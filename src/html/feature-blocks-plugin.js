@@ -43,6 +43,15 @@ export function htmlFeatureBlocksPlugin(env) {
     return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
   }
 
+  function repeatUntilStable(input, processor) {
+    let current = input
+    while (true) {
+      const next = processor(current)
+      if (next === current) return current
+      current = next
+    }
+  }
+
   function processWithRegex(code, re, openerFactory, closerFactory) {
     return code.replace(re, (match, rawName) => {
       const { name, invert } = parseRawName(rawName)
@@ -57,13 +66,15 @@ export function htmlFeatureBlocksPlugin(env) {
   }
 
   function processHtml(html) {
-    const re = /<!--\s*FEATURE:([\w\-.:\s]+)\s*-->[\s\S]*?<!--\s*\/FEATURE:\1\s*-->/gi
-    return processWithRegex(
-      html,
-      re,
-      (esc) => new RegExp(`<!--\\s*FEATURE:${esc}\\s*-->`, 'gi'),
-      (esc) => new RegExp(`<!--\\s*\\/FEATURE:${esc}\\s*-->`, 'gi'),
-    )
+    return repeatUntilStable(html, (current) => {
+      const re = /<!--\s*FEATURE:([\w\-.:\s]+)\s*-->[\s\S]*?<!--\s*\/FEATURE:\1\s*-->/gi
+      return processWithRegex(
+        current,
+        re,
+        (esc) => new RegExp(`<!--\\s*FEATURE:${esc}\\s*-->`, 'gi'),
+        (esc) => new RegExp(`<!--\\s*\\/FEATURE:${esc}\\s*-->`, 'gi'),
+      )
+    })
   }
 
   function processJs(code) {
@@ -71,31 +82,36 @@ export function htmlFeatureBlocksPlugin(env) {
     code = processHtml(code)
 
     // Block comment markers
-    const blockRe = /\/\*\s*FEATURE:([\w\-.:\s]+)\s*\*\/[\s\S]*?\/\*\s*\/FEATURE:\1\s*\*\//gi
-    code = processWithRegex(
-      code,
-      blockRe,
-      (esc) => new RegExp(`/\\*\\s*FEATURE:${esc}\\s*\\*/`, 'gi'),
-      (esc) => new RegExp(`/\\*\\s*\\/FEATURE:${esc}\\s*\\*/`, 'gi'),
-    )
+    code = repeatUntilStable(code, (current) => {
+      const blockRe = /\/\*\s*FEATURE:([\w\-.:\s]+)\s*\*\/[\s\S]*?\/\*\s*\/FEATURE:\1\s*\*\//gi
+      return processWithRegex(
+        current,
+        blockRe,
+        (esc) => new RegExp(`/\\*\\s*FEATURE:${esc}\\s*\\*/`, 'gi'),
+        (esc) => new RegExp(`/\\*\\s*\\/FEATURE:${esc}\\s*\\*/`, 'gi'),
+      )
+    })
     // Line comment markers (must use m flag to anchor at line starts)
-    const lineRe = /^\s*\/\/\s*FEATURE:([\w\-.:\s]+)\s*$[\s\S]*?^\s*\/\/\s*\/FEATURE:\1\s*$/gim
-    code = code.replace(lineRe, (match, rawName) => {
-      const { name, invert } = parseRawName(rawName)
-      const flag = getFlagForName(name, false)
-      const keep = invert ? !flag : flag
-      if (!keep) return ''
-      // Remove only the opening/closing marker lines
-      const esc = escapeRegExp(rawName)
-      const open = new RegExp(`^\\s*\/\/\\s*FEATURE:${esc}\\s*$`, 'gim')
-      const close = new RegExp(`^\\s*\/\/\\s*\\/FEATURE:${esc}\\s*$`, 'gim')
-      return match.replace(open, '').replace(close, '')
+    code = repeatUntilStable(code, (current) => {
+      const lineRe = /^\s*\/\/\s*FEATURE:([\w\-.:\s]+)\s*$[\s\S]*?^\s*\/\/\s*\/FEATURE:\1\s*$/gim
+      return current.replace(lineRe, (match, rawName) => {
+        const { name, invert } = parseRawName(rawName)
+        const flag = getFlagForName(name, false)
+        const keep = invert ? !flag : flag
+        if (!keep) return ''
+        // Remove only the opening/closing marker lines
+        const esc = escapeRegExp(rawName)
+        const open = new RegExp(`^\\s*\/\/\\s*FEATURE:${esc}\\s*$`, 'gim')
+        const close = new RegExp(`^\\s*\/\/\\s*\\/FEATURE:${esc}\\s*$`, 'gim')
+        return match.replace(open, '').replace(close, '')
+      })
     })
     return code
   }
 
   return {
     name: 'html-feature-blocks',
+    enforce: 'pre',
     transformIndexHtml(html) {
       return processHtml(html)
     },

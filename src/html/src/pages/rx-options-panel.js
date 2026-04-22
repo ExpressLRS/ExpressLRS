@@ -1,6 +1,5 @@
 import {html, LitElement} from "lit"
 import {customElement, state} from "lit/decorators.js"
-import '../assets/mui.js'
 import {_renderOptions, _uintInput} from "../utils/libs.js"
 import {elrsState, saveOptionsAndConfig} from "../utils/state.js"
 import {postWithFeedback} from "../utils/feedback.js"

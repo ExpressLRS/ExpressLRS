@@ -1,8 +1,6 @@
 import {html, LitElement} from "lit"
 import {customElement, state} from "lit/decorators.js"
-import '../assets/mui.js'
 import '../components/filedrag.js'
-import FEATURES from "../features.js"
 import {cuteAlert} from "../utils/feedback.js"
 
 @customElement('update-panel')
@@ -21,7 +19,14 @@ class UpdatePanel extends LitElement {
             <div class="mui-panel mui--text-title">Firmware Update</div>
             <div class="mui-panel">
                 <p>
-                    Select the correct <strong>firmware.bin${FEATURES.IS_8285 ? '.gz' : ''}</strong> for your platform otherwise a bad flash may occur.
+                    Select the correct
+                    <!-- FEATURE:IS_8285 -->
+                    <strong>firmware.bin.gz</strong>
+                    <!-- /FEATURE:IS_8285 -->
+                    <!-- FEATURE:NOT IS_8285 -->
+                    <strong>firmware.bin</strong>
+                    <!-- /FEATURE:NOT IS_8285 -->
+                    for your platform otherwise a bad flash may occur.
                     If this happens you will need to recover via USB/Serial. You may also download the <a
                         href="firmware.bin" title="Click to download firmware">currently running firmware</a>.
                 </p>
@@ -38,15 +43,14 @@ class UpdatePanel extends LitElement {
         // ESP32 expects .bin, ESP8285 RX expect .bin.gz
         const files = e.detail.files
         const fileExt = files[0].name.split('.').pop()
-        let expectedFileExt
-        let expectedFileExtDesc
-        if (FEATURES.IS_8285 && !FEATURES.IS_TX) {
-            expectedFileExt = 'gz'
-            expectedFileExtDesc = '.bin.gz file. <br />Do NOT decompress/unzip/extract the file!'
-        } else {
-            expectedFileExt = 'bin'
-            expectedFileExtDesc = '.bin file.'
-        }
+        // FEATURE:IS_8285
+        const expectedFileExt = 'gz'
+        const expectedFileExtDesc = '.bin.gz file. <br />Do NOT decompress/unzip/extract the file!'
+        // /FEATURE:IS_8285
+        // FEATURE:NOT IS_8285
+        const expectedFileExt = 'bin'
+        const expectedFileExtDesc = '.bin file.'
+        // /FEATURE:NOT IS_8285
         if (fileExt === expectedFileExt) {
             this._uploadFile(files[0])
         } else {
@@ -94,10 +98,12 @@ class UpdatePanel extends LitElement {
             // This is basically a delayed display of the success dialog with a fake progress
             let percent = 0
             const interval = setInterval(()=>{
-                if (FEATURES.IS_8285)
-                    percent = percent + 1
-                else
-                    percent = percent + 2
+                // FEATURE:IS_8285
+                percent = percent + 1
+                // /FEATURE:IS_8285
+                // FEATURE:NOT IS_8285
+                percent = percent + 2
+                // /FEATURE:NOT IS_8285
 
                 self.progress = percent
                 self.progressText = percent + '% flashed... please wait'

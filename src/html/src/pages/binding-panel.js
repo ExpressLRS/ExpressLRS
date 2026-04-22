@@ -1,7 +1,6 @@
 import {html, LitElement} from "lit";
 import {customElement, query, state} from "lit/decorators.js";
 import {elrsState, saveConfig, saveOptions} from "../utils/state.js";
-import '../assets/mui.js';
 import {calcMD5} from "../utils/md5.js";
 
 @customElement('binding-panel')

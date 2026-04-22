@@ -103,6 +103,7 @@ const HARDWARE_SCHEMA = [
                 icon: 'output',
                 desc: 'Clock pin connected to (possibly) multiple SX1280/127x'
             },
+            /* FEATURE: NOT IS_8285 */
             /* FEATURE: NOT HAS_SX127X */
             {
                 id: 'radio_busy_2',
@@ -144,6 +145,7 @@ const HARDWARE_SCHEMA = [
                 icon: 'output',
                 desc: 'Reset pin connected to second SX1280/127x'
             },
+            /* /FEATURE: NOT IS_8285 */
             /* FEATURE: NOT HAS_SX127X */
             {
                 id: 'radio_dcdc',
@@ -217,6 +219,7 @@ const HARDWARE_SCHEMA = [
                 icon: 'output',
                 desc: 'Enable TX mode PA (active high)'
             },
+            /* FEATURE: NOT IS_8285 */
             {
                 id: 'power_rxen_2',
                 label: 'RXEN_2 pin',
@@ -231,6 +234,7 @@ const HARDWARE_SCHEMA = [
                 icon: 'output',
                 desc: 'Enable TX mode PA on second SX1280 (active high)'
             },
+            /* /FEATURE: NOT IS_8285 */
             {
                 id: 'power_min',
                 label: 'Min Power',
@@ -306,6 +310,7 @@ const HARDWARE_SCHEMA = [
         ]
     },
 
+    /* FEATURE: IS_TX */
     {
         title: 'Radio Power Detection', rows: [
             {
@@ -319,20 +324,19 @@ const HARDWARE_SCHEMA = [
                 id: 'power_pdet_intercept',
                 label: 'Intercept',
                 type: 'float',
-                size: 20,
+                size: 10,
                 desc: 'Intercept and Slope are used together to calculate the dBm from the measured mV on the PDET pin'
             },
             {
                 id: 'power_pdet_slope',
                 label: 'Slope',
                 type: 'float',
-                size: 20,
+                size: 10,
                 desc: 'dBm = mV * slope + intercept, this is then used to adjust the actual output power accordingly'
             },
         ]
     },
 
-    /* FEATURE: IS_TX */
     {
         title: 'Analog Joystick', rows: [
             {
@@ -417,13 +421,22 @@ const HARDWARE_SCHEMA = [
                 size: 40,
                 desc: 'Indexes into the "string" of RGB LEDs (if empty status indexes are used)'
             },
+            /* FEATURE: NOT IS_TX */
             {
                 id: 'led',
                 label: 'LED pin',
                 type: 'uint',
                 icon: 'output',
-                desc: 'Only use when only a single LED is used'
+                desc: 'Pin used for single color LED'
             },
+            {
+                id: 'led_red_invert',
+                label: 'LED inverted',
+                type: 'checkbox',
+                desc: 'LEDs are active LOW unless this is checked'
+            },
+            /* /FEATURE: NOT IS_TX */
+            /* FEATURE: IS_TX */
             {
                 id: 'led_red',
                 label: 'Red LED pin',
@@ -463,6 +476,7 @@ const HARDWARE_SCHEMA = [
                 type: 'checkbox',
                 desc: 'Check if the LED is active HIGH'
             },
+            /* /FEATURE: IS_TX */
         ]
     },
 
@@ -475,6 +489,7 @@ const HARDWARE_SCHEMA = [
                 icon: 'output',
                 desc: 'Single/first (active low) button'
             },
+            /* FEATURE: IS_TX */
             {
                 id: 'button_led_index',
                 label: 'Button 1 RGB Index',
@@ -494,6 +509,7 @@ const HARDWARE_SCHEMA = [
                 type: 'uint',
                 desc: 'Index of button LED in RGB string, leave empty for no RGB LED'
             },
+            /* /FEATURE: IS_TX */
         ]
     },
 
@@ -725,6 +741,7 @@ const HARDWARE_SCHEMA = [
                 size: 7,
                 desc: 'voltage = (analog - offset) / scale'
             },
+            /* FEATURE: NOT IS_8285 */
             {
                 id: 'vbat_atten',
                 label: 'VBat attenuation',
@@ -737,9 +754,11 @@ const HARDWARE_SCHEMA = [
                 ],
                 desc: 'ADC pin attenuation (ESP32) and optional efuse-based calibration adjustment'
             },
+            /* /FEATURE: NOT IS_8285 */
         ]
     },
 
+    /* FEATURE: NOT IS_8285 */
     {
         title: 'SPI VTX', rows: [
             {
@@ -840,6 +859,7 @@ const HARDWARE_SCHEMA = [
             },
         ]
     },
+    /* /FEATURE: NOT IS_8285 */
     /* /FEATURE: NOT IS_TX */
 ];
 

@@ -55,7 +55,7 @@ class TxOptionsPanel extends LitElement {
                         <label for="airport">Use as AirPort Serial device</label>
                     </div>
                     ${this.isAirport ? html`
-                        <div class="mui-textfield"">
+                        <div class="mui-textfield">
                         <input id="baud" size='7' type='number'
                                @input="${(e) => this.baudRate = parseInt(e.target.value)}"
                                .value="${this.baudRate}">

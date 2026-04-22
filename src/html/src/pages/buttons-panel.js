@@ -1,8 +1,19 @@
 import {html, LitElement} from "lit";
 import {customElement} from "lit/decorators.js";
 import {elrsState, saveConfig} from "../utils/state.js";
-import {_, _renderOptions} from "../utils/libs.js";
+import {_renderOptions} from "../utils/libs.js";
 import {postJSON} from "../utils/feedback.js";
+
+const ACTION_OPTIONS = ['Unused', 'Increase Power', 'Go to VTX Band Menu', 'Go to VTX Channel Menu',
+    'Send VTX Settings', 'Start WiFi', 'Send Bind Command', 'Start BLE Joystick'];
+const LONG_PRESS_OPTIONS = [
+    'for 0.5 seconds', 'for 1 second', 'for 1.5 seconds', 'for 2 seconds',
+    'for 2.5 seconds', 'for 3 seconds', 'for 3.5 seconds', 'for 4 seconds',
+];
+const COUNT_OPTIONS = [
+    '1 time', '2 times', '3 times', '4 times',
+    '5 times', '6 times', '7 times', '8 times',
+];
 
 @customElement('buttons-panel')
 class ButtonsPanel extends LitElement {
@@ -10,14 +21,17 @@ class ButtonsPanel extends LitElement {
     colorTimer = undefined;
     colorUpdated = false;
     buttonActions = [];
+    loadedButtonActionsJson = '[]';
+    currentButtonActionsJson = '[]';
+    buttonActionsInitialized = false;
 
     createRenderRoot() {
         this._timeoutCurrentColors = this._timeoutCurrentColors.bind(this);
-        this._checkEnableButtonActionSave = this._checkEnableButtonActionSave.bind(this);
         return this;
     }
 
     render() {
+        this._initializeButtonActions();
         return html`
             <div class="mui-panel mui--text-title">Button & Actions</div>
             <div class="mui-panel">
@@ -25,66 +39,55 @@ class ButtonsPanel extends LitElement {
                     Specify which actions to perform when clicking or long pressing module buttons.
                 </p>
                 <form class="mui-form">
-                    ${elrsState.config['button-actions'] ? html`
+                    ${this.buttonActions.length ? html`
                         <table class="mui-table">
                             <tbody id="button-actions">
-                            ${this._appendButtonActions()}
+                            ${this.buttonActions.map((button, b) =>
+                                    button.action.map((v, p) => this._appendButtonActionRow(b, p, v))
+                            )}
                             </tbody>
                         </table>
                     ` : ``}
-                    ${this.buttonActions[0] && this.buttonActions[0]['color'] !== undefined ? html`
-                        <p>
-                            <input id='button1-color' type='color' @input="${(e) => this._changeCurrentColors(e, 0)}"
-                                   .value="${this._toRGB(this.buttonActions[0]['color'])}"/>
-                            <label for="button1-color">User button 1 color</label>
-                        </p>
-                    ` : ''}
-                    ${this.buttonActions[1] && this.buttonActions[1]['color'] !== undefined ? html`
-                        <p>
-                            <input id='button2-color' type='color' @input="${(e) => this._changeCurrentColors(e, 1)}"
-                                   .value="${this._toRGB(this.buttonActions[1]['color'])}"/>
-                            <label for="button2-color">User button 2 color</label>
-                        </p>
-                    ` : ''}
+                    ${this._renderColorInput(0, 'User button 1 color')}
+                    ${this._renderColorInput(1, 'User button 2 color')}
                     <button class="mui-btn mui-btn--primary" @click="${this._submitButtonActions}"
-                            ?disabled="${this._checkEnableButtonActionSave()}">Save
+                            ?disabled=${this._isSaveDisabled()}>Save
                     </button>
                 </form>
             </div>
         `;
     }
 
-    _appendButtonActions() {
-        let result = []
-        this.buttonActions = elrsState.config['button-actions'];
-        for (const [b, _v] of Object.entries(this.buttonActions)) {
-            for (const [p, v] of Object.entries(_v.action)) {
-                result.push(this._appendButtonActionRow(parseInt(b), parseInt(p), v));
-            }
-        }
-        return result
+    _renderColorInput(index, label) {
+        const color = this.buttonActions[index]?.color;
+        if (color === undefined) return '';
+        return html`
+            <p>
+                <input id="button${index + 1}-color" type="color" @input="${(e) => this._changeCurrentColors(e, index)}"
+                       .value="${this._toRGB(color)}"/>
+                <label for="button${index + 1}-color">${label}</label>
+            </p>
+        `;
     }
 
     _appendButtonActionRow(b, p, v) {
         return html`
             <tr>
                 <td>
-                    Button ${parseInt(b) + 1}
+                    Button ${b + 1}
                 </td>
                 <td>
                     <div class="mui-select">
                         <select @change="${(e) => this._changeAction(b, p, parseInt(e.target.value))}">
-                            ${_renderOptions(['Unused', 'Increase Power', 'Go to VTX Band Menu', 'Go to VTX Channel Menu',
-                                'Send VTX Settings', 'Start WiFi', 'Enter Binding Mode', 'Start BLE Joystick'], v.action)}
+                            ${_renderOptions(ACTION_OPTIONS, v.action)}
                         </select>
                         <label>Action</label>
                     </div>
                 </td>
                 <td>
                     <div class="mui-select">
-                        <select id="select-press-${b}-${p}"
-                                @change="${(e) => this._changePress(b, p, e.target.value)}"
-                                ?disabled="${v.action === 0}"
+                        <select @change="${(e) => this._changePress(b, p, e.target.value)}"
+                                ?disabled=${v.action === 0}
                         >
                             <option value='' disabled hidden ?selected="${v.action === 0}"></option>
                             <option value='false' ?selected="${v['is-long-press'] === false}">Short press (click)
@@ -96,20 +99,13 @@ class ButtonsPanel extends LitElement {
                 </td>
                 <td>
                     <div class="mui-select">
-                        <select id="select-timing-${b}-${p}"
-                                @change="${(e) => this._changeCount(b, p, parseInt(e.target.value))}"
-                                ?disabled="${v.action === 0}"
+                        <select @change="${(e) => this._changeCount(b, p, Number(e.target.value))}"
+                                ?disabled=${v.action === 0}
                         >
                             <option value='' disabled hidden ?selected="${v.action === 0}"></option>
                             ${v['is-long-press'] === true
-                                    ? _renderOptions([
-                                        'for 0.5 seconds', 'for 1 second', 'for 1.5 seconds', 'for 2 seconds',
-                                        'for 2.5 seconds', 'for 3 seconds', 'for 3.5 seconds', 'for 4 seconds',
-                                    ], v.count)
-                                    : _renderOptions([
-                                        '1 time', '2 times', '3 times', '4 times',
-                                        '5 times', '6 times', '7 times', '8 times',
-                                    ], v.count)}
+                                    ? _renderOptions(LONG_PRESS_OPTIONS, v.count)
+                                    : _renderOptions(COUNT_OPTIONS, v.count)}
                         </select>
                         <label>Count</label>
                     </div>
@@ -120,7 +116,11 @@ class ButtonsPanel extends LitElement {
 
     _submitButtonActions(e) {
         e.preventDefault();
-        saveConfig({'button-actions': this.buttonActions})
+        saveConfig({'button-actions': this.buttonActions}, () => {
+            this._refreshButtonActionsJson();
+            this.loadedButtonActionsJson = this.currentButtonActionsJson;
+            this.requestUpdate();
+        })
     }
 
     _toRGB(c) {
@@ -164,33 +164,59 @@ class ButtonsPanel extends LitElement {
         }
     }
 
-    _checkEnableButtonActionSave() {
-        for (const [b, _v] of Object.entries(this.buttonActions)) {
-            for (const [p, v] of Object.entries(_v.action)) {
-                if (v.action !== 0 && (_(`select-press-${b}-${p}`)?.value === '' || _(`select-timing-${b}-${p}`)?.value === '')) {
-                    return true;
-                }
-            }
+    _isSaveDisabled() {
+        return this.currentButtonActionsJson === this.loadedButtonActionsJson;
+    }
+
+    checkChanged() {
+        return !this._isSaveDisabled()
+    }
+
+    _initializeButtonActions() {
+        if (this.buttonActionsInitialized || !elrsState.config['button-actions']) {
+            return;
         }
-        return false;
+        this.buttonActions = this._cloneButtonActions(elrsState.config['button-actions'] ?? []);
+        this._refreshButtonActionsJson();
+        this.loadedButtonActionsJson = this.currentButtonActionsJson;
+        this.buttonActionsInitialized = true;
+    }
+
+    _cloneButtonActions(buttonActions) {
+        return JSON.parse(JSON.stringify(buttonActions));
+    }
+
+    _refreshButtonActionsJson() {
+        this.currentButtonActionsJson = JSON.stringify(this.buttonActions);
     }
 
     _changeAction(b, p, value) {
-        (this.buttonActions)[b].action[p].action = value;
+        const actionConfig = this.buttonActions[b].action[p];
+        actionConfig.action = value;
         if (value === 0) {
-            _(`select-press-${b}-${p}`).value = '';
-            _(`select-timing-${b}-${p}`).value = '';
+            actionConfig['is-long-press'] = undefined;
+            actionConfig.count = undefined;
+        } else {
+            if (actionConfig['is-long-press'] !== true && actionConfig['is-long-press'] !== false) {
+                actionConfig['is-long-press'] = false; // default to short press
+            }
+            if (!Number.isInteger(actionConfig.count)) {
+                actionConfig.count = 0; // default to first count option
+            }
         }
+        this._refreshButtonActionsJson();
         this.requestUpdate()
     }
 
     _changePress(b, p, value) {
-        (this.buttonActions)[b].action[p]['is-long-press'] = (value === 'true');
+        this.buttonActions[b].action[p]['is-long-press'] = (value === 'true');
+        this._refreshButtonActionsJson();
         this.requestUpdate()
     }
 
     _changeCount(b, p, value) {
-        (this.buttonActions)[b].action[p].count = parseInt(value);
+        this.buttonActions[b].action[p].count = value;
+        this._refreshButtonActionsJson();
         this.requestUpdate()
     }
 }

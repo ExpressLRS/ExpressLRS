@@ -1,8 +1,6 @@
-// Central place to read build-time feature flags from Vite env
-// Any variable starting with VITE_ can be injected at build-time via .env files or CLI.
-// Provide stable booleans for use in the app (works in browser and Node/Vite plugin contexts).
+// Central place to read build-time feature flags from Vite env.
+// This lives outside `src` because it is only used by build/dev tooling now.
 
-// Helper to coerce env strings to boolean
 const toBool = (v, defaultValue) => {
   if (v === undefined || v === null || v === '') return defaultValue
   if (typeof v === 'boolean') return v
@@ -10,7 +8,6 @@ const toBool = (v, defaultValue) => {
   return s === '1' || s === 'true' || s === 'yes' || s === 'on' || s === 'y'
 }
 
-// Resolve environment source: prefer import.meta.env (browser), fallback to process.env (Node)
 const ENV = (typeof import.meta !== 'undefined' && import.meta && import.meta.env)
   ? import.meta.env
   : (typeof process !== 'undefined' && process.env ? process.env : {})

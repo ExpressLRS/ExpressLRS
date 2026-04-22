@@ -1,19 +1,21 @@
 import {html, LitElement, nothing} from 'lit'
 import {customElement, state} from 'lit/decorators.js'
-import '../assets/mui.js'
 import {postWithFeedback, saveJSONWithReboot} from '../utils/feedback.js'
 import '../components/filedrag.js'
 import HARDWARE_SCHEMA from '../utils/hardware-schema.js'
-import {_arrayInput, _intInput, _uintInput} from "../utils/libs.js";
+import {_arrayInput, _floatInput, _intInput, _uintInput} from "../utils/libs.js";
 
 @customElement('hardware-layout')
 export class HardwareLayout extends LitElement {
 
     @state() accessor customised = false
+    @state() accessor loadedHardwareJson = null
+    @state() accessor currentHardwareJson = '{}'
 
     static SCHEMA = HARDWARE_SCHEMA
 
     createRenderRoot() {
+        this._onFormEdited = this._onFormEdited.bind(this)
         return this
     }
 
@@ -27,19 +29,21 @@ export class HardwareLayout extends LitElement {
                     <file-drop id="filedrag" label="Upload" @file-drop=${this._onFileDrop}>or drop files here</file-drop>
                 </div>
                 <div class="mui-panel">
-                    <div class="mui-panel"
-                         style="display:${this.customised ? 'block' : 'none'}; background-color: #FFC107;">
+                    <div class="mui-panel warning-bg hardware-customised-warning" ?hidden="${!this.customised}">
                         This hardware configuration has been customized. This can be safely ignored if this is a custom hardware
                         build or for testing purposes.<br>
                         You can <a download href="/hardware.json">download</a> the configuration or
                         <a href="/reset?hardware" @click="${postWithFeedback('Hardware Configuration Reset', 'Reset failed', '/reset?hardware')}">reset</a>
                         to pre-configured defaults and reboot.
                     </div>
-                    <form id="upload_hardware" class="mui-form">
+                    <form id="upload_hardware" class="mui-form"
+                          @input=${this._onFormEdited}
+                          @change=${this._onFormEdited}>
                         ${this._renderTable()}
                         <br>
                         <input type="button" name="_ignore" value="Save Target Configuration"
-                               class="mui-btn mui-btn--primary" @click=${this._submitConfig} />
+                               class="mui-btn mui-btn--primary" @click=${this._submitConfig}
+                               ?disabled=${this._isSaveDisabled()} />
                     </form>
                 </div>
             </div>
@@ -85,6 +89,8 @@ export class HardwareLayout extends LitElement {
                     ${row.options?.map(opt => html`
                         <option value="${opt.value}">${opt.label}</option>`)}
                 </select>`
+            case 'float':
+                return html`<input id="${row.id}" name="${row.id}" size=${row.size ?? 10} maxlength=${row.size ?? 10} type="text" @keypress="${_floatInput}"/>`
             case 'int':
                 return html`<input id="${row.id}" name="${row.id}" size=${row.size ?? 3} maxlength=${row.size ?? 3} type="text" @keypress="${_intInput}"/>`
             case 'uint':
@@ -101,9 +107,13 @@ export class HardwareLayout extends LitElement {
         this._loadData()
     }
 
+    _field(id) {
+        return document.getElementById(id)
+    }
+
     _initTooltips() {
         const add = (cls, label) => {
-            const images = document.querySelectorAll('.' + cls)
+            const images = this.querySelectorAll('.' + cls)
             images.forEach(i => i.setAttribute('title', label))
         }
         add('icon-input', 'Digital Input')
@@ -119,6 +129,7 @@ export class HardwareLayout extends LitElement {
                 const data = JSON.parse(xmlhttp.responseText)
                 this.customised = !!data.customised
                 this._updateHardwareSettings(data)
+                this.loadedHardwareJson = this.currentHardwareJson
             }
         }
         xmlhttp.open('GET', '/hardware.json', true)
@@ -128,7 +139,7 @@ export class HardwareLayout extends LitElement {
 
     _onFileDrop(e) {
         const files = e.detail.files
-        const form = document.getElementById('upload_hardware')
+        const form = this._field('upload_hardware')
         if (form) form.reset()
         for (const file of files) {
             const reader = new FileReader()
@@ -142,7 +153,7 @@ export class HardwareLayout extends LitElement {
 
     _updateHardwareSettings(data) {
         for (const [key, value] of Object.entries(data)) {
-            const el = document.getElementById(key)
+            const el = this._field(key)
             if (el) {
                 if (el.type === 'checkbox') {
                     el.checked = !!value
@@ -152,15 +163,29 @@ export class HardwareLayout extends LitElement {
                 }
             }
         }
+        this.currentHardwareJson = this._serializeCurrentConfig()
     }
 
     _submitConfig() {
-        const form = document.getElementById('upload_hardware')
+        const body = this.currentHardwareJson
+        // Use shared helper that prompts for reboot on success
+        saveJSONWithReboot('Upload Succeeded', 'Upload Failed', '/hardware.json', {...JSON.parse(body), "customised": true}, () => {
+            this.loadedHardwareJson = body
+        })
+        return false
+    }
+
+    _onFormEdited() {
+        this.currentHardwareJson = this._serializeCurrentConfig()
+    }
+
+    _serializeCurrentConfig() {
+        const form = this._field('upload_hardware')
+        if (!form) return '{}'
         const formData = new FormData(form)
-        // rebuild using original serializer logic
-        const body = JSON.stringify(Object.fromEntries(formData), (k, v) => {
+        return JSON.stringify(Object.fromEntries(formData), (k, v) => {
             if (v === '') return undefined
-            const el = document.getElementById(k)
+            const el = this._field(k)
             if (el && el.type === 'checkbox') {
                 return v === 'on'
             }
@@ -170,8 +195,14 @@ export class HardwareLayout extends LitElement {
             }
             return isNaN(v) ? v : +v
         })
-        // Use shared helper that prompts for reboot on success
-        saveJSONWithReboot('Upload Succeeded', 'Upload Failed', '/hardware.json', {...JSON.parse(body), "customised": true})
-        return false
+    }
+
+    _isSaveDisabled() {
+        if (this.loadedHardwareJson === null) return true
+        return this.currentHardwareJson === this.loadedHardwareJson
+    }
+
+    checkChanged() {
+        return !this._isSaveDisabled()
     }
 }

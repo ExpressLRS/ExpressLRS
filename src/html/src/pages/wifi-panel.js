@@ -28,6 +28,12 @@ class WifiPanel extends LitElement {
         return this
     }
 
+    _parseWifiOnInterval(value) {
+        if (value === '') return undefined
+        const parsed = Number.parseInt(value, 10)
+        return Number.isNaN(parsed) ? undefined : parsed
+    }
+
     disconnectedCallback() {
         this.running = false
     }
@@ -74,8 +80,8 @@ class WifiPanel extends LitElement {
                     <div ?hidden="${this.selectedValue !== '0' && this.selectedValue !== '3'}">
                         <div class="mui-textfield">
                             <input id="interval" size='3' name='wifi-on-interval' type='number' placeholder="Disabled"
-                                   @input="${(e) => this.wifiOnInterval = parseInt(e.target.value)}"
-                                   .value="${this.wifiOnInterval}"
+                                   @input="${(e) => this.wifiOnInterval = this._parseWifiOnInterval(e.target.value)}"
+                                   .value="${this.wifiOnInterval?.toString() ?? ''}"
                             />
                             <label for="interval">WiFi "auto on" interval in seconds (leave blank to disable)</label>
                         </div>
@@ -142,6 +148,7 @@ class WifiPanel extends LitElement {
                         'wifi-on-interval': self.wifiOnInterval,
                         customised: true
                     }
+                    self.requestUpdate()
                 })(event)
                 break
             case '1':
@@ -161,6 +168,7 @@ class WifiPanel extends LitElement {
                         'wifi-on-interval': self.wifiOnInterval,
                         customised: true
                     }
+                    self.requestUpdate()
                 })(event)
                 break
         }
@@ -193,9 +201,11 @@ class WifiPanel extends LitElement {
 
     checkChanged() {
         let changed = false
+        const currentNetwork = this.network?.value ?? elrsState.options['wifi-ssid']
+        const currentPassword = this.password?.value ?? elrsState.options['wifi-password']
         changed |= this.wifiOnInterval !== elrsState.options['wifi-on-interval']
-        changed |= this.network?.value !== elrsState.options['wifi-ssid']
-        changed |= this.password?.value !== elrsState.options['wifi-password']
+        changed |= currentNetwork !== elrsState.options['wifi-ssid']
+        changed |= currentPassword !== elrsState.options['wifi-password']
         return !!changed
     }
 }

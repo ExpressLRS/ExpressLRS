@@ -1,5 +1,5 @@
 import { defineConfig, loadEnv } from 'vite'
-import babel from 'vite-plugin-babel'
+import { transformAsync } from '@babel/core'
 import { promises as fs } from 'fs'
 import path from 'path'
 import Zopfli from 'node-zopfli-es'
@@ -38,8 +38,20 @@ function toHexArray(buf) {
   return lines.join(',\n')
 }
 
-function headerPreamble(generatedBy, dateStr) {
-  return `#pragma once\n#include <stddef.h>\n#include <stdint.h>\n#include <pgmspace.h>\n\n#ifdef __cplusplus\nextern \"C\" {\n#endif\n\n// Represents one web asset (pre-compressed) stored in PROGMEM\ntypedef struct {\n  const char* path;\n  const char* content_type;\n  const unsigned char* data;\n  const size_t size;\n} WebAsset;\n`
+function formatBytes(bytes) {
+  return `${bytes} bytes (${(bytes / 1024).toFixed(2)} KiB)`
+}
+
+function inlineForHtml(code, tagName) {
+  return code.replace(new RegExp(`</${tagName}`, 'gi'), `<\\/${tagName}`)
+}
+
+function toDataUrl(contentType, data) {
+  return `data:${contentType};base64,${data.toString('base64')}`
+}
+
+function headerPreamble() {
+  return `#pragma once\n#include <stddef.h>\n#include <stdint.h>\n#include <pgmspace.h>\n\n#ifdef __cplusplus\nextern \"C\" {\n#endif\n\ntypedef struct {\n  const char* path;\n  const char* content_type;\n  const unsigned char* data;\n  const size_t size;\n} WebAsset;\n`
 }
 
 function headerEpilogue() {
@@ -73,8 +85,116 @@ function guessContentType(filePath) {
 // HTML feature blocks plugin extracted to separate module
 import { htmlFeatureBlocksPlugin } from './feature-blocks-plugin.js'
 
+function babelDecoratorsPlugin() {
+  let root = process.cwd()
+
+  return {
+    name: 'babel-decorators',
+    configResolved(config) {
+      root = config.root || process.cwd()
+    },
+    async transform(code, id) {
+      const file = id.split('?')[0]
+      const normalized = file.split(path.sep).join('/')
+      const srcRoot = path.resolve(root, 'src').split(path.sep).join('/') + '/'
+
+      if (!normalized.startsWith(srcRoot) || !normalized.endsWith('.js')) {
+        return null
+      }
+
+      const result = await transformAsync(code, {
+        cwd: root,
+        root,
+        filename: file,
+        sourceMaps: true,
+      })
+
+      return result ? { code: result.code ?? code, map: result.map ?? null } : null
+    },
+  }
+}
+
+function inlineStaticHtmlAssetsPlugin() {
+  let outDir = 'dist'
+  let root = process.cwd()
+
+  return {
+    name: 'inline-static-html-assets',
+    apply: 'build',
+    configResolved(config) {
+      outDir = config.build?.outDir || 'dist'
+      root = config.root || process.cwd()
+    },
+    async writeBundle() {
+      const distDir = path.resolve(root, outDir)
+      const assetsDir = path.join(distDir, 'assets')
+      const indexPath = path.join(distDir, 'index.html')
+
+      let assetNames
+      try {
+        assetNames = await fs.readdir(assetsDir)
+      } catch {
+        return
+      }
+
+      const appCssName = assetNames.find((name) => /^app-[^.]+\.css$/.test(name))
+      const appJsName = assetNames.find((name) => /^app-[^.]+\.js$/.test(name))
+      const faviconName = assetNames.find((name) => /^favicon-[^.]+\.svg$/.test(name))
+
+      if (!appCssName && !appJsName && !faviconName) {
+        return
+      }
+
+      let indexHtml = await fs.readFile(indexPath, 'utf8')
+
+      if (appCssName) {
+        const appCssPath = path.join(assetsDir, appCssName)
+        const appCss = await fs.readFile(appCssPath, 'utf8')
+
+        indexHtml = indexHtml.replace(
+          /<link rel="stylesheet" crossorigin href="\/assets\/app-[^"]+\.css">/,
+          `<style>${inlineForHtml(appCss, 'style')}</style>`
+        )
+
+        await fs.unlink(appCssPath)
+      }
+
+      if (appJsName) {
+        const appJsPath = path.join(assetsDir, appJsName)
+        const appJs = (await fs.readFile(appJsPath, 'utf8')).replace(
+          /\.\/([^"'`]+\.js)/g,
+          '/assets/$1'
+        )
+
+        indexHtml = indexHtml.replace(
+          /<script type="module" crossorigin src="\/assets\/app-[^"]+\.js"><\/script>/,
+          `<script type="module">${inlineForHtml(appJs, 'script')}</script>`
+        )
+
+        await fs.unlink(appJsPath)
+      }
+
+      if (faviconName) {
+        const faviconPath = path.join(assetsDir, faviconName)
+        const faviconDataUrl = toDataUrl('image/svg+xml', await fs.readFile(faviconPath))
+
+        indexHtml = indexHtml.replace(
+          /<link[^>]+href="\/assets\/favicon-[^"]+\.svg"[^>]*>/,
+          `<link href="${faviconDataUrl}" rel="icon" type="image/svg+xml" />`
+        )
+
+        await fs.unlink(faviconPath)
+      }
+
+      await fs.writeFile(indexPath, indexHtml, 'utf8')
+      this.info('Inlined static HTML assets into index.html.')
+    },
+  }
+}
+
 function viteEsp32HeaderPlugin(options = {}) {
   const headerName = options.headerName || 'esp32_fs.h'
+  const headerOut = options.headerOut || null
   const includeMaps = options.includeMaps ?? false // whether to include source maps
 
   let outDir = 'dist'
@@ -111,9 +231,8 @@ function viteEsp32HeaderPlugin(options = {}) {
 
       const genBy = 'vite-esp32-header plugin'
       const when = new Date().toISOString()
-      let header = headerPreamble(genBy, when)
-
       const assetEntries = []
+      let totalCompressedBytes = 0
 
       for (const abs of files) {
         const rel = path.relative(distDir, abs).split(path.sep).join('/')
@@ -121,12 +240,25 @@ function viteEsp32HeaderPlugin(options = {}) {
         const id = toCIdentifier(rel)
         const data = await fs.readFile(abs)
         const compressed = Zopfli.gzipSync(data, { numiterations: 15 })
-        const hex = toHexArray(compressed)
+        totalCompressedBytes += compressed.length
         const contentType = guessContentType(rel)
-        header += `\n// ${webPath} (original ${data.length} bytes) -> compressed ${compressed.length} bytes\n`;
-        header += `static const unsigned char ${id}[] PROGMEM = {\n${hex}\n};\n`
-        header += `static const size_t ${id}_len = ${compressed.length};\n`
-        assetEntries.push({ webPath, id, contentType})
+        const hex = toHexArray(compressed)
+        assetEntries.push({ webPath, id, contentType, hex, originalBytes: data.length, compressedBytes: compressed.length })
+      }
+
+      let header = headerPreamble()
+      const outFile = headerOut
+        ? path.resolve(root, headerOut)
+        : path.join(distDir, headerName)
+      const artifactName = path.relative(root, outFile)
+
+      header += `\n// Artifact: ${artifactName}\n`
+      header += `// Total web asset payload: ${formatBytes(totalCompressedBytes)} across ${assetEntries.length} assets\n`
+
+      for (const entry of assetEntries) {
+        header += `\n// ${entry.webPath} (original ${entry.originalBytes} bytes) -> compressed ${entry.compressedBytes} bytes\n`
+        header += `static const unsigned char ${entry.id}[] PROGMEM = {\n${entry.hex}\n};\n`
+        header += `static const size_t ${entry.id}_len = ${entry.compressedBytes};\n`
       }
 
       header += '\n// File index for convenient iteration\n'
@@ -139,10 +271,12 @@ function viteEsp32HeaderPlugin(options = {}) {
       header += 'static const size_t WEB_ASSETS_COUNT = sizeof(WEB_ASSETS) / sizeof(WEB_ASSETS[0]);\n\n'
       header += headerEpilogue()
 
-      const outFile = path.join(distDir, headerName)
+      await fs.mkdir(path.dirname(outFile), { recursive: true })
       await fs.writeFile(outFile, header, 'utf8')
-      // eslint-disable-next-line no-console
-      console.log(`\n[${genBy}] Wrote ${path.relative(root, outFile)} with ${assetEntries.length} assets.`)
+      this.info(
+        `Wrote ${artifactName} with ${assetEntries.length} assets. ` +
+        `Total byte-array payload: ${formatBytes(totalCompressedBytes)}.`
+      )
     },
   }
 }
@@ -159,18 +293,13 @@ export default defineConfig(({ command, mode }) => {
   return {
     plugins: [
       htmlFeatureBlocksPlugin(env),
-      minifyTemplateLiterals(),
-      viteEsp32HeaderPlugin(),
-      babel({
-        babelConfig: {
-          babelrc: false,
-          configFile: false,
-          plugins: [
-            // Configure the decorators plugin with the desired version
-            ['@babel/plugin-proposal-decorators', { version: '2023-05' }],
-          ],
-        },
+      minifyTemplateLiterals({
+        include: ['src/**/*.js'],
+        exclude: ['node_modules/**'],
       }),
+      inlineStaticHtmlAssetsPlugin(),
+      viteEsp32HeaderPlugin({ headerOut: env.ELRS_WEB_HEADER_OUT }),
+      babelDecoratorsPlugin(),
       ...(command === 'serve'
         ? [
             env.VITE_ELRS_PROXY_TARGET
@@ -179,11 +308,16 @@ export default defineConfig(({ command, mode }) => {
           ]
         : []),
     ],
+    optimizeDeps: {
+      rolldownOptions: {
+        plugins: [htmlFeatureBlocksPlugin(env)],
+      },
+    },
     esbuild: {
       legalComments: 'none'
     },
     build: {
-      rollupOptions: {
+      rolldownOptions: {
         input: {
           app: path.resolve(__dirname, 'index.html'),
         },
@@ -191,36 +325,17 @@ export default defineConfig(({ command, mode }) => {
           entryFileNames: 'assets/[name]-[hash].js',
           chunkFileNames: 'assets/[name]-[hash].js',
           manualChunks(id) {
-            const p = id.split('\\').join('/');
-            const is = (name) => p.includes(`/src/pages/${name}.js`);
-            // Group General route modules
+            const p = id.split('\\').join('/')
             if (
-              is('binding-panel') ||
-              is('wifi-panel') ||
-              is('update-panel') ||
-              is('tx-options-panel') ||
-              is('models-panel') ||
-              is('buttons-panel') ||
-              is('rx-options-panel') ||
-              is('connections-panel') ||
-              is('serial-panel')
+              (p.includes('/src/utils/') && !p.endsWith('/hardware-schema.js')) ||
+              p.endsWith('/src/components/filedrag.js')
             ) {
-              return 'general';
+              return 'utils'
             }
-            // Group Advanced route modules
-            if (
-              is('hardware-layout') ||
-              is('continuous-wave') ||
-              is('lr1121-updater')
-            ) {
-              return 'advanced';
-            }
-            // Force everything else (including node_modules) into the main chunk
-            return 'main';
+            return undefined
           },
         },
       },
-      // Keep CSS separate; request was specifically about JS files
       cssCodeSplit: true,
       sourcemap: false,
     }

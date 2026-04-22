@@ -1,6 +1,5 @@
 import {html, LitElement} from 'lit';
 import {customElement, query, state} from 'lit/decorators.js';
-import FEATURES from "../features.js";
 import {post} from "../utils/feedback.js";
 import {elrsState} from "../utils/state.js";
 
@@ -56,16 +55,13 @@ export class ContinuousWave extends LitElement {
                         ` : html``}
                         <!-- FEATURE:HAS_LR1121 -->
                         ${elrsState.settings.has_high_band && elrsState.settings.has_low_band ? html`
-                            <br>
-                            Basic support is available for the LR1121 and setting 915 MHz.
-                            <br>
                             <div class="mui-checkbox">
                                 <input type="checkbox"
                                        name="setSubGHz"
                                        id="optionsSetSubGHz"
                                        ?disabled=${this.started}
                                        @click="${this._updateFreq}">
-                                <label for="optionsSetSubGHz">Set 915 MHz</label>
+                                <label for="optionsSetSubGHz">Set continuous wave center frequency to ${(this.data.center / 1000000)} MHz</label>
                             </div>
                         ` : ''}
                         <!-- /FEATURE:HAS_LR1121 -->
@@ -138,17 +134,17 @@ export class ContinuousWave extends LitElement {
 
     _updateFreq() {
         this.cwFreq = this.data.center
-        if (FEATURES.HAS_LR1121) {
-            if (elrsState.settings?.has_high_band && elrsState.settings?.has_low_band) {
-                if (!this.optionsSetSubGHz || !this.optionsSetSubGHz.checked)
-                {
-                    this.cwFreq = this.data.center2
-                }
-            }
-            else if (elrsState.settings?.has_high_band) {
+        // FEATURE:HAS_LR1121
+        if (elrsState.settings?.has_high_band && elrsState.settings?.has_low_band) {
+            if (!this.optionsSetSubGHz || !this.optionsSetSubGHz.checked)
+            {
                 this.cwFreq = this.data.center2
             }
         }
+        else if (elrsState.settings?.has_high_band) {
+            this.cwFreq = this.data.center2
+        }
+        // /FEATURE:HAS_LR1121
         this._measured()
     }
 
@@ -158,28 +154,34 @@ export class ContinuousWave extends LitElement {
         this.started = true
         const formdata = new FormData()
         formdata.append('radio', this.radio2?.checked ? 2 : 1)
-        if (FEATURES.HAS_LR1121) {
-            let subGHz = 0
-            if (elrsState.settings.has_high_band && elrsState.settings.has_low_band) {
-                subGHz = this.optionsSetSubGHz.checked ? 1 : 0
-            } else if (elrsState.settings.has_low_band) {
-                subGHz = 1
-            }
-            formdata.append('subGHz', subGHz)
+        // FEATURE:HAS_LR1121
+        let subGHz = 0
+        if (elrsState.settings.has_high_band && elrsState.settings.has_low_band) {
+            subGHz = this.optionsSetSubGHz.checked ? 1 : 0
+        } else if (elrsState.settings.has_low_band) {
+            subGHz = 1
         }
+        formdata.append('subGHz', subGHz)
+        // /FEATURE:HAS_LR1121
         post('/cw', formdata)
     }
 
     _measured() {
-        let xtalNominal = 52000000
-        let warn_offset = 90000
-        let bad_offset = 180000
-
-        if (FEATURES.HAS_SX127X || FEATURES.HAS_LR1121) {
-            xtalNominal = 32000000
-            warn_offset = 100000
-            bad_offset = 125000
-        }
+        // FEATURE:HAS_SX127X
+        const xtalNominal = 32000000
+        const warn_offset = 100000
+        const bad_offset = 125000
+        // /FEATURE:HAS_SX127X
+        // FEATURE:HAS_SX128X
+        const xtalNominal = 52000000
+        const warn_offset = 90000
+        const bad_offset = 180000
+        // /FEATURE:HAS_SX128X
+        // FEATURE:HAS_LR1121
+        const xtalNominal = 32000000
+        const warn_offset = 100000
+        const bad_offset = 125000
+        // /FEATURE:HAS_LR1121
 
         if (!this.measured) return
         const calc = (this.measured.value / this.cwFreq) * xtalNominal

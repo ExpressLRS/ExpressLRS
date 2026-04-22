@@ -1,4 +1,4 @@
-import FEATURES from "./src/features.js";
+import FEATURES from "./features.js";
 
 export function devMockPlugin() {
     function sendJSON(res, obj, status = 200) {
@@ -28,7 +28,7 @@ export function devMockPlugin() {
             mode: 'AP',
             rssi_dbm: -60,
             custom_hardware: true,
-            has_low_band: false,
+            has_low_band: true,
             has_high_band: true,
             reg_domain_low: 'EU868',
             reg_domain_high: 'CE_LBT',
@@ -178,7 +178,7 @@ export function devMockPlugin() {
                 }
                 // CW page mock endpoints
                 if (url === '/cw' && method === 'GET') {
-                    return sendJSON(res, {center: 915000000, center2: 2440000000, radios: 2})
+                    return sendJSON(res, {center: 868000000, center2: 2440000000, radios: 2})
                 }
                 if (url === '/cw' && method === 'POST') {
                     return sendText(res, 'CW started')
