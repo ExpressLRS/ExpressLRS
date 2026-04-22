@@ -5,7 +5,7 @@ import {_renderOptions} from "../utils/libs.js";
 import {postJSON} from "../utils/feedback.js";
 
 const ACTION_OPTIONS = ['Unused', 'Increase Power', 'Go to VTX Band Menu', 'Go to VTX Channel Menu',
-    'Send VTX Settings', 'Start WiFi', 'Enter Binding Mode', 'Start BLE Joystick'];
+    'Send VTX Settings', 'Start WiFi', 'Send Bind Command', 'Start BLE Joystick'];
 const LONG_PRESS_OPTIONS = [
     'for 0.5 seconds', 'for 1 second', 'for 1.5 seconds', 'for 2 seconds',
     'for 2.5 seconds', 'for 3 seconds', 'for 3.5 seconds', 'for 4 seconds',
