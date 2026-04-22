@@ -10,9 +10,6 @@ SX1280Driver *SX1280Driver::instance = NULL;
 
 RFAMP_hal RFAMP;
 
-constexpr uint8_t SX1280_TX_BUFFER_BASE = 0x00;
-constexpr uint8_t SX1280_RX_BUFFER_BASE = 0x80;
-
 //DEBUG_SX1280_OTA_TIMING
 
 /* Steps for startup
@@ -540,7 +537,7 @@ void ICACHE_RAM_ATTR SX1280Driver::RXnb()
 bool ICACHE_RAM_ATTR SX1280Driver::GetRxBufferAddr(SX12XX_Radio_Number_t radioNumber, uint8_t *rxBufferAddr)
 {
     WORD_ALIGNED_ATTR uint8_t status[2] = {0};
-    uint8_t const chipStatus = hal.ReadCommand(SX1280_RADIO_GET_RXBUFFERSTATUS, status, 2, radioNumber);
+    const auto chipStatus = hal.ReadCommand(SX1280_RADIO_GET_RXBUFFERSTATUS, status, 2, radioNumber);
 
     *rxBufferAddr = status[1];
 
