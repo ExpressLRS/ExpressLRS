@@ -1022,7 +1022,7 @@ static void EnterBindingMode()
 
   // Start attempting to bind
   // Lock the RF rate and freq while binding
-  SetRFLinkRate(enumRatetoIndex(RATE_BINDING));
+  SetRFLinkRate(enumRatetoIndexSafe(RATE_BINDING));
 
   // Start transmitting again
   hwTimer::resume();
@@ -1567,7 +1567,7 @@ void loop()
 #if defined(RADIO_LR1121)
     // Send half of the bind packets on the 2.4GHz domain
     if (BindingSendCount == BindingSpamAmount / 2) {
-      SetRFLinkRate(enumRatetoIndex(RATE_DUALBAND_BINDING));
+      SetRFLinkRate(enumRatetoIndexSafe(RATE_DUALBAND_BINDING));
       // Increment BindingSendCount so that SetRFLinkRate is only called once.
       BindingSendCount++;
     }

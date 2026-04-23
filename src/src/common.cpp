@@ -138,17 +138,38 @@ uint8_t get_elrs_HandsetRate_max(uint8_t rateIndex, uint32_t minInterval)
     return rateIndex;
 }
 
-uint8_t ICACHE_RAM_ATTR enumRatetoIndex(expresslrs_RFrates_e const eRate)
-{ // convert enum_rate to index
-    expresslrs_mod_settings_s const * ModParams;
+/***
+ * @brief Find the RFrates_e in the active ModParams table, returning true and its index if found
+ * @param eRate (in) expresslrs_RFrates_e of rate to find
+ * @param idx (out) Index into ExpressLRS_AirRateConfig[] of the rate, not modified if not found
+ * @return true if rate is in the ModParams table, false if not
+ */
+bool ICACHE_RAM_ATTR enumRatetoIndex(expresslrs_RFrates_e const eRate, uint8_t &idx)
+{
     for (uint8_t i = 0; i < RATE_MAX; i++)
     {
-        ModParams = get_elrs_airRateConfig(i);
+        expresslrs_mod_settings_s const *ModParams = &ExpressLRS_AirRateConfig[i];
         if (ModParams->enum_rate == eRate)
         {
-            return i;
+            idx = i;
+            return true;
         }
     }
+
+    return false;
+}
+
+/***
+ * @brief Find the RFrates_e in the active ModParams table, always returning a valid value
+ * @param eRate (in) expresslrs_RFrates_e of rate to find
+ * @return  A valid index into the ModParams table, even if the rate was not found
+ */
+uint8_t enumRatetoIndexSafe(expresslrs_RFrates_e const eRate)
+{
+    uint8_t idx;
+    if (enumRatetoIndex(eRate, idx))
+        return idx;
+
     // If 25Hz selected and not available, return the slowest rate available
     // else return the fastest rate available (500Hz selected but not available)
     return (eRate == RATE_LORA_900_25HZ) ? RATE_MAX - 1 : 0;
@@ -219,12 +240,16 @@ bool ICACHE_RAM_ATTR isDualRadio()
 
 
 #if defined(RADIO_LR1121)
-bool isSupportedRFRate(uint8_t index)
+/***
+ * @brief Return true if the rate index passed is valid for the current RF hardware
+ * @param index Index into the ModParams table
+ */
+bool ICACHE_RAM_ATTR isSupportedRFRate(uint8_t index)
 {
     const expresslrs_mod_settings_s *const ModParams = get_elrs_airRateConfig(index);
 
     // Dual Band modes not supported for hardware with only a single LR1121
-    if (GPIO_PIN_NSS_2 == UNDEF_PIN && RadioBandMod::isBDUAL(ModParams->radio_type))
+    if (!isDualRadio() && RadioBandMod::isBDUAL(ModParams->radio_type))
     {
         return false;
     }

@@ -298,7 +298,8 @@ uint8_t get_elrs_HandsetRate_max(uint8_t rateIndex, uint32_t minInterval);
 
 uint8_t TLMratioEnumToValue(expresslrs_tlm_ratio_e const enumval);
 uint8_t TLMBurstMaxForRateRatio(uint16_t const rateHz, uint8_t const ratioDiv);
-uint8_t enumRatetoIndex(expresslrs_RFrates_e const eRate);
+bool enumRatetoIndex(expresslrs_RFrates_e const eRate, uint8_t &idx);
+uint8_t enumRatetoIndexSafe(expresslrs_RFrates_e const eRate);
 
 extern bool connectionHasModelMatch;
 extern bool teamraceHasModelMatch;
