@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "dev:tx": "VITE_FEATURE_IS_TX=true VITE_FEATURE_HAS_LR1121=true VITE_FEATURE_HAS_SUBGHZ=true vite",
+    "dev:tx": "VITE_FEATURE_IS_TX=true VITE_FEATURE_HAS_LR1121=true vite",
     "dev:rx": "VITE_FEATURE_IS_TX=false VITE_FEATURE_HAS_SX128X=true VITE_FEATURE_IS_8285=true vite",
     "check:syntax": "node scripts/check-syntax.mjs",
     "check:lint": "node scripts/check-lint.mjs",
