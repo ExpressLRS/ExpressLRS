@@ -38,9 +38,7 @@ public:
     uint16_t GetIrqStatus(SX12XX_Radio_Number_t radioNumber);
     void ClearIrqStatus(uint16_t irqMask, SX12XX_Radio_Number_t radioNumber);
 
-    void GetStatus(SX12XX_Radio_Number_t radioNumber);
-
-    uint8_t GetRxBufferAddr(SX12XX_Radio_Number_t radioNumber);
+    bool GetRxBufferAddr(SX12XX_Radio_Number_t radioNumber, uint8_t *rxBufferAddr);
     int8_t GetRssiInst(SX12XX_Radio_Number_t radioNumber);
     void GetLastPacketStats();
     void CheckForSecondPacket();
@@ -48,7 +46,9 @@ public:
 private:
     // constant used for no power change pending
     // must not be a valid power register value
-    static const uint8_t PWRPENDING_NONE = 0x7f;
+    static constexpr uint8_t PWRPENDING_NONE = 0x7f;
+    static constexpr uint8_t SX1280_TX_BUFFER_BASE = 0x00;
+    static constexpr uint8_t SX1280_RX_BUFFER_BASE = 0x80;
 
     SX1280_RadioOperatingModes_t currOpmode;
     uint8_t packet_mode;

@@ -140,7 +140,7 @@ void ICACHE_RAM_ATTR SX1280Hal::WriteCommand(SX1280_RadioCommands_t command, uin
     BusyDelay(busyDelay);
 }
 
-void ICACHE_RAM_ATTR SX1280Hal::ReadCommand(SX1280_RadioCommands_t command, uint8_t *buffer, uint8_t size, SX12XX_Radio_Number_t radioNumber)
+SX1280_RadioStatus_t ICACHE_RAM_ATTR SX1280Hal::ReadCommand(SX1280_RadioCommands_t command, uint8_t *buffer, uint8_t size, SX12XX_Radio_Number_t radioNumber)
 {
     WORD_ALIGNED_ATTR uint8_t OutBuffer[WORD_PADDED(size + 2)] = {
         (uint8_t)command,
@@ -150,17 +150,9 @@ void ICACHE_RAM_ATTR SX1280Hal::ReadCommand(SX1280_RadioCommands_t command, uint
 
     WaitOnBusy(radioNumber);
 
-    if (command == SX1280_RADIO_GET_STATUS)
-    {
-        const auto RADIO_GET_STATUS_BUF_SIZEOF = 3; // special case for command == SX1280_RADIO_GET_STATUS, fixed 3 bytes packet size
-        SPIEx.read(radioNumber, OutBuffer, RADIO_GET_STATUS_BUF_SIZEOF);
-        buffer[0] = OutBuffer[0];
-    }
-    else
-    {
-        SPIEx.read(radioNumber, OutBuffer, size + 2); // first 2 bytes returned are status!
-        memcpy(buffer, OutBuffer + 2, size);
-    }
+    SPIEx.read(radioNumber, OutBuffer, size + 2); // first 2 bytes returned are status!
+    memcpy(buffer, OutBuffer + 2, size);
+    return (SX1280_RadioStatus_t)(OutBuffer[0] & SX1280_STATUS_MASK); // Discard reserved bits
 }
 
 void ICACHE_RAM_ATTR SX1280Hal::WriteRegister(uint16_t address, uint8_t *buffer, uint8_t size, SX12XX_Radio_Number_t radioNumber)

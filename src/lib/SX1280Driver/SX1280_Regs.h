@@ -23,6 +23,24 @@ typedef enum
     SX1280_RF_CAD,         //!< The radio is doing channel activity detection
 } SX1280_RadioStates_t;
 
+typedef enum
+{
+    SX1280_STATUS_CIRCUIT_MODE_STDBY_RC = 0x02 << 5,
+    SX1280_STATUS_CIRCUIT_MODE_STDBY_XOSC = 0x03 << 5,
+    SX1280_STATUS_CIRCUIT_MODE_FS = 0x04 << 5,
+    SX1280_STATUS_CIRCUIT_MODE_RX = 0x05 << 5,
+    SX1280_STATUS_CIRCUIT_MODE_TX = 0x06 << 5,
+
+    SX1280_STATUS_COMMAND_PROCESSING_SUCCESS = 0x01 << 2,
+    SX1280_STATUS_COMMAND_DATA_AVAILABLE = 0x02 << 2,
+    SX1280_STATUS_COMMAND_TIMEOUT = 0x03 << 2,
+    SX1280_STATUS_COMMAND_PROCESSING_ERROR = 0x04 << 2,
+    SX1280_STATUS_COMMAND_EXECUTE_FAILED = 0x05 << 2,
+    SX1280_STATUS_COMMAND_TX_DONE = 0x06 << 2,
+
+    SX1280_STATUS_MASK = 0xFC,
+} SX1280_RadioStatus_t;
+
 /*!
  * \brief Represents the operating mode the radio is actually running
  */
