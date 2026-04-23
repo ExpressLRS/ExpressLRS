@@ -54,6 +54,8 @@ static struct
     int8_t pin;
     uint8_t resolution_bits;
     uint32_t interval;
+    bool attached;
+    uint8_t tmr_idx;
 } ledc_config[LEDC_CHANNELS];
 static uint32_t ledcTimerConfigs[LEDC_TIMER_MAX] = {0};
 
@@ -177,6 +179,8 @@ pwm_channel_t PWMController::allocate(uint8_t pin, uint32_t frequency)
                     ledc_config[ch].pin = pin;
                     ledc_config[ch].resolution_bits = bits;
                     ledc_config[ch].interval = 1000000U / frequency;
+                    ledc_config[ch].attached = true;
+                    ledc_config[ch].tmr_idx = timer_idx;
                     DBGLN("allocate ledc_ch %d on pin %d using ledc_tim: %d, bits: %d", ch, pin, timer_idx, bits);
                     return ch | LEDC_CHANNEL_FLAG;
                 }
@@ -199,6 +203,7 @@ void PWMController::release(pwm_channel_t channel)
         ledc_config[ch].pin = -1;
         ledc_config[ch].resolution_bits = 0;
         ledc_config[ch].interval = 0;
+        ledc_config[ch].attached = false;
     }
 #if SOC_MCPWM_SUPPORTED
     else if (IS_MCPWM_CHANNEL(channel))
@@ -214,12 +219,39 @@ void PWMController::release(pwm_channel_t channel)
     }
 }
 
+static void setLedcMapped(pwm_channel_t channel, bool active, uint32_t raw)
+{
+    auto ch = LEDC_CHANNEL(channel);
+
+    if (active)
+    {
+        if (!ledc_config[ch].attached)
+        {
+            ledcAttachPinEx(ledc_config[ch].pin, ch, (ledc_timer_t)(ledc_config[ch].tmr_idx));
+            ledc_config[ch].attached = true;
+        }
+
+        ledcWrite(ch, raw);
+    }
+    else
+    {
+        if (ledc_config[ch].attached)
+        {
+            ledcDetachPin(ledc_config[ch].pin);
+            ledc_config[ch].attached = false;
+        }
+    }
+}
+
 void PWMController::setDuty(pwm_channel_t channel, uint16_t duty)
 {
     if (IS_LEDC_CHANNEL(channel))
     {
         auto ch = LEDC_CHANNEL(channel);
-        ledcWrite(ch, map(duty, 0, 1000, 0, (1 << ledc_config[ch].resolution_bits) - 1));
+        uint32_t maxRaw = (1U << ledc_config[ch].resolution_bits) - 1;
+        uint32_t raw = map(duty, 0, 1000, 0, maxRaw);
+
+        setLedcMapped(channel, duty > 0, raw);
     }
 #if SOC_MCPWM_SUPPORTED
     else if (IS_MCPWM_CHANNEL(channel))
@@ -235,7 +267,10 @@ void PWMController::setMicroseconds(pwm_channel_t channel, uint16_t microseconds
     if (IS_LEDC_CHANNEL(channel))
     {
         auto ch = LEDC_CHANNEL(channel);
-        ledcWrite(ch, map(microseconds, 0, ledc_config[ch].interval, 0, (1 << ledc_config[ch].resolution_bits) - 1));
+        uint32_t maxRaw = (1U << ledc_config[ch].resolution_bits) - 1;
+        uint32_t raw = map(microseconds, 0, ledc_config[ch].interval, 0, maxRaw);
+
+        setLedcMapped(channel, microseconds > 0, raw);
     }
 #if SOC_MCPWM_SUPPORTED
     else if (IS_MCPWM_CHANNEL(channel))
