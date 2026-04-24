@@ -1,0 +1,42 @@
+{
+  "build": {
+    "core": "stm32",
+    "cpu": "cortex-m0plus",
+    "extra_flags": "-DSTM32L0xx -DSTM32L071xx",
+    "f_cpu": "32000000L",
+    "framework_extra_flags": {
+      "arduino": "-D__CORTEX_SC=0"
+    },
+    "mcu": "stm32l071k8",
+    "product_line": "STM32L07xkB",
+    "variant": "RAK4200"
+  },
+  "connectivity": [
+    "can"
+  ],
+  "debug": {
+    "jlink_device": "STM32L071K8",
+    "openocd_target": "stm32l0x",
+    "svd_path": "STM32L071x.svd"
+  },
+  "frameworks": [
+    "arduino",
+    "cmsis",
+    "stm32cube"
+  ],
+  "name": "RAK4200",
+  "upload": {
+    "maximum_ram_size": 20480,
+    "maximum_size": 65536,
+    "protocol": "serial",
+    "protocols": [
+      "jlink",
+      "stlink",
+      "blackmagic",
+      "dfu",
+      "serial"
+    ]
+  },
+  "url": "https://www.st.com/en/microcontrollers-microprocessors/stm32l071k8.html",
+  "vendor": "ST"
+}

@@ -1,0 +1,2 @@
+include *.py
+recursive-include external *.py *.json

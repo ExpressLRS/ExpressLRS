@@ -1,0 +1,59 @@
+{
+  "build": {
+    "core": "stm32",
+    "cpu": "cortex-m3",
+    "extra_flags": "-DSTM32F1=1 -DSTM32F1xx=1 -DSTM32F103xB=1 -DARDUINO_BLUEPILL_F103C8=1",
+    "f_cpu": "72000000L",
+    "hwids": [
+      [
+        "0x1EAF",
+        "0x0003"
+      ],
+      [
+        "0x1EAF",
+        "0x0004"
+      ]
+    ],
+    "ldscript": "linker/stm32.ld",
+    "mcu": "stm32f103c8t6",
+    "product_line": "STM32F103xB",
+    "variants_dir": "variants",
+    "variant": "F103XX",
+    "zephyr": {
+       "variant": "stm32_min_dev_blue"
+    }
+  },
+  "debug": {
+    "default_tools": [
+      "stlink"
+    ],
+    "jlink_device": "STM32F103C8",
+    "openocd_extra_args": [
+      "-c",
+      "reset_config none"
+    ],
+    "openocd_target": "stm32f1x",
+    "svd_path": "STM32F103xx.svd"
+  },
+  "frameworks": [
+    "arduino",
+    "cmsis",
+    "libopencm3",
+    "stm32cube",
+    "zephyr"
+  ],
+  "name": "BL_F103C8",
+  "upload": {
+    "maximum_ram_size": 20480,
+    "maximum_size": 16384,
+    "protocol": "stlink",
+    "protocols": [
+      "jlink",
+      "stlink",
+      "blackmagic",
+      "dfu"
+    ]
+  },
+  "url": "http://www.st.com/content/st_com/en/products/microcontrollers/stm32-32-bit-arm-cortex-mcus/stm32f1-series/stm32f103/stm32f103c8.html",
+  "vendor": "Generic"
+}
