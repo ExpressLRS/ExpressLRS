@@ -412,8 +412,8 @@ void LR2021Driver::SetDioAsRfSwitch()
     constexpr uint8_t default_rfsw_ctrl[] {
         0x10,   // DIO5 = 2.4 TX
         0x08,   // DIO6 = 2.4 RX
-        0x02,   // DIO7 = subGHz TX
-        0x04,   // DIO8 = subGHz RX
+        0x04,   // DIO7 = subGHz TX
+        0x02,   // DIO8 = subGHz RX
         0xFF,   // DIO9 = IRQ pin
         0x00,   // DIO10 = nothing
         0x00,   // DIO11 = nothing
