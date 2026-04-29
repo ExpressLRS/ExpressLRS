@@ -225,9 +225,9 @@ static folderParameter luaVtxFolder = {
 };
 
 static selectionParameter luaVtxBand = {
-    {"Band", CRSF_TEXT_SELECTION},
+    {"Band/Enable", CRSF_TEXT_SELECTION},
     0, // value
-    "Off;A;B;E;F;R;L",
+    "Disabled;A;B;E;F;R;L",
     STR_EMPTYSPACE
 };
 
@@ -444,27 +444,28 @@ void TXModuleEndpoint::updateTlmBandwidth()
 
 void TXModuleEndpoint::updateBackpackOpts()
 {
-  if (config.GetBackpackDisable())
-  {
-    // If backpack is disabled, set all the Backpack select options to "Disabled"
-    LUA_FIELD_HIDE(luaDvrAux);
-    LUA_FIELD_HIDE(luaDvrStartDelay);
-    LUA_FIELD_HIDE(luaDvrStopDelay);
-    LUA_FIELD_HIDE(luaHeadTrackingEnableChannel);
-    LUA_FIELD_HIDE(luaHeadTrackingStartChannel);
-    LUA_FIELD_HIDE(luaBackpackTelemetry);
-    LUA_FIELD_HIDE(luaBackpackVersion);
-  }
-  else
-  {
-    LUA_FIELD_SHOW(luaDvrAux);
-    LUA_FIELD_SHOW(luaDvrStartDelay);
-    LUA_FIELD_SHOW(luaDvrStopDelay);
-    LUA_FIELD_SHOW(luaHeadTrackingEnableChannel);
-    LUA_FIELD_SHOW(luaHeadTrackingStartChannel);
-    LUA_FIELD_SHOW(luaBackpackTelemetry);
-    LUA_FIELD_SHOW(luaBackpackVersion);
-  }
+  const bool isBackpackEnabled = config.GetBackpackDisable() == false;
+
+  LUA_FIELD_VISIBLE(luaDvrAux, isBackpackEnabled);
+  LUA_FIELD_VISIBLE(luaDvrStartDelay, isBackpackEnabled);
+  LUA_FIELD_VISIBLE(luaDvrStopDelay, isBackpackEnabled);
+  LUA_FIELD_VISIBLE(luaHeadTrackingEnableChannel, isBackpackEnabled);
+  LUA_FIELD_VISIBLE(luaHeadTrackingStartChannel, isBackpackEnabled);
+  LUA_FIELD_VISIBLE(luaBackpackTelemetry, isBackpackEnabled);
+  LUA_FIELD_VISIBLE(luaBackpackVersion, isBackpackEnabled);
+}
+
+void TXModuleEndpoint::updateVtxAdminOpts()
+{
+  const bool isVtxAdminEnabled = config.GetVtxBand() != 0;
+
+  LUA_FIELD_VISIBLE(luaVtxChannel, isVtxAdminEnabled);
+  LUA_FIELD_VISIBLE(luaVtxPwr, isVtxAdminEnabled);
+  LUA_FIELD_VISIBLE(luaVtxPit, isVtxAdminEnabled);
+  // Pit mode can only be sent as part of the power byte
+  LUA_FIELD_VISIBLE(luaVtxPit, isVtxAdminEnabled && config.GetVtxPower() != 0);
+  // Can't toggle a COMMAND type, the lua will not refresh commands
+  //LUA_FIELD_VISIBLE(luaVtxSend, isVtxAdminEnabled);
 }
 
 static void setBleJoystickMode()
@@ -537,7 +538,11 @@ void TXModuleEndpoint::handleSimpleSendCmd(propertiesCommon *item, uint8_t arg)
     }
     else if ((void *)item == (void *)&luaVtxSend)
     {
-      VtxTriggerSend();
+      // If VtxAdmin enabled then send, otherwise show brief "Not enabled" message
+      if (config.GetVtxBand() != 0)
+        VtxTriggerSend();
+      else
+        msg = "Not enabled";
     }
     else if ((void *)item == (void *)&luaRxWebUpdate)
     {
@@ -727,16 +732,16 @@ void TXModuleEndpoint::SetDynamicPower(uint8_t idx)
 }
 
 /***
- * @brief: Update the dynamic strings used for folder names and labels
+ * @brief: Update the dynamic strings used for folder names, as well as labels and item visibility
  ***/
-void TXModuleEndpoint::updateFolderNames()
+void TXModuleEndpoint::updateFolderNamesAndVisibility()
 {
   updateFolderName_TxPower();
   updateFolderName_VtxAdmin();
 
-  // These aren't folder names, just string labels slapped in the units field generally
   updateTlmBandwidth();
   updateBackpackOpts();
+  updateVtxAdminOpts();
 }
 
 static void recalculatePacketRateOptions(int minInterval)
@@ -1028,8 +1033,6 @@ void TXModuleEndpoint::updateParameters()
   setTextSelectionValue(&luaVtxBand, config.GetVtxBand());
   setUint8Value(&luaVtxChannel, config.GetVtxChannel() + 1);
   setTextSelectionValue(&luaVtxPwr, config.GetVtxPower());
-  // Pit mode can only be sent as part of the power byte
-  LUA_FIELD_VISIBLE(luaVtxPit, config.GetVtxPower() != 0);
   setTextSelectionValue(&luaVtxPit, config.GetVtxPitmode());
   if (OPT_USE_TX_BACKPACK)
   {
@@ -1042,5 +1045,5 @@ void TXModuleEndpoint::updateParameters()
     setTextSelectionValue(&luaBackpackTelemetry, config.GetBackpackDisable() ? 0 : config.GetBackpackTlmMode());
     setStringValue(&luaBackpackVersion, backpackVersion);
   }
-  updateFolderNames();
+  updateFolderNamesAndVisibility();
 }

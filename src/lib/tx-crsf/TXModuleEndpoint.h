@@ -28,7 +28,7 @@ public:
     void handleMessage(const crsf_header_t *message) override;
     void RcPacketToChannelsData(const crsf_header_t *message);
 
-    void updateFolderNames();
+    void updateFolderNamesAndVisibility();
     void registerParameters() override;
     void updateParameters() override;
 
@@ -57,6 +57,7 @@ private:
     void handleSimpleSendCmd(propertiesCommon *item, uint8_t arg);
     void updateTlmBandwidth();
     void updateBackpackOpts();
+    void updateVtxAdminOpts();
 };
 
 extern TXModuleEndpoint crsfTransmitter;

@@ -162,7 +162,7 @@ static const char *smartfan_string[] = {
 };
 
 static const char *band_string[] = {
-    "OFF",
+    "Disabled",
     "A",
     "B",
     "E",
