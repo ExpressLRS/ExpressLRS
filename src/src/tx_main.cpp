@@ -27,6 +27,7 @@
 void checkBackpackUpdate() {}
 void sendCRSFTelemetryToBackpack(uint8_t *) {}
 void sendMAVLinkTelemetryToBackpack(uint8_t *) {}
+void processTrainerChannelsPacket(uint32_t, const mspPacket_t *) {}
 #endif
 
 #include "CRSFParser.h"
@@ -59,6 +60,20 @@ extern bool webserverPreventAutoStart;
 //// MSP Data Handling ///////
 bool NextPacketIsDataUl = false;  // if true the next packet will contain the uplink data (instead of channels)
 char backpackVersion[32] = "";
+
+typedef struct {
+  bool paired;
+  bool pairing;
+  uint8_t peerLastByte;
+} backpackTrainerStatus_t;
+
+backpackTrainerStatus_t backpackTrainerStatus = {};
+char backpackTrainerStatusText[16] = "Not paired";
+
+bool BackpackTrainerIsPaired()
+{
+  return backpackTrainerStatus.paired;
+}
 
 ////////////SYNC PACKET/////////
 /// sync packet spamming on mode change vars ///
@@ -1097,6 +1112,40 @@ void ProcessMSPPacket(uint32_t now, mspPacket_t *packet)
     memcpy(backpackVersion, packet->payload, min((size_t)packet->payloadSize, sizeof(backpackVersion)-1));
   }
 #endif
+  if (packet->function == MSP_ELRS_BACKPACK_TRAINER_CHANNELS)
+  {
+    processTrainerChannelsPacket(now, packet);
+  }
+  if (packet->function == MSP_ELRS_BACKPACK_TRAINER_STATUS)
+  {
+    if (packet->payloadSize == 3)
+    {
+      const bool prevPaired  = backpackTrainerStatus.paired;
+      const bool prevPairing = backpackTrainerStatus.pairing;
+      const uint8_t prevByte = backpackTrainerStatus.peerLastByte;
+      char prevText[sizeof(backpackTrainerStatusText)];
+      memcpy(prevText, backpackTrainerStatusText, sizeof(prevText));
+
+      backpackTrainerStatus.paired    = packet->payload[0] != 0;
+      backpackTrainerStatus.pairing   = packet->payload[1] != 0;
+      backpackTrainerStatus.peerLastByte = backpackTrainerStatus.paired ? packet->payload[2] : 0;
+
+      const bool changed = (prevPaired  != backpackTrainerStatus.paired)
+                        || (prevPairing != backpackTrainerStatus.pairing)
+                        || (prevByte    != backpackTrainerStatus.peerLastByte);
+
+      if (backpackTrainerStatus.paired)
+        snprintf(backpackTrainerStatusText, sizeof(backpackTrainerStatusText), "Paired:%02X", backpackTrainerStatus.peerLastByte);
+      else if (backpackTrainerStatus.pairing)
+        snprintf(backpackTrainerStatusText, sizeof(backpackTrainerStatusText), "Pairing...");
+      else
+        snprintf(backpackTrainerStatusText, sizeof(backpackTrainerStatusText), "Not paired");
+
+      const bool textChanged = strncmp(prevText, backpackTrainerStatusText, sizeof(backpackTrainerStatusText)) != 0;
+      if (changed || textChanged)
+        devicesTriggerEvent(EVENT_BACKPACK_TRAINER_STATUS_CHANGED);
+    }
+  }
 }
 
 void ParseMSPData(uint8_t *buf, uint8_t size)
