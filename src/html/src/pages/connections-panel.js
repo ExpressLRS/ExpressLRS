@@ -190,11 +190,12 @@ class ConnectionsPanel extends LitElement {
             modes.push(undefined)  // true PWM (not yet supported)
             modes.push(features & 32 ? 'Serial2 RX' : undefined)
             modes.push(features & 64 ? 'Serial2 TX' : undefined)
+            const selectedMode = modes[mode] ? mode : 0
 
             htmlFields.push(html`
                 <tr><td class="mui--text-center mui--text-title">${index + 1}</td>
                 <td>${this._generateFeatureBadges(features)}</td>
-                <td>${this._enumSelectGenerate(`pwm_${index}_mode`, mode, modes, (e) => {this._pinModeChange(e.target, index)})}</td>
+                <td>${this._enumSelectGenerate(`pwm_${index}_mode`, selectedMode, modes, (e) => {this._pinModeChange(e.target, index)})}</td>
                 <td>${this._enumSelectGenerate(`pwm_${index}_ch`, ch,
                         ['ch1', 'ch2', 'ch3', 'ch4',
                             'ch5 (AUX1)', 'ch6 (AUX2)', 'ch7 (AUX3)', 'ch8 (AUX4)',
@@ -206,7 +207,7 @@ class ConnectionsPanel extends LitElement {
                         (e) => {this._failsafeModeChange(e.target, index)})}</td>
                 <td><div class="mui-textfield compact"><input id="pwm_${index}_fs" value="${failsafe}" size="6" class="pwmitm" /></div></td></tr>
             `);
-            this.pinModes[index] = mode
+            this.pinModes[index] = selectedMode
         });
         return htmlFields
     }
