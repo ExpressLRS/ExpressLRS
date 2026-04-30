@@ -41,6 +41,7 @@
 #define HAS_RADIO (GPIO_PIN_SCK != UNDEF_PIN)
 
 extern char backpackVersion[];
+extern char backpackTrainerStatusText[];
 
 #if defined(Regulatory_Domain_EU_CE_2400)
 #if defined(RADIO_LR1121)
@@ -225,9 +226,9 @@ static folderParameter luaVtxFolder = {
 };
 
 static selectionParameter luaVtxBand = {
-    {"Band/Enable", CRSF_TEXT_SELECTION},
+    {"Band", CRSF_TEXT_SELECTION},
     0, // value
-    "Disabled;A;B;E;F;R;L",
+    "Off;A;B;E;F;R;L",
     STR_EMPTYSPACE
 };
 
@@ -311,6 +312,23 @@ static stringParameter luaBackpackVersion = {
     {"Version", CRSF_INFO},
     backpackVersion};
 
+static selectionParameter luaTrainerMode = {
+    {"Trainer Mode", CRSF_TEXT_SELECTION},
+    0,
+    "Off;Master;Slave",
+    STR_EMPTYSPACE};
+
+static commandParameter luaTrainerPair = {
+    {"Pair Trainer", CRSF_COMMAND},
+    lcsIdle,
+    STR_EMPTYSPACE};
+
+static commandParameter luaTrainerForget = {
+    {"Forget Pair", CRSF_COMMAND},
+    lcsIdle,
+    STR_EMPTYSPACE};
+
+
 //---------------------------- BACKPACK ------------------
 
 extern TxConfig config;
@@ -320,6 +338,9 @@ extern uint8_t adjustPacketRateForBaud(uint8_t rate);
 extern uint8_t adjustSwitchModeForAirRate(OtaSwitchMode_e eSwitchMode, uint8_t packetSize);
 extern bool RxWiFiReadyToSend;
 extern bool BackpackTelemReadyToSend;
+extern bool BackpackTrainerPairReadyToSend;
+extern bool BackpackTrainerForgetReadyToSend;
+extern bool BackpackTrainerIsPaired();
 extern bool TxBackpackWiFiReadyToSend;
 extern bool VRxBackpackWiFiReadyToSend;
 extern void setWifiUpdateMode();
@@ -356,15 +377,24 @@ void TXModuleEndpoint::setWarningFlag(const warningFlags flag, const bool value)
 
 void TXModuleEndpoint::sendELRSstatus(const crsf_addr_e origin)
 {
-  constexpr const char *messages[] = { //higher order = higher priority
-    "",                   //status2 = connected status
-    "",                   //status1, reserved for future use
-    "Model Mismatch",     //warning3, model mismatch
-    "[ ! Armed ! ]",      //warning2, AUX1 high / armed
-    "",           //warning1, reserved for future use
-    "Not while connected",  //critical warning3, trying to change a protected value while connected
-    "Baud rate too low",  //critical warning2, changing packet rate and baud rate too low
-    ""   //critical warning1, reserved for future use
+  setWarningFlag(LUA_FLAG_MODEL_MATCH, connectionState == connected && connectionHasModelMatch == false);
+  setWarningFlag(LUA_FLAG_CONNECTED, connectionState == connected);
+  setWarningFlag(LUA_FLAG_ISARMED, isArmed);
+  const bool trainerStatusActive = OPT_USE_TX_BACKPACK
+                                && !config.GetBackpackDisable()
+                                && config.GetBackpackTlmMode() == BACKPACK_TELEM_MODE_ESPNOW
+                                && config.GetTrainerMode() != TRAINER_MODE_OFF;
+  setWarningFlag(LUA_FLAG_TRAINER_STATUS, trainerStatusActive);
+
+  const char *messages[] = {
+    "",
+    backpackTrainerStatusText,
+    "Model Mismatch",
+    "[ ! Armed ! ]",
+    "",
+    "Not while connected",
+    "Baud rate too low",
+    ""
   };
   auto warningInfo = "";
 
@@ -379,10 +409,6 @@ void TXModuleEndpoint::sendELRSstatus(const crsf_addr_e origin)
   const uint8_t payloadSize = sizeof(elrsStatusParameter) + strlen(warningInfo) + 1;
   uint8_t buffer[sizeof(crsf_ext_header_t) + payloadSize + 1];
   const auto params = (elrsStatusParameter *)&buffer[sizeof(crsf_ext_header_t)];
-
-  setWarningFlag(LUA_FLAG_MODEL_MATCH, connectionState == connected && connectionHasModelMatch == false);
-  setWarningFlag(LUA_FLAG_CONNECTED, connectionState == connected);
-  setWarningFlag(LUA_FLAG_ISARMED, isArmed);
 
   params->pktsBad = CRSFHandset::BadPktsCountResult;
   params->pktsGood = htobe16(CRSFHandset::GoodPktsCountResult);
@@ -442,6 +468,35 @@ void TXModuleEndpoint::updateTlmBandwidth()
   }
 }
 
+static bool trainerBackpackOptionsEnabled()
+{
+  return !config.GetBackpackDisable() && config.GetBackpackTlmMode() == BACKPACK_TELEM_MODE_ESPNOW;
+}
+
+static void applyTrainerVisibility()
+{
+  if (!trainerBackpackOptionsEnabled())
+  {
+    LUA_FIELD_HIDE(luaTrainerMode);
+    LUA_FIELD_HIDE(luaTrainerPair);
+    LUA_FIELD_HIDE(luaTrainerForget);
+    return;
+  }
+
+  LUA_FIELD_SHOW(luaTrainerMode);
+
+  if (config.GetTrainerMode() == TRAINER_MODE_OFF)
+  {
+    LUA_FIELD_HIDE(luaTrainerPair);
+    LUA_FIELD_HIDE(luaTrainerForget);
+  }
+  else
+  {
+    LUA_FIELD_SHOW(luaTrainerPair);
+    LUA_FIELD_SHOW(luaTrainerForget);
+  }
+}
+
 void TXModuleEndpoint::updateBackpackOpts()
 {
   const bool isBackpackEnabled = config.GetBackpackDisable() == false;
@@ -453,6 +508,17 @@ void TXModuleEndpoint::updateBackpackOpts()
   LUA_FIELD_VISIBLE(luaHeadTrackingStartChannel, isBackpackEnabled);
   LUA_FIELD_VISIBLE(luaBackpackTelemetry, isBackpackEnabled);
   LUA_FIELD_VISIBLE(luaBackpackVersion, isBackpackEnabled);
+
+  if (isBackpackEnabled)
+  {
+    applyTrainerVisibility();
+  }
+  else
+  {
+    LUA_FIELD_HIDE(luaTrainerMode);
+    LUA_FIELD_HIDE(luaTrainerPair);
+    LUA_FIELD_HIDE(luaTrainerForget);
+  }
 }
 
 void TXModuleEndpoint::updateVtxAdminOpts()
@@ -467,6 +533,7 @@ void TXModuleEndpoint::updateVtxAdminOpts()
   // Can't toggle a COMMAND type, the lua will not refresh commands
   //LUA_FIELD_VISIBLE(luaVtxSend, isVtxAdminEnabled);
 }
+
 
 static void setBleJoystickMode()
 {
@@ -526,8 +593,84 @@ void TXModuleEndpoint::handleWifiBle(propertiesCommon *item, uint8_t arg)
 
 void TXModuleEndpoint::handleSimpleSendCmd(propertiesCommon *item, uint8_t arg)
 {
+  commandParameter *cmd = (commandParameter *)item;
   const char *msg = "Sending...";
   static uint32_t lastLcsPoll;
+
+  if ((void *)item == (void *)&luaTrainerPair && OPT_USE_TX_BACKPACK)
+  {
+    if (!trainerBackpackOptionsEnabled() || config.GetTrainerMode() == TRAINER_MODE_OFF)
+    {
+      sendCommandResponse(cmd, lcsIdle, STR_EMPTYSPACE);
+      return;
+    }
+
+    if (arg == lcsCancel)
+    {
+      if (!BackpackTrainerIsPaired())
+      {
+        BackpackTrainerForgetReadyToSend = true;
+      }
+      sendCommandResponse(cmd, lcsIdle, STR_EMPTYSPACE);
+      return;
+    }
+
+    if (arg == lcsClick || arg == lcsConfirmed)
+    {
+      BackpackTrainerPairReadyToSend = true;
+      sendCommandResponse(cmd, lcsExecuting, "Pairing...");
+      return;
+    }
+
+    const bool trainerPaired = BackpackTrainerIsPaired();
+    sendCommandResponse(cmd, trainerPaired ? lcsIdle : lcsExecuting,
+                        trainerPaired ? STR_EMPTYSPACE : backpackTrainerStatusText);
+    return;
+  }
+
+  if ((void *)item == (void *)&luaTrainerForget && OPT_USE_TX_BACKPACK)
+  {
+    static uint32_t forgetStart;
+
+    if (!trainerBackpackOptionsEnabled())
+    {
+      forgetStart = 0;
+      sendCommandResponse(cmd, lcsIdle, STR_EMPTYSPACE);
+      return;
+    }
+
+    if (arg == lcsCancel)
+    {
+      forgetStart = 0;
+      sendCommandResponse(cmd, lcsIdle, STR_EMPTYSPACE);
+      return;
+    }
+
+    if (arg == lcsClick || arg == lcsConfirmed)
+    {
+      BackpackTrainerForgetReadyToSend = true;
+      forgetStart = millis();
+      sendCommandResponse(cmd, lcsExecuting, "Forgetting...");
+      return;
+    }
+
+    if (!BackpackTrainerIsPaired())
+    {
+      forgetStart = 0;
+      sendCommandResponse(cmd, lcsIdle, STR_EMPTYSPACE);
+      return;
+    }
+
+    if (forgetStart != 0 && millis() - forgetStart > 5000)
+    {
+      forgetStart = 0;
+      sendCommandResponse(cmd, lcsIdle, STR_EMPTYSPACE);
+      return;
+    }
+
+    sendCommandResponse(cmd, lcsExecuting, "Forgetting...");
+    return;
+  }
   if (arg < lcsCancel)
   {
     lastLcsPoll = millis();
@@ -538,11 +681,7 @@ void TXModuleEndpoint::handleSimpleSendCmd(propertiesCommon *item, uint8_t arg)
     }
     else if ((void *)item == (void *)&luaVtxSend)
     {
-      // If VtxAdmin enabled then send, otherwise show brief "Not enabled" message
-      if (config.GetVtxBand() != 0)
-        VtxTriggerSend();
-      else
-        msg = "Not enabled";
+      VtxTriggerSend();
     }
     else if ((void *)item == (void *)&luaRxWebUpdate)
     {
@@ -556,11 +695,11 @@ void TXModuleEndpoint::handleSimpleSendCmd(propertiesCommon *item, uint8_t arg)
     {
       VRxBackpackWiFiReadyToSend = true;
     }
-    sendCommandResponse((commandParameter *)item, lcsExecuting, msg);
+    sendCommandResponse(cmd, lcsExecuting, msg);
   } /* if doExecute */
   else if(arg == lcsCancel || ((millis() - lastLcsPoll)> 2000))
   {
-    sendCommandResponse((commandParameter *)item, lcsIdle, STR_EMPTYSPACE);
+    sendCommandResponse(cmd, lcsIdle, STR_EMPTYSPACE);
   }
 }
 
@@ -732,16 +871,16 @@ void TXModuleEndpoint::SetDynamicPower(uint8_t idx)
 }
 
 /***
- * @brief: Update the dynamic strings used for folder names, as well as labels and item visibility
+ * @brief: Update the dynamic strings used for folder names and labels
  ***/
-void TXModuleEndpoint::updateFolderNamesAndVisibility()
+void TXModuleEndpoint::updateFolderNames()
 {
   updateFolderName_TxPower();
   updateFolderName_VtxAdmin();
 
+  // These aren't folder names, just string labels slapped in the units field generally
   updateTlmBandwidth();
   updateBackpackOpts();
-  updateVtxAdminOpts();
 }
 
 static void recalculatePacketRateOptions(int minInterval)
@@ -968,10 +1107,22 @@ void TXModuleEndpoint::registerParameters()
       registerParameter(
             &luaBackpackTelemetry, [](propertiesCommon *item, uint8_t arg) {
                 config.SetBackpackTlmMode(arg);
+                applyTrainerVisibility();
                 BackpackTelemReadyToSend = true;
             }, luaBackpackFolder.common.id);
 
       registerParameter(&luaBackpackVersion, nullptr, luaBackpackFolder.common.id);
+
+      registerParameter(
+          &luaTrainerMode, [](propertiesCommon *item, uint8_t arg) {
+              if (trainerBackpackOptionsEnabled())
+              {
+                  config.SetTrainerMode(arg);
+                  applyTrainerVisibility();
+              }
+          }, luaBackpackFolder.common.id);
+      registerParameter(&luaTrainerPair, sendCallback, luaBackpackFolder.common.id);
+      registerParameter(&luaTrainerForget, sendCallback, luaBackpackFolder.common.id);
     }
   }
 
@@ -1033,6 +1184,8 @@ void TXModuleEndpoint::updateParameters()
   setTextSelectionValue(&luaVtxBand, config.GetVtxBand());
   setUint8Value(&luaVtxChannel, config.GetVtxChannel() + 1);
   setTextSelectionValue(&luaVtxPwr, config.GetVtxPower());
+  // Pit mode can only be sent as part of the power byte
+  LUA_FIELD_VISIBLE(luaVtxPit, config.GetVtxPower() != 0);
   setTextSelectionValue(&luaVtxPit, config.GetVtxPitmode());
   if (OPT_USE_TX_BACKPACK)
   {
@@ -1044,6 +1197,7 @@ void TXModuleEndpoint::updateParameters()
     setTextSelectionValue(&luaHeadTrackingStartChannel, config.GetBackpackDisable() ? 0 : config.GetPTRStartChannel());
     setTextSelectionValue(&luaBackpackTelemetry, config.GetBackpackDisable() ? 0 : config.GetBackpackTlmMode());
     setStringValue(&luaBackpackVersion, backpackVersion);
+    setTextSelectionValue(&luaTrainerMode, config.GetBackpackDisable() ? 0 : config.GetTrainerMode());
   }
-  updateFolderNamesAndVisibility();
+  updateFolderNames();
 }

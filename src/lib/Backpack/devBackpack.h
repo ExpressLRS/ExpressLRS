@@ -10,6 +10,8 @@
  */
 void processPanTiltRollPacket(uint32_t now, const mspPacket_t *packet);
 
+void processTrainerChannelsPacket(uint32_t now, const mspPacket_t *packet);
+
 /**
  * @brief perform check to see if a backpack firmware update has been requested.
  *
@@ -36,3 +38,6 @@ void sendCRSFTelemetryToBackpack(const uint8_t *data);
 void sendMAVLinkTelemetryToBackpack(const uint8_t *data);
 
 extern device_t Backpack_device;
+
+extern bool BackpackTrainerPairReadyToSend;
+extern bool BackpackTrainerForgetReadyToSend;
