@@ -267,6 +267,19 @@ export function devMockPlugin() {
                         return sendText(res, 'Config saved')
                     })
                 }
+                if (method === 'GET' && url === '/cw') {
+                    const cwConfig = {
+                        radios: hardwareState.radio_nss_2 === undefined ? 1 : 2,
+                        center: FEATURES.HAS_SX128X ? 2440000000 : 868000000
+                    }
+                    if (FEATURES.HAS_LR1121) {
+                        cwConfig.center2 = 2400000000
+                    }
+                    return sendJSON(res, cwConfig)
+                }
+                if (method === 'POST' && url === '/cw') {
+                    return readBody().then(() => sendText(res, 'CW started'))
+                }
                 if (method === 'GET' && url === '/hardware.json') {
                     return sendJSON(res, hardwareState)
                 }
