@@ -1,5 +1,5 @@
 import {LitElement, html, svg} from 'lit'
-import {customElement, query} from "lit/decorators.js"
+import {customElement, query, state} from "lit/decorators.js"
 import {initRipple} from './utils/ripple.js'
 import {initMuiSelect} from './utils/select.js'
 import {elrsState, formatBand} from './utils/state.js'
@@ -20,7 +20,7 @@ export class App extends LitElement {
     menu = svg`<svg width="40" height="40" viewBox="0 0 512 512"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-miterlimit="10" stroke-width="48" d="M88 152h336M88 256h336M88 360h336"/></svg>`
 
     // Track the currently rendered route so we can restore it when a page blocks navigation
-    currentRoute = null
+    @state() accessor currentRoute = null
 
     constructor() {
         super()
@@ -98,7 +98,7 @@ export class App extends LitElement {
             </header>
             <div id="content-wrapper">
                 <div class="mui--appbar-height"></div>
-                <div id="main" class="mui-container-fluid"></div>
+                <div id="main" class="mui-container-fluid">${this.buildRouteContent(this.currentRoute)}</div>
             </div>
             <elrs-footer></elrs-footer>
         `
@@ -166,42 +166,42 @@ export class App extends LitElement {
     buildRouteContent(route) {
         switch (route) {
             case 'info':
-                return '<info-panel></info-panel>'
+                return html`<info-panel></info-panel>`
             case 'binding':
-                return '<binding-panel></binding-panel>'
+                return html`<binding-panel></binding-panel>`
             case 'options':
             // FEATURE:IS_TX
-                return '<tx-options-panel></tx-options-panel>'
+                return html`<tx-options-panel></tx-options-panel>`
             // /FEATURE:IS_TX
             // FEATURE:NOT IS_TX
-                return '<rx-options-panel></rx-options-panel>'
+                return html`<rx-options-panel></rx-options-panel>`
             // /FEATURE:NOT IS_TX
             case 'wifi':
-                return '<wifi-panel></wifi-panel>'
+                return html`<wifi-panel></wifi-panel>`
             case 'update':
-                return '<update-panel></update-panel>'
+                return html`<update-panel></update-panel>`
             // FEATURE:NOT IS_TX
             case 'connections':
-                return elrsState.config.pwm !== undefined ? '<connections-panel></connections-panel>' : ''
+                return elrsState.config.pwm !== undefined ? html`<connections-panel></connections-panel>` : null
             case 'serial':
-                return '<serial-panel></serial-panel>'
+                return html`<serial-panel></serial-panel>`
             // /FEATURE:NOT IS_TX
             // FEATURE:IS_TX
             case 'buttons':
-                return '<buttons-panel></buttons-panel>'
+                return html`<buttons-panel></buttons-panel>`
             // /FEATURE:IS_TX
             case 'hardware':
-                return '<hardware-layout></hardware-layout>'
+                return html`<hardware-layout></hardware-layout>`
             case 'cw':
-                return '<continuous-wave></continuous-wave>'
+                return html`<continuous-wave></continuous-wave>`
             case 'models':
-                return '<models-panel></models-panel>'
+                return html`<models-panel></models-panel>`
             // FEATURE:HAS_LR1121
             case 'lr1121':
-                return '<lr1121-updater></lr1121-updater>'
+                return html`<lr1121-updater></lr1121-updater>`
             // /FEATURE:HAS_LR1121
             default:
-                return ''
+                return null
         }
     }
 
@@ -236,30 +236,52 @@ export class App extends LitElement {
         }
     }
 
-    replaceMainWithTransition(newContent) {
+    waitForMainTransition(className) {
         return new Promise(resolve => {
-            const onEnd = () => {
-                this.mainEl.removeEventListener('transitionend', onEnd)
-                if (typeof newContent === 'string') {
-                    this.mainEl.innerHTML = newContent
-                } else if (newContent instanceof Node) {
-                    this.mainEl.innerHTML = ''
-                    this.mainEl.appendChild(newContent)
-                } else {
-                    this.mainEl.innerHTML = ''
-                }
-                this.mainEl.classList.add('route-fade-in')
-                requestAnimationFrame(() => {
-                    this.mainEl.classList.remove('route-fade-out')
-                    requestAnimationFrame(() => {
-                        this.mainEl.classList.remove('route-fade-in')
-                        resolve()
-                    })
-                })
+            if (!this.mainEl) {
+                resolve()
+                return
             }
+
+            let settled = false
+            let fallbackTimer = null
+            const finish = () => {
+                if (settled) return
+                settled = true
+                this.mainEl.removeEventListener('transitionend', onEnd)
+                if (fallbackTimer !== null) {
+                    clearTimeout(fallbackTimer)
+                    fallbackTimer = null
+                }
+                resolve()
+            }
+
+            const onEnd = (event) => {
+                if (event?.target !== this.mainEl) return
+                finish()
+            }
+
             this.mainEl.addEventListener('transitionend', onEnd)
-            this.mainEl.classList.add('route-fade-out')
-            setTimeout(onEnd, 220)
+            this.mainEl.classList.add(className)
+            fallbackTimer = setTimeout(finish, 220)
+        })
+    }
+
+    animateMainIn() {
+        return new Promise(resolve => {
+            if (!this.mainEl) {
+                resolve()
+                return
+            }
+
+            this.mainEl.classList.add('route-fade-in')
+            requestAnimationFrame(() => {
+                this.mainEl.classList.remove('route-fade-out')
+                requestAnimationFrame(() => {
+                    this.mainEl.classList.remove('route-fade-in')
+                    resolve()
+                })
+            })
         })
     }
 
@@ -305,10 +327,13 @@ export class App extends LitElement {
         document.body.classList.remove('hide-sidedrawer')
         const sd = this.querySelector('#sidedrawer') || document.getElementById('sidedrawer')
         if (sd) sd.classList.remove('active')
-        const content = this.buildRouteContent(route)
-        await this.replaceMainWithTransition(content)
-        this.scrollMainToTop()
+        if (this.currentRoute) {
+            await this.waitForMainTransition('route-fade-out')
+        }
         this.currentRoute = route
+        await this.updateComplete
+        await this.animateMainIn()
+        this.scrollMainToTop()
     }
 
     showSidedrawer() {
