@@ -84,6 +84,7 @@ function guessContentType(filePath) {
 
 // HTML feature blocks plugin extracted to separate module
 import { htmlFeatureBlocksPlugin } from './feature-blocks-plugin.js'
+import { cssTreeShakePlugin } from './css-tree-shake-plugin.js'
 
 function babelDecoratorsPlugin() {
   let root = process.cwd()
@@ -297,6 +298,7 @@ export default defineConfig(({ command, mode }) => {
         include: ['src/**/*.js'],
         exclude: ['node_modules/**'],
       }),
+      cssTreeShakePlugin(env),
       inlineStaticHtmlAssetsPlugin(),
       viteEsp32HeaderPlugin({ headerOut: env.ELRS_WEB_HEADER_OUT }),
       babelDecoratorsPlugin(),

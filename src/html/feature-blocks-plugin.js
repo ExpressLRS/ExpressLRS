@@ -17,7 +17,7 @@ function toBoolEnv(v, def) {
   return s === '1' || s === 'true' || s === 'yes' || s === 'on' || s === 'y'
 }
 
-export function htmlFeatureBlocksPlugin(env) {
+export function createFeatureBlockProcessor(env) {
   function normalizeName(name) {
     return String(name).trim().replace(/[^A-Za-z0-9]+/g, '_').toUpperCase()
   }
@@ -108,6 +108,12 @@ export function htmlFeatureBlocksPlugin(env) {
     })
     return code
   }
+
+  return { processHtml, processJs }
+}
+
+export function htmlFeatureBlocksPlugin(env) {
+  const { processHtml, processJs } = createFeatureBlockProcessor(env)
 
   return {
     name: 'html-feature-blocks',
