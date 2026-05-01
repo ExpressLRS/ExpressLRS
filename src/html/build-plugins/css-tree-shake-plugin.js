@@ -4,6 +4,14 @@ import path from 'path'
 
 import { createFeatureBlockProcessor } from './feature-blocks-plugin.js'
 
+// Conservative CSS tree-shaker used for two different jobs:
+// - build: prune emitted CSS against the final target-specific bundle
+// - dev: prune source CSS against the current target feature set so the UI can
+//   be tested locally without reflashing hardware
+//
+// The heuristic is intentionally simple: extract identifier-like tokens from
+// HTML/JS, then remove selectors that require tokens that never appear.
+
 function formatBytes(bytes) {
   return `${bytes} bytes (${(bytes / 1024).toFixed(2)} KiB)`
 }
@@ -52,6 +60,9 @@ function collectUsedCssTokensFromBundle(bundle) {
   return usedTokens
 }
 
+// CSS selector lists can contain commas inside attribute selectors and
+// pseudo-class arguments, so split with a small state machine instead of a raw
+// .split(',').
 function splitSelectorList(selectorText) {
   const selectors = []
   let current = ''
@@ -95,6 +106,8 @@ function splitSelectorList(selectorText) {
   return selectors
 }
 
+// Extract the selector tokens that must exist in the document for the selector
+// to match anything at all. We only track element/class/id-like identifiers.
 function extractRequiredTokensFromSelector(selector) {
   const requiredTokens = []
   const seen = new Set()
@@ -121,6 +134,8 @@ function extractRequiredTokensFromSelector(selector) {
   return requiredTokens
 }
 
+// Treat removal as a "definitely unused" test, not a best-effort guess. If the
+// selector shape gets too dynamic, keep it.
 function selectorIsDefinitelyUnused(selector, usedTokens) {
   if (!selector) return false
   if (selector.includes('&')) return false
@@ -140,6 +155,8 @@ function selectorIsDefinitelyUnused(selector, usedTokens) {
   return requiredTokens.some((token) => !usedTokens.has(token))
 }
 
+// Walk nested at-rules recursively so target-specific dead selectors are
+// removed even when they live inside media/supports blocks.
 function pruneCssContainer(container, usedTokens, stats) {
   for (const node of [...(container.nodes || [])]) {
     if (node.type === 'rule') {
@@ -175,6 +192,8 @@ function pruneUnusedCss(css, usedTokens) {
   return { css: root.toString(), stats }
 }
 
+// Dev mode has no final bundle yet, so approximate usage from the source tree
+// after applying the same feature-block filtering used elsewhere in the build.
 async function collectUsedCssTokensFromSource(root, processHtml, processJs) {
   const usedTokens = new Set()
 
@@ -202,6 +221,8 @@ async function collectUsedCssTokensFromSource(root, processHtml, processJs) {
   return usedTokens
 }
 
+// Build-time pruning is the authoritative size optimization. Dev-time pruning
+// is opt-in because it is source-based and therefore necessarily less precise.
 export function cssTreeShakePlugin(env = {}) {
   const devEnabled = toBoolEnv(env.VITE_DEV_CSS_TREE_SHAKE, false)
   const { processHtml, processJs } = createFeatureBlockProcessor(env)
@@ -218,6 +239,8 @@ export function cssTreeShakePlugin(env = {}) {
       const usedTokens = await collectUsedCssTokensFromSource(root, processHtml, processJs)
       const { css, stats } = pruneUnusedCss(code, usedTokens)
 
+      // Warn in dev so it is obvious when the served CSS differs from the
+      // source file on disk.
       if (stats.removedRules > 0 || stats.trimmedSelectors > 0) {
         this.warn(
           `CSS tree-shake(dev) pruned ${stats.removedRules} rules and ` +

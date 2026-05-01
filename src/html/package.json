@@ -14,7 +14,7 @@
     "check:syntax": "node scripts/check-syntax.mjs",
     "check:lint": "node scripts/check-lint.mjs",
     "lint": "npm run check:lint",
-    "lint:raw": "eslint src/**/*.js dev-mock-plugin.js vite.config.js",
+    "lint:raw": "eslint src/**/*.js build-plugins/**/*.js dev-plugins/**/*.js vite.config.js",
     "clean": "rimraf dist",
     "build": "npm run check:syntax && npm run check:lint && npm run clean && vite build",
     "build:lr1121-tx": "npm run check:syntax && npm run check:lint && npm run clean && cross-env ELRS_WEB_HEADER_OUT=headers/web-lr1121-tx.h VITE_FEATURE_IS_TX=true VITE_FEATURE_HAS_LR1121=true vite build",
