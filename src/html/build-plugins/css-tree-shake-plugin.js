@@ -16,6 +16,24 @@ function formatBytes(bytes) {
   return `${bytes} bytes (${(bytes / 1024).toFixed(2)} KiB)`
 }
 
+// Classes assembled dynamically at runtime (e.g. `${type}-bg`) won't appear as
+// full tokens in static source scans, so keep them explicitly.
+const SAFELIST_TOKENS = new Set([
+  'error-bg',
+  'error-btn',
+  'info-bg',
+  'info-btn',
+  'question-bg',
+  'question-btn',
+  'success-bg',
+  'success-btn',
+])
+
+function applySafelist(usedTokens) {
+  for (const token of SAFELIST_TOKENS) usedTokens.add(token)
+  return usedTokens
+}
+
 function toBoolEnv(v, def = false) {
   if (v === undefined || v === null || v === '') return def
   const s = String(v).trim().toLowerCase()
@@ -57,7 +75,7 @@ function collectUsedCssTokensFromBundle(bundle) {
     }
   }
 
-  return usedTokens
+  return applySafelist(usedTokens)
 }
 
 // CSS selector lists can contain commas inside attribute selectors and
@@ -218,7 +236,7 @@ async function collectUsedCssTokensFromSource(root, processHtml, processJs) {
     }
   }
 
-  return usedTokens
+  return applySafelist(usedTokens)
 }
 
 // Build-time pruning is the authoritative size optimization. Dev-time pruning

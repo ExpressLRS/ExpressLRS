@@ -22,6 +22,19 @@ export default defineConfig(({ command, mode }) => {
       minifyTemplateLiterals({
         include: ['src/**/*.js'],
         exclude: ['node_modules/**'],
+        failOnError: true,
+        options: {
+          minifyOptions: {
+            collapseWhitespace: true,
+            removeComments: true,
+            removeAttributeQuotes: true,
+            collapseBooleanAttributes: true,
+            removeRedundantAttributes: true,
+            useShortDoctype: true,
+            caseSensitive: true,
+            minifyCSS: true
+          }
+        }
       }),
       cssTreeShakePlugin(env),
       inlineStaticHtmlAssetsPlugin(),

@@ -2,7 +2,7 @@ import {html, LitElement} from "lit";
 import {customElement} from "lit/decorators.js";
 import {elrsState, saveConfig} from "../utils/state.js";
 import {_renderOptions} from "../utils/libs.js";
-import {postJSON} from "../utils/feedback.js";
+import {post} from "../utils/feedback.js";
 
 const ACTION_OPTIONS = ['Unused', 'Increase Power', 'Go to VTX Band Menu', 'Go to VTX Channel Menu',
     'Send VTX Settings', 'Start WiFi', 'Send Bind Command', 'Start BLE Joystick'];
@@ -151,7 +151,7 @@ class ButtonsPanel extends LitElement {
     _sendCurrentColors() {
         let colors = [this.buttonActions[0].color];
         if (this.buttonActions[1] && this.buttonActions[1].color !== undefined) colors.push(this.buttonActions[1].color);
-        postJSON('/buttons', colors)
+        post('/buttons', colors)
         this.colorUpdated = false;
     }
 

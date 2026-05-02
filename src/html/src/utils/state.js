@@ -1,5 +1,5 @@
 import {State} from "@lit-app/state";
-import {errorAlert, postJSON, saveJSONWithReboot} from "./feedback.js";
+import {post, saveJSONWithReboot, showAlert} from "./feedback.js";
 
 class ElrsState extends State {
     config = {}
@@ -79,7 +79,7 @@ export function saveOptions(changes, successCB) {
 
 export function saveOptionsAndConfig(changes, successCB) {
     const newOptions = {...elrsState.options, ...changes.options, customised: true}
-    postJSON('/options.json', newOptions, {
+    post('/options.json', newOptions, {
         onload: async () => {
             saveConfig(changes.config, () => {
                 elrsState.options = newOptions
@@ -87,7 +87,7 @@ export function saveOptionsAndConfig(changes, successCB) {
             })
         },
         onerror: async (xhr) => {
-            await errorAlert('Configuration Update Failed', xhr.responseText || 'Request failed')
+            await showAlert('error', 'Configuration Update Failed', xhr.responseText || 'Request failed')
         }
     })
 }

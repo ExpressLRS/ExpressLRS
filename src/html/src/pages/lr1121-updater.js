@@ -1,7 +1,7 @@
 import {html, LitElement} from 'lit'
 import {customElement, query, state} from 'lit/decorators.js'
 import '../components/filedrag.js'
-import {cuteAlert, postWithFeedback} from "../utils/feedback.js"
+import {loadJSON, post, postWithFeedback, showAlert} from "../utils/feedback.js"
 import {overlay} from '../utils/overlay.js'
 
 @customElement('lr1121-updater')
@@ -12,8 +12,13 @@ export class LR1121Updater extends LitElement {
     @state() accessor status = ''
     @state() accessor progress = 0
     @state() accessor manual = false
+    loadPromise = null
 
     createRenderRoot() {
+        this._progressHandler = this._progressHandler.bind(this)
+        this._completeHandler = this._completeHandler.bind(this)
+        this._errorHandler = this._errorHandler.bind(this)
+        this._abortHandler = this._abortHandler.bind(this)
         return this
     }
 
@@ -90,7 +95,21 @@ export class LR1121Updater extends LitElement {
 
     connectedCallback() {
         super.connectedCallback()
-        this._loadData()
+        this.pageReady()
+    }
+
+    pageReady() {
+        if (!this.loadPromise) {
+            this.loadPromise = loadJSON('/lr1121.json', 'Failed to load LR1121 firmware status.')
+                .then((data) => {
+                    this.data = data
+                    this.manual = !!data.manual
+                }, (error) => {
+                    this.loadPromise = null
+                    throw error
+                })
+        }
+        return this.loadPromise
     }
 
     _dec2hex(i, len) {
@@ -104,45 +123,20 @@ export class LR1121Updater extends LitElement {
         return postWithFeedback('LR1121 Reset', 'Reset failed', '/reset?lr1121', null)(e)
     }
 
-    _loadData() {
-        const xmlhttp = new XMLHttpRequest()
-        xmlhttp.onreadystatechange = () => {
-            if (xmlhttp.readyState === 4 && xmlhttp.status === 200) {
-                const data = JSON.parse(xmlhttp.responseText)
-                this.data = data
-                this.manual = !!data.manual
-            }
-        }
-        xmlhttp.open('GET', '/lr1121.json', true)
-        xmlhttp.setRequestHeader('Content-type', 'application/x-www-form-urlencoded')
-        xmlhttp.send()
-    }
-
     _fileSelected(e) {
         const files = e.detail.files
         if (files && files[0]) this._uploadFile(files[0])
     }
 
     _uploadFile(file) {
-        try {
-            // Show overlay
-            overlay('on', {keyboard: false, static: true})
-            const ajax = new XMLHttpRequest()
-            ajax.upload.addEventListener('progress', (event) => this._progressHandler(event), false)
-            ajax.addEventListener('load', (event) => this._completeHandler(event), false)
-            ajax.addEventListener('error', (event) => this._errorHandler(event), false)
-            ajax.addEventListener('abort', (event) => this._abortHandler(event), false)
-            ajax.open('POST', '/lr1121')
-            ajax.setRequestHeader('X-FileSize', file.size)
-            const radio = document.querySelector('input[name=optionsRadio]:checked')?.value || '1'
-            ajax.setRequestHeader('X-Radio', radio)
-            const formdata = new FormData()
-            formdata.append('upload', file, file.name)
-            ajax.send(formdata)
-        } catch (e) {
-            this._resetProgress()
-            overlay('off')
-        }
+        overlay('on', {keyboard: false, static: true})
+        post('/lr1121', file, {
+            headers: {'X-Radio': document.querySelector('input[name=optionsRadio]:checked')?.value || '1'},
+            onprogress: this._progressHandler,
+            onload: this._completeHandler,
+            onerror: this._errorHandler,
+            onabort: this._abortHandler,
+        })
     }
 
     _progressHandler(event) {
@@ -151,33 +145,31 @@ export class LR1121Updater extends LitElement {
         this.status = percent + '% uploaded... please wait'
     }
 
-    async _completeHandler(event) {
-        this.status = ''
-        this.progress = 0
-        const data = JSON.parse(event.target.responseText || '{}')
+    _completeHandler(request) {
+        this._resetProgress()
+        const data = JSON.parse(request.responseText || '{}')
         if (data.status === 'ok') {
-            // Simulate flashing progress
             let percent = 0
-            const interval = setInterval(async () => {
+            const interval = setInterval(() => {
                 percent = percent + 2
                 this.progress = percent
                 this.status = percent + '% flashed... please wait'
                 if (percent >= 100) {
                     clearInterval(interval)
-                    await this._showAlert('success', 'Update Succeeded', data.msg)
+                    this._showAlert('success', 'Update Succeeded', data.msg)
                 }
             }, 100)
         } else {
-            await this._showAlert('error', 'Update Failed', data.msg || '')
+            return this._showAlert('error', 'Update Failed', data.msg || '')
         }
     }
 
-    _errorHandler(event) {
-        return this._showAlert('error', 'Update Failed', event?.target?.responseText || '')
+    _errorHandler(request) {
+        return this._showAlert('error', 'Update Failed', request.responseText || '')
     }
 
-    _abortHandler(event) {
-        return this._showAlert('info', 'Update Aborted', event?.target?.responseText || '')
+    _abortHandler(request) {
+        return this._showAlert('info', 'Update Aborted', request.responseText || '')
     }
 
     _resetProgress() {
@@ -187,10 +179,7 @@ export class LR1121Updater extends LitElement {
 
     _showAlert(type, title, message) {
         this._resetProgress()
-        try {
-            overlay('off')
-        } catch (e) {
-        }
-        return cuteAlert({type, title, message})
+        overlay('off')
+        return showAlert(type, title, message)
     }
 }

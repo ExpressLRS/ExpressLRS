@@ -6,6 +6,10 @@ import FEATURES from "../features.js";
 // data. Do not use it to validate behavior that depends on a real device or
 // real network timing.
 export function devMockPlugin() {
+    const PAGE_LOAD_DELAY_MS = 450
+    const MODULE_LOAD_DELAY_MS = 800
+    let cwGetRequestCount = 0
+
     function sendJSON(res, obj, status = 200) {
         res.statusCode = status
         res.setHeader('Content-Type', 'application/json')
@@ -21,6 +25,10 @@ export function devMockPlugin() {
     function sendStatus(res, status = 204) {
         res.statusCode = status
         res.end()
+    }
+
+    function sendDelayed(delayMs, sendResponse) {
+        setTimeout(sendResponse, delayMs)
     }
 
     // Basic stub data used by multiple endpoints
@@ -221,6 +229,11 @@ export function devMockPlugin() {
                 const url = req.url || '/'
                 const method = (req.method || 'GET').toUpperCase()
 
+                // Add delay for lazy-loaded page group modules to simulate network latency
+                if (method === 'GET' && (url.includes('general-group.js') || url.includes('advanced-group.js'))) {
+                    return setTimeout(() => next(), MODULE_LOAD_DELAY_MS)
+                }
+
                 // Utilities to collect request body (json or text)
                 const readBody = () => new Promise((resolve) => {
                     let data = ''
@@ -237,7 +250,7 @@ export function devMockPlugin() {
                     // Reset the networks scan delay counter whenever config is fetched
                     networkQueryCount = 0
                     stubState.settings.voltage_source_count = voltageSources.length
-                    return sendJSON(res, stubState)
+                    return sendDelayed(PAGE_LOAD_DELAY_MS, () => sendJSON(res, stubState))
                 }
                 if (method === 'GET' && (url === '/networks.json' || url.startsWith('/networks.json'))) {
                     networkQueryCount++
@@ -268,6 +281,11 @@ export function devMockPlugin() {
                     })
                 }
                 if (method === 'GET' && url === '/cw') {
+                    cwGetRequestCount++
+                    // Fail every third request to test error handling
+                    if (cwGetRequestCount % 3 === 0) {
+                        return sendDelayed(PAGE_LOAD_DELAY_MS, () => sendStatus(res, 500))
+                    }
                     const cwConfig = {
                         radios: hardwareState.radio_nss_2 === undefined ? 1 : 2,
                         center: FEATURES.HAS_SX128X ? 2440000000 : 868000000
@@ -275,13 +293,23 @@ export function devMockPlugin() {
                     if (FEATURES.HAS_LR1121) {
                         cwConfig.center2 = 2400000000
                     }
-                    return sendJSON(res, cwConfig)
+                    return sendDelayed(PAGE_LOAD_DELAY_MS, () => sendJSON(res, cwConfig))
                 }
                 if (method === 'POST' && url === '/cw') {
                     return readBody().then(() => sendText(res, 'CW started'))
                 }
+                if (method === 'GET' && url === '/lr1121.json') {
+                    return sendDelayed(PAGE_LOAD_DELAY_MS, () => sendJSON(res, {
+                        manual: false,
+                        radio1: {type: 0x07, hardware: 0x11, firmware: 0x1234},
+                        radio2: FEATURES.HAS_LR1121 ? {type: 0x07, hardware: 0x12, firmware: 0x1234} : undefined
+                    }))
+                }
+                if (method === 'POST' && url === '/lr1121') {
+                    return readBody().then(() => sendJSON(res, {status: 'ok', msg: 'LR1121 firmware updated'}))
+                }
                 if (method === 'GET' && url === '/hardware.json') {
-                    return sendJSON(res, hardwareState)
+                    return sendDelayed(PAGE_LOAD_DELAY_MS, () => sendJSON(res, hardwareState))
                 }
                 if (method === 'POST' && url === '/hardware.json') {
                     return readBody().then((body) => {
