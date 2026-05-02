@@ -14,17 +14,19 @@ class BindingPanel extends LitElement {
     originalUIDType = ''
     originalUID = []
 
-    createRenderRoot() {
+    constructor() {
+        super()
         this._submitOptions = this._submitOptions.bind(this)
-        return this
-    }
 
-    firstUpdated(_changedProperties) {
         this.uid = elrsState.config.uid
         this.bindType = elrsState.config.vbind
         this.originalUID = elrsState.config.uid
         this.originalUIDType = (elrsState.settings && elrsState.settings.uidtype) ? elrsState.settings.uidtype : ''
         this._updateUIDType(this.originalUIDType)
+    }
+
+    createRenderRoot() {
+        return this
     }
 
     render() {
