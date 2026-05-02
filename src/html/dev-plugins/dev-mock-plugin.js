@@ -298,6 +298,21 @@ export function devMockPlugin() {
                 if (method === 'POST' && url === '/cw') {
                     return readBody().then(() => sendText(res, 'CW started'))
                 }
+                if (method === 'POST' && url === '/update') {
+                    return readBody().then(() => sendJSON(res, {
+                        status: 'ok',
+                        msg: 'Firmware updated successfully. Device will reboot.'
+                    }))
+                }
+                if (method === 'POST' && url === '/forceupdate') {
+                    return readBody().then(() => sendJSON(res, {
+                        status: 'ok',
+                        msg: 'Forced firmware update started.'
+                    }))
+                }
+                if (method === 'POST' && (url === '/reset?lr1121' || url === '/reset')) {
+                    return sendText(res, 'LR1121 reset requested. Rebooting...')
+                }
                 if (method === 'GET' && url === '/lr1121.json') {
                     return sendDelayed(PAGE_LOAD_DELAY_MS, () => sendJSON(res, {
                         manual: false,
