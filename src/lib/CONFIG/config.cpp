@@ -247,6 +247,8 @@ void TxConfig::Load()
             m_config.backpackDisable = value8;
         if (nvs_get_u8(handle, "backpacktlmen", &value8) == ESP_OK)
             m_config.backpackTlmMode = value8;
+        if (nvs_get_u8(handle, "trainermode", &value8) == ESP_OK)
+            m_config.trainerMode = value8 <= TRAINER_MODE_SLAVE ? value8 : TRAINER_MODE_OFF;
     }
 
     for(unsigned i=0; i<CONFIG_TX_MODEL_CNT; i++)
@@ -464,6 +466,7 @@ TxConfig::Commit()
     {
         nvs_set_u8(handle, "backpackdisable", m_config.backpackDisable);
         nvs_set_u8(handle, "backpacktlmen", m_config.backpackTlmMode);
+        nvs_set_u8(handle, "trainermode", m_config.trainerMode);
         nvs_set_u8(handle, "dvraux", m_config.dvrAux);
         nvs_set_u8(handle, "dvrstartdelay", m_config.dvrStartDelay);
         nvs_set_u8(handle, "dvrstopdelay", m_config.dvrStopDelay);
@@ -710,6 +713,17 @@ TxConfig::SetBackpackTlmMode(uint8_t mode)
     if (m_config.backpackTlmMode != mode)
     {
         m_config.backpackTlmMode = mode;
+        m_modified |= EVENT_CONFIG_MAIN_CHANGED;
+    }
+}
+
+void
+TxConfig::SetTrainerMode(uint8_t mode)
+{
+    if (mode > TRAINER_MODE_SLAVE) mode = TRAINER_MODE_OFF;
+    if (m_config.trainerMode != mode)
+    {
+        m_config.trainerMode = mode;
         m_modified |= EVENT_CONFIG_MAIN_CHANGED;
     }
 }

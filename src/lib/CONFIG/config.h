@@ -104,13 +104,21 @@ typedef enum {
     BACKPACK_TELEM_MODE_BLUETOOTH,
 } telem_mode_t;
 
+typedef enum {
+    TRAINER_MODE_OFF,
+    TRAINER_MODE_MASTER,
+    TRAINER_MODE_SLAVE,
+} trainer_mode_t;
+
+
 typedef struct {
     uint32_t        version;
     uint8_t         vtxBand;    // 0=Off, else band number
     uint8_t         vtxChannel; // 0=Ch1 -> 7=Ch8
     uint8_t         vtxPower;   // 0=Do not set, else power number
     uint8_t         vtxPitmode; // Off/On/AUX1^/AUX1v/etc
-    uint8_t         powerFanThreshold:4; // Power level to enable fan if present
+    uint8_t         powerFanThreshold:4, // Power level to enable fan if present
+                    trainerMode:2;
     model_config_t  model_config[CONFIG_TX_MODEL_CNT];
     uint8_t         fanMode;            // some value used by thermal?
     uint8_t         motionMode:2,       // bool, but space for 2 more modes
@@ -155,6 +163,7 @@ public:
     uint8_t  GetDvrStopDelay() const { return m_config.dvrStopDelay; }
     bool     GetBackpackDisable() const { return m_config.backpackDisable; }
     uint8_t  GetBackpackTlmMode() const { return m_config.backpackTlmMode; }
+    uint8_t  GetTrainerMode() const { return m_config.trainerMode <= TRAINER_MODE_SLAVE ? m_config.trainerMode : TRAINER_MODE_OFF; }
     tx_button_color_t const *GetButtonActions(uint8_t button) const { return &m_config.buttonColors[button]; }
     model_config_t const &GetModelConfig(uint8_t model) const { return m_config.model_config[model]; }
     uint8_t GetPTRStartChannel() const { return m_model->ptrStartChannel; }
@@ -185,6 +194,7 @@ public:
     void SetButtonActions(uint8_t button, tx_button_color_t actions[2]);
     void SetBackpackDisable(bool backpackDisable);
     void SetBackpackTlmMode(uint8_t mode);
+    void SetTrainerMode(uint8_t mode);
     void SetPTRStartChannel(uint8_t ptrStartChannel);
     void SetPTREnableChannel(uint8_t ptrEnableChannel);
     void SetUID(uint8_t uid[UID_LEN]) override;
