@@ -1044,6 +1044,6 @@ const HARDWARE_SCHEMA = [
     },
     /* /FEATURE: NOT IS_8285 */
     /* /FEATURE: NOT IS_TX */
-];
+]
 
-export default HARDWARE_SCHEMA;
+export default HARDWARE_SCHEMA

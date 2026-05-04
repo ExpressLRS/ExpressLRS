@@ -7,8 +7,8 @@ import {overlay} from './utils/overlay.js'
 import './components/elrs-footer.js'
 
 import './pages/info-panel.js'
-import {hideLoadingOverlay, loadJSON, showConfirm, showLoadingOverlay} from "./utils/feedback.js";
-import {_} from "./utils/libs.js";
+import {hideLoadingOverlay, loadJSON, showConfirm, showLoadingOverlay} from "./utils/feedback.js"
+import {_} from "./utils/libs.js"
 
 @customElement('elrs-app')
 export class App extends LitElement {

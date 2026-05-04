@@ -296,6 +296,9 @@ export function devMockPlugin() {
                 if (method === 'POST' && url === '/cw') {
                     return readBody().then(() => sendText(res, 'CW started'))
                 }
+                if (method === 'POST' && url === '/buttons') {
+                    return readBody().then(() => sendText(res, 'ok'))
+                }
                 if (method === 'POST' && url === '/update') {
                     return readBody().then(() => sendJSON(res, {
                         status: 'ok',

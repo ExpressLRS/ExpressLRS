@@ -1,7 +1,7 @@
-import {html, LitElement} from 'lit';
-import {customElement, query, state} from 'lit/decorators.js';
-import {loadJSON, post} from "../utils/feedback.js";
-import {elrsState} from "../utils/state.js";
+import {html, LitElement} from 'lit'
+import {customElement, query, state} from 'lit/decorators.js'
+import {loadJSON, post} from "../utils/feedback.js"
+import {elrsState} from "../utils/state.js"
 
 @customElement('continuous-wave')
 export class ContinuousWave extends LitElement {
@@ -12,7 +12,7 @@ export class ContinuousWave extends LitElement {
     @state() accessor data = undefined
     @state() accessor started = false
     @state() accessor result = {}
-    @state() accessor cwFreq;
+    @state() accessor cwFreq
     loadPromise = null
 
     createRenderRoot() {
@@ -74,7 +74,7 @@ export class ContinuousWave extends LitElement {
                            placeholder="Enter peak/center frequency of measured continuous wave"
                            @keypress="${(e) => {
                                if (e.which !== 8 && e.which !== 0 && e.which < 48 || e.which > 57)
-                                   e.preventDefault();
+                                   e.preventDefault()
                            }}"
                     />
                     <label for="measured">Measured Center Frequency</label>

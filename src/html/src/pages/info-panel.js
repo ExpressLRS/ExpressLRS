@@ -1,6 +1,6 @@
-import {html, LitElement} from "lit";
-import {customElement} from "lit/decorators.js";
-import {elrsState, formatBand, formatWifiRssi} from "../utils/state.js";
+import {html, LitElement} from "lit"
+import {customElement} from "lit/decorators.js"
+import {elrsState, formatBand, formatWifiRssi} from "../utils/state.js"
 import {SERIAL_OPTIONS1} from '../utils/globals.js'
 
 @customElement('info-panel')
