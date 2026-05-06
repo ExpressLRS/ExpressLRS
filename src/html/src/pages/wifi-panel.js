@@ -1,7 +1,7 @@
 import {html, LitElement} from "lit"
 import {customElement, query, state} from "lit/decorators.js"
 import {elrsState} from "../utils/state.js"
-import {postWithFeedback} from "../utils/feedback.js"
+import {errorAlert, postWithFeedback} from "../utils/feedback.js"
 import {autocomplete} from "../utils/autocomplete.js"
 
 @customElement('wifi-panel')
@@ -109,6 +109,10 @@ class WifiPanel extends LitElement {
     _setupNetwork(event) {
         event.preventDefault()
         const self = this
+        if ((this.selectedValue === '0' || this.selectedValue === '1') && !this.network.value.trim()) {
+            errorAlert('WiFi SSID Required', 'Please enter a WiFi SSID.')
+            return
+        }
         switch (this.selectedValue) {
             case '0':
                 postWithFeedback('Set Home Network', 'An error occurred setting the home network', '/sethome?save', function () {
