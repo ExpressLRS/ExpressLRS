@@ -32,3 +32,19 @@ export function _arrayInput(e) {
     if (e.which !== 32 && e.which !== 44 && e.which !== 45)
         _intInput(e)
 }
+
+export function _smartEqual(a, b) {
+    const normalize = (value) => {
+        if (value === null || value === undefined)
+            return null
+
+        if (typeof value === 'string') {
+            const trimmed = value.trim()
+            return trimmed === '' || trimmed === '-1' ? null : trimmed
+        }
+
+        return value === -1 ? null : value
+    }
+
+    return normalize(a) === normalize(b)
+}

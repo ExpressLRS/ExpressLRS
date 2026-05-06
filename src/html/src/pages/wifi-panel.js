@@ -3,6 +3,7 @@ import {customElement, query, state} from "lit/decorators.js"
 import {elrsState} from "../utils/state.js"
 import {postWithFeedback} from "../utils/feedback.js"
 import {autocomplete} from "../utils/autocomplete.js"
+import {_smartEqual} from "../utils/libs.js"
 
 @customElement('wifi-panel')
 class WifiPanel extends LitElement {
@@ -173,8 +174,8 @@ class WifiPanel extends LitElement {
     checkChanged() {
         let changed = false
         changed |= this.wifiOnInterval !== elrsState.options['wifi-on-interval']
-        changed |= this.network?.value !== elrsState.options['wifi-ssid']
-        changed |= this.password?.value !== elrsState.options['wifi-password']
+        changed |= !_smartEqual(this.network?.value, elrsState.options['wifi-ssid'])
+        changed |= !_smartEqual(this.password?.value, elrsState.options['wifi-password'])
         return !!changed
     }
 }
