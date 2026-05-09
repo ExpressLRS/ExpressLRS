@@ -247,6 +247,19 @@ static void BackpackBinding()
     MSP::sendPacket(&packet, BackpackOrLogStrm); // send to tx-backpack as MSP
 }
 
+static bool trainerBackpackRuntimeEnabled()
+{
+    return !config.GetBackpackDisable()
+        && config.GetBackpackTlmMode() == BACKPACK_TELEM_MODE_ESPNOW
+        && config.GetTrainerMode() != TRAINER_MODE_OFF;
+}
+
+static bool trainerMasterOwnsChannelBuffer()
+{
+    return trainerBackpackRuntimeEnabled()
+        && config.GetTrainerMode() == TRAINER_MODE_MASTER;
+}
+
 /***
  * @brief:  Read 16-bit CRSF value channels from the packet payload and store them for head-tracking.
  *          Process as many values as there are payload bytes available
@@ -254,6 +267,9 @@ static void BackpackBinding()
  */
 void processPanTiltRollPacket(const uint32_t now, const mspPacket_t *packet)
 {
+    if (trainerMasterOwnsChannelBuffer())
+        return;
+
     unsigned chStart = (config.GetPTRStartChannel() == HT_START_EDGETX) ? 0 : (config.GetPTRStartChannel() - HT_START_AUX1 + AUX1);
     unsigned payloadPos = 0;
     // Any time a PTR packet is received, all channels are returned to HT_DO_NOT_UPDATE unless they are in this packet
@@ -331,6 +347,9 @@ static void headtrackPublishChannelsToEdgeTX()
 
 void headtrackOverrideChannels(uint32_t channels[], size_t channelCount)
 {
+    if (trainerMasterOwnsChannelBuffer())
+        return;
+
     if (millis() - lastPTRValidTimeMs > HT_STALE_TIMEOUT_MS)
         return;
 
@@ -358,10 +377,15 @@ static void BackpackPollAuxStates(bool allowHeadTracking)
 {
     if (!allowHeadTracking)
     {
+        if (headTrackingEnabled)
+        {
+            headTrackingEnabled = false;
+            BackpackHTFlagToMSPOut(false);
+        }
         if (!trainerCallbackActive)
         {
             trainerCallbackActive = true;
-            headTrackingEnabled = false;
+            BackpackHTFlagToMSPOut(false);
             TRAINER_STATE_ENTER();
             trainerStreamingActive = true;
             TRAINER_STATE_EXIT();
@@ -465,13 +489,6 @@ void sendMAVLinkTelemetryToBackpack(const uint8_t *data)
 
     const uint8_t count = data[1];
     BackpackOrLogStrm->write(data + CRSF_FRAME_NOT_COUNTED_BYTES, count);
-}
-
-static bool trainerBackpackRuntimeEnabled()
-{
-    return !config.GetBackpackDisable()
-        && config.GetBackpackTlmMode() == BACKPACK_TELEM_MODE_ESPNOW
-        && config.GetTrainerMode() != TRAINER_MODE_OFF;
 }
 
 static void stopTrainerCallbacks()
@@ -690,11 +707,7 @@ static int timeout()
             }
         }
 
-        bool trainerHasValidPacketSnapshot;
-        TRAINER_STATE_ENTER();
-        trainerHasValidPacketSnapshot = trainerHasValidPacket;
-        TRAINER_STATE_EXIT();
-        const bool trainerMasterActive = trainerRuntimeEnabled && trainerMode == TRAINER_MODE_MASTER && trainerHasValidPacketSnapshot;
+        const bool trainerMasterActive = trainerRuntimeEnabled && trainerMode == TRAINER_MODE_MASTER;
 
         BackpackPollAuxStates(!trainerMasterActive);
     }
