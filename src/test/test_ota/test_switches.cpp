@@ -30,6 +30,12 @@ CRSFEndpoint *crsfEndpoint = new MockEndpoint();
 
 uint32_t ChannelData[CRSF_NUM_CHANNELS];      // Current state of channels, CRSF format
 
+static void resetTestChannelData()
+{
+    for (auto &ch : ChannelData)
+        ch = CRSF_CHANNEL_VALUE_UNSET;
+}
+
 void test_crsf_endpoints()
 {
     // Validate 988us and 2012us convert to approprate CRSF values. Spoiler: They don't
@@ -254,6 +260,65 @@ void test_decodingHybrid8_all()
     // // Switch 7 is 16 pos
     // for (uint8_t val=0; val<16; ++val)
     //     test_decodingHybrid8(7, val);
+}
+
+void test_channelDataComplete_hybrid8()
+{
+    OtaUpdateSerializers(smHybridOr16ch, OTA4_PACKET_SIZE);
+    resetTestChannelData();
+    OtaResetChannelDataComplete();
+
+    for (int i = 0; i < 12; ++i)
+        ChannelData[i] = CRSF_CHANNEL_VALUE_MID;
+    for (int i = 12; i < CRSF_NUM_CHANNELS; ++i)
+        ChannelData[i] = CRSF_CHANNEL_VALUE_UNSET;
+
+    TEST_ASSERT_TRUE(OtaIsChannelDataComplete(ChannelData));
+}
+
+void test_channelDataComplete_wide8ch()
+{
+    OtaUpdateSerializers(smWideOr8ch, OTA8_PACKET_SIZE);
+    resetTestChannelData();
+    OtaResetChannelDataComplete();
+
+    for (int i = 0; i < 8; ++i)
+        ChannelData[i] = CRSF_CHANNEL_VALUE_MID;
+
+    TEST_ASSERT_TRUE(OtaIsChannelDataComplete(ChannelData));
+
+    resetTestChannelData();
+    OtaResetChannelDataComplete();
+    for (int i = 0; i < 7; ++i)
+        ChannelData[i] = CRSF_CHANNEL_VALUE_MID;
+
+    TEST_ASSERT_FALSE(OtaIsChannelDataComplete(ChannelData));
+}
+
+void test_channelDataComplete_12ch()
+{
+    OtaUpdateSerializers(sm12ch, OTA8_PACKET_SIZE);
+    resetTestChannelData();
+    OtaResetChannelDataComplete();
+
+    for (int i = 0; i < 12; ++i)
+        ChannelData[i] = CRSF_CHANNEL_VALUE_MID;
+
+    TEST_ASSERT_TRUE(OtaIsChannelDataComplete(ChannelData));
+}
+
+void test_channelDataComplete_16ch()
+{
+    OtaUpdateSerializers(smHybridOr16ch, OTA8_PACKET_SIZE);
+    resetTestChannelData();
+    OtaResetChannelDataComplete();
+
+    for (int i = 0; i < 15; ++i)
+        ChannelData[i] = CRSF_CHANNEL_VALUE_MID;
+    TEST_ASSERT_FALSE(OtaIsChannelDataComplete(ChannelData));
+
+    ChannelData[15] = CRSF_CHANNEL_VALUE_MID;
+    TEST_ASSERT_TRUE(OtaIsChannelDataComplete(ChannelData));
 }
 
 /* Check the HybridWide encoding of a packet for OTA tx
@@ -647,6 +712,10 @@ int main(int argc, char **argv)
     RUN_TEST(test_encodingHybrid8_3);
     RUN_TEST(test_encodingHybrid8_7);
     RUN_TEST(test_decodingHybrid8_all);
+    RUN_TEST(test_channelDataComplete_hybrid8);
+    RUN_TEST(test_channelDataComplete_wide8ch);
+    RUN_TEST(test_channelDataComplete_12ch);
+    RUN_TEST(test_channelDataComplete_16ch);
 
     RUN_TEST(test_encodingHybridWide_low);
     RUN_TEST(test_decodingHybridWide_AUX1);

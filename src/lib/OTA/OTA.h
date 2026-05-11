@@ -201,6 +201,8 @@ void OtaSetFullResNextChannelSet(bool next);
 #if defined(TARGET_RX) || defined(UNIT_TEST)
 typedef bool (*UnpackChannelData_t)(OTA_Packet_s const * const otaPktPtr, uint32_t *channelData);
 extern UnpackChannelData_t OtaUnpackChannelData;
+void OtaResetChannelDataComplete();
+bool OtaIsChannelDataComplete(uint32_t const *channelData);
 #endif
 
 void OtaPackAirportData(OTA_Packet_s * const otaPktPtr, FIFO<AP_MAX_BUF_LEN> *inputBuffer);
