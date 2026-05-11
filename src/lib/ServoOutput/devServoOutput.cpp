@@ -19,7 +19,8 @@ const uint8_t RMT_MAX_CHANNELS = 8;
 #endif
 
 // true when the RX has a new channels packet
-static bool newChannelsAvailable;
+static volatile bool newChannelsAvailable;
+static uint32_t lastUpdate;
 // Absolute max failsafe time if no update is received, regardless of LQ
 static constexpr uint32_t FAILSAFE_ABS_TIMEOUT_MS = 1000U;
 
@@ -143,6 +144,18 @@ static void servosFailsafe()
     }
 }
 
+static void servosEnterFailsafe()
+{
+    newChannelsAvailable = false;
+    lastUpdate = 0;
+
+    // Outputs are only allocated after the RX has reached connected once.
+    if (initialized)
+    {
+        servosFailsafe();
+    }
+}
+
 static void servoCalcAllChannels(servoWrite_fn write)
 {
     for (int ch = 0 ; ch < GPIO_PIN_PWM_OUTPUTS_COUNT ; ++ch)
@@ -194,7 +207,11 @@ void servoCurrentToFailsafeConfig()
 
 static void servosUpdate(unsigned long now)
 {
-    static uint32_t lastUpdate;
+    if (connectionState != connected || !connectionHasModelMatch || !teamraceHasModelMatch)
+    {
+        servosEnterFailsafe();
+        return;
+    }
 
     if (newChannelsAvailable)
     {
@@ -279,14 +296,9 @@ static bool initialize()
 
 static int event()
 {
-    if (connectionState == disconnected)
-    {
-        // Disconnected should come after failsafe on the RX,
-        // so it is safe to shut down when disconnected
-        return DURATION_NEVER;
-    }
     if (connectionState == wifiUpdate)
     {
+        servosEnterFailsafe();
         for (int ch = 0; ch < GPIO_PIN_PWM_OUTPUTS_COUNT; ++ch)
         {
             if (pwmChannels[ch] != -1)
@@ -304,6 +316,11 @@ static int event()
             servoPins[ch] = UNDEF_PIN;
         }
         return DURATION_NEVER;
+    }
+    if (connectionState != connected)
+    {
+        servosEnterFailsafe();
+        return connectionState == disconnected ? DURATION_NEVER : DURATION_IMMEDIATELY;
     }
     if (!initialized && connectionState == connected)
     {
