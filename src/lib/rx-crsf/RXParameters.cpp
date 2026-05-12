@@ -600,6 +600,21 @@ void RXEndpoint::updateParameters()
 #endif
 
   setTextSelectionValue(&luaSBUSFailsafeMode, config.GetFailsafeMode());
+  bool sbusFailsafeApplies =
+    config.GetSerialProtocol() == PROTOCOL_SBUS ||
+    config.GetSerialProtocol() == PROTOCOL_INVERTED_SBUS ||
+    config.GetSerialProtocol() == PROTOCOL_DJI_RS_PRO;
+#if defined(PLATFORM_ESP32)
+  if (RX_HAS_SERIAL1)
+  {
+    eSerial1Protocol s1 = config.GetSerial1Protocol();
+    sbusFailsafeApplies = sbusFailsafeApplies ||
+      s1 == PROTOCOL_SERIAL1_SBUS ||
+      s1 == PROTOCOL_SERIAL1_INVERTED_SBUS ||
+      s1 == PROTOCOL_SERIAL1_DJI_RS_PRO;
+  }
+#endif
+  LUA_FIELD_VISIBLE(luaSBUSFailsafeMode, sbusFailsafeApplies)
 
   if (GPIO_PIN_ANT_CTRL != UNDEF_PIN)
   {
