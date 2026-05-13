@@ -607,11 +607,10 @@ void RXEndpoint::updateParameters()
 #if defined(PLATFORM_ESP32)
   if (RX_HAS_SERIAL1)
   {
-    eSerial1Protocol s1 = config.GetSerial1Protocol();
     sbusFailsafeApplies = sbusFailsafeApplies ||
-      s1 == PROTOCOL_SERIAL1_SBUS ||
-      s1 == PROTOCOL_SERIAL1_INVERTED_SBUS ||
-      s1 == PROTOCOL_SERIAL1_DJI_RS_PRO;
+      config.GetSerial1Protocol() == PROTOCOL_SERIAL1_SBUS ||
+      config.GetSerial1Protocol() == PROTOCOL_SERIAL1_INVERTED_SBUS ||
+      config.GetSerial1Protocol() == PROTOCOL_SERIAL1_DJI_RS_PRO;
   }
 #endif
   LUA_FIELD_VISIBLE(luaSBUSFailsafeMode, sbusFailsafeApplies)
