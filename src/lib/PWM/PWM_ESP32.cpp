@@ -281,4 +281,8 @@ void PWMController::setMicroseconds(pwm_channel_t channel, uint16_t microseconds
 #endif
 }
 
+void PWMController::feedWatchdog()
+{
+}
+
 #endif
