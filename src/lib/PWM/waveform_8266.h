@@ -2,6 +2,7 @@
 
 void startWaveform8266(uint8_t gpio, uint32_t timeHighUS, uint32_t timeLowUS);
 void stopWaveform8266(uint8_t gpio);
+void feedWaveform8266();
 
 #define startWaveform DO_NOT_USE
 #define startWaveformClockCycles DO_NOT_USE

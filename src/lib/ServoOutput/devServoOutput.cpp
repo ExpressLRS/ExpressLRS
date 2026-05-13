@@ -207,6 +207,7 @@ void servoCurrentToFailsafeConfig()
 
 static void servosUpdate(unsigned long now)
 {
+    PWM.feedWatchdog();
     if (connectionState != connected || !connectionHasModelMatch || !teamraceHasModelMatch)
     {
         servosEnterFailsafe();
