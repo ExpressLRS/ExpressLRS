@@ -278,14 +278,14 @@ enum eAuxChannels : uint8_t
 extern SX127xDriver Radio;
 
 #elif defined(RADIO_LR1121)
-#define RATE_MAX 20
+#define RATE_MAX 21
 #define RATE_BINDING RATE_LORA_900_50HZ
 #define RATE_DUALBAND_BINDING RATE_LORA_2G4_50HZ
 
 extern LR1121Driver Radio;
 
 #elif defined(RADIO_SX128X)
-#define RATE_MAX 10     // 2xFLRC + 2xDVDA + 4xLoRa + 2xFullRes
+#define RATE_MAX 11     // 2xFLRC + 2xDVDA + 4xLoRa + 3xFullRes
 #define RATE_BINDING RATE_LORA_2G4_50HZ
 
 extern SX1280Driver Radio;
