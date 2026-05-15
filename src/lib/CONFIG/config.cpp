@@ -127,7 +127,7 @@ static void ModelV6toV7(v6_model_config_t const * const v6, v7_model_config_t * 
     v7->boostChannel = v6->boostChannel;
 }
 
-static void ModelV7toV8(v7_model_config_t const * const v7, model_config_t * const v8)
+static void ModelV7toV8(v7_model_config_t const * const v7, v8_model_config_t * const v8)
 {
     uint8_t newRate = v7->rate;
 #if defined(RADIO_LR1121)
@@ -162,6 +162,33 @@ static void ModelV7toV8(v7_model_config_t const * const v7, model_config_t * con
     v8->ptrStartChannel = v7->ptrStartChannel;
     v8->ptrEnableChannel = v7->ptrEnableChannel;
     v8->linkMode = v7->linkMode;
+}
+
+static void ModelV8toV9(v8_model_config_t const * const v8, model_config_t * const v9)
+{
+    uint8_t newRate = v8->rate;
+#if defined(RADIO_LR1121)
+    if (newRate >= 14 && newRate <= 19)
+    {
+        newRate += 1;
+    }
+#elif defined(RADIO_SX128X)
+    if (newRate >= 6 && newRate <= 9)
+    {
+        newRate += 1;
+    }
+#endif
+    v9->rate = newRate;
+    v9->tlm = v8->tlm;
+    v9->power = v8->power;
+    v9->switchMode = v8->switchMode;
+    v9->boostChannel = v8->boostChannel;
+    v9->dynamicPower = v8->dynamicPower;
+    v9->modelMatch = v8->modelMatch;
+    v9->txAntenna = v8->txAntenna;
+    v9->ptrStartChannel = v8->ptrStartChannel;
+    v9->ptrEnableChannel = v8->ptrEnableChannel;
+    v9->linkMode = v8->linkMode;
 }
 
 TxConfig::TxConfig() :
@@ -271,8 +298,18 @@ void TxConfig::Load()
                 // Upgrade v7 to v8
                 v7_model_config_t v7model;
                 U32_to_Model(value, &v7model);
+                v8_model_config_t v8Model;
+                ModelV7toV8(&v7model, &v8Model);
+                value = Model_to_U32(&v8Model);
+            }
+
+            if (version <= 8)
+            {
+                // Upgrade v8 to v9
+                v8_model_config_t v8model;
+                U32_to_Model(value, &v8model);
                 model_config_t * const newModel = &m_config.model_config[i];
-                ModelV7toV8(&v7model, newModel);
+                ModelV8toV9(&v8model, newModel);
                 nvs_set_u32(handle, model, Model_to_U32(newModel));
             }
 
@@ -335,6 +372,12 @@ void TxConfig::Load()
     if (version == 7)
     {
         UpgradeEepromV7ToV8();
+        version = 8;
+    }
+
+    if (version == 8)
+    {
+        UpgradeEepromV8ToV9();
     }
 }
 
@@ -393,10 +436,11 @@ void TxConfig::UpgradeEepromV6ToV7()
 void TxConfig::UpgradeEepromV7ToV8()
 {
     v7_tx_config_t v7Config;
+    v8_tx_config_t v8Config = { 0 };
     m_eeprom->Get(0, v7Config);
 
     // Manual field copying as some fields were removed
-    #define LAZY(member) m_config.member = v7Config.member
+    #define LAZY(member) v8Config.member = v7Config.member
     LAZY(vtxBand);
     LAZY(vtxChannel);
     LAZY(vtxPower);
@@ -411,13 +455,48 @@ void TxConfig::UpgradeEepromV7ToV8()
 
     for (unsigned i=0; i<CONFIG_TX_MODEL_CNT; i++)
     {
-        ModelV7toV8(&v7Config.model_config[i], &m_config.model_config[i]);
+        ModelV7toV8(&v7Config.model_config[i], &v8Config.model_config[i]);
     }
 
     m_modified = ALL_CHANGED;
 
-    // Full Commit now
-    m_config.version = 8U | TX_CONFIG_MAGIC;
+    v8Config.version = 8U | TX_CONFIG_MAGIC;
+    m_eeprom->Put(0, v8Config);
+    m_eeprom->Commit();
+}
+
+void TxConfig::UpgradeEepromV8ToV9()
+{
+    v8_tx_config_t v8Config;
+    m_eeprom->Get(0, v8Config);
+
+    #define LAZY(member) m_config.member = v8Config.member
+    LAZY(vtxBand);
+    LAZY(vtxChannel);
+    LAZY(vtxPower);
+    LAZY(vtxPitmode);
+    LAZY(powerFanThreshold);
+    LAZY(fanMode);
+    LAZY(motionMode);
+    LAZY(dvrStopDelay);
+    LAZY(backpackDisable);
+    LAZY(backpackTlmMode);
+    LAZY(dvrStartDelay);
+    LAZY(dvrAux);
+    #undef LAZY
+
+    for (unsigned i=0; i<CONFIG_TX_MODEL_CNT; i++)
+    {
+        ModelV8toV9(&v8Config.model_config[i], &m_config.model_config[i]);
+    }
+    for (unsigned b=0; b<2; b++)
+    {
+        m_config.buttonColors[b].raw = v8Config.buttonColors[b];
+    }
+
+    m_modified = ALL_CHANGED;
+
+    m_config.version = TX_CONFIG_VERSION | TX_CONFIG_MAGIC;
     Commit();
 }
 #endif

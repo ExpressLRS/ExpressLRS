@@ -5,6 +5,7 @@
  *
  * TX V7 Jun 22 2022 (3.0.0)
  * TX V8 (4.0.0)
+ * TX V9 (4.1.0) - 2G4 LoRa rates renumbered to insert 200Hz Full
  *
  * RX V5 Jun 22 2022 (3.0.0)
  * RX V6 Nov 09 2022 (3.1.0)
@@ -96,6 +97,39 @@ typedef struct {
     uint8_t         dvrStartDelay:3;
     uint8_t         dvrStopDelay:3;
 } v7_tx_config_t;
+
+// V8
+typedef struct {
+    uint32_t    rate:5,
+                tlm:4,
+                power:3,
+                switchMode:2,
+                boostChannel:3,
+                dynamicPower:1,
+                modelMatch:1,
+                txAntenna:2,
+                ptrStartChannel:4,
+                ptrEnableChannel:5,
+                linkMode:2;
+} v8_model_config_t;
+
+typedef struct {
+    uint32_t          version;
+    uint8_t           vtxBand;
+    uint8_t           vtxChannel;
+    uint8_t           vtxPower;
+    uint8_t           vtxPitmode;
+    uint8_t           powerFanThreshold:4;
+    v8_model_config_t model_config[64];
+    uint8_t           fanMode;
+    uint8_t           motionMode:2,
+                      dvrStopDelay:3,
+                      backpackDisable:1,
+                      backpackTlmMode:2;
+    uint8_t           dvrStartDelay:3,
+                      dvrAux:5;
+    uint32_t          buttonColors[2];
+} v8_tx_config_t;
 
 /***
  * RX config
@@ -251,4 +285,3 @@ typedef struct {
 // rateInitialIdx 4 bits -> 5
 // V11 changed
 // rx_config_pwm_t to add stretch and changed failsafe from 988-2012 to 476-2523
-
