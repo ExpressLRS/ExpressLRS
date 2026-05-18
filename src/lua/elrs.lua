@@ -375,7 +375,7 @@ local function fieldBackExec(field)
     field.po = nil
     currentFolderId = nil
     currentFolderName = nil
-  else -- Executing EXIT 
+  else -- Executing EXIT
     exitscript = 1
   end
 end
@@ -675,7 +675,7 @@ local function reloadRelatedFields(field)
     local fldType = fldTest.type or 99 -- type could be nil if still loading
     if fieldId ~= field.id
       and fldTest.parent == field.parent
-      and (fldType < 11 or fldType == 12) then -- ignores FOLDER/COMMAND/devices/EXIT
+      and (fldType < 11 or fldType == 12 or fldType == 13) then -- ignores FOLDER/devices/EXIT
       fldTest.nc = true -- "no cache" the options
       loadQ[#loadQ+1] = fieldId
     end

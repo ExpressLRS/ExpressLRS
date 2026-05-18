@@ -796,8 +796,6 @@ static void ConfigChangeCommit()
   ChangeRadioParams();
   // Clear the commitInProgress flag so normal processing resumes
   commitInProgress = false;
-  // UpdateFolderNames is expensive so it is called directly instead of in event() which gets called a lot
-  crsfTransmitter.updateFolderNames();
   devicesTriggerEvent(changes);
 }
 
