@@ -114,7 +114,9 @@ void DynamicPower_Update(uint32_t now)
   }
 
   // How much available power is left for incremental increases
-  uint8_t powerHeadroom = (uint8_t)config.GetPower() - (uint8_t)POWERMGNT::currPower();
+  uint8_t configPower = (uint8_t)config.GetPower();
+  uint8_t currPower = (uint8_t)POWERMGNT::currPower();
+  uint8_t powerHeadroom = (configPower > currPower) ? configPower - currPower : 0;
 
   if (lastTlmMissed)
   {
