@@ -113,6 +113,7 @@
 #define GPIO_PIN_SCREEN_SDA hardware_pin(HARDWARE_screen_sda)       // I2C data
 #define GPIO_PIN_SCREEN_BL hardware_pin(HARDWARE_screen_bl)         // Backlight
 #define OPT_SCREEN_REVERSED hardware_flag(HARDWARE_screen_reversed)
+#define OPT_SCREEN_MIRROR hardware_flag(HARDWARE_screen_mirror)
 
 // Backpack
 #define OPT_USE_TX_BACKPACK hardware_flag(HARDWARE_use_backpack)
