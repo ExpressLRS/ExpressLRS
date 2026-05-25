@@ -267,8 +267,7 @@ void convert_mavlink_to_crsf_telem(crsf_addr_e destination, uint8_t *CRSFinBuffe
                 }
                 time_t time_unix = (time_t)(system_time.time_unix_usec / 1000000);
                 struct tm *time_info = gmtime(&time_unix);
-                CRSF_MK_FRAME_T(crsf_sensor_gps_time_t)
-                crsftime = {0};
+                CRSF_MK_FRAME_T(crsf_sensor_gps_time_t) crsftime{};
                 crsftime.p.year = htobe16(time_info->tm_year + 1900);
                 crsftime.p.month = time_info->tm_mon + 1;
                 crsftime.p.day = time_info->tm_mday;
@@ -276,7 +275,7 @@ void convert_mavlink_to_crsf_telem(crsf_addr_e destination, uint8_t *CRSFinBuffe
                 crsftime.p.minute = time_info->tm_min;
                 crsftime.p.second = time_info->tm_sec;
                 crsftime.p.millisecond = 0; // intentionally not populated, avoids 64-bit maths
-                crsfRouter.SetHeaderAndCrc((crsf_header_t *)&crsftime, CRSF_FRAMETYPE_GPS_TIME, CRSF_FRAME_SIZE(sizeof(crsf_sensor_gps_time_t)));
+                crsfRouter.SetHeaderAndCrc(&crsftime.h, CRSF_FRAMETYPE_GPS_TIME, CRSF_FRAME_SIZE(sizeof(crsf_sensor_gps_time_t)));
                 crsfRouter.deliverMessageTo(destination, &crsftime.h);
                 break;
             }
@@ -284,12 +283,11 @@ void convert_mavlink_to_crsf_telem(crsf_addr_e destination, uint8_t *CRSFinBuffe
                 mavlink_scaled_pressure_t scaled_pressure;
                 mavlink_msg_scaled_pressure_decode(&msg, &scaled_pressure);
                 // CRSF temp is variable-length: crsf_sensor_temp_t reserves 20 samples but we send only one
-                CRSF_MK_FRAME_T(crsf_sensor_temp_t)
-                crsftemp = {0};
+                CRSF_MK_FRAME_T(crsf_sensor_temp_t) crsftemp{};
                 crsftemp.p.source_id = 1; // 1 = Ambient (per CRSF temp source_id convention)
                 crsftemp.p.temperature[0] = htobe16(scaled_pressure.temperature / 10); // cdegC -> ddegC
                 constexpr size_t payloadLen = sizeof(crsftemp.p.source_id) + sizeof(crsftemp.p.temperature[0]);
-                crsfRouter.SetHeaderAndCrc((crsf_header_t *)&crsftemp, CRSF_FRAMETYPE_TEMP, CRSF_FRAME_SIZE(payloadLen));
+                crsfRouter.SetHeaderAndCrc(&crsftemp.h, CRSF_FRAMETYPE_TEMP, CRSF_FRAME_SIZE(payloadLen));
                 crsfRouter.deliverMessageTo(destination, &crsftemp.h);
                 break;
             }
