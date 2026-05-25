@@ -54,6 +54,7 @@
 typedef enum : uint8_t
 {
     CRSF_FRAMETYPE_GPS = 0x02,
+    CRSF_FRAMETYPE_GPS_TIME = 0x03,
     CRSF_FRAMETYPE_VARIO = 0x07,
     CRSF_FRAMETYPE_BATTERY_SENSOR = 0x08,
     CRSF_FRAMETYPE_BARO_ALTITUDE = 0x09,
@@ -336,6 +337,18 @@ typedef struct crsf_sensor_vario_s
 {
     int16_t verticalspd;  // Vertical speed in cm/s, BigEndian
 } PACKED crsf_sensor_vario_t;
+
+// CRSF_FRAMETYPE_GPS_TIME
+typedef struct crsf_sensor_gps_time_s
+{
+    int16_t year;
+    uint8_t month;
+    uint8_t day;
+    uint8_t hour;
+    uint8_t minute;
+    uint8_t second;
+    uint16_t millisecond;
+} PACKED crsf_sensor_gps_time_t;
 
 // CRSF_FRAMETYPE_GPS
 typedef struct crsf_sensor_gps_s
