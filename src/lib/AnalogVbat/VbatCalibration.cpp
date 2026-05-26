@@ -78,7 +78,7 @@ static void sortSamples(uint16_t *values, const uint8_t count)
     for (uint8_t i = 1; i < count; ++i)
     {
         const uint16_t value = values[i];
-        int8_t pos = i - 1;
+        int pos = i - 1;
         while (pos >= 0 && values[pos] > value)
         {
             values[pos + 1] = values[pos];
@@ -88,30 +88,20 @@ static void sortSamples(uint16_t *values, const uint8_t count)
     }
 }
 
-static void summarizeSamples(const uint16_t *rawValues, const uint16_t *adcValues, const uint8_t count, voltage_source_sample_t *sample)
+static void summarizeSamples(uint16_t *rawValues, uint16_t *adcValues, const uint8_t count, voltage_source_sample_t *sample)
 {
-    uint16_t rawSorted[count];
-    uint16_t adcSorted[count];
-
-    sample->rawMax = rawValues[0];
-    for (uint8_t i = 0; i < count; ++i)
-    {
-        rawSorted[i] = rawValues[i];
-        adcSorted[i] = adcValues[i];
-        sample->rawMax = max(sample->rawMax, rawValues[i]);
-    }
-
-    sortSamples(rawSorted, count);
-    sortSamples(adcSorted, count);
+    sortSamples(rawValues, count);
+    sortSamples(adcValues, count);
+    sample->rawMax = rawValues[count-1];
     if ((count & 1) == 0)
     {
-        sample->rawMedian = (rawSorted[(count / 2) - 1] + rawSorted[count / 2]) / 2;
-        sample->adcMedian = (adcSorted[(count / 2) - 1] + adcSorted[count / 2]) / 2;
+        sample->rawMedian = (rawValues[(count / 2) - 1] + rawValues[count / 2]) / 2;
+        sample->adcMedian = (adcValues[(count / 2) - 1] + adcValues[count / 2]) / 2;
     }
     else
     {
-        sample->rawMedian = rawSorted[count / 2];
-        sample->adcMedian = adcSorted[count / 2];
+        sample->rawMedian = rawValues[count / 2];
+        sample->adcMedian = adcValues[count / 2];
     }
 }
 
@@ -138,12 +128,12 @@ bool VbatCalibration_findSource(const char *sourceId, uint8_t *sourceIdx)
     return false;
 }
 
-bool VbatCalibration_isSourceDefined(uint8_t sourceIdx)
+bool VbatCalibration_isSourceDefined(const uint8_t sourceIdx)
 {
     return sourceIdx < VOLTAGE_SOURCE_COUNT && sourceIsDefined(sourceIdx);
 }
 
-void VbatCalibration_getSourceConfig(uint8_t sourceIdx, voltage_source_config_t *config)
+void VbatCalibration_getSourceConfig(const uint8_t sourceIdx, voltage_source_config_t *config)
 {
     if (!config || sourceIdx >= VOLTAGE_SOURCE_COUNT)
         return;
@@ -159,7 +149,7 @@ void VbatCalibration_getSourceConfig(uint8_t sourceIdx, voltage_source_config_t 
     config->calMax = hardware_int(voltageSources[sourceIdx].calMax);
 }
 
-bool VbatCalibration_sampleSource(uint8_t sourceIdx, int atten, uint8_t samples, voltage_source_sample_t *sample)
+bool VbatCalibration_sampleSource(const uint8_t sourceIdx, int atten, uint8_t samples, voltage_source_sample_t *sample)
 {
     if (!sample || sourceIdx >= VOLTAGE_SOURCE_COUNT || !sourceIsDefined(sourceIdx))
         return false;
@@ -172,8 +162,8 @@ bool VbatCalibration_sampleSource(uint8_t sourceIdx, int atten, uint8_t samples,
     analogSetPinAttenuation(hardware_pin(voltageSources[sourceIdx].hardwarePin), (adc_attenuation_t)getSamplingAttenuation(atten));
 #endif
 
-    uint16_t rawValues[samples];
-    uint16_t adcValues[samples];
+    uint16_t rawValues[samples] {};
+    uint16_t adcValues[samples] {};
     for (uint8_t i = 0; i < samples; ++i)
     {
         const uint16_t raw = analogRead(hardware_pin(voltageSources[sourceIdx].hardwarePin));
