@@ -232,7 +232,7 @@ static int timeout()
         DBGLN("$ADC,%u,%u", sourceIdx, adc);
 #endif
 
-        if (voltageSmooth[sourceIdx].add(adc) == 0)
+        if (voltageSourceConnected[sourceIdx] && voltageSmooth[sourceIdx].add(adc) == 0)
             shouldReport = true;
     }
 

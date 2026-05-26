@@ -754,6 +754,7 @@ const HARDWARE_SCHEMA = [
                 ],
                 desc: 'ADC pin attenuation (ESP32) and optional efuse-based calibration adjustment'
             },
+            /* /FEATURE: NOT IS_8285 */
             {
                 id: 'vbat_noreading',
                 label: 'VBat no-reading threshold',
@@ -775,6 +776,7 @@ const HARDWARE_SCHEMA = [
                 size: 7,
                 desc: 'Manufacturer-defined maximum supported source voltage in mV used by the calibration wizard'
             },
+            /* FEATURE: NOT IS_8285 */
             {
                 id: 'vsrc1',
                 label: 'VSrc1 pin',

@@ -90,8 +90,8 @@ static void sortSamples(uint16_t *values, const uint8_t count)
 
 static void summarizeSamples(const uint16_t *rawValues, const uint16_t *adcValues, const uint8_t count, voltage_source_sample_t *sample)
 {
-    uint16_t rawSorted[64] {};
-    uint16_t adcSorted[64] {};
+    uint16_t rawSorted[count];
+    uint16_t adcSorted[count];
 
     sample->rawMax = rawValues[0];
     for (uint8_t i = 0; i < count; ++i)
@@ -172,8 +172,8 @@ bool VbatCalibration_sampleSource(uint8_t sourceIdx, int atten, uint8_t samples,
     analogSetPinAttenuation(hardware_pin(voltageSources[sourceIdx].hardwarePin), (adc_attenuation_t)getSamplingAttenuation(atten));
 #endif
 
-    uint16_t rawValues[64] {};
-    uint16_t adcValues[64] {};
+    uint16_t rawValues[samples];
+    uint16_t adcValues[samples];
     for (uint8_t i = 0; i < samples; ++i)
     {
         const uint16_t raw = analogRead(hardware_pin(voltageSources[sourceIdx].hardwarePin));
