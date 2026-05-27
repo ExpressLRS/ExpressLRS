@@ -14,6 +14,8 @@ class WifiPanel extends LitElement {
     @state() accessor selectedValue = '0'
     @state() accessor showLoader = true
     @state() accessor wifiOnInterval
+    @state() accessor wifiSsid = ''
+    @state() accessor wifiPassword = ''
     @state() accessor passwordVisible = false
 
     running = false
@@ -25,6 +27,8 @@ class WifiPanel extends LitElement {
 
     createRenderRoot() {
         this.wifiOnInterval = elrsState.options['wifi-on-interval'] === undefined ? 60 : elrsState.options['wifi-on-interval']
+        this.wifiSsid = elrsState.options['wifi-ssid'] ?? ''
+        this.wifiPassword = elrsState.options['wifi-password'] ?? ''
         return this
     }
 
@@ -90,13 +94,15 @@ class WifiPanel extends LitElement {
                         <div class="autocomplete mui-textfield" style="position:relative;">
                             <div style="display: ${this.showLoader ? 'block' : 'none'};" class="loader"></div>
                             <input id="ssid" name="network" type="text" placeholder="SSID" autocomplete="off"
-                                .value="${elrsState.options['wifi-ssid']}"
+                                .value="${this.wifiSsid}"
+                                @input="${(e) => this.wifiSsid = e.target.value}"
                             />
                             <label for="ssid">WiFi SSID</label>
                         </div>
                         <div class="mui-textfield">
                             <input id="pwd" size='64' name='password' type=${this.passwordVisible ? 'text' : 'password'}
-                                .value="${elrsState.options['wifi-password']}"
+                                .value="${this.wifiPassword}"
+                                @input="${(e) => this.wifiPassword = e.target.value}"
                             />
                             <label for="pwd">WiFi password</label>
                             <span
@@ -143,8 +149,8 @@ class WifiPanel extends LitElement {
                 }, function () {
                     elrsState.options = {
                         ...elrsState.options,
-                        'wifi-ssid': self.network.value,
-                        'wifi-password': self.password.value,
+                        'wifi-ssid': self.wifiSsid,
+                        'wifi-password': self.wifiPassword,
                         'wifi-on-interval': self.wifiOnInterval,
                         customised: true
                     }
@@ -201,11 +207,11 @@ class WifiPanel extends LitElement {
 
     checkChanged() {
         let changed = false
-        const currentNetwork = this.network?.value ?? elrsState.options['wifi-ssid']
-        const currentPassword = this.password?.value ?? elrsState.options['wifi-password']
+        const currentNetwork = this.wifiSsid
+        const currentPassword = this.wifiPassword
         changed |= this.wifiOnInterval !== elrsState.options['wifi-on-interval']
-        changed |= currentNetwork !== elrsState.options['wifi-ssid']
-        changed |= currentPassword !== elrsState.options['wifi-password']
+        changed |= currentNetwork !== (elrsState.options['wifi-ssid'] ?? '')
+        changed |= currentPassword !== (elrsState.options['wifi-password'] ?? '')
         return !!changed
     }
 }

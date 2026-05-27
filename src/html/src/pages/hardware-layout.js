@@ -1,9 +1,9 @@
 import {html, LitElement, nothing} from 'lit'
 import {customElement, state} from 'lit/decorators.js'
-import {postWithFeedback, saveJSONWithReboot} from '../utils/feedback.js'
+import {loadJSON, postWithFeedback, saveJSONWithReboot} from '../utils/feedback.js'
 import '../components/filedrag.js'
 import HARDWARE_SCHEMA from '../utils/hardware-schema.js'
-import {_arrayInput, _floatInput, _intInput, _uintInput} from "../utils/libs.js";
+import {_arrayInput, _floatInput, _intInput, _uintInput} from "../utils/libs.js"
 
 @customElement('hardware-layout')
 export class HardwareLayout extends LitElement {
@@ -11,8 +11,7 @@ export class HardwareLayout extends LitElement {
     @state() accessor customised = false
     @state() accessor loadedHardwareJson = null
     @state() accessor currentHardwareJson = '{}'
-
-    static SCHEMA = HARDWARE_SCHEMA
+    loadPromise = null
 
     createRenderRoot() {
         this._onFormEdited = this._onFormEdited.bind(this)
@@ -104,7 +103,23 @@ export class HardwareLayout extends LitElement {
         super.connectedCallback()
         // Add tooltips to icon classes after first paint
         setTimeout(() => this._initTooltips(), 0)
-        this._loadData()
+        this.pageReady()
+    }
+
+    pageReady() {
+        if (!this.loadPromise) {
+            this.loadPromise = this.updateComplete
+                .then(() => loadJSON('/hardware.json', 'Failed to load hardware configuration.'))
+                .then((data) => {
+                    this.customised = !!data.customised
+                    this._updateHardwareSettings(data)
+                    this.loadedHardwareJson = this.currentHardwareJson
+                }, (error) => {
+                    this.loadPromise = null
+                    throw error
+                })
+        }
+        return this.loadPromise
     }
 
     _field(id) {
@@ -120,21 +135,6 @@ export class HardwareLayout extends LitElement {
         add('icon-output', 'Digital Output')
         add('icon-analog', 'Analog Input')
         add('icon-pwm', 'PWM Output')
-    }
-
-    _loadData() {
-        const xmlhttp = new XMLHttpRequest()
-        xmlhttp.onreadystatechange = () => {
-            if (xmlhttp.readyState === 4 && xmlhttp.status === 200) {
-                const data = JSON.parse(xmlhttp.responseText)
-                this.customised = !!data.customised
-                this._updateHardwareSettings(data)
-                this.loadedHardwareJson = this.currentHardwareJson
-            }
-        }
-        xmlhttp.open('GET', '/hardware.json', true)
-        xmlhttp.setRequestHeader('Content-type', 'application/x-www-form-urlencoded')
-        xmlhttp.send()
     }
 
     _onFileDrop(e) {
@@ -206,3 +206,5 @@ export class HardwareLayout extends LitElement {
         return !this._isSaveDisabled()
     }
 }
+
+HardwareLayout.SCHEMA = HARDWARE_SCHEMA

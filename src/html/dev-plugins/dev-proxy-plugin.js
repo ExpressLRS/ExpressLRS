@@ -2,6 +2,12 @@ import http from 'http'
 import https from 'https'
 import { URL } from 'url'
 
+// Dev plugin: proxy non-Vite requests from the local dev server to a real
+// device.
+//
+// Use this when you want live hardware responses while keeping the local UI
+// code. Do not use it when you need offline, deterministic, or fully mocked
+// testing.
 export function devProxyPlugin({ target }) {
   const targetUrl = new URL(target)
   const client = targetUrl.protocol === 'https:' ? https : http

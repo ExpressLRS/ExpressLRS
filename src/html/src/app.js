@@ -1,5 +1,5 @@
 import {LitElement, html, svg} from 'lit'
-import {customElement, query} from "lit/decorators.js"
+import {customElement, query, state} from "lit/decorators.js"
 import {initRipple} from './utils/ripple.js'
 import {initMuiSelect} from './utils/select.js'
 import {elrsState, formatBand} from './utils/state.js'
@@ -7,21 +7,27 @@ import {overlay} from './utils/overlay.js'
 import './components/elrs-footer.js'
 
 import './pages/info-panel.js'
-import {cuteAlert} from "./utils/feedback.js";
+import {hideLoadingOverlay, loadJSON, showConfirm, showLoadingOverlay} from "./utils/feedback.js"
+import {_} from "./utils/libs.js"
 
 @customElement('elrs-app')
 export class App extends LitElement {
-    @query("#sidedrawer") accessor sidedrawerEl
+    static SETTINGS_LOAD_FAILED_MESSAGE = 'Failed to load settings. Retry or power cycle device.'
+
     @query("#main") accessor mainEl
 
+    // Runtime references and UI constants
     removeRippleListeners = null
     removeSelectListeners = null
+    sidedrawerClosePromise = null
+    sideDrawer = null
 
     menu = svg`<svg width="40" height="40" viewBox="0 0 512 512"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-miterlimit="10" stroke-width="48" d="M88 152h336M88 256h336M88 360h336"/></svg>`
 
     // Track the currently rendered route so we can restore it when a page blocks navigation
-    currentRoute = null
+    @state() accessor currentRoute = null
 
+    // Core component setup and rendering
     constructor() {
         super()
         // Bind methods used as callbacks to preserve `this`
@@ -72,6 +78,11 @@ export class App extends LitElement {
                         <strong>Advanced</strong>
                         <ul>
                             <li><a id="menu-hardware" href="#hardware"><span class="mui--align-middle icon--symbols icon--symbols--hardware"></span>Hardware Layout</a></li>
+                            <!-- FEATURE:NOT IS_TX -->
+                            ${elrsState.settings?.voltage_source_count > 0 ? html`
+                                <li><a id="menu-voltage" href="#voltage"><span class="mui--align-middle icon--symbols icon--symbols--voltage"></span>Voltage Calibration</a></li>
+                            ` : ''}
+                            <!-- /FEATURE:NOT IS_TX -->
                             <li><a id="menu-cw" href="#cw"><span class="mui--align-middle icon--symbols icon--symbols--wave"></span>Continuous Wave</a></li>
                             <!-- FEATURE:HAS_LR1121 -->
                             <li><a id="menu-lr1121" href="#lr1121"><span class="mui--align-middle icon--symbols icon--symbols--lr1121"></span>LR1121 Firmware</a></li>
@@ -98,22 +109,21 @@ export class App extends LitElement {
             </header>
             <div id="content-wrapper">
                 <div class="mui--appbar-height"></div>
-                <div id="main" class="mui-container-fluid"></div>
+                <div id="main" class="mui-container-fluid">${this.buildRouteContent(this.currentRoute)}</div>
             </div>
             <elrs-footer></elrs-footer>
         `
     }
 
+    // Lifecycle wiring and teardown
     firstUpdated(_changedProperties) {
         this.removeRippleListeners = initRipple()
         this.removeSelectListeners = initMuiSelect()
+        this.sideDrawer = _('sidedrawer')
         window.addEventListener('hashchange', this.renderRoute)
 
         // Initial load sequence
-        this.loadInitialData().catch(() => {
-        }).then(() => {
-            this.renderRoute()
-        })
+        this.initializeApp()
     }
 
     disconnectedCallback() {
@@ -125,21 +135,42 @@ export class App extends LitElement {
         super.disconnectedCallback()
     }
 
-    async loadInitialData() {
-        try {
-            const resp = await fetch('/config')
-            if (!resp.ok) throw new Error('Failed to load config')
-            const data = await resp.json()
-            elrsState.settings = data.settings || {}
-            elrsState.options = data.options || {}
-            elrsState.config = data.config || {}
-            document.title = 'ExpressLRS ' + data.settings["module-type"] + ' WebUI'
-            this.requestUpdate()
-        } catch (e) {
-            console.warn('Startup data load failed:', e)
+    // Initial data loading and retry flow
+    async initializeApp() {
+        const loaded = await this.runWithSettingsRetry('Loading settings...', () => this.loadInitialData())
+        if (loaded) {
+            this.renderRoute()
         }
     }
 
+    async runWithSettingsRetry(loadingMessage, operation) {
+        while (true) {
+            await showLoadingOverlay(loadingMessage)
+            try {
+                return await operation()
+            } catch (error) {
+                hideLoadingOverlay()
+                const result = await showConfirm('Settings Load Failed', App.SETTINGS_LOAD_FAILED_MESSAGE, 'Retry', 'Close')
+                if (result !== 'confirm') {
+                    return false
+                }
+            } finally {
+                hideLoadingOverlay()
+            }
+        }
+    }
+
+    async loadInitialData() {
+        const data = await loadJSON('/config', 'Failed to load config')
+        elrsState.settings = data.settings || {}
+        elrsState.options = data.options || {}
+        elrsState.config = data.config || {}
+        document.title = 'ExpressLRS ' + data.settings["module-type"] + ' WebUI'
+        this.requestUpdate()
+        return true
+    }
+
+    // UI utilities and drawer DOM helpers
     scrollMainToTop() {
         const doScroll = (behavior = 'smooth') => {
             try {
@@ -151,11 +182,20 @@ export class App extends LitElement {
         requestAnimationFrame(() => requestAnimationFrame(() => doScroll('smooth')))
     }
 
+    getOverlayElement() {
+        return document.getElementById('mui-overlay')
+    }
+
+    teardownSidedrawer() {
+        if (this.sideDrawer && !this.contains(this.sideDrawer)) {
+            this.appendChild(this.sideDrawer)
+        }
+        this.sideDrawer?.classList.remove('active')
+    }
+
     setActiveMenu(route) {
-        // Sidedrawer may be moved into MUI overlay, making @query return null; resolve robustly
-        const sidedrawer = this.sidedrawerEl || this.querySelector('#sidedrawer') || document.getElementById('sidedrawer')
-        if (sidedrawer) {
-            const links = sidedrawer.querySelectorAll('a[href^="#"]')
+        if (this.sideDrawer) {
+            const links = this.sideDrawer.querySelectorAll('a[href^="#"]')
             links.forEach(a => a.classList.remove('active'))
         }
         const id = 'menu-' +route
@@ -163,167 +203,241 @@ export class App extends LitElement {
         if (el) el.classList.add('active')
     }
 
+    // Route content rendering and lazy-loading
     buildRouteContent(route) {
         switch (route) {
             case 'info':
-                return '<info-panel></info-panel>'
+                return html`<info-panel></info-panel>`
             case 'binding':
-                return '<binding-panel></binding-panel>'
+                return html`<binding-panel></binding-panel>`
             case 'options':
             // FEATURE:IS_TX
-                return '<tx-options-panel></tx-options-panel>'
+                return html`<tx-options-panel></tx-options-panel>`
             // /FEATURE:IS_TX
             // FEATURE:NOT IS_TX
-                return '<rx-options-panel></rx-options-panel>'
+                return html`<rx-options-panel></rx-options-panel>`
             // /FEATURE:NOT IS_TX
             case 'wifi':
-                return '<wifi-panel></wifi-panel>'
+                return html`<wifi-panel></wifi-panel>`
             case 'update':
-                return '<update-panel></update-panel>'
+                return html`<update-panel></update-panel>`
             // FEATURE:NOT IS_TX
             case 'connections':
-                return elrsState.config.pwm !== undefined ? '<connections-panel></connections-panel>' : ''
+                return elrsState.config.pwm !== undefined ? html`<connections-panel></connections-panel>` : null
             case 'serial':
-                return '<serial-panel></serial-panel>'
+                return html`<serial-panel></serial-panel>`
+            case 'voltage':
+                return elrsState.settings?.voltage_source_count > 0 ? html`<voltage-calibration-panel></voltage-calibration-panel>` : null
             // /FEATURE:NOT IS_TX
             // FEATURE:IS_TX
             case 'buttons':
-                return '<buttons-panel></buttons-panel>'
+                return html`<buttons-panel></buttons-panel>`
             // /FEATURE:IS_TX
             case 'hardware':
-                return '<hardware-layout></hardware-layout>'
+                return html`<hardware-layout></hardware-layout>`
             case 'cw':
-                return '<continuous-wave></continuous-wave>'
+                return html`<continuous-wave></continuous-wave>`
             case 'models':
-                return '<models-panel></models-panel>'
+                return html`<models-panel></models-panel>`
             // FEATURE:HAS_LR1121
             case 'lr1121':
-                return '<lr1121-updater></lr1121-updater>'
+                return html`<lr1121-updater></lr1121-updater>`
             // /FEATURE:HAS_LR1121
             default:
-                return ''
+                return null
         }
     }
 
     generalGroupLoaded = false
     advancedGroupLoaded = false
 
-    async loadGeneralGroup() {
-        if (this.generalGroupLoaded) return
-        try {
-            await import('./page-groups/general-group.js')
-        } finally {
-            this.generalGroupLoaded = true
-        }
+    loadGeneralGroup() {
+        if (this.generalGroupLoaded) return Promise.resolve()
+        return showLoadingOverlay('Loading...')
+            .then(() => import('./page-groups/general-group.js'))
+            .finally(() => {
+                hideLoadingOverlay()
+                this.generalGroupLoaded = true
+            })
     }
 
-    async loadAdvancedGroup() {
-        if (this.advancedGroupLoaded) return
-        try {
-            await import('./page-groups/advanced-group.js')
-        } finally {
-            this.advancedGroupLoaded = true
-        }
+    loadAdvancedGroup() {
+        if (this.advancedGroupLoaded) return Promise.resolve()
+        return showLoadingOverlay('Loading...')
+            .then(() => import('./page-groups/advanced-group.js'))
+            .finally(() => {
+                hideLoadingOverlay()
+                this.advancedGroupLoaded = true
+            })
     }
 
-    async ensureLoadedForRoute(route) {
-        const generalRoutes = ['binding', 'options', 'wifi', 'update', 'connections', 'serial', 'buttons', 'models']
-        const advancedRoutes = ['hardware', 'cw', 'lr1121']
-        if (generalRoutes.includes(route)) {
-            await this.loadGeneralGroup()
-        } else if (advancedRoutes.includes(route)) {
-            await this.loadAdvancedGroup()
+    ensureLoadedForRoute(route) {
+        if (['binding', 'options', 'wifi', 'update', 'connections', 'serial', 'buttons', 'models'].includes(route)) {
+            return this.loadGeneralGroup()
         }
+        if (['hardware', 'voltage', 'cw', 'lr1121'].includes(route)) {
+            return this.loadAdvancedGroup()
+        }
+        return Promise.resolve()
     }
 
-    replaceMainWithTransition(newContent) {
+    // Transition/animation timing helpers
+    waitForElementTransition(element, mutate, fallbackMs = 220) {
         return new Promise(resolve => {
-            const onEnd = () => {
-                this.mainEl.removeEventListener('transitionend', onEnd)
-                if (typeof newContent === 'string') {
-                    this.mainEl.innerHTML = newContent
-                } else if (newContent instanceof Node) {
-                    this.mainEl.innerHTML = ''
-                    this.mainEl.appendChild(newContent)
-                } else {
-                    this.mainEl.innerHTML = ''
-                }
-                this.mainEl.classList.add('route-fade-in')
-                requestAnimationFrame(() => {
-                    this.mainEl.classList.remove('route-fade-out')
-                    requestAnimationFrame(() => {
-                        this.mainEl.classList.remove('route-fade-in')
-                        resolve()
-                    })
-                })
+            if (!element) {
+                resolve()
+                return
             }
-            this.mainEl.addEventListener('transitionend', onEnd)
-            this.mainEl.classList.add('route-fade-out')
-            setTimeout(onEnd, 220)
+
+            let settled = false
+            let fallbackTimer = null
+            const finish = () => {
+                if (settled) return
+                settled = true
+                element.removeEventListener('transitionend', onEnd)
+                if (fallbackTimer !== null) {
+                    clearTimeout(fallbackTimer)
+                    fallbackTimer = null
+                }
+                resolve()
+            }
+
+            const onEnd = (event) => {
+                if (event?.target !== element) return
+                finish()
+            }
+
+            element.addEventListener('transitionend', onEnd)
+            try {
+                mutate?.()
+            } catch {
+                finish()
+                return
+            }
+            fallbackTimer = setTimeout(finish, fallbackMs)
         })
     }
 
-    async renderRoute() {
-        const route = (location.hash || '#info').replace('#', '')
+    animateMainIn() {
+        return new Promise(resolve => {
+            if (!this.mainEl) {
+                resolve()
+                return
+            }
 
-        // If we are already on this route, do nothing
+            this.mainEl.classList.add('route-fade-in')
+            requestAnimationFrame(() => {
+                this.mainEl.classList.remove('route-fade-out')
+                requestAnimationFrame(() => {
+                    this.mainEl.classList.remove('route-fade-in')
+                    resolve()
+                })
+            })
+        })
+    }
+
+    // Route navigation orchestration
+    renderRoute() {
+        const route = (location.hash || '#info').replace('#', '')
         if (this.currentRoute && route === this.currentRoute) {
             this.setActiveMenu(route)
+            return Promise.resolve()
+        }
+
+        const checkNavGuard = () => {
+            const currentEl = this.mainEl?.firstElementChild
+            if (!currentEl?.checkChanged?.()) return Promise.resolve(true)
+            return showConfirm('Configuration Changed', 'Do you wish to navigate away and discard changes to this page?', 'Discard', 'Cancel')
+                .then(r => r === 'confirm')
+                .catch(() => true)
+        }
+
+        return checkNavGuard().then(canNavigate => {
+            if (!canNavigate) {
+                const hash = '#' + this.currentRoute
+                if (this.currentRoute && this.currentRoute !== route && hash !== location.hash) {
+                    location.hash = hash
+                }
+                this.setActiveMenu(this.currentRoute || route)
+                return
+            }
+
+            this.setActiveMenu(route)
+            return this.closeSidedrawer().then(() => this.ensureLoadedForRoute(route)).then(() => {
+                let rendered = false
+                return this.runWithSettingsRetry('Loading panel data...', () => {
+                    return (rendered || !this.currentRoute
+                        ? Promise.resolve()
+                        : this.waitForElementTransition(this.mainEl, () => this.mainEl.classList.add('route-fade-out')))
+                        .then(() => rendered || (this.currentRoute = route) && this.updateComplete)
+                        .then(() => rendered || (rendered = true) && this.animateMainIn())
+                        .then(() => this.mainEl?.firstElementChild?.pageReady?.())
+                        .then(() => {
+                            this.scrollMainToTop()
+                            return true
+                        })
+                })
+            })
+        })
+    }
+
+    // Sidedrawer interactions (mobile and desktop toggle)
+    showSidedrawer() {
+        if (this.sidedrawerClosePromise) {
+            this.sidedrawerClosePromise.then(() => this.showSidedrawer())
             return
         }
 
-        // Navigation guard: ask the current page component if we can leave
-        const currentEl = this.mainEl?.firstElementChild
-        if (currentEl && typeof currentEl.checkChanged === 'function') {
-            try {
-                let hasChanges = currentEl.checkChanged()
-                let navigate = true;
-                if (hasChanges === true) {
-                   navigate = (await cuteAlert({type: 'question', message: 'Do you wish to navigate away and discard changes to this page?', title: 'Configuration Changed', confirmText: 'Discard', cancelText: 'Cancel'})) === 'confirm'
-                }
-                if (navigate === false) {
-                    // Revert the hash to the previous route and exit
-                    if (this.currentRoute && this.currentRoute !== route) {
-                        if (('#' + this.currentRoute) !== location.hash) {
-                            location.hash = '#' + this.currentRoute
-                        }
-                        this.setActiveMenu(this.currentRoute)
-                    }
-                    return
-                }
-            } catch {
-                // If the hook throws, proceed with navigation
+        if (this.getOverlayElement()) return
+
+        if (!this.sideDrawer) return
+
+        // Ensure known closed baseline before animating in
+        this.sideDrawer.classList.remove('active')
+
+        const options = {
+            static: true,
+            keyboard: false,
+            onclose: () => {
+                this.teardownSidedrawer()
             }
         }
 
-        await this.ensureLoadedForRoute(route)
-        this.setActiveMenu(route)
-        try {
-            overlay('off')
-        } catch {
-        }
-        document.body.classList.remove('hide-sidedrawer')
-        const sd = this.querySelector('#sidedrawer') || document.getElementById('sidedrawer')
-        if (sd) sd.classList.remove('active')
-        const content = this.buildRouteContent(route)
-        await this.replaceMainWithTransition(content)
-        this.scrollMainToTop()
-        this.currentRoute = route
+        const overlayEl = overlay('on', options)
+        overlayEl.appendChild(this.sideDrawer)
+
+        overlayEl.addEventListener('click', (event) => {
+            if (event.target === overlayEl) {
+                this.closeSidedrawer()
+            }
+        })
+
+        requestAnimationFrame(() => requestAnimationFrame(() => this.sideDrawer.classList.add('active')))
     }
 
-    showSidedrawer() {
-        const sidedrawer = this.sidedrawerEl
-        if (!sidedrawer) return
-        const options = {
-            onclose: () => {
-                sidedrawer.classList.remove('active')
-                // Append back into the component so @query can find it again
-                this.appendChild(sidedrawer)
-            }
+    closeSidedrawer() {
+        if (this.sidedrawerClosePromise) {
+            return this.sidedrawerClosePromise
         }
-        const overlayEl = overlay('on', options)
-        overlayEl.appendChild(sidedrawer)
-        setTimeout(() => sidedrawer.classList.add('active'), 20)
+
+        const overlayEl = this.getOverlayElement()
+        document.body.classList.remove('hide-sidedrawer')
+
+        // If no overlay, ensure drawer is reset and return
+        if (!overlayEl) {
+            this.teardownSidedrawer()
+            return Promise.resolve()
+        }
+
+        this.sidedrawerClosePromise = this.waitForElementTransition(this.sideDrawer, () => {
+            this.sideDrawer?.classList.remove('active')
+        }).then(() => {
+            overlay('off')
+        }).finally(() => {
+            this.sidedrawerClosePromise = null
+        })
+
+        return this.sidedrawerClosePromise
     }
 
     hideSidedrawer() {

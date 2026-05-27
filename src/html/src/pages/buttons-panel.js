@@ -1,37 +1,37 @@
-import {html, LitElement} from "lit";
-import {customElement} from "lit/decorators.js";
-import {elrsState, saveConfig} from "../utils/state.js";
-import {_renderOptions} from "../utils/libs.js";
-import {postJSON} from "../utils/feedback.js";
+import {html, LitElement} from "lit"
+import {customElement} from "lit/decorators.js"
+import {elrsState, saveConfig} from "../utils/state.js"
+import {_renderOptions} from "../utils/libs.js"
+import {post} from "../utils/feedback.js"
 
 const ACTION_OPTIONS = ['Unused', 'Increase Power', 'Go to VTX Band Menu', 'Go to VTX Channel Menu',
-    'Send VTX Settings', 'Start WiFi', 'Send Bind Command', 'Start BLE Joystick'];
+    'Send VTX Settings', 'Start WiFi', 'Send Bind Command', 'Start BLE Joystick']
 const LONG_PRESS_OPTIONS = [
     'for 0.5 seconds', 'for 1 second', 'for 1.5 seconds', 'for 2 seconds',
     'for 2.5 seconds', 'for 3 seconds', 'for 3.5 seconds', 'for 4 seconds',
-];
+]
 const COUNT_OPTIONS = [
     '1 time', '2 times', '3 times', '4 times',
     '5 times', '6 times', '7 times', '8 times',
-];
+]
 
 @customElement('buttons-panel')
 class ButtonsPanel extends LitElement {
 
-    colorTimer = undefined;
-    colorUpdated = false;
-    buttonActions = [];
-    loadedButtonActionsJson = '[]';
-    currentButtonActionsJson = '[]';
-    buttonActionsInitialized = false;
+    colorTimer = undefined
+    colorUpdated = false
+    buttonActions = []
+    loadedButtonActionsJson = '[]'
+    currentButtonActionsJson = '[]'
+    buttonActionsInitialized = false
 
     createRenderRoot() {
-        this._timeoutCurrentColors = this._timeoutCurrentColors.bind(this);
-        return this;
+        this._timeoutCurrentColors = this._timeoutCurrentColors.bind(this)
+        return this
     }
 
     render() {
-        this._initializeButtonActions();
+        this._initializeButtonActions()
         return html`
             <div class="mui-panel mui--text-title">Button & Actions</div>
             <div class="mui-panel">
@@ -55,19 +55,19 @@ class ButtonsPanel extends LitElement {
                     </button>
                 </form>
             </div>
-        `;
+        `
     }
 
     _renderColorInput(index, label) {
-        const color = this.buttonActions[index]?.color;
-        if (color === undefined) return '';
+        const color = this.buttonActions[index]?.color
+        if (color === undefined) return ''
         return html`
             <p>
                 <input id="button${index + 1}-color" type="color" @input="${(e) => this._changeCurrentColors(e, index)}"
                        .value="${this._toRGB(color)}"/>
                 <label for="button${index + 1}-color">${label}</label>
             </p>
-        `;
+        `
     }
 
     _appendButtonActionRow(b, p, v) {
@@ -115,22 +115,22 @@ class ButtonsPanel extends LitElement {
     }
 
     _submitButtonActions(e) {
-        e.preventDefault();
+        e.preventDefault()
         saveConfig({'button-actions': this.buttonActions}, () => {
-            this._refreshButtonActionsJson();
-            this.loadedButtonActionsJson = this.currentButtonActionsJson;
-            this.requestUpdate();
+            this._refreshButtonActionsJson()
+            this.loadedButtonActionsJson = this.currentButtonActionsJson
+            this.requestUpdate()
         })
     }
 
     _toRGB(c) {
-        let r = c & 0xE0;
-        r = ((r << 16) + (r << 13) + (r << 10)) & 0xFF0000;
-        let g = c & 0x1C;
-        g = ((g << 11) + (g << 8) + (g << 5)) & 0xFF00;
-        let b = ((c & 0x3) << 1) + ((c & 0x3) >> 1);
-        b = (b << 5) + (b << 2) + (b >> 1);
-        return '#' + (r + g + b).toString(16).padStart(6, '0');
+        let r = c & 0xE0
+        r = ((r << 16) + (r << 13) + (r << 10)) & 0xFF0000
+        let g = c & 0x1C
+        g = ((g << 11) + (g << 8) + (g << 5)) & 0xFF00
+        let b = ((c & 0x3) << 1) + ((c & 0x3) >> 1)
+        b = (b << 5) + (b << 2) + (b >> 1)
+        return '#' + (r + g + b).toString(16).padStart(6, '0')
     }
 
     _to8bit(v) {
@@ -139,33 +139,38 @@ class ButtonsPanel extends LitElement {
     }
 
     _changeCurrentColors(e, index) {
-        this.buttonActions[index].color = this._to8bit(e.target.value);
+        this.buttonActions[index].color = this._to8bit(e.target.value)
         if (this.colorTimer === undefined) {
-            this._sendCurrentColors();
-            this.colorTimer = setInterval(this._timeoutCurrentColors, 50);
+            this._sendCurrentColors()
+            this.colorTimer = setInterval(this._timeoutCurrentColors, 50)
         } else {
-            this.colorUpdated = true;
+            this.colorUpdated = true
         }
     }
 
     _sendCurrentColors() {
-        let colors = [this.buttonActions[0].color];
-        if (this.buttonActions[1] && this.buttonActions[1].color !== undefined) colors.push(this.buttonActions[1].color);
-        postJSON('/buttons', colors)
-        this.colorUpdated = false;
+        let colors = [this.buttonActions[0].color]
+        if (this.buttonActions[1] && this.buttonActions[1].color !== undefined) colors.push(this.buttonActions[1].color)
+        post('/buttons', colors, {
+            onload: () => {
+                this._refreshButtonActionsJson()
+                this.requestUpdate()
+            }
+        })
+        this.colorUpdated = false
     }
 
     _timeoutCurrentColors() {
         if (this.colorUpdated) {
-            this._sendCurrentColors();
+            this._sendCurrentColors()
         } else {
-            clearInterval(this.colorTimer);
-            this.colorTimer = undefined;
+            clearInterval(this.colorTimer)
+            this.colorTimer = undefined
         }
     }
 
     _isSaveDisabled() {
-        return this.currentButtonActionsJson === this.loadedButtonActionsJson;
+        return this.currentButtonActionsJson === this.loadedButtonActionsJson
     }
 
     checkChanged() {
@@ -174,28 +179,28 @@ class ButtonsPanel extends LitElement {
 
     _initializeButtonActions() {
         if (this.buttonActionsInitialized || !elrsState.config['button-actions']) {
-            return;
+            return
         }
-        this.buttonActions = this._cloneButtonActions(elrsState.config['button-actions'] ?? []);
-        this._refreshButtonActionsJson();
-        this.loadedButtonActionsJson = this.currentButtonActionsJson;
-        this.buttonActionsInitialized = true;
+        this.buttonActions = this._cloneButtonActions(elrsState.config['button-actions'] ?? [])
+        this._refreshButtonActionsJson()
+        this.loadedButtonActionsJson = this.currentButtonActionsJson
+        this.buttonActionsInitialized = true
     }
 
     _cloneButtonActions(buttonActions) {
-        return JSON.parse(JSON.stringify(buttonActions));
+        return JSON.parse(JSON.stringify(buttonActions))
     }
 
     _refreshButtonActionsJson() {
-        this.currentButtonActionsJson = JSON.stringify(this.buttonActions);
+        this.currentButtonActionsJson = JSON.stringify(this.buttonActions)
     }
 
     _changeAction(b, p, value) {
-        const actionConfig = this.buttonActions[b].action[p];
-        actionConfig.action = value;
+        const actionConfig = this.buttonActions[b].action[p]
+        actionConfig.action = value
         if (value === 0) {
-            actionConfig['is-long-press'] = undefined;
-            actionConfig.count = undefined;
+            actionConfig['is-long-press'] = undefined
+            actionConfig.count = undefined
         } else {
             if (actionConfig['is-long-press'] !== true && actionConfig['is-long-press'] !== false) {
                 actionConfig['is-long-press'] = false; // default to short press
@@ -204,19 +209,19 @@ class ButtonsPanel extends LitElement {
                 actionConfig.count = 0; // default to first count option
             }
         }
-        this._refreshButtonActionsJson();
+        this._refreshButtonActionsJson()
         this.requestUpdate()
     }
 
     _changePress(b, p, value) {
-        this.buttonActions[b].action[p]['is-long-press'] = (value === 'true');
-        this._refreshButtonActionsJson();
+        this.buttonActions[b].action[p]['is-long-press'] = (value === 'true')
+        this._refreshButtonActionsJson()
         this.requestUpdate()
     }
 
     _changeCount(b, p, value) {
-        this.buttonActions[b].action[p].count = value;
-        this._refreshButtonActionsJson();
+        this.buttonActions[b].action[p].count = value
+        this._refreshButtonActionsJson()
         this.requestUpdate()
     }
 }
