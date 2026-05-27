@@ -2,8 +2,8 @@ import {html, LitElement} from "lit"
 import {customElement, state} from "lit/decorators.js"
 import {_renderOptions} from "../utils/libs.js"
 import {elrsState, saveOptionsAndConfig} from "../utils/state.js"
-import {PWM_MODE_SERIAL, PWM_MODE_SERIAL2RX, PWM_MODE_SERIAL2TX} from "./connections-panel.js";
-import {SERIAL_OPTIONS1, SERIAL_OPTIONS2} from "../utils/globals.js";
+import {PWM_MODE_SERIAL, PWM_MODE_SERIAL2RX, PWM_MODE_SERIAL2TX} from "./connections-panel.js"
+import {SERIAL_OPTIONS1, SERIAL_OPTIONS2} from "../utils/globals.js"
 
 @customElement('serial-panel')
 class SerialPanel extends LitElement {

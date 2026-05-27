@@ -1,13 +1,67 @@
-export function infoAlert(title, message) {
-  return cuteAlert({ type: 'info', title, message })
-}
-export function errorAlert(title, message) {
-  return cuteAlert({ type: 'error', title, message })
+import {overlay} from './overlay.js'
+
+function scopeLoadingOverlay(overlayEl) {
+  const contentWrapper = document.getElementById('content-wrapper')
+  if (!overlayEl || !contentWrapper) return
+  const rect = contentWrapper.getBoundingClientRect()
+  const footer = document.getElementById('footer')
+  const footerTop = footer ? footer.getBoundingClientRect().top : window.innerHeight
+  const top = Math.max(rect.top, 0)
+  const left = Math.max(rect.left, 0)
+  const right = Math.min(rect.right, window.innerWidth)
+  const bottom = Math.min(rect.bottom, footerTop)
+  overlayEl.style.top = `${top}px`
+  overlayEl.style.left = `${left}px`
+  overlayEl.style.width = `${Math.max(0, right - left)}px`
+  overlayEl.style.height = `${Math.max(0, bottom - top)}px`
+  overlayEl.style.right = 'auto'
+  overlayEl.style.bottom = 'auto'
 }
 
-// Generic POST helper that can send JSON or raw bodies (no UI side-effects)
-export function post(url, data, { headers = {}, onload, onerror } = {}) {
+export async function showLoadingOverlay(message) {
+  const wrapper = document.createElement('div')
+  wrapper.className = 'elrs-loading-overlay'
+  wrapper.innerHTML = `
+    <div class="elrs-loading-panel">
+      <div class="loader elrs-loading-spinner"></div>
+      <span class="elrs-loading-message">${message}</span>
+    </div>
+  `
+  const overlayEl = overlay('on', {keyboard: false, static: true}, wrapper)
+  overlayEl?.classList.add('elrs-loading-active')
+  // scopeLoadingOverlay(overlayEl)
+  await new Promise(requestAnimationFrame)
+}
+
+export function hideLoadingOverlay() {
+  overlay('off')
+}
+
+export function showAlert(type, title, message) {
+  return cuteAlert({type, title, message})
+}
+
+export function showConfirm(title, message, confirmText = 'OK', cancelText = 'Cancel') {
+  return cuteAlert({type: 'question', title, message, confirmText, cancelText})
+}
+
+export async function loadJSON(url, errorMessage = 'Failed to load data', headers = {}) {
+  const response = await fetch(url, {headers})
+  if (!response.ok) {
+    const text = await response.text()
+    throw new Error(text || errorMessage)
+  }
+  return await response.json()
+}
+
+// Generic POST helper that can send JSON, FormData, or file uploads (no UI side-effects)
+export function post(url, data, { headers = {}, timeoutMs = 0, onprogress, onload, onerror, onabort, ontimeout } = {}) {
   const xhr = new XMLHttpRequest()
+  if (timeoutMs > 0) xhr.timeout = timeoutMs
+  if (onprogress) xhr.upload.addEventListener('progress', onprogress, false)
+  if (onerror) xhr.addEventListener('error', () => onerror(xhr), false)
+  if (onabort) xhr.addEventListener('abort', () => onabort(xhr), false)
+  if (ontimeout) xhr.addEventListener('timeout', () => ontimeout(xhr), false)
   xhr.onreadystatechange = function () {
     if (xhr.readyState === 4) {
       if (xhr.status === 200) {
@@ -18,6 +72,16 @@ export function post(url, data, { headers = {}, onload, onerror } = {}) {
     }
   }
   xhr.open('POST', url, true)
+  if ((typeof File !== 'undefined') && (data instanceof File)) {
+    xhr.setRequestHeader('X-FileSize', data.size)
+    for (const [k, v] of Object.entries(headers)) {
+      xhr.setRequestHeader(k, v)
+    }
+    const formdata = new FormData()
+    formdata.append('upload', data, data.name)
+    xhr.send(formdata)
+    return xhr
+  }
   const isFormData = (typeof FormData !== 'undefined') && (data instanceof FormData)
   if (!isFormData) {
     // default to JSON unless caller supplied explicit Content-Type
@@ -31,24 +95,13 @@ export function post(url, data, { headers = {}, onload, onerror } = {}) {
   return xhr
 }
 
-// Convenience wrapper for JSON bodies
-export function postJSON(url, data, opts = {}) {
-  return post(url, data, opts)
-}
-
 // Helper to post JSON and then show reboot prompt on success
 export function saveJSONWithReboot(title, errorTitle, url, changes, successCB) {
-  postJSON(url, changes, {
+  post(url, changes, {
     onload: async () => {
       let message
       if (successCB) message = successCB()
-      const res = await cuteAlert({
-        type: 'question',
-        title,
-        message: message || 'Reboot to take effect',
-        confirmText: 'Reboot',
-        cancelText: 'Close',
-      })
+      const res = await showConfirm(title, message || 'Reboot to take effect', 'Reboot', 'Close')
       if (res === 'confirm') {
         // fire-and-forget reboot
         const r = new XMLHttpRequest()
@@ -58,7 +111,7 @@ export function saveJSONWithReboot(title, errorTitle, url, changes, successCB) {
       }
     },
     onerror: async (xhr) => {
-      await errorAlert(errorTitle, xhr.responseText || 'Request failed')
+      await showAlert('error', errorTitle, xhr.responseText || 'Request failed')
     }
   })
 }
@@ -67,22 +120,15 @@ export function postWithFeedback(title, errorMsg, url, getdata, success) {
   return function (e) {
     e.stopPropagation()
     e.preventDefault()
-    const xmlhttp = new XMLHttpRequest()
-    xmlhttp.onreadystatechange = async function () {
-      if (this.readyState === 4) {
-        if (this.status === 200) {
-          if (success) success()
-          await infoAlert(title, this.responseText)
-        } else {
-          await errorAlert(title, errorMsg)
-        }
+    post(url, getdata ? getdata() : null, {
+      onload: async (xhr) => {
+        if (success) success()
+        await showAlert('info', title, xhr.responseText)
+      },
+      onerror: async () => {
+        await showAlert('error', title, errorMsg)
       }
-    }
-    xmlhttp.open('POST', url, true)
-    let data
-    if (getdata) data = getdata(xmlhttp)
-    else data = null
-    xmlhttp.send(data)
+    })
   }
 }
 
@@ -155,11 +201,13 @@ export function cuteAlert({
 </div>
 `
 
-    body.insertAdjacentHTML('afterend', template)
+    const host = document.createElement('div')
+    host.innerHTML = template.trim()
+    const alertWrapper = host.firstElementChild
+    body.appendChild(alertWrapper)
 
-    const alertWrapper = document.querySelector('.alert-wrapper')
-    const alertFrame = document.querySelector('.alert-frame')
-    const alertClose = document.querySelector(`.${closeStyleTemplate}`)
+    const alertFrame = alertWrapper.querySelector('.alert-frame')
+    const alertClose = alertWrapper.querySelector(`.${closeStyleTemplate}`)
 
     function resolveIt() {
       alertWrapper.remove()
@@ -174,13 +222,13 @@ export function cuteAlert({
     }
 
     if (type === 'question') {
-      const confirmButton = document.querySelector('.confirm-button')
-      const cancelButton = document.querySelector('.cancel-button')
+      const confirmButton = alertWrapper.querySelector('.confirm-button')
+      const cancelButton = alertWrapper.querySelector('.cancel-button')
 
       confirmButton.addEventListener('click', confirmIt)
       cancelButton.addEventListener('click', resolveIt)
     } else {
-      const alertButton = document.querySelector('.alert-button')
+      const alertButton = alertWrapper.querySelector('.alert-button')
 
       alertButton.addEventListener('click', resolveIt)
     }

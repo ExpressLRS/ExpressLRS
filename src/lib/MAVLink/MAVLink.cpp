@@ -258,6 +258,39 @@ void convert_mavlink_to_crsf_telem(crsf_addr_e destination, uint8_t *CRSFinBuffe
                                                );
                 break;
             }
+            case MAVLINK_MSG_ID_SYSTEM_TIME: {
+                mavlink_system_time_t system_time;
+                mavlink_msg_system_time_decode(&msg, &system_time);
+                // SYSTEM_TIME.time_unix_usec is non-zero only when AP::rtc() has a valid time source
+                if (system_time.time_unix_usec == 0) {
+                    break;
+                }
+                time_t time_unix = (time_t)(system_time.time_unix_usec / 1000000);
+                struct tm *time_info = gmtime(&time_unix);
+                CRSF_MK_FRAME_T(crsf_sensor_gps_time_t) crsftime{};
+                crsftime.p.year = htobe16(time_info->tm_year + 1900);
+                crsftime.p.month = time_info->tm_mon + 1;
+                crsftime.p.day = time_info->tm_mday;
+                crsftime.p.hour = time_info->tm_hour;
+                crsftime.p.minute = time_info->tm_min;
+                crsftime.p.second = time_info->tm_sec;
+                crsftime.p.millisecond = 0; // intentionally not populated, avoids 64-bit maths
+                crsfRouter.SetHeaderAndCrc(&crsftime.h, CRSF_FRAMETYPE_GPS_TIME, CRSF_FRAME_SIZE(sizeof(crsf_sensor_gps_time_t)));
+                crsfRouter.deliverMessageTo(destination, &crsftime.h);
+                break;
+            }
+            case MAVLINK_MSG_ID_SCALED_PRESSURE: {
+                mavlink_scaled_pressure_t scaled_pressure;
+                mavlink_msg_scaled_pressure_decode(&msg, &scaled_pressure);
+                // CRSF temp is variable-length: crsf_sensor_temp_t reserves 20 samples but we send only one
+                CRSF_MK_FRAME_T(crsf_sensor_temp_t) crsftemp{};
+                crsftemp.p.source_id = 1; // 1 = Ambient (per CRSF temp source_id convention)
+                crsftemp.p.temperature[0] = htobe16(scaled_pressure.temperature / 10); // cdegC -> ddegC
+                constexpr size_t payloadLen = sizeof(crsftemp.p.source_id) + sizeof(crsftemp.p.temperature[0]);
+                crsfRouter.SetHeaderAndCrc(&crsftemp.h, CRSF_FRAMETYPE_TEMP, CRSF_FRAME_SIZE(payloadLen));
+                crsfRouter.deliverMessageTo(destination, &crsftemp.h);
+                break;
+            }
             case MAVLINK_MSG_ID_HOME_POSITION: {
                 mavlink_home_position_t home_pos;
                 mavlink_msg_home_position_decode(&msg, &home_pos);

@@ -6,7 +6,7 @@ export default [
         ignores: ['dist/**', 'headers/**', 'node_modules/**', '.vite/**']
     },
     {
-        files: ['src/**/*.js', 'dev-mock-plugin.js', 'vite.config.js'],
+        files: ['src/**/*.js', 'build-plugins/**/*.js', 'dev-plugins/**/*.js', 'vite.config.js'],
         languageOptions: {
             parser: babelParser,
             parserOptions: {

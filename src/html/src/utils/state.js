@@ -1,10 +1,29 @@
-import {State} from "@lit-app/state";
-import {errorAlert, postJSON, saveJSONWithReboot} from "./feedback.js";
+import {State} from "@lit-app/state"
+import {loadJSON, post, saveJSONWithReboot, showAlert} from "./feedback.js"
 
 class ElrsState extends State {
     config = {}
     options = {}
     settings = {}
+    hardware = {}
+}
+
+export function setHardwareState(hardware) {
+    elrsState.hardware = {...hardware}
+    elrsState.settings = {
+        ...elrsState.settings,
+        custom_hardware: !!hardware.customised
+    }
+}
+
+export async function loadHardware(force = false) {
+    if (!force && Object.keys(elrsState.hardware || {}).length > 0) {
+        return elrsState.hardware
+    }
+
+    const hardware = await loadJSON('/hardware.json')
+    setHardwareState(hardware)
+    return hardware
 }
 
 export function formatBand() {
@@ -19,33 +38,33 @@ export function formatBand() {
 }
 
 export function formatWifiRssi() {
-    let wifiDesc = "";
+    let wifiDesc = ""
     if (elrsState.settings) {
         if (elrsState.settings.mode === "STA")
-            wifiDesc = `Client [${elrsState.settings.ssid}]`;
+            wifiDesc = `Client [${elrsState.settings.ssid}]`
         else
-            wifiDesc = "AP mode";
+            wifiDesc = "AP mode"
 
         // If we have dbm and it isn't 0, add it
         if (elrsState.settings?.wifi_dbm)
         {
-            let dbm = elrsState.settings.wifi_dbm;
-            wifiDesc += ` ${dbm}dBm `;
+            let dbm = elrsState.settings.wifi_dbm
+            wifiDesc += ` ${dbm}dBm `
             if (dbm > -30)
-                wifiDesc += "**GODLIKE**";
+                wifiDesc += "**GODLIKE**"
             else if (dbm > -60)
-                wifiDesc += "excellent signal";
+                wifiDesc += "excellent signal"
             else if (dbm == -69)
-                wifiDesc += "nice signal";
+                wifiDesc += "nice signal"
             else if (dbm > -80)
-                wifiDesc += "good signal";
+                wifiDesc += "good signal"
             else if (dbm > -90)
-                wifiDesc += "poor signal";
+                wifiDesc += "poor signal"
             else
-                wifiDesc += "Unusable";
+                wifiDesc += "Unusable"
         }
     }
-    return wifiDesc;
+    return wifiDesc
 }
 
 export function saveConfig(changes, successCB) {
@@ -77,18 +96,20 @@ export function saveOptions(changes, successCB) {
     })
 }
 
-export function saveOptionsAndConfig(changes, successCB) {
+export async function saveOptionsAndConfig(changes, successCB) {
     const newOptions = {...elrsState.options, ...changes.options, customised: true}
-    postJSON('/options.json', newOptions, {
-        onload: async () => {
-            saveConfig(changes.config, () => {
-                elrsState.options = newOptions
-                if (successCB) successCB()
-            })
-        },
-        onerror: async (xhr) => {
-            await errorAlert('Configuration Update Failed', xhr.responseText || 'Request failed')
-        }
+    await new Promise((resolve, reject) => {
+        post('/options.json', newOptions, {
+            onload: () => resolve(),
+            onerror: (xhr) => reject(new Error(xhr.responseText || 'Request failed'))
+        })
+    }).then(() => {
+        saveConfig(changes.config, () => {
+            elrsState.options = newOptions
+            if (successCB) successCB()
+        })
+    }).catch(async (error) => {
+        await showAlert('error', 'Configuration Update Failed', error?.message || 'Request failed')
     })
 }
 
