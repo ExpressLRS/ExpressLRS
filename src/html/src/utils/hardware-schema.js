@@ -533,6 +533,12 @@ const HARDWARE_SCHEMA = [
                 desc: 'Select to rotate the display 180 degrees'
             },
             {
+                id: 'screen_mirror',
+                label: 'Screen mirror',
+                type: 'checkbox',
+                desc: 'Mirror the display horizontally. Combine with "180 rotation" for vertical mirror. OLED only; no effect on SPI TFT screens.'
+            },
+            {
                 id: 'screen_cs',
                 label: 'CS pin',
                 type: 'uint',

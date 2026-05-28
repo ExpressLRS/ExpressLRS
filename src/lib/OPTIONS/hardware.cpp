@@ -94,6 +94,7 @@ static const struct {
     {HARDWARE_screen_sda, "screen_sda", INT},
     {HARDWARE_screen_type, "screen_type", INT},
     {HARDWARE_screen_reversed, "screen_reversed", BOOL},
+    {HARDWARE_screen_mirror, "screen_mirror", BOOL},
     {HARDWARE_screen_bl, "screen_bl", INT},
     {HARDWARE_use_backpack, "use_backpack", BOOL},
     {HARDWARE_debug_backpack_baud, "debug_backpack_baud", INT},

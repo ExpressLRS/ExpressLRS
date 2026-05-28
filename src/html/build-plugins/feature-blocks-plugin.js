@@ -38,6 +38,10 @@ export function createFeatureBlockProcessor(env) {
 
   function getFlagForName(name, defaultValue) {
     const key = normalizeName(name)
+    // Add any other "derived" flags here, check features.js
+    if (name === 'HAS_SUBGHZ') {
+      return getFlagForName('HAS_LR1121', false) || getFlagForName('HAS_SX127X', false)
+    }
     const v = env[`VITE_FEATURE_HTML_${key}`] ?? env[`VITE_FEATURE_${key}`]
     return toBoolEnv(v, defaultValue)
   }
