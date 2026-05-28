@@ -17,6 +17,8 @@
 #define HT_EDGETX_NO_VALUE  0
 // Stop overriding channels with PTR data if older than this
 #define HT_STALE_TIMEOUT_MS 1000
+#define TRAINER_EDGE_TX_REFRESH_MS 20
+#define TRAINER_STALE_TIMEOUT_MS 100
 
 extern char backpackVersion[];
 
@@ -24,12 +26,27 @@ bool TxBackpackWiFiReadyToSend = false;
 bool VRxBackpackWiFiReadyToSend = false;
 bool BackpackTelemReadyToSend = false;
 bool lastRecordingState = false;
+bool BackpackTrainerPairReadyToSend = false;
+bool BackpackTrainerForgetReadyToSend = false;
+
+#define TRAINER_CHANNEL_PAYLOAD_SIZE (CRSF_NUM_CHANNELS * 2)
 
 static uint16_t ptrChannelData[CRSF_NUM_CHANNELS];
 static bool headTrackingEnabled = false;
-static uint32_t lastPTRValidTimeMs;
+static volatile uint32_t lastPTRValidTimeMs;
+
+static volatile bool trainerHasValidPacket = false;
+static bool trainerModeSyncedToBackpack = false;
+static volatile bool trainerStreamingActive = false;
+static bool trainerCallbackActive = false;
+static uint32_t lastTrainerEdgeTxSendMs = 0;
+static bool backpackWifiUpdateActive = false;
 
 #if defined(PLATFORM_ESP32)
+
+static portMUX_TYPE trainerStateMux = portMUX_INITIALIZER_UNLOCKED;
+#define TRAINER_STATE_ENTER() portENTER_CRITICAL(&trainerStateMux)
+#define TRAINER_STATE_EXIT()  portEXIT_CRITICAL(&trainerStateMux)
 
 #define GPIO_PIN_BOOT0 0
 
@@ -230,13 +247,29 @@ static void BackpackBinding()
     MSP::sendPacket(&packet, BackpackOrLogStrm); // send to tx-backpack as MSP
 }
 
+static bool trainerBackpackRuntimeEnabled()
+{
+    return !config.GetBackpackDisable()
+        && config.GetBackpackTlmMode() == BACKPACK_TELEM_MODE_ESPNOW
+        && config.GetTrainerMode() != TRAINER_MODE_OFF;
+}
+
+static bool trainerMasterOwnsChannelBuffer()
+{
+    return trainerBackpackRuntimeEnabled()
+        && config.GetTrainerMode() == TRAINER_MODE_MASTER;
+}
+
 /***
- * @brief:  Read 16-bit CRSF value channels from the packet payload and store them for head-tracking/trainer.
+ * @brief:  Read 16-bit CRSF value channels from the packet payload and store them for head-tracking.
  *          Process as many values as there are payload bytes available
  *          A value of HT_DO_NOT_UPDATE will not overwrite that channel
  */
 void processPanTiltRollPacket(const uint32_t now, const mspPacket_t *packet)
 {
+    if (trainerMasterOwnsChannelBuffer())
+        return;
+
     unsigned chStart = (config.GetPTRStartChannel() == HT_START_EDGETX) ? 0 : (config.GetPTRStartChannel() - HT_START_AUX1 + AUX1);
     unsigned payloadPos = 0;
     // Any time a PTR packet is received, all channels are returned to HT_DO_NOT_UPDATE unless they are in this packet
@@ -261,9 +294,33 @@ void processPanTiltRollPacket(const uint32_t now, const mspPacket_t *packet)
 static void headtrackPublishChannelsToEdgeTX()
 {
     static uint32_t lastPTRSentMs = 0;
-    if (lastPTRSentMs == lastPTRValidTimeMs)
-        return;
-    lastPTRSentMs = lastPTRValidTimeMs;
+
+    bool streaming;
+    bool hasPkt;
+    uint32_t lastValid;
+    TRAINER_STATE_ENTER();
+    streaming = trainerStreamingActive;
+    hasPkt = trainerHasValidPacket;
+    lastValid = lastPTRValidTimeMs;
+    TRAINER_STATE_EXIT();
+
+    if (streaming)
+    {
+        if (!hasPkt)
+            return;
+        const uint32_t now = millis();
+        if (now - lastValid > TRAINER_STALE_TIMEOUT_MS)
+            return;
+        if (lastTrainerEdgeTxSendMs != 0 && (uint32_t)(now - lastTrainerEdgeTxSendMs) < TRAINER_EDGE_TX_REFRESH_MS)
+            return;
+        lastTrainerEdgeTxSendMs = now;
+    }
+    else
+    {
+        if (lastPTRSentMs == lastValid)
+            return;
+        lastPTRSentMs = lastValid;
+    }
 
     CRSF_MK_FRAME_T(crsf_channels_t) rcPacket; // not zeroed, entire packet will be filled
     // Pack the ptrChannelData into 11 bits for the crsf_channels_t packet
@@ -290,6 +347,9 @@ static void headtrackPublishChannelsToEdgeTX()
 
 void headtrackOverrideChannels(uint32_t channels[], size_t channelCount)
 {
+    if (trainerMasterOwnsChannelBuffer())
+        return;
+
     if (millis() - lastPTRValidTimeMs > HT_STALE_TIMEOUT_MS)
         return;
 
@@ -302,34 +362,77 @@ void headtrackOverrideChannels(uint32_t channels[], size_t channelCount)
     }
 }
 
-static void BackpackPollAuxStates()
+static void resetTrainerRuntimeState()
 {
-    // HeadTracking Enable
-    bool enable = backpackVersion[0] != 0;
-    if (enable)
+    memset(ptrChannelData, 0xff, sizeof(ptrChannelData));
+    TRAINER_STATE_ENTER();
+    lastPTRValidTimeMs = 0;
+    trainerHasValidPacket = false;
+    trainerStreamingActive = false;
+    TRAINER_STATE_EXIT();
+    lastTrainerEdgeTxSendMs = 0;
+}
+
+static void BackpackPollAuxStates(bool allowHeadTracking)
+{
+    if (!allowHeadTracking)
     {
-        switch (config.GetPTREnableChannel())
+        if (headTrackingEnabled)
         {
-            case HT_OFF:
-                enable = false; break;
-            case HT_ON:
-                enable = true; break;
-            default:
-                enable = CRSF_to_BIT(ChannelData[config.GetPTREnableChannel() / 2 + 3]);
-                if (config.GetPTREnableChannel() % 2)
-                    enable = !enable;
+            headTrackingEnabled = false;
+            BackpackHTFlagToMSPOut(false);
+        }
+        if (!trainerCallbackActive)
+        {
+            trainerCallbackActive = true;
+            BackpackHTFlagToMSPOut(false);
+            TRAINER_STATE_ENTER();
+            trainerStreamingActive = true;
+            TRAINER_STATE_EXIT();
+            lastTrainerEdgeTxSendMs = 0;
+            handset->setRcChannelsOverrideCallback(nullptr);
+            handset->setRCDataCallback(&headtrackPublishChannelsToEdgeTX);
         }
     }
-    if (enable != headTrackingEnabled)
+    else
     {
-        headTrackingEnabled = enable;
-        BackpackHTFlagToMSPOut(headTrackingEnabled);
+        if (trainerCallbackActive)
+        {
+            trainerCallbackActive = false;
+            TRAINER_STATE_ENTER();
+            trainerStreamingActive = false;
+            TRAINER_STATE_EXIT();
+            handset->setRCDataCallback(nullptr);
+            headTrackingEnabled = false;
+        }
 
-        auto rcchannelsoverride_cb = (enable && config.GetPTRStartChannel() != HT_START_EDGETX) ? &headtrackOverrideChannels : nullptr;
-        handset->setRcChannelsOverrideCallback(rcchannelsoverride_cb);
+        // HeadTracking Enable
+        bool enable = backpackVersion[0] != 0;
+        if (enable)
+        {
+            switch (config.GetPTREnableChannel())
+            {
+                case HT_OFF:
+                    enable = false; break;
+                case HT_ON:
+                    enable = true; break;
+                default:
+                    enable = CRSF_to_BIT(ChannelData[config.GetPTREnableChannel() / 2 + 3]);
+                    if (config.GetPTREnableChannel() % 2)
+                        enable = !enable;
+            }
+        }
+        if (enable != headTrackingEnabled)
+        {
+            headTrackingEnabled = enable;
+            BackpackHTFlagToMSPOut(headTrackingEnabled);
 
-        auto rcdata_cb = (enable && config.GetPTRStartChannel() == HT_START_EDGETX) ? &headtrackPublishChannelsToEdgeTX : nullptr;
-        handset->setRCDataCallback(rcdata_cb);
+            auto rcchannelsoverride_cb = (enable && config.GetPTRStartChannel() != HT_START_EDGETX) ? &headtrackOverrideChannels : nullptr;
+            handset->setRcChannelsOverrideCallback(rcchannelsoverride_cb);
+
+            auto rcdata_cb = (enable && config.GetPTRStartChannel() == HT_START_EDGETX) ? &headtrackPublishChannelsToEdgeTX : nullptr;
+            handset->setRCDataCallback(rcdata_cb);
+        }
     }
 
     // DVR recording enable
@@ -388,16 +491,66 @@ void sendMAVLinkTelemetryToBackpack(const uint8_t *data)
     BackpackOrLogStrm->write(data + CRSF_FRAME_NOT_COUNTED_BYTES, count);
 }
 
-static void sendConfigToBackpack()
+static void stopTrainerCallbacks()
 {
-    // Send any config values to the tx-backpack, as one key/value pair per MSP msg
+    TRAINER_STATE_ENTER();
+    trainerStreamingActive = false;
+    TRAINER_STATE_EXIT();
+    if (trainerCallbackActive)
+    {
+        trainerCallbackActive = false;
+        handset->setRcChannelsOverrideCallback(nullptr);
+        handset->setRCDataCallback(nullptr);
+    }
+}
+
+void processTrainerChannelsPacket(uint32_t now, const mspPacket_t *packet)
+{
+    if (!trainerBackpackRuntimeEnabled() || config.GetTrainerMode() != TRAINER_MODE_MASTER) return;
+    if (packet->payloadSize != TRAINER_CHANNEL_PAYLOAD_SIZE) return;
+    for (unsigned ch = 0; ch < CRSF_NUM_CHANNELS; ch++)
+    {
+        const unsigned pos = ch * 2;
+        ptrChannelData[ch] = (packet->payload[pos] | (packet->payload[pos + 1] << 8)) & 0x7FF;
+    }
+    TRAINER_STATE_ENTER();
+    lastPTRValidTimeMs = now;
+    trainerHasValidPacket = true;
+    TRAINER_STATE_EXIT();
+}
+
+static void sendBackpackConfigValue(uint8_t key, uint8_t value)
+{
     mspPacket_t packet;
     packet.reset();
     packet.makeCommand();
     packet.function = MSP_ELRS_BACKPACK_CONFIG;
-    packet.addByte(MSP_ELRS_BACKPACK_CONFIG_TLM_MODE); // Backpack tlm mode
-    packet.addByte(config.GetBackpackTlmMode());
-    MSP::sendPacket(&packet, BackpackOrLogStrm); // send to tx-backpack as MSP
+    packet.addByte(key);
+    packet.addByte(value);
+    MSP::sendPacket(&packet, BackpackOrLogStrm);
+}
+
+static void sendTrainerModeToBackpack(uint8_t mode)
+{
+    if (mode > TRAINER_MODE_SLAVE)
+    {
+        mode = TRAINER_MODE_OFF;
+    }
+    sendBackpackConfigValue(MSP_ELRS_BACKPACK_CONFIG_TRAINER_MODE, mode);
+}
+
+static void disableTrainerForBackpackWifi()
+{
+    BackpackTrainerPairReadyToSend = false;
+    BackpackTrainerForgetReadyToSend = false;
+    stopTrainerCallbacks();
+    resetTrainerRuntimeState();
+}
+
+static void sendConfigToBackpack()
+{
+    sendBackpackConfigValue(MSP_ELRS_BACKPACK_CONFIG_TLM_MODE, config.GetBackpackTlmMode());
+    sendTrainerModeToBackpack(config.GetTrainerMode());
 }
 
 static bool initialize()
@@ -417,6 +570,7 @@ static bool initialize()
         }
         // Set all channels of PTR data to "do not override" (0xffff)
         memset(ptrChannelData, 0xff, sizeof(ptrChannelData));
+        resetTrainerRuntimeState();
     }
     return OPT_USE_TX_BACKPACK;
 }
@@ -431,6 +585,15 @@ static int timeout()
     static uint8_t versionRequestTries = 0;
     static uint32_t lastVersionTryTime = 0;
 
+    if (backpackWifiUpdateActive)
+    {
+        TxBackpackWiFiReadyToSend = false;
+        VRxBackpackWiFiReadyToSend = false;
+        BackpackTelemReadyToSend = false;
+        disableTrainerForBackpackWifi();
+        return BACKPACK_PERIOD_MS;
+    }
+
     if (versionRequestTries < 10 && strlen(backpackVersion) == 0 && (lastVersionTryTime == 0 || millis() - lastVersionTryTime > 1000))
     {
         lastVersionTryTime = millis();
@@ -443,12 +606,37 @@ static int timeout()
         DBGLN("Sending get backpack version command");
     }
 
+    // When the Backpack reports its version (= it has booted), push the
+    // current trainer mode so a RAM-only setting on the Backpack stays in
+    // sync with the persistent value held by the TX MCU.
+    const bool backpackUp = strlen(backpackVersion) > 0;
+    if (backpackUp && !trainerModeSyncedToBackpack)
+    {
+        sendTrainerModeToBackpack(config.GetTrainerMode());
+        trainerModeSyncedToBackpack = true;
+    }
+    else if (!backpackUp && trainerModeSyncedToBackpack)
+    {
+        trainerModeSyncedToBackpack = false;
+    }
+
+    if (!trainerBackpackRuntimeEnabled())
+    {
+        BackpackTrainerPairReadyToSend = false;
+        BackpackTrainerForgetReadyToSend = false;
+    }
+
     if (connectionState < MODE_STATES && !config.GetBackpackDisable())
     {
         if (TxBackpackWiFiReadyToSend)
         {
             TxBackpackWiFiReadyToSend = false;
+            disableTrainerForBackpackWifi();
+            BackpackTelemReadyToSend = false;
+            VRxBackpackWiFiReadyToSend = false;
             BackpackWiFiToMSPOut(MSP_ELRS_SET_TX_BACKPACK_WIFI_MODE);
+            backpackWifiUpdateActive = true;
+            return BACKPACK_PERIOD_MS;
         }
 
         if (VRxBackpackWiFiReadyToSend)
@@ -461,9 +649,67 @@ static int timeout()
         {
             BackpackTelemReadyToSend = false;
             sendConfigToBackpack();
+            if (BackpackTrainerPairReadyToSend)
+            {
+                return BACKPACK_PERIOD_MS;
+            }
         }
 
-        BackpackPollAuxStates();
+        if (BackpackTrainerPairReadyToSend && trainerBackpackRuntimeEnabled())
+        {
+            BackpackTrainerPairReadyToSend = false;
+            sendTrainerModeToBackpack(config.GetTrainerMode());
+            mspPacket_t pkt;
+            pkt.reset();
+            pkt.makeCommand();
+            pkt.function = MSP_ELRS_BACKPACK_TRAINER_PAIR_REQ;
+            MSP::sendPacket(&pkt, BackpackOrLogStrm);
+        }
+
+        if (BackpackTrainerForgetReadyToSend && trainerBackpackRuntimeEnabled())
+        {
+            BackpackTrainerForgetReadyToSend = false;
+            mspPacket_t pkt;
+            pkt.reset();
+            pkt.makeCommand();
+            pkt.function = MSP_ELRS_BACKPACK_TRAINER_FORGET;
+            MSP::sendPacket(&pkt, BackpackOrLogStrm);
+        }
+
+        static uint8_t previousTrainerMode = TRAINER_MODE_OFF;
+        const uint8_t trainerMode = config.GetTrainerMode();
+        const bool trainerRuntimeEnabled = trainerBackpackRuntimeEnabled();
+
+        if (trainerMode != previousTrainerMode)
+        {
+            previousTrainerMode = trainerMode;
+            sendTrainerModeToBackpack(trainerMode);
+            resetTrainerRuntimeState();
+        }
+
+        if (trainerRuntimeEnabled && trainerMode == TRAINER_MODE_SLAVE)
+        {
+            static uint32_t lastTrainerSendMs = 0;
+            if (millis() - lastTrainerSendMs >= 20)
+            {
+                lastTrainerSendMs = millis();
+                mspPacket_t pkt;
+                pkt.reset();
+                pkt.makeCommand();
+                pkt.function = MSP_ELRS_BACKPACK_TRAINER_CHANNELS;
+                for (unsigned ch = 0; ch < CRSF_NUM_CHANNELS; ch++)
+                {
+                    uint16_t v = (uint16_t)ChannelData[ch];
+                    pkt.addByte(v & 0xFF);
+                    pkt.addByte(v >> 8);
+                }
+                MSP::sendPacket(&pkt, BackpackOrLogStrm);
+            }
+        }
+
+        const bool trainerMasterActive = trainerRuntimeEnabled && trainerMode == TRAINER_MODE_MASTER;
+
+        BackpackPollAuxStates(!trainerMasterActive);
     }
 
     return BACKPACK_PERIOD_MS;
@@ -491,6 +737,12 @@ static int event()
         headTrackingEnabled = false;
         handset->setRcChannelsOverrideCallback(nullptr);
         handset->setRCDataCallback(nullptr);
+    }
+
+    if (disabled)
+    {
+        stopTrainerCallbacks();
+        resetTrainerRuntimeState();
     }
 
     return disabled ? DURATION_NEVER : BACKPACK_PERIOD_MS;
