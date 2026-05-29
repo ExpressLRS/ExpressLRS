@@ -296,6 +296,7 @@ static void ICACHE_RAM_ATTR GenerateChannelData12ch(OTA_Packet_s * const otaPktP
 
 // Current ChannelData unpacker function being used by RX
 UnpackChannelData_t OtaUnpackChannelData;
+static bool OtaChannelDataComplete;
 
 #if defined(DEBUG_RCVR_LINKSTATS)
 // Sequential PacketID from the TX
@@ -465,6 +466,50 @@ bool ICACHE_RAM_ATTR UnpackChannelData8ch(OTA_Packet_s const * const otaPktPtr, 
     // Restore the uplink_TX_Power range 0-7 -> 1-8
     linkStats.uplink_TX_Power = constrain(ota8->rc.uplinkPower + 1, 1, 8);
     return ota8->rc.stubbornAck;
+}
+
+void OtaResetChannelDataComplete()
+{
+    OtaChannelDataComplete = false;
+}
+
+bool ICACHE_RAM_ATTR OtaIsChannelDataComplete(uint32_t const *channelData)
+{
+#if defined(DEBUG_RCVR_LINKSTATS)
+    (void)channelData;
+    OtaChannelDataComplete = true;
+    return true;
+#else
+    if (!OtaChannelDataComplete) {
+        uint8_t lastRequiredChannel = 11;
+        if (OtaIsFullRes)
+        {
+            switch (OtaSwitchModeCurrent)
+            {
+                case smWideOr8ch:
+                    lastRequiredChannel = 7;
+                    break;
+                case sm12ch:
+                    lastRequiredChannel = 11;
+                    break;
+                case smHybridOr16ch:
+                    lastRequiredChannel = 15;
+                    break;
+            }
+        }
+
+        for (uint8_t ch = 0; ch <= lastRequiredChannel; ++ch)
+        {
+            if (channelData[ch] == CRSF_CHANNEL_VALUE_UNSET)
+            {
+                return false;
+            }
+        }
+
+        OtaChannelDataComplete = true;
+    }
+    return OtaChannelDataComplete;
+#endif
 }
 #endif
 
