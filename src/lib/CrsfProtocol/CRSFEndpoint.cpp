@@ -349,7 +349,7 @@ void CRSFEndpoint::parameterUpdateReq(const crsf_addr_e origin, const bool isElr
         break;
 
     case CRSF_FRAMETYPE_PARAMETER_READ: {
-        DBGVLN("Read parameter %u %u", fieldId, fieldChunk);
+        DBGVLN("Read parameter %u %u", parameterIndex, parameterArg);
         if (parameterIndex < MAX_CRSF_PARAMETERS && parameter)
         {
             const auto field = (commandParameter *)parameter;
