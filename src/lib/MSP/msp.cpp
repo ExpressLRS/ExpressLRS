@@ -79,11 +79,20 @@ MSP::processReceivedByte(uint8_t c)
 
             // If we've received the correct amount of bytes for a full header
             if (m_offset == sizeof(mspHeaderV2_t)) {
-                // Copy header values into packet
-                mspHeaderV2_t* header = (mspHeaderV2_t*)&m_inputBuffer[0];
-                m_packet.payloadSize = header->payloadSize;
-                m_packet.function = header->function;
-                m_packet.flags = header->flags;
+                // MSPv2 header bytes are: flag, function LE, payload size LE.
+                const uint16_t payloadSize = m_inputBuffer[3] | (m_inputBuffer[4] << 8);
+                // Reject before payload copy because m_packet.payload is fixed-size.
+                if (payloadSize > MSP_PORT_INBUF_SIZE)
+                {
+                    DBGLN("MSP payload too large - Got %u max %u", payloadSize, MSP_PORT_INBUF_SIZE);
+                    m_packet.reset();
+                    m_offset = 0;
+                    m_inputState = MSP_IDLE;
+                    break;
+                }
+                m_packet.payloadSize = payloadSize;
+                m_packet.function = m_inputBuffer[1] | (m_inputBuffer[2] << 8);
+                m_packet.flags = m_inputBuffer[0];
                 // reset the offset iterator for re-use in payload below
                 m_offset = 0;
 				if (m_packet.payloadSize == 0)
@@ -173,12 +182,13 @@ MSP::sendPacket(mspPacket_t* packet, Stream* port)
     // Subsequent bytes are contained in the crc
     uint8_t crc = 0;
 
-    // Pack header struct into buffer
-    uint8_t headerBuffer[5];
-    mspHeaderV2_t* header = (mspHeaderV2_t*)&headerBuffer[0];
-    header->flags = packet->flags;
-    header->function = packet->function;
-    header->payloadSize = packet->payloadSize;
+    // Pack header bytes in little-endian order.
+    uint8_t headerBuffer[sizeof(mspHeaderV2_t)];
+    headerBuffer[0] = packet->flags;
+    headerBuffer[1] = static_cast<uint8_t>(packet->function);
+    headerBuffer[2] = static_cast<uint8_t>(packet->function >> 8);
+    headerBuffer[3] = static_cast<uint8_t>(packet->payloadSize);
+    headerBuffer[4] = static_cast<uint8_t>(packet->payloadSize >> 8);
 
     // Write out the header buffer, adding each byte to the crc
     for (uint8_t i = 0; i < sizeof(mspHeaderV2_t); ++i) {
