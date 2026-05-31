@@ -1567,7 +1567,11 @@ void loop()
         // retransmits due to missed packets.
         if (CRSFinBuffer[CRSF_TELEMETRY_TYPE_INDEX] == CRSF_FRAMETYPE_GPS_TIME && gpsTimeFirstChunkMs != 0)
         {
-          crsfGpsTimeAdvanceMs(CRSFinBuffer, (uint16_t)(millis() - gpsTimeFirstChunkMs));
+          // Add one TOA to account for the time between the RX starting to transmit
+          // the first chunk and it being received here. TOA is in µs, round to ms.
+          const uint16_t otaMs = (uint16_t)(millis() - gpsTimeFirstChunkMs)
+                                 + (ExpressLRS_currAirRate_RFperfParams->TOA + 500) / 1000;
+          crsfGpsTimeAdvanceMs(CRSFinBuffer, otaMs);
           crsfRecalcCrc(CRSFinBuffer);
           gpsTimeFirstChunkMs = 0;
         }
