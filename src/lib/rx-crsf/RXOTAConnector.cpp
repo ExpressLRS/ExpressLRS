@@ -137,6 +137,9 @@ void RXOTAConnector::forwardMessage(const crsf_header_t *message)
 {
     const uint8_t messageSize = CRSF_FRAME_SIZE(((uint8_t *)message)[CRSF_TELEMETRY_LENGTH_INDEX]);
 
+    if (message->type == CRSF_FRAMETYPE_GPS_TIME)
+        gpsTimeEnqueuedMs = millis();
+
     auto action = ACTION_APPEND;
     uint16_t overwritePosition = 0;
     const auto comparator = comparators.find(message->type);
