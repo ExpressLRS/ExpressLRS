@@ -192,8 +192,8 @@ void ICACHE_RAM_ATTR ProcessOtaDataDl(uint8_t pi1, uint8_t pi2, uint8_t *data1, 
       }
       else
       {
-          packageIndexRadio2 = pi1;
-          memcpy(&geminiSpanBuffer[dataLen], data1, dataLen);
+          packageIndexRadio2 = pi2;
+          memcpy(&geminiSpanBuffer[dataLen], data2, dataLen);
       }
 
       if (Radio.GetProcessingPacketRadio() == SX12XX_Radio_1 && Radio.hasSecondRadioGotData)
@@ -203,8 +203,8 @@ void ICACHE_RAM_ATTR ProcessOtaDataDl(uint8_t pi1, uint8_t pi2, uint8_t *data1, 
       }
       else if (Radio.GetProcessingPacketRadio() == SX12XX_Radio_2 && Radio.hasSecondRadioGotData)
       {
-          packageIndexRadio1 = pi2;
-          memcpy(geminiSpanBuffer, data2, dataLen);
+          packageIndexRadio1 = pi1;
+          memcpy(geminiSpanBuffer, data1, dataLen);
       }
 
       if (packageIndexRadio1 == packageIndexRadio2 && packageIndexRadio1 != 0xFF)
