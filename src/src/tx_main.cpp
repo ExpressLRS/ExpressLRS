@@ -31,6 +31,7 @@ void sendMAVLinkTelemetryToBackpack(uint8_t *) {}
 
 #include "CRSFParser.h"
 #include "CRSFRouter.h"
+#include "CRSFGpsTime.h"
 #include "MAVLink.h"
 #include "TXModuleEndpoint.h"
 #include "TXOTAConnector.h"
@@ -72,6 +73,7 @@ static enum { stbIdle, stbRequested, stbBoosting } syncTelemBoostState = stbIdle
 ////////////////////////////////////////////////
 
 static uint32_t LastTLMpacketRecv_Ms = 0;
+static uint32_t gpsTimeFirstChunkMs = 0; // millis() when first chunk of a GPS Time frame was received OTA
 static uint32_t LinkStatsLastReported_Ms = 0;
 static uint32_t RxDisconnected_Ms = 0;
 static bool commitInProgress = false;
@@ -219,6 +221,12 @@ void ICACHE_RAM_ATTR ProcessOtaDataDl(uint8_t pi1, uint8_t pi2, uint8_t *data1, 
   {
       DataUlSender.ConfirmCurrentPayload(stubbornAck);
       DataDlReceiver.ReceiveData(pi1, data1, dataLen);
+      // Record when the first chunk of a GPS Time frame arrives so the
+      // HasFinishedData() handler can compensate for OTA transmission time.
+      if (pi1 == 1 && CRSFinBuffer[CRSF_TELEMETRY_TYPE_INDEX] == CRSF_FRAMETYPE_GPS_TIME)
+      {
+          gpsTimeFirstChunkMs = millis();
+      }
   }
 }
 
@@ -1552,6 +1560,17 @@ void loop()
       }
       else
       {
+        // Compensate GPS Time timestamp for OTA transmission time.
+        // gpsTimeFirstChunkMs was recorded when packageIndex==1 arrived;
+        // by HasFinishedData() the last chunk has been received, so the
+        // elapsed time covers the full chunked OTA transfer including any
+        // retransmits due to missed packets.
+        if (CRSFinBuffer[CRSF_TELEMETRY_TYPE_INDEX] == CRSF_FRAMETYPE_GPS_TIME && gpsTimeFirstChunkMs != 0)
+        {
+          crsfGpsTimeAdvanceMs(CRSFinBuffer, (uint16_t)(millis() - gpsTimeFirstChunkMs));
+          crsfRecalcCrc(CRSFinBuffer);
+          gpsTimeFirstChunkMs = 0;
+        }
         // Send all other tlm to CRSF router
         crsfRouter.processMessage(&otaConnector, (crsf_header_t *)CRSFinBuffer);
         sendCRSFTelemetryToBackpack(CRSFinBuffer);
