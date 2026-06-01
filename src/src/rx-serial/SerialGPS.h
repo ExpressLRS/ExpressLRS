@@ -20,7 +20,6 @@ typedef struct
     uint8_t minute;
     uint8_t second;
     uint16_t millisecond;
-    bool hasDateTime;
 } GpsData;
 
 class SerialGPS final : public SerialIO {
@@ -35,6 +34,7 @@ public:
 private:
     void processBytes(uint8_t *bytes, uint16_t size) override;
     void sendTelemetryFrame();
+    void sendGpsTimeTelemetryFrame();
     bool isValidChecksum(char *sentence, uint8_t size);
     void processSentence(char *sentence, uint8_t size);
     void splitSentenceFields(char *sentence, uint8_t size, gpsFieldParser_t callback);
