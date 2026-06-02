@@ -34,6 +34,10 @@ uint32_t SerialMavlink::sendRCFrame(bool frameAvailable, bool frameMissed, uint3
         return DURATION_IMMEDIATELY;
     }
 
+    if (!config.GetMavlinkRCEnabled()) {
+        return DURATION_IMMEDIATELY;
+    }
+
     const mavlink_rc_channels_override_t rc_override {
         chan1_raw: CRSF_to_US(channelData[0]),
         chan2_raw: CRSF_to_US(channelData[1]),
