@@ -83,7 +83,7 @@ def getDefaultProductForTarget(target_name: str) -> tuple[str, bool]:
         return ''
 
     # remove the "_via_WIFI" etc method
-    target_wo_method = re.sub('_VIA_.*', '', target_name.upper())
+    target_wo_method = re.sub('_via_.*', '', target_name)
     try:
         with open('.pio/default_target_config.json', 'r') as f:
             data = json.load(f)
