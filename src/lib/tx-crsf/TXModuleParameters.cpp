@@ -304,7 +304,7 @@ static selectionParameter luaHeadTrackingStartChannel = {
 static selectionParameter luaBackpackTelemetry = {
     {"Telemetry", CRSF_TEXT_SELECTION},
     0, // value
-    "Off;ESPNOW;WiFi",
+    "Off;ESPNOW;WiFi;BLE",
     STR_EMPTYSPACE};
 
 static stringParameter luaBackpackVersion = {
