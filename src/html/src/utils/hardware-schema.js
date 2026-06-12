@@ -533,6 +533,12 @@ const HARDWARE_SCHEMA = [
                 desc: 'Select to rotate the display 180 degrees'
             },
             {
+                id: 'screen_mirror',
+                label: 'Screen mirror',
+                type: 'checkbox',
+                desc: 'Mirror the display horizontally. Combine with "180 rotation" for vertical mirror. OLED only; no effect on SPI TFT screens.'
+            },
+            {
                 id: 'screen_cs',
                 label: 'CS pin',
                 type: 'uint',
@@ -709,23 +715,30 @@ const HARDWARE_SCHEMA = [
         title: 'PWM', rows: [
             {
                 id: 'pwm_outputs',
-                label: 'PWM output pins',
+                label: 'PWM pins',
                 type: 'array',
                 size: 40,
                 icon: 'pwm',
-                desc: 'Comma-separated list of pins used for PWM output'
+                desc: 'Comma-separated list of pins used for PWM (and other I/O features)'
+            },
+            {
+                id: 'pwm_out_only',
+                label: 'PWM pins are output-only',
+                type: 'checkbox',
+                icon: null,
+                desc: 'Enable this when the PWM pins are behind output-only buffers such as Schmitt triggers. Input or bidirectional functions like Serial and I2C will be disabled on PWM pins.'
             },
         ]
     },
 
     {
-        title: 'VBat', rows: [
+        title: 'Voltage Sensors', rows: [
             {
                 id: 'vbat',
                 label: 'VBat pin',
                 type: 'uint',
                 icon: 'analog',
-                desc: 'Analog input pin for reading VBAT voltage (1V max on 8285, 3.3V max on ESP32)'
+                desc: 'Primary analog input pin for battery voltage (1V max on 8285, 3.3V max on ESP32)'
             },
             {
                 id: 'vbat_offset',
@@ -753,6 +766,191 @@ const HARDWARE_SCHEMA = [
                     {value: 7, label: '11 dB + calibration'}
                 ],
                 desc: 'ADC pin attenuation (ESP32) and optional efuse-based calibration adjustment'
+            },
+            /* /FEATURE: NOT IS_8285 */
+            {
+                id: 'vbat_noreading',
+                label: 'VBat no-reading threshold',
+                type: 'uint',
+                size: 7,
+                desc: 'Raw ADC values at or below this are treated as not connected (0mV in cell telemetry)'
+            },
+            {
+                id: 'vbat_cal_min',
+                label: 'VBat calibration min',
+                type: 'uint',
+                size: 7,
+                desc: 'Manufacturer-defined minimum supported source voltage in mV used by the calibration wizard'
+            },
+            {
+                id: 'vbat_cal_max',
+                label: 'VBat calibration max',
+                type: 'uint',
+                size: 7,
+                desc: 'Manufacturer-defined maximum supported source voltage in mV used by the calibration wizard'
+            },
+            /* FEATURE: NOT IS_8285 */
+            {
+                id: 'vsrc1',
+                label: 'VSrc1 pin',
+                type: 'uint',
+                icon: 'analog',
+                desc: 'Voltage source input pin for source 2'
+            },
+            {
+                id: 'vsrc1_offset',
+                label: 'VSrc1 offset',
+                type: 'int',
+                size: 7,
+                desc: 'Offset used with the VSrc1 analog pin to calculate the voltage'
+            },
+            {
+                id: 'vsrc1_scale',
+                label: 'VSrc1 scale',
+                type: 'uint',
+                size: 7,
+                desc: 'voltage = (analog - offset) / scale'
+            },
+            {
+                id: 'vsrc1_atten',
+                label: 'VSrc1 attenuation',
+                type: 'select',
+                options: [
+                    {value: -1, label: 'Default'}, {value: 0, label: '0 dB'}, {value: 1, label: '2.5 dB'},
+                    {value: 2, label: '6 dB'}, {value: 3, label: '11 dB'}, {value: 4, label: '0 dB + calibration'},
+                    {value: 5, label: '2.5 dB + calibration'}, {value: 6, label: '6 dB + calibration'},
+                    {value: 7, label: '11 dB + calibration'}
+                ],
+                desc: 'ADC pin attenuation (ESP32) and optional efuse-based calibration adjustment'
+            },
+            {
+                id: 'vsrc1_noreading',
+                label: 'VSrc1 no-reading threshold',
+                type: 'uint',
+                size: 7,
+                desc: 'Raw ADC values at or below this are treated as not connected (0mV in cell telemetry)'
+            },
+            {
+                id: 'vsrc1_cal_min',
+                label: 'VSrc1 calibration min',
+                type: 'uint',
+                size: 7,
+                desc: 'Manufacturer-defined minimum supported source voltage in mV used by the calibration wizard'
+            },
+            {
+                id: 'vsrc1_cal_max',
+                label: 'VSrc1 calibration max',
+                type: 'uint',
+                size: 7,
+                desc: 'Manufacturer-defined maximum supported source voltage in mV used by the calibration wizard'
+            },
+            {
+                id: 'vsrc2',
+                label: 'VSrc2 pin',
+                type: 'uint',
+                icon: 'analog',
+                desc: 'Voltage source input pin for source 3'
+            },
+            {
+                id: 'vsrc2_offset',
+                label: 'VSrc2 offset',
+                type: 'int',
+                size: 7,
+                desc: 'Offset used with the VSrc2 analog pin to calculate the voltage'
+            },
+            {
+                id: 'vsrc2_scale',
+                label: 'VSrc2 scale',
+                type: 'uint',
+                size: 7,
+                desc: 'voltage = (analog - offset) / scale'
+            },
+            {
+                id: 'vsrc2_atten',
+                label: 'VSrc2 attenuation',
+                type: 'select',
+                options: [
+                    {value: -1, label: 'Default'}, {value: 0, label: '0 dB'}, {value: 1, label: '2.5 dB'},
+                    {value: 2, label: '6 dB'}, {value: 3, label: '11 dB'}, {value: 4, label: '0 dB + calibration'},
+                    {value: 5, label: '2.5 dB + calibration'}, {value: 6, label: '6 dB + calibration'},
+                    {value: 7, label: '11 dB + calibration'}
+                ],
+                desc: 'ADC pin attenuation (ESP32) and optional efuse-based calibration adjustment'
+            },
+            {
+                id: 'vsrc2_noreading',
+                label: 'VSrc2 no-reading threshold',
+                type: 'uint',
+                size: 7,
+                desc: 'Raw ADC values at or below this are treated as not connected (0mV in cell telemetry)'
+            },
+            {
+                id: 'vsrc2_cal_min',
+                label: 'VSrc2 calibration min',
+                type: 'uint',
+                size: 7,
+                desc: 'Manufacturer-defined minimum supported source voltage in mV used by the calibration wizard'
+            },
+            {
+                id: 'vsrc2_cal_max',
+                label: 'VSrc2 calibration max',
+                type: 'uint',
+                size: 7,
+                desc: 'Manufacturer-defined maximum supported source voltage in mV used by the calibration wizard'
+            },
+            {
+                id: 'vsrc3',
+                label: 'VSrc3 pin',
+                type: 'uint',
+                icon: 'analog',
+                desc: 'Voltage source input pin for source 4'
+            },
+            {
+                id: 'vsrc3_offset',
+                label: 'VSrc3 offset',
+                type: 'int',
+                size: 7,
+                desc: 'Offset used with the VSrc3 analog pin to calculate the voltage'
+            },
+            {
+                id: 'vsrc3_scale',
+                label: 'VSrc3 scale',
+                type: 'uint',
+                size: 7,
+                desc: 'voltage = (analog - offset) / scale'
+            },
+            {
+                id: 'vsrc3_atten',
+                label: 'VSrc3 attenuation',
+                type: 'select',
+                options: [
+                    {value: -1, label: 'Default'}, {value: 0, label: '0 dB'}, {value: 1, label: '2.5 dB'},
+                    {value: 2, label: '6 dB'}, {value: 3, label: '11 dB'}, {value: 4, label: '0 dB + calibration'},
+                    {value: 5, label: '2.5 dB + calibration'}, {value: 6, label: '6 dB + calibration'},
+                    {value: 7, label: '11 dB + calibration'}
+                ],
+                desc: 'ADC pin attenuation (ESP32) and optional efuse-based calibration adjustment'
+            },
+            {
+                id: 'vsrc3_noreading',
+                label: 'VSrc3 no-reading threshold',
+                type: 'uint',
+                size: 7,
+                desc: 'Raw ADC values at or below this are treated as not connected (0mV in cell telemetry)'
+            },
+            {
+                id: 'vsrc3_cal_min',
+                label: 'VSrc3 calibration min',
+                type: 'uint',
+                size: 7,
+                desc: 'Manufacturer-defined minimum supported source voltage in mV used by the calibration wizard'
+            },
+            {
+                id: 'vsrc3_cal_max',
+                label: 'VSrc3 calibration max',
+                type: 'uint',
+                size: 7,
+                desc: 'Manufacturer-defined maximum supported source voltage in mV used by the calibration wizard'
             },
             /* /FEATURE: NOT IS_8285 */
         ]
@@ -861,6 +1059,6 @@ const HARDWARE_SCHEMA = [
     },
     /* /FEATURE: NOT IS_8285 */
     /* /FEATURE: NOT IS_TX */
-];
+]
 
-export default HARDWARE_SCHEMA;
+export default HARDWARE_SCHEMA

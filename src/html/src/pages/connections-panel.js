@@ -1,12 +1,12 @@
-import {html, LitElement} from "lit";
-import {customElement} from "lit/decorators.js";
-import {elrsState, saveConfig} from "../utils/state.js";
-import {_} from "../utils/libs.js";
-import {postWithFeedback} from "../utils/feedback.js";
+import {html, LitElement} from "lit"
+import {customElement} from "lit/decorators.js"
+import {elrsState, saveConfig} from "../utils/state.js"
+import {_} from "../utils/libs.js"
+import {postWithFeedback} from "../utils/feedback.js"
 
-export const PWM_MODE_SERIAL = 10;
-export const PWM_MODE_SERIAL2RX = 14;
-export const PWM_MODE_SERIAL2TX = 15;
+export const PWM_MODE_SERIAL = 10
+export const PWM_MODE_SERIAL2RX = 14
+export const PWM_MODE_SERIAL2TX = 15
 
 @customElement('connections-panel')
 class ConnectionsPanel extends LitElement {
@@ -114,7 +114,7 @@ class ConnectionsPanel extends LitElement {
                     </ul>
                 </div>
             </div>
-        `;
+        `
     }
 
     firstUpdated() {
@@ -165,14 +165,14 @@ class ConnectionsPanel extends LitElement {
         elrsState.config.pwm.forEach((item, index) => {
             const failsafe = (item.config & 2047) + 476; // 11 bits
             const ch = (item.config >> 11) & 15; // 4 bits
-            const inv = (item.config >> 15) & 1;
+            const inv = (item.config >> 15) & 1
             const mode = (item.config >> 16) & 15; // 4 bits
-            const stretch = (item.config >> 20) & 1;
+            const stretch = (item.config >> 20) & 1
             const failsafeMode = (item.config >> 22) & 3; // 2 bits
             const features = item.features
             const modes = ['50Hz', '60Hz', '100Hz', '160Hz', '333Hz', '400Hz', '10KHzDuty', 'On/Off']
             if (features & 16) {
-                modes.push('DShot', 'DShot-3D');
+                modes.push('DShot', 'DShot-3D')
             } else {
                 modes.push(undefined, undefined)
             }
@@ -190,11 +190,12 @@ class ConnectionsPanel extends LitElement {
             modes.push(undefined)  // true PWM (not yet supported)
             modes.push(features & 32 ? 'Serial2 RX' : undefined)
             modes.push(features & 64 ? 'Serial2 TX' : undefined)
+            const selectedMode = modes[mode] ? mode : 0
 
             htmlFields.push(html`
                 <tr><td class="mui--text-center mui--text-title">${index + 1}</td>
                 <td>${this._generateFeatureBadges(features)}</td>
-                <td>${this._enumSelectGenerate(`pwm_${index}_mode`, mode, modes, (e) => {this._pinModeChange(e.target, index)})}</td>
+                <td>${this._enumSelectGenerate(`pwm_${index}_mode`, selectedMode, modes, (e) => {this._pinModeChange(e.target, index)})}</td>
                 <td>${this._enumSelectGenerate(`pwm_${index}_ch`, ch,
                         ['ch1', 'ch2', 'ch3', 'ch4',
                             'ch5 (AUX1)', 'ch6 (AUX2)', 'ch7 (AUX3)', 'ch8 (AUX4)',
@@ -205,8 +206,8 @@ class ConnectionsPanel extends LitElement {
                 <td>${this._enumSelectGenerate(`pwm_${index}_fsmode`, failsafeMode, ['Set Position', 'No Pulses', 'Last Position'],
                         (e) => {this._failsafeModeChange(e.target, index)})}</td>
                 <td><div class="mui-textfield compact"><input id="pwm_${index}_fs" value="${failsafe}" size="6" class="pwmitm" /></div></td></tr>
-            `);
-            this.pinModes[index] = mode
+            `)
+            this.pinModes[index] = selectedMode
         });
         return htmlFields
     }
@@ -221,7 +222,7 @@ class ConnectionsPanel extends LitElement {
         }
 
         // disable extra fields for serial & i2c pins
-        setDisabled(index, Number.parseInt(pinMode.value) >= PWM_MODE_SERIAL);
+        setDisabled(index, Number.parseInt(pinMode.value) >= PWM_MODE_SERIAL)
 
         const updateOthers = (value, enable) => {
             if (value > PWM_MODE_SERIAL) { // disable others
@@ -304,8 +305,8 @@ class ConnectionsPanel extends LitElement {
             const failsafeField = _(`pwm_${ch}_fs`)
             const failsafeModeField = _(`pwm_${ch}_fsmode`)
             let failsafe = failsafeField.value
-            if (failsafe > 2523) failsafe = 2523;
-            if (failsafe < 476) failsafe = 476;
+            if (failsafe > 2523) failsafe = 2523
+            if (failsafe < 476) failsafe = 476
             if (normalizeFields) failsafeField.value = failsafe
             let failsafeMode = failsafeModeField.value
 
@@ -318,7 +319,7 @@ class ConnectionsPanel extends LitElement {
     }
 
     _savePwmConfig(e) {
-        e.preventDefault();
+        e.preventDefault()
         const data = this._getPwmFormData(true)
         saveConfig({'pwm': data}, () => this.requestUpdate())
     }

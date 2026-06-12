@@ -1,7 +1,7 @@
 import {html, LitElement} from "lit"
 import {customElement, state} from "lit/decorators.js"
 import '../components/filedrag.js'
-import {cuteAlert} from "../utils/feedback.js"
+import {post, showAlert, showConfirm} from "../utils/feedback.js"
 
 @customElement('update-panel')
 class UpdatePanel extends LitElement {
@@ -11,6 +11,8 @@ class UpdatePanel extends LitElement {
     createRenderRoot() {
         this._completeHandler = this._completeHandler.bind(this)
         this._progressHandler = this._progressHandler.bind(this)
+        this._errorHandler = this._errorHandler.bind(this)
+        this._abortHandler = this._abortHandler.bind(this)
         return this
     }
 
@@ -54,129 +56,87 @@ class UpdatePanel extends LitElement {
         if (fileExt === expectedFileExt) {
             this._uploadFile(files[0])
         } else {
-            cuteAlert({
-                type: 'error',
-                title: 'Incorrect File Format',
-                message: 'You selected the file &quot;' + files[0].name.toString() + '&quot;.<br />The firmware file must be a ' + expectedFileExtDesc
-            })
+            showAlert('error', 'Incorrect File Format', 'You selected the file &quot;' + files[0].name.toString() + '&quot;.<br />The firmware file must be a ' + expectedFileExtDesc)
         }
     }
 
     _uploadFile(file) {
-        const formdata = new FormData()
-        formdata.append('upload', file, file.name)
-        const ajax = new XMLHttpRequest()
-        ajax.upload.addEventListener('progress', this._progressHandler, false)
-        ajax.addEventListener('load', this._completeHandler, false)
-        ajax.addEventListener('error', this._errorHandler, false)
-        ajax.addEventListener('abort', this._abortHandler, false)
-        ajax.open('POST', '/update')
-        ajax.setRequestHeader('X-FileSize', file.size)
-        ajax.send(formdata)
+        post('/update', file, {
+            onprogress: this._progressHandler,
+            onload: this._completeHandler,
+            onerror: this._errorHandler,
+            onabort: this._abortHandler,
+        })
     }
 
     _progressHandler(event) {
         const percent = Math.round((event.loaded / event.total) * 100)
         this.progress = percent
         this.progressText = percent + '% uploaded... please wait'
-        this.requestUpdate()
     }
 
-    _completeHandler(event) {
-        const self = this
-        this.progressText = ''
-        this.progress = 0
-        const data = JSON.parse(event.target.responseText)
+    _completeHandler(request) {
+        this._resetProgress()
+        const data = JSON.parse(request.responseText)
         if (data.status === 'ok') {
-            function showMessage() {
-                cuteAlert({
-                    type: 'success',
-                    title: 'Update Succeeded',
-                    message: data.msg
-                })
-            }
-            // This is basically a delayed display of the success dialog with a fake progress
-            let percent = 0
-            const interval = setInterval(()=>{
-                // FEATURE:IS_8285
-                percent = percent + 1
-                // /FEATURE:IS_8285
-                // FEATURE:NOT IS_8285
-                percent = percent + 2
-                // /FEATURE:NOT IS_8285
-
-                self.progress = percent
-                self.progressText = percent + '% flashed... please wait'
-                if (percent === 100) {
-                    clearInterval(interval)
-                    self.progressText = ''
-                    self.progress = 0
-                    showMessage()
-                }
-                self.requestUpdate()
-            }, 100)
+            this._showFlashingProgress(data.msg)
         } else if (data.status === 'mismatch') {
-            cuteAlert({
-                type: 'question',
-                title: 'Targets Mismatch',
-                message: data.msg,
-                confirmText: 'Flash anyway',
-                cancelText: 'Cancel'
-            }).then((e)=>{
-                const xmlhttp = new XMLHttpRequest()
-                xmlhttp.onreadystatechange = function() {
-                    if (this.readyState === 4) {
-                        self.progressText = ''
-                        self.progress = 0
-                        self.requestUpdate()
-                        if (this.status === 200) {
-                            const data = JSON.parse(this.responseText)
-                            cuteAlert({
-                                type: 'info',
-                                title: 'Force Update',
-                                message: data.msg
-                            })
-                        } else {
-                            cuteAlert({
-                                type: 'error',
-                                title: 'Force Update',
-                                message: 'An error occurred trying to force the update'
-                            })
-                        }
-                    }
-                }
-                xmlhttp.open('POST', '/forceupdate', true)
-                const data = new FormData()
-                data.append('action', e)
-                xmlhttp.send(data)
-            })
+            this._confirmForceUpdate(data.msg)
         } else {
-            cuteAlert({
-                type: 'error',
-                title: 'Update Failed',
-                message: data.msg
-            })
+            this._showAlert('error', 'Update Failed', data.msg)
         }
-        this.requestUpdate()
     }
 
-    _errorHandler(event) {
-        this.progressText = ''
-        this.progress = 0
-        return cuteAlert({
-            type: 'error',
-            title: 'Update Failed',
-            message: event.target.responseText
-        })
+    _errorHandler(request) {
+        return this._showAlert('error', 'Update Failed', request.responseText)
     }
 
-    _abortHandler(event) {
+    _abortHandler(request) {
+        return this._showAlert('info', 'Update Aborted', request.responseText)
+    }
+
+    _resetProgress() {
         this.progressText = ''
         this.progress = 0
-        return cuteAlert({
-            type: 'info',
-            title: 'Update Aborted',
-            message: event.target.responseText
+    }
+
+    _showAlert(type, title, message) {
+        this._resetProgress()
+        return showAlert(type, title, message)
+    }
+
+    _showFlashingProgress(message) {
+        let percent = 0
+        const interval = setInterval(() => {
+            // FEATURE:IS_8285
+            percent = percent + 1
+            // /FEATURE:IS_8285
+            // FEATURE:NOT IS_8285
+            percent = percent + 2
+            // /FEATURE:NOT IS_8285
+            this.progress = percent
+            this.progressText = percent + '% flashed... please wait'
+            if (percent === 100) {
+                clearInterval(interval)
+                this._showAlert('success', 'Update Succeeded', message)
+            }
+        }, 100)
+    }
+
+    _confirmForceUpdate(message) {
+        showConfirm('Targets Mismatch', message, 'Flash anyway', 'Cancel').then((action) => {
+            if (action !== 'confirm') return
+            const data = new FormData()
+            data.append('action', action)
+            post('/forceupdate', data, {
+                onload: (xhr) => {
+                    const response = JSON.parse(xhr.responseText)
+                    this._showAlert('info', 'Force Update', response.msg)
+                },
+                onerror: () => {
+                    this._showAlert('error', 'Force Update', 'An error occurred trying to force the update')
+                }
+            })
         })
     }
 }

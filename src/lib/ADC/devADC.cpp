@@ -20,6 +20,12 @@ static int start()
         return DURATION_IMMEDIATELY;
     }
 #endif
+#if defined(GPIO_PIN_PA_PDET)
+    if (GPIO_PIN_PA_PDET != UNDEF_PIN)
+    {
+        return DURATION_IMMEDIATELY;
+    }
+#endif
     return DURATION_NEVER;
 }
 

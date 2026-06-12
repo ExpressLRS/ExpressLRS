@@ -35,6 +35,10 @@
 #include "options.h"
 #include "helpers.h"
 #include "devButton.h"
+#include "devAnalogVbat.h"
+#if defined(TARGET_RX)
+#include "VbatCalibration.h"
+#endif
 #if defined(TARGET_RX) && defined(PLATFORM_ESP32)
 #include "devVTXSPI.h"
 #endif
@@ -289,6 +293,80 @@ static int8_t wifi_GetClientRssi()
   return 0;
 }
 
+#if defined(TARGET_RX)
+static uint8_t getDefinedVoltageSourceCount()
+{
+    uint8_t count = 0;
+    if (hardware_pin(HARDWARE_vbat) != UNDEF_PIN)
+        ++count;
+#if defined(PLATFORM_ESP32)
+    if (hardware_pin(HARDWARE_vsrc1) != UNDEF_PIN)
+        ++count;
+    if (hardware_pin(HARDWARE_vsrc2) != UNDEF_PIN)
+        ++count;
+    if (hardware_pin(HARDWARE_vsrc3) != UNDEF_PIN)
+        ++count;
+#endif
+    return count;
+}
+
+static void populateVoltageSampleJson(JsonObject root, const voltage_source_sample_t &sample)
+{
+  root["rawMax"] = sample.rawMax;
+  root["adcMedian"] = sample.adcMedian;
+  root["saturated"] = sample.saturated;
+  root["hasReading"] = sample.hasReading;
+}
+
+static void SampleVoltageSources(AsyncWebServerRequest *request, JsonVariant &json)
+{
+  JsonArray requests = json["requests"].as<JsonArray>();
+  if (requests.isNull())
+  {
+    request->send(400, "text/plain", "Voltage sample batch requests are required");
+    return;
+  }
+
+  auto *response = new AsyncJsonResponse();
+  JsonObject root = response->getRoot().to<JsonObject>();
+  JsonObject samplesRoot = root["samples"].to<JsonObject>();
+
+  bool sampledAny = false;
+  Vbat_setCalibrationActive(true);
+  for (JsonVariant requestItem : requests)
+  {
+    uint8_t sourceIdx = 0;
+    const char *sourceId = requestItem["source"] | "";
+    if (!VbatCalibration_findSource(sourceId, &sourceIdx) || !VbatCalibration_isSourceDefined(sourceIdx))
+      continue;
+
+    voltage_source_config_t source {};
+    VbatCalibration_getSourceConfig(sourceIdx, &source);
+    int atten = requestItem["atten"] | source.atten;
+    uint8_t samples = requestItem["samples"] | 24;
+
+    voltage_source_sample_t sample {};
+    if (!VbatCalibration_sampleSource(sourceIdx, atten, samples, &sample))
+      continue;
+
+    JsonObject sampleRoot = samplesRoot[source.id].to<JsonObject>();
+    populateVoltageSampleJson(sampleRoot, sample);
+    sampledAny = true;
+  }
+  Vbat_setCalibrationActive(false);
+
+  if (!sampledAny)
+  {
+    delete response;
+    request->send(400, "text/plain", "No valid voltage sample batch requests");
+    return;
+  }
+
+  response->setLength();
+  request->send(response);
+}
+#endif
+
 static void GetConfiguration(AsyncWebServerRequest *request)
 {
   const bool exportMode = request->hasArg("export");
@@ -389,17 +467,23 @@ static void GetConfiguration(AsyncWebServerRequest *request)
       channel["pin"] = GPIO_PIN_PWM_OUTPUTS[ch];
       uint8_t features = 0;
       auto pin = GPIO_PIN_PWM_OUTPUTS[ch];
-      if (pin == U0TXD_GPIO_NUM) features |= 1;  // SerialTX supported
-      else if (pin == U0RXD_GPIO_NUM) features |= 2;  // SerialRX supported
-      else if (pin == GPIO_PIN_SCL) features |= 4;  // I2C SCL supported (only on this pin)
-      else if (pin == GPIO_PIN_SDA) features |= 8;  // I2C SDA supported (only on this pin)
-      else if (GPIO_PIN_SCL == UNDEF_PIN || GPIO_PIN_SDA == UNDEF_PIN) features |= 12; // Both I2C SCL/SDA supported (on any pin)
+      if (!OPT_PWM_OUT_ONLY)
+      {
+        if (pin == U0TXD_GPIO_NUM) features |= 1;  // SerialTX supported
+        else if (pin == U0RXD_GPIO_NUM) features |= 2;  // SerialRX supported
+        else if (pin == GPIO_PIN_SCL) features |= 4;  // I2C SCL supported (only on this pin)
+        else if (pin == GPIO_PIN_SDA) features |= 8;  // I2C SDA supported (only on this pin)
+        else if (GPIO_PIN_SCL == UNDEF_PIN || GPIO_PIN_SDA == UNDEF_PIN) features |= 12; // Both I2C SCL/SDA supported (on any pin)
+      }
       #if defined(PLATFORM_ESP32)
       if (pin != 0) features |= 16; // DShot supported on all pins but GPIO0
-      if (pin == GPIO_PIN_SERIAL1_RX) features |= 32;  // SERIAL1 RX supported (only on this pin)
-      else if (pin == GPIO_PIN_SERIAL1_TX) features |= 64;  // SERIAL1 TX supported (only on this pin)
-      else if ((GPIO_PIN_SERIAL1_RX == UNDEF_PIN || GPIO_PIN_SERIAL1_TX == UNDEF_PIN) &&
-               (!(features & 1) && !(features & 2))) features |= 96; // Both Serial1 RX/TX supported (on any pin if not already featured for Serial 1)
+      if (!OPT_PWM_OUT_ONLY)
+      {
+        if (pin == GPIO_PIN_SERIAL1_RX) features |= 32;  // SERIAL1 RX supported (only on this pin)
+        else if (pin == GPIO_PIN_SERIAL1_TX) features |= 64;  // SERIAL1 TX supported (only on this pin)
+        else if ((GPIO_PIN_SERIAL1_RX == UNDEF_PIN || GPIO_PIN_SERIAL1_TX == UNDEF_PIN) &&
+                 (!(features & 1) && !(features & 2))) features |= 96; // Both Serial1 RX/TX supported (on any pin if not already featured for Serial 1)
+      }
       #endif
       channel["features"] = features;
     }
@@ -423,6 +507,7 @@ static void GetConfiguration(AsyncWebServerRequest *request)
 #endif
 #if defined(TARGET_RX)
     settings["module-type"] = "RX";
+    settings["voltage_source_count"] = getDefinedVoltageSourceCount();
 #endif
 #if defined(RADIO_SX128X)
     settings["radio-type"] = "SX128X";
@@ -585,9 +670,16 @@ static void UpdateConfiguration(AsyncWebServerRequest *request, JsonVariant &jso
   JsonArray pwm = json["pwm"].as<JsonArray>();
   for(uint32_t channel = 0 ; channel < pwm.size() ; channel++)
   {
-    uint32_t val = pwm[channel];
+    rx_config_pwm_t pwmChannel;
+    pwmChannel.raw = pwm[channel];
+    if (OPT_PWM_OUT_ONLY &&
+        (pwmChannel.val.mode == somSerial || pwmChannel.val.mode == somSCL || pwmChannel.val.mode == somSDA ||
+         pwmChannel.val.mode == somSerial1RX || pwmChannel.val.mode == somSerial1TX))
+    {
+      pwmChannel.val.mode = som50Hz;
+    }
     //DBGLN("PWMch(%u)=%u", channel, val);
-    config.SetPwmChannelRaw(channel, val);
+    config.SetPwmChannelRaw(channel, pwmChannel.raw);
   }
 
   config.Commit();
@@ -1129,6 +1221,9 @@ static void startServices()
 
   server.addHandler(new AsyncCallbackJsonWebHandler("/config", UpdateConfiguration));
   server.addHandler(new AsyncCallbackJsonWebHandler("/options.json", UpdateSettings));
+  #if defined(TARGET_RX)
+    server.addHandler(new AsyncCallbackJsonWebHandler("/voltage-sample", SampleVoltageSources));
+  #endif
   #if defined(TARGET_TX)
     server.addHandler(new AsyncCallbackJsonWebHandler("/buttons", WebUpdateButtonColors));
     auto *handler = new AsyncCallbackJsonWebHandler("/import", ImportConfiguration);

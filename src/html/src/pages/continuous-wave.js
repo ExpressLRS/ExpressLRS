@@ -1,7 +1,7 @@
-import {html, LitElement} from 'lit';
-import {customElement, query, state} from 'lit/decorators.js';
-import {post} from "../utils/feedback.js";
-import {elrsState} from "../utils/state.js";
+import {html, LitElement} from 'lit'
+import {customElement, query, state} from 'lit/decorators.js'
+import {loadJSON, post} from "../utils/feedback.js"
+import {elrsState} from "../utils/state.js"
 
 @customElement('continuous-wave')
 export class ContinuousWave extends LitElement {
@@ -12,119 +12,117 @@ export class ContinuousWave extends LitElement {
     @state() accessor data = undefined
     @state() accessor started = false
     @state() accessor result = {}
-    @state() accessor cwFreq;
-
-    _text = "Loading..."
+    @state() accessor cwFreq
+    loadPromise = null
 
     createRenderRoot() {
         return this
     }
 
     render() {
-        if (this.data)
-            return html`
-                <div class="mui-panel mui--text-title">Continuous Wave Generation</div>
-                <div class="mui-panel">
-                    Put the Semtech chip into a mode where it transmits a continuous wave with a center
-                    frequency of ${(this.cwFreq / 1000000)}</span> MHz.
+        return html`
+            <div class="mui-panel mui--text-title">Continuous Wave Generation</div>
+            <div class="mui-panel">
+                Put the Semtech chip into a mode where it transmits a continuous wave with a center
+                frequency of ${(this.cwFreq / 1000000)}</span> MHz.
+                <br>
+                You can then measure the actual continuous wave center frequency using a spectrum analyzer and enter
+                the
+                measured value below. This will be used to calculate the accuracy of the crystal used in the device
+                and
+                how far it differs from the ideal frequency.
+                <form class="mui-form">
+                    ${this.data?.radios === 2 ? html`
+                        <div class="mui-radio">
+                            <input id="radio1"
+                                   type="radio"
+                                   name="optionsRadios"
+                                   value="1"
+                                   ?disabled=${this.started}
+                                   checked>
+                            <label for="radio1">Radio 1</label>
+                        </div>
+                        <div class="mui-radio">
+                            <input id="radio2"
+                                   type="radio"
+                                   name="optionsRadios"
+                                   value="2"
+                                   ?disabled=${this.started}>
+                            <label for="radio2">Radio 2</label>
+                        </div>
+                    ` : html``}
+                    <!-- FEATURE:HAS_LR1121 -->
+                    ${elrsState.settings.has_high_band && elrsState.settings.has_low_band && this.data ? html`
+                        <div class="mui-checkbox">
+                            <input type="checkbox"
+                                   name="setSubGHz"
+                                   id="optionsSetSubGHz"
+                                   ?disabled=${this.started}
+                                   @click="${this._updateFreq}">
+                            <label for="optionsSetSubGHz">Set continuous wave center frequency to ${(this.data.center / 1000000)} MHz</label>
+                        </div>
+                    ` : ''}
+                    <!-- /FEATURE:HAS_LR1121 -->
                     <br>
-                    You can then measure the actual continuous wave center frequency using a spectrum analyzer and enter
-                    the
-                    measured value below. This will be used to calculate the accuracy of the crystal used in the device
-                    and
-                    how far it differs from the ideal frequency.
-                    <form class="mui-form">
-                        ${this.data.radios === 2 ? html`
-                            <div class="mui-radio">
-                                <input id="radio1"
-                                       type="radio"
-                                       name="optionsRadios"
-                                       value="1"
-                                       ?disabled=${this.started}
-                                       checked>
-                                <label for="radio1">Radio 1</label>
-                            </div>
-                            <div class="mui-radio">
-                                <input id="radio2"
-                                       type="radio"
-                                       name="optionsRadios"
-                                       value="2"
-                                       ?disabled=${this.started}>
-                                <label for="radio2">Radio 2</label>
-                            </div>
-                        ` : html``}
-                        <!-- FEATURE:HAS_LR1121 -->
-                        ${elrsState.settings.has_high_band && elrsState.settings.has_low_band ? html`
-                            <div class="mui-checkbox">
-                                <input type="checkbox"
-                                       name="setSubGHz"
-                                       id="optionsSetSubGHz"
-                                       ?disabled=${this.started}
-                                       @click="${this._updateFreq}">
-                                <label for="optionsSetSubGHz">Set continuous wave center frequency to ${(this.data.center / 1000000)} MHz</label>
-                            </div>
-                        ` : ''}
-                        <!-- /FEATURE:HAS_LR1121 -->
-                        <br>
-                        <button class="mui-btn mui-btn--primary" ?disabled=${this.started} @click="${this._startCW}">
-                            Start Continuous Wave
-                        </button>
-                    </form>
-                    <br>
-                    <div class="mui-textfield">
-                        <input id="measured" type='number' required @input="${this._measured}"
-                               placeholder="Enter peak/center frequency of measured continuous wave"
-                               @keypress="${(e) => {
-                                   if (e.which !== 8 && e.which !== 0 && e.which < 48 || e.which > 57)
-                                       e.preventDefault();
-                               }}"
-                        />
-                        <label for="measured">Measured Center Frequency</label>
-                    </div>
-                    <div style="display: ${this.result.calculated ? 'block' : 'none'};">
-                        <table class="mui-table mui-table--bordered">
-                            <tr>
-                                <td>Calculated XO Freq</td>
-                                <td>${this.result.calculated}</td>
-                            </tr>
-                            <tr>
-                                <td>Calculated XO Offset (kHz)</td>
-                                <td>${this.result.offset}</td>
-                            </tr>
-                            <tr>
-                                <td>Calculated XO Offset (PPM)</td>
-                                <td>${this.result.ppm}</td>
-                            </tr>
-                            <tr>
-                                <td>Raw Offset (kHz)</td>
-                                <td>${this.result.raw}</td>
-                            </tr>
-                            <tr>
-                                <td>TL;DR</td>
-                                <td>${this.result.tldr}</td>
-                            </tr>
-                        </table>
-                    </div>
+                    <button class="mui-btn mui-btn--primary" ?disabled=${this.started} @click="${this._startCW}">
+                        Start Continuous Wave
+                    </button>
+                </form>
+                <br>
+                <div class="mui-textfield">
+                    <input id="measured" type='number' required @input="${this._measured}"
+                           placeholder="Enter peak/center frequency of measured continuous wave"
+                           @keypress="${(e) => {
+                               if (e.which !== 8 && e.which !== 0 && e.which < 48 || e.which > 57)
+                                   e.preventDefault()
+                           }}"
+                    />
+                    <label for="measured">Measured Center Frequency</label>
                 </div>
-            `
-        else
-            return html`
-                <div class="mui--text-title">${this._text}</div>
-            `
+                <div style="display: ${this.result.calculated ? 'block' : 'none'};">
+                    <table class="mui-table mui-table--bordered">
+                        <tr>
+                            <td>Calculated XO Freq</td>
+                            <td>${this.result.calculated}</td>
+                        </tr>
+                        <tr>
+                            <td>Calculated XO Offset (kHz)</td>
+                            <td>${this.result.offset}</td>
+                        </tr>
+                        <tr>
+                            <td>Calculated XO Offset (PPM)</td>
+                            <td>${this.result.ppm}</td>
+                        </tr>
+                        <tr>
+                            <td>Raw Offset (kHz)</td>
+                            <td>${this.result.raw}</td>
+                        </tr>
+                        <tr>
+                            <td>TL;DR</td>
+                            <td>${this.result.tldr}</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        `
     }
 
     connectedCallback() {
         super.connectedCallback()
-        const xmlhttp = new XMLHttpRequest()
-        xmlhttp.onreadystatechange = () => {
-            if (xmlhttp.readyState === 4 && xmlhttp.status === 200) {
-                this._updateParams(JSON.parse(xmlhttp.responseText))
-            } else {
-                this._text = "Failed to load data."
-            }
+        this.pageReady()
+    }
+
+    pageReady() {
+        if (!this.loadPromise) {
+            this.loadPromise = loadJSON('/cw', 'Failed to load continuous wave settings.')
+                .then((data) => {
+                    this._updateParams(data)
+                }, (error) => {
+                    this.loadPromise = null
+                    throw error
+                })
         }
-        xmlhttp.open('GET', '/cw', true)
-        xmlhttp.send()
+        return this.loadPromise
     }
 
     _updateParams(data) {

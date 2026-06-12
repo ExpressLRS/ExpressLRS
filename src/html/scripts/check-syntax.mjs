@@ -3,7 +3,7 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {transformSync} from '@babel/core';
 import {loadEnv} from 'vite';
-import {htmlFeatureBlocksPlugin} from '../feature-blocks-plugin.js';
+import {htmlFeatureBlocksPlugin} from '../build-plugins/feature-blocks-plugin.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -18,7 +18,8 @@ const INCLUDE_EXTENSIONS = new Set(['.js', '.mjs']);
 const EXCLUDE_DIRS = new Set(['dist', 'headers', 'node_modules', '.vite', '.idea']);
 const rootsToCheck = [
     path.join(projectRoot, 'src'),
-    path.join(projectRoot, 'dev-mock-plugin.js'),
+    path.join(projectRoot, 'build-plugins'),
+    path.join(projectRoot, 'dev-plugins'),
     path.join(projectRoot, 'vite.config.js')
 ];
 

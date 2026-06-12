@@ -98,6 +98,7 @@ typedef enum {
     // screen_type == 0 is no screen
     HARDWARE_screen_type,
     HARDWARE_screen_reversed,
+    HARDWARE_screen_mirror,
     HARDWARE_screen_bl,
 
     // Backpack
@@ -125,12 +126,37 @@ typedef enum {
     // PWM
     HARDWARE_pwm_outputs,
     HARDWARE_pwm_outputs_count,
+    HARDWARE_pwm_out_only,
 
     // VBAT
     HARDWARE_vbat,
     HARDWARE_vbat_offset,
     HARDWARE_vbat_scale,
     HARDWARE_vbat_atten,
+    HARDWARE_vbat_noreading,
+    HARDWARE_vbat_cal_min,
+    HARDWARE_vbat_cal_max,
+    HARDWARE_vsrc1,
+    HARDWARE_vsrc1_offset,
+    HARDWARE_vsrc1_scale,
+    HARDWARE_vsrc1_atten,
+    HARDWARE_vsrc1_noreading,
+    HARDWARE_vsrc1_cal_min,
+    HARDWARE_vsrc1_cal_max,
+    HARDWARE_vsrc2,
+    HARDWARE_vsrc2_offset,
+    HARDWARE_vsrc2_scale,
+    HARDWARE_vsrc2_atten,
+    HARDWARE_vsrc2_noreading,
+    HARDWARE_vsrc2_cal_min,
+    HARDWARE_vsrc2_cal_max,
+    HARDWARE_vsrc3,
+    HARDWARE_vsrc3_offset,
+    HARDWARE_vsrc3_scale,
+    HARDWARE_vsrc3_atten,
+    HARDWARE_vsrc3_noreading,
+    HARDWARE_vsrc3_cal_min,
+    HARDWARE_vsrc3_cal_max,
 
     // VTX
     HARDWARE_vtx_amp_pwm,

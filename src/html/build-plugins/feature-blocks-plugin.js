@@ -1,14 +1,12 @@
-// HTML & JS Feature Blocks Vite plugin extracted for reuse/maintenance
-// Enables conditional inclusion of sections delimited by feature markers.
-// HTML markers: <!-- FEATURE:NAME --> ... <!-- /FEATURE:NAME -->
-//   - Note: HTML-style markers are supported in .html files AND inside .js/.mjs files
-//     (useful for embedded HTML such as lit-html templates). These are processed
-//     at build-time and removed along with their contents when the feature is disabled.
-// JS markers (either style):
-//   // FEATURE:NAME            ... (code) ...            // /FEATURE:NAME
-//   /* FEATURE:NAME */         ... (code) ...         /* /FEATURE:NAME */
-// Usage: import { htmlFeatureBlocksPlugin } from './feature-blocks-plugin.js'
-// and register in Vite plugins with the current env passed into the factory.
+// Feature marker processor shared by build-time plugins.
+//
+// Supported markers:
+// - HTML: <!-- FEATURE:NAME --> ... <!-- /FEATURE:NAME -->
+// - JS/CSS line: // FEATURE:NAME ... // /FEATURE:NAME
+// - JS/CSS block: /* FEATURE:NAME */ ... /* /FEATURE:NAME */
+//
+// Feature names map to VITE_FEATURE_<NAME> env vars after normalization.
+// "NOT NAME" and "!NAME" invert the sense of the flag.
 
 // Simple boolean coercion for env strings
 function toBoolEnv(v, def) {
@@ -17,10 +15,13 @@ function toBoolEnv(v, def) {
   return s === '1' || s === 'true' || s === 'yes' || s === 'on' || s === 'y'
 }
 
-export function htmlFeatureBlocksPlugin(env) {
+export function createFeatureBlockProcessor(env) {
+  // Map free-form feature names such as "NOT IS_TX" inputs down to the
+  // environment variable shape used by the build scripts.
   function normalizeName(name) {
     return String(name).trim().replace(/[^A-Za-z0-9]+/g, '_').toUpperCase()
   }
+
   function parseRawName(raw) {
     let s = String(raw).trim()
     let invert = false
@@ -34,15 +35,23 @@ export function htmlFeatureBlocksPlugin(env) {
     }
     return { name: s, invert }
   }
+
   function getFlagForName(name, defaultValue) {
     const key = normalizeName(name)
+    // Add any other "derived" flags here, check features.js
+    if (name === 'HAS_SUBGHZ') {
+      return getFlagForName('HAS_LR1121', false) || getFlagForName('HAS_SX127X', false)
+    }
     const v = env[`VITE_FEATURE_HTML_${key}`] ?? env[`VITE_FEATURE_${key}`]
     return toBoolEnv(v, defaultValue)
   }
+
   function escapeRegExp(str) {
     return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
   }
 
+  // Feature blocks can be nested, so keep running the same pass until no
+  // further replacements occur.
   function repeatUntilStable(input, processor) {
     let current = input
     while (true) {
@@ -78,10 +87,11 @@ export function htmlFeatureBlocksPlugin(env) {
   }
 
   function processJs(code) {
-    // First, also process HTML-style feature markers within JS files (for embedded HTML templates)
+    // Lit templates live inside JS modules, so handle embedded HTML markers too.
     code = processHtml(code)
 
-    // Block comment markers
+    // Block comment markers are the CSS-safe form, so this path is reused by
+    // both JS and CSS transforms.
     code = repeatUntilStable(code, (current) => {
       const blockRe = /\/\*\s*FEATURE:([\w\-.:\s]+)\s*\*\/[\s\S]*?\/\*\s*\/FEATURE:\1\s*\*\//gi
       return processWithRegex(
@@ -91,7 +101,7 @@ export function htmlFeatureBlocksPlugin(env) {
         (esc) => new RegExp(`/\\*\\s*\\/FEATURE:${esc}\\s*\\*/`, 'gi'),
       )
     })
-    // Line comment markers (must use m flag to anchor at line starts)
+    // Line markers are JS-only in practice, but harmless to scan for here.
     code = repeatUntilStable(code, (current) => {
       const lineRe = /^\s*\/\/\s*FEATURE:([\w\-.:\s]+)\s*$[\s\S]*?^\s*\/\/\s*\/FEATURE:\1\s*$/gim
       return current.replace(lineRe, (match, rawName) => {
@@ -109,6 +119,14 @@ export function htmlFeatureBlocksPlugin(env) {
     return code
   }
 
+  return { processHtml, processJs }
+}
+
+// Vite wrapper around the shared processor. Keep this thin so other plugins
+// can reuse the same feature evaluation rules without duplicating logic.
+export function htmlFeatureBlocksPlugin(env) {
+  const { processHtml, processJs } = createFeatureBlockProcessor(env)
+
   return {
     name: 'html-feature-blocks',
     enforce: 'pre',
@@ -117,7 +135,7 @@ export function htmlFeatureBlocksPlugin(env) {
     },
     transform(code, id) {
       if (!id) return null
-      if (/\.(m?js)($|\?)/i.test(id)) {
+      if (/\.(m?js|css)($|\?)/i.test(id)) {
         const out = processJs(code)
         return out === code ? null : { code: out, map: null }
       }
