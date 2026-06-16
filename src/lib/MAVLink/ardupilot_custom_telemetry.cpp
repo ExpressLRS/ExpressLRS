@@ -372,7 +372,7 @@ uint32_t format_batt1(uint16_t voltage_mv, int16_t current_ca, int32_t current_c
     }
     if (current_consumed > 0){
         // battery current drawn since power on in mAh (limit to 32767 (0x7FFF) since value is stored on 15 bits)
-        batt |= ((current_consumed < BATT_TOTALMAH_LIMIT) ? (current_consumed & BATT_TOTALMAH_LIMIT) : BATT_TOTALMAH_LIMIT)<<BATT_TOTALMAH_OFFSET;
+        batt |= MIN((uint32_t)current_consumed, (uint32_t)BATT_TOTALMAH_LIMIT)<<BATT_TOTALMAH_OFFSET;
     }
     return batt;
 }
