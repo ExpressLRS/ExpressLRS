@@ -321,8 +321,6 @@ private:
     uint8_t getHoTTsatellites();
     uint16_t getHoTTMSLaltitude();
 
-    uint32_t htobe24(uint32_t val);
-
     // last received HoTT telemetry packets
     GPSPacket_t gps;
     GeneralAirPacket_t gam;
