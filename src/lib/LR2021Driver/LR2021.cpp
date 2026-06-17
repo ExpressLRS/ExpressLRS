@@ -229,6 +229,9 @@ void LR2021Driver::Config(const uint8_t bw, const uint8_t sf, const uint8_t cr, 
     ClearIrqStatus(radioNumber);
 
     SetPaConfig(isSubGHz, radioNumber); // Must be called after changing rf modes between subG and 2.4G.  This sets the correct rf amps, and txen pins to be used.
+
+    GetIrqStatus(radioNumber);          // required so the commit succeeds
+
     pwrForceUpdate = true;              // force an update of the output power because the band may have changed, and we need to configure the power for the band.
     CommitOutputPower();
 
