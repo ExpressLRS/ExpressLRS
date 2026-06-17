@@ -13,12 +13,12 @@ public:
     void end();
     void reset(bool bootloader = false);
 
-    uint16_t ICACHE_RAM_ATTR WriteCommand(uint16_t opcode, SX12XX_Radio_Number_t radioNumber);
-    uint16_t ICACHE_RAM_ATTR WriteCommand(uint16_t opcode, const uint8_t *buffer, uint8_t size, SX12XX_Radio_Number_t radioNumber);
+    uint16_t ICACHE_RAM_ATTR WriteCommand(uint16_t opcode, SX12XX_Radio_Number_t radioNumber, uint32_t timeout = 2000);
+    uint16_t ICACHE_RAM_ATTR WriteCommand(uint16_t opcode, const uint8_t *buffer, uint8_t size, SX12XX_Radio_Number_t radioNumber, uint32_t timeout = 2000);
 
-    uint16_t ICACHE_RAM_ATTR ReadCommand(uint8_t *buffer, uint8_t size, SX12XX_Radio_Number_t radioNumber);
+    uint16_t ICACHE_RAM_ATTR ReadCommand(uint8_t *buffer, uint8_t size, SX12XX_Radio_Number_t radioNumber, uint32_t timeout = 2000);
 
-    bool ICACHE_RAM_ATTR WaitOnBusy(SX12XX_Radio_Number_t radioNumber);
+    bool ICACHE_RAM_ATTR WaitOnBusy(SX12XX_Radio_Number_t radioNumber, uint32_t wtimeoutUS = 2000U);
 
     static ICACHE_RAM_ATTR void dioISR_1();
     static ICACHE_RAM_ATTR void dioISR_2();
@@ -26,4 +26,6 @@ public:
     void (*IsrCallback_2)(){};
 
 private:
+    uint16_t pCommand = 0;
+    uint32_t pTimeout = 0;
 };

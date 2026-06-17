@@ -132,11 +132,11 @@ bool LR2021Driver::Begin(const uint32_t lowBandFreq, const uint32_t highBandFreq
 
     // 6.4.2 Calibrate
     constexpr uint8_t calibrate = 0x7F;
-    CHECK("LR2021_SYSTEM_CALIBRATE_OC", hal.WriteCommand(LR2021_SYSTEM_CALIBRATE_OC, &calibrate, 1, SX12XX_Radio_All));
+    CHECK("LR2021_SYSTEM_CALIBRATE_OC", hal.WriteCommand(LR2021_SYSTEM_CALIBRATE_OC, &calibrate, 1, SX12XX_Radio_All, 10000));
 
     // 6.4.2 CalibFE
     const uint8_t calibrateFE[]{static_cast<uint8_t>((lowBandFreq / 4000000) >> 8), static_cast<uint8_t>(lowBandFreq / 4000000), static_cast<uint8_t>(((highBandFreq / 4000000) >> 8) | 0x80), static_cast<uint8_t>(highBandFreq / 4000000)};
-    CHECK("LR2021_SYSTEM_CALIBRATE_FRONTEND_OC", hal.WriteCommand(LR2021_SYSTEM_CALIBRATE_FRONTEND_OC, calibrateFE, sizeof(calibrateFE), SX12XX_Radio_All));
+    CHECK("LR2021_SYSTEM_CALIBRATE_FRONTEND_OC", hal.WriteCommand(LR2021_SYSTEM_CALIBRATE_FRONTEND_OC, calibrateFE, sizeof(calibrateFE), SX12XX_Radio_All, 30000));
 
     return true;
 }
@@ -218,12 +218,12 @@ void LR2021Driver::Config(const uint8_t bw, const uint8_t sf, const uint8_t cr, 
     if (isSubGHz)
     {
         constexpr uint8_t buf[] {0x00, 0x00};
-        CHECK("LR2021_RADIO_SET_RX_PATH_OC", hal.WriteCommand(LR2021_RADIO_SET_RX_PATH_OC, buf, sizeof(buf), radioNumber));
+        CHECK("LR2021_RADIO_SET_RX_PATH_OC", hal.WriteCommand(LR2021_RADIO_SET_RX_PATH_OC, buf, sizeof(buf), radioNumber, 10000));
     }
     else
     {
         const uint8_t buf[] {0x01, static_cast<uint8_t>(RadioBandMod::isFLRC(modulation) ? 0x00 : 0x04)};
-        CHECK("LR2021_RADIO_SET_RX_PATH_OC", hal.WriteCommand(LR2021_RADIO_SET_RX_PATH_OC, buf, sizeof(buf), radioNumber));
+        CHECK("LR2021_RADIO_SET_RX_PATH_OC", hal.WriteCommand(LR2021_RADIO_SET_RX_PATH_OC, buf, sizeof(buf), radioNumber, 10000));
     }
 
     ClearIrqStatus(radioNumber);

@@ -119,7 +119,7 @@ void LR2021Hal::reset(const bool bootloader)
     WaitOnBusy(SX12XX_Radio_All);
 }
 
-uint16_t ICACHE_RAM_ATTR LR2021Hal::WriteCommand(uint16_t command, const uint8_t *buffer, uint8_t size, SX12XX_Radio_Number_t radioNumber)
+uint16_t ICACHE_RAM_ATTR LR2021Hal::WriteCommand(uint16_t command, const uint8_t *buffer, uint8_t size, SX12XX_Radio_Number_t radioNumber, uint32_t timeout)
 {
     WORD_ALIGNED_ATTR uint8_t OutBuffer[WORD_PADDED(size + 2)] = {
         (uint8_t)((command & 0xFF00) >> 8),
@@ -128,40 +128,47 @@ uint16_t ICACHE_RAM_ATTR LR2021Hal::WriteCommand(uint16_t command, const uint8_t
 
     memcpy(OutBuffer + 2, buffer, size);
 
-    WaitOnBusy(radioNumber);
+    WaitOnBusy(radioNumber, pTimeout);
+    pCommand = command;
+    pTimeout = timeout;
     SPIEx.read(radioNumber, OutBuffer, size + 2);
     return OutBuffer[0] << 8 | OutBuffer[1];
 }
 
-uint16_t ICACHE_RAM_ATTR LR2021Hal::WriteCommand(uint16_t command, SX12XX_Radio_Number_t radioNumber)
+uint16_t ICACHE_RAM_ATTR LR2021Hal::WriteCommand(uint16_t command, SX12XX_Radio_Number_t radioNumber, uint32_t timeout)
 {
     WORD_ALIGNED_ATTR uint8_t OutBuffer[WORD_PADDED(2)] = {
         (uint8_t)((command & 0xFF00) >> 8),
         (uint8_t)(command & 0x00FF)};
 
-    WaitOnBusy(radioNumber);
+    WaitOnBusy(radioNumber, pTimeout);
+    pCommand = command;
+    pTimeout = timeout;
     SPIEx.read(radioNumber, OutBuffer, 2);
     return OutBuffer[0] << 8 | OutBuffer[1];
 }
 
-uint16_t ICACHE_RAM_ATTR LR2021Hal::ReadCommand(uint8_t *buffer, uint8_t size, SX12XX_Radio_Number_t radioNumber)
+uint16_t ICACHE_RAM_ATTR LR2021Hal::ReadCommand(uint8_t *buffer, uint8_t size, SX12XX_Radio_Number_t radioNumber, uint32_t timeout)
 {
     WORD_ALIGNED_ATTR uint8_t InBuffer[WORD_PADDED(size)] = {};
 
     memcpy(InBuffer, buffer, size);
 
-    WaitOnBusy(radioNumber);
+    WaitOnBusy(radioNumber, pTimeout);
+    pCommand = ((int)buffer[0]) << 8 | buffer[1];
+    pTimeout = timeout;
     SPIEx.read(radioNumber, InBuffer, size);
 
     memcpy(buffer, InBuffer, size);
     return InBuffer[0] << 8 | InBuffer[1];
 }
 
-bool ICACHE_RAM_ATTR LR2021Hal::WaitOnBusy(SX12XX_Radio_Number_t radioNumber)
+bool ICACHE_RAM_ATTR LR2021Hal::WaitOnBusy(SX12XX_Radio_Number_t radioNumber, uint32_t wtimeoutUS)
 {
-    constexpr uint32_t wtimeoutUS = 2000U; // changed due to unknown issues in a small percentage of LR2021s that some
-                                           // commands may have extremely long busy times during startup, exceeding 1ms
     uint32_t startTime = 0;
+#ifdef DEBUG_LOG
+    startTime = micros();
+#endif
 
     while (true)
     {
@@ -185,6 +192,14 @@ bool ICACHE_RAM_ATTR LR2021Hal::WaitOnBusy(SX12XX_Radio_Number_t radioNumber)
             {
                 if (digitalRead(GPIO_PIN_BUSY) == LOW && digitalRead(GPIO_PIN_BUSY_2) == LOW)
                 {
+#ifdef DEBUG_LOG
+                    const uint32_t now = micros();
+                    if (wtimeoutUS != 0 && (now - startTime) > wtimeoutUS)
+                    {
+                        DBGLN("timedout %x %u > %u!", pCommand, now - startTime, wtimeoutUS);
+                        return false;
+                    }
+#endif
                     return true;
                 }
             }
@@ -192,20 +207,30 @@ bool ICACHE_RAM_ATTR LR2021Hal::WaitOnBusy(SX12XX_Radio_Number_t radioNumber)
             {
                 if (digitalRead(GPIO_PIN_BUSY) == LOW)
                 {
+#ifdef DEBUG_LOG
+                    const uint32_t now = micros();
+                    if (wtimeoutUS != 0 && (now - startTime) > wtimeoutUS)
+                    {
+                        DBGLN("timedout %x %u > %u!", pCommand, now - startTime, wtimeoutUS);
+                        return false;
+                    }
+#endif
                     return true;
                 }
             }
         }
         // Use this time to call micros().
+#ifndef DEBUG_LOG
         const uint32_t now = micros();
         if (startTime == 0)
         {
             startTime = now;
         }
-        if ((now - startTime) > wtimeoutUS)
+        if (wtimeoutUS != 0 && (now - startTime) > wtimeoutUS)
         {
             return false;
         }
+#endif
     }
 }
 
