@@ -521,10 +521,11 @@ const HARDWARE_SCHEMA = [
                 label: 'Screen type',
                 type: 'select',
                 options: [
-                    {value: 0, label: 'None'}, {value: 1, label: 'I2C OLED (SSD1306 128x64)'},
-                    {value: 2, label: 'SPI OLED (SSD1306 128x64)'}, {value: 3, label: 'SPI OLED (small SSD1306 128x32)'},
+                    {value: 0, label: 'None'},
+                    {value: 1, label: 'I2C OLED (SSD1306 128x64)'},
+                    {value: 2, label: 'SPI OLED (SSD1306 128x64)'},
                     {value: 4, label: 'SPI TFT (ST7735 160x80)'}
-                ], desc: 'Type of OLED connected'
+                ], desc: 'Type of display connected'
             },
             {
                 id: 'screen_reversed',
