@@ -619,7 +619,8 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
       transmittingRadio = SX12XX_Radio_2;
       break;
     case TX_RADIO_MODE_SWITCH:
-      transmittingRadio = OtaNonce%2 == 0 ? SX12XX_Radio_1 : SX12XX_Radio_2;
+      static boolean toggle = false;
+      transmittingRadio = (toggle ^= true) ? SX12XX_Radio_1 : SX12XX_Radio_2;
       break;
     default:
       break;
