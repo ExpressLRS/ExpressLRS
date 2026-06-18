@@ -37,7 +37,7 @@
 #define LR2021_XTAL_FREQ 32000000
 #define FREQ_STEP 61.03515625 // TODO check and fix... this is a cut and paste from sx1276
 
-#define LR2021_POWER_MIN_LF_PA (-19) // Low Frequency PA 0.5dBm steps
+#define LR2021_POWER_MIN_LF_PA (-44) // Low Frequency PA 0.5dBm steps
 #define LR2021_POWER_MAX_LF_PA (44)
 #define LR2021_POWER_MIN_HF_PA (-39) // High Frequency PA 0.5dBm steps
 #define LR2021_POWER_MAX_HF_PA (24)
