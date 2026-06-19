@@ -109,6 +109,9 @@ bool LR2021Driver::Begin(const uint32_t lowBandFreq, const uint32_t highBandFreq
     hal.IsrCallback_1 = &LR2021Driver::IsrCallback_1;
     hal.IsrCallback_2 = &LR2021Driver::IsrCallback_2;
 
+    CHECK("LOAD_PATCH_RAM", LoadPatchRAM(SX12XX_Radio_1));
+    if (GPIO_PIN_NSS_2 != UNDEF_PIN) CHECK("LOAD_PATCH_RAM", LoadPatchRAM(SX12XX_Radio_2));
+
     // Clear Errors
     CHECK("LR2021_SYSTEM_CLEAR_ERRORS_OC", hal.WriteCommand(LR2021_SYSTEM_CLEAR_ERRORS_OC, SX12XX_Radio_All)); // Remove later?  Might not be required???
 

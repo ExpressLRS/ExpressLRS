@@ -103,4 +103,8 @@ private:
     void CommitOutputPower();
     void WriteOutputPower(uint8_t power, SX12XX_Radio_Number_t radioNumber);
     void SetPaConfig(bool isSubGHz, SX12XX_Radio_Number_t radioNumber);
+
+    uint16_t WriteRegMem32(uint32_t address, const uint32_t *buffer, uint8_t length, SX12XX_Radio_Number_t radioNumber);
+    uint16_t LoadPatchRAM(SX12XX_Radio_Number_t radioNumber);
+    uint16_t EnablePatchRAM();
 };
