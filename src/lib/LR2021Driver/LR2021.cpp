@@ -233,15 +233,13 @@ void LR2021Driver::Config(const uint8_t bw, const uint8_t sf, const uint8_t cr, 
         CHECK("LR2021_RADIO_SET_RX_PATH_OC", hal.WriteCommand(LR2021_RADIO_SET_RX_PATH_OC, buf, sizeof(buf), radioNumber, 10000));
     }
 
-    ClearIrqStatus(radioNumber);
-
-    SetPaConfig(isSubGHz, radioNumber); // Must be called after changing rf modes between subG and 2.4G.  This sets the correct rf amps, and txen pins to be used.
-
-    GetIrqStatus(radioNumber);          // required so the commit succeeds
+    WriteOutputPower(max(LR2021_POWER_MIN_HF_PA, LR2021_POWER_MIN_LF_PA), SX12XX_Radio_All);    // Force power into a good range for 900 & 2.4G
+    SetPaConfig(isSubGHz, radioNumber);
 
     pwrForceUpdate = true;              // force an update of the output power because the band may have changed, and we need to configure the power for the band.
     CommitOutputPower();
 
+    ClearIrqStatus(radioNumber);
     CHECK("LR2021_SYSTEM_CLEAR_RX_FIFO_OC", hal.WriteCommand(LR2021_SYSTEM_CLEAR_RX_FIFO_OC, radioNumber));
     CHECK("LR2021_SYSTEM_CLEAR_TX_FIFO_OC", hal.WriteCommand(LR2021_SYSTEM_CLEAR_TX_FIFO_OC, radioNumber));
 }
