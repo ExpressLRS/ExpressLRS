@@ -23,6 +23,7 @@ static volatile bool newChannelsAvailable;
 static uint32_t lastUpdate;
 // Absolute max failsafe time if no update is received, regardless of LQ
 static constexpr uint32_t FAILSAFE_ABS_TIMEOUT_MS = 1000U;
+static constexpr uint32_t DISCONNECTED_UPDATE_MS = 10;
 
 typedef void (*servoWrite_fn)(uint8_t ch, uint16_t us);
 
@@ -321,7 +322,8 @@ static int event()
     if (connectionState != connected)
     {
         servosEnterFailsafe();
-        return connectionState == disconnected ? DURATION_NEVER : DURATION_IMMEDIATELY;
+        // When disconnected, return a timeout to feed the ISR watchdog for the PWM signals
+        return connectionState == disconnected ? DISCONNECTED_UPDATE_MS : DURATION_IMMEDIATELY;
     }
     if (!initialized && connectionState == connected)
     {
@@ -337,7 +339,7 @@ static int event()
 #if defined(PLATFORM_ESP32)
             else if ((eServoOutputMode)chConfig->val.mode == somDShot || (eServoOutputMode)chConfig->val.mode == somDShot3D)
             {
-                dshotInstances[ch]->begin(DSHOT300, false); // Set DShot protocol and bidirectional dshot bool
+                dshotInstances[ch]->begin(DSHOT300, false); // Set DShot protocol and bidirectional DShot bool
             }
 #endif
         }
@@ -348,7 +350,8 @@ static int event()
 static int timeout()
 {
     servosUpdate(millis());
-    return DURATION_IMMEDIATELY;
+    // When disconnected, return a timeout to feed the ISR watchdog for the PWM signals
+    return connectionState == disconnected ? DISCONNECTED_UPDATE_MS : DURATION_IMMEDIATELY;
 }
 
 device_t ServoOut_device = {
