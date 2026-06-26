@@ -95,7 +95,7 @@ void convert_mavlink_to_crsf_telem(crsf_addr_e destination, uint8_t *CRSFinBuffe
     {
         mavlink_message_t msg;
         mavlink_status_t status;
-        bool have_message = mavlink_frame_char(MAVLINK_COMM_0, CRSFinBuffer[CRSF_FRAME_NOT_COUNTED_BYTES + i], &msg, &status);
+        bool have_message = mavlink_frame_char(MAVLINK_COMM_0, CRSFinBuffer[CRSF_FRAME_NOT_COUNTED_BYTES + i], &msg, &status) == MAVLINK_FRAMING_OK;
         // convert mavlink messages to CRSF messages
         if (have_message)
         {
