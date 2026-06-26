@@ -171,11 +171,6 @@ static commandParameter luaBind = {
     STR_EMPTYSPACE
 };
 
-static stringParameter luaInfo = {
-    {"Bad/Good", (crsf_value_type_e)(CRSF_INFO | CRSF_FIELD_ELRS_HIDDEN)},
-    STR_EMPTYSPACE
-};
-
 static stringParameter luaELRSversion = {
     {version_domain, CRSF_INFO},
     commit
@@ -337,9 +332,6 @@ void TXModuleEndpoint::supressCriticalErrors()
 void TXModuleEndpoint::devicePingCalled()
 {
     supressCriticalErrors();
-    utoa(CRSFHandset::BadPktsCountResult, luaBadGoodString, 10);
-    strcat(luaBadGoodString, "/");
-    utoa(CRSFHandset::GoodPktsCountResult, luaBadGoodString + strlen(luaBadGoodString), 10);
 }
 
 void TXModuleEndpoint::setWarningFlag(const warningFlags flag, const bool value)
@@ -784,8 +776,6 @@ static void recalculatePacketRateOptions(int minInterval)
 
 void TXModuleEndpoint::registerParameters()
 {
-  setStringValue(&luaInfo, luaBadGoodString);
-
   auto wifiBleCallback = [&](propertiesCommon *item, const uint8_t arg) { handleWifiBle(item, arg); };
   auto sendCallback = [&](propertiesCommon *item, const uint8_t arg) { handleSimpleSendCmd(item, arg); };
 
@@ -983,7 +973,6 @@ void TXModuleEndpoint::registerParameters()
     registerParameter(&luaBind, sendCallback);
   }
 
-  registerParameter(&luaInfo);
   registerParameter(&luaELRSversion);
 }
 
