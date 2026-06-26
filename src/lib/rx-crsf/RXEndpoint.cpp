@@ -79,7 +79,6 @@ void RXEndpoint::handleMessage(const crsf_header_t *message)
     {
         parameterUpdateReq(
             extMessage->orig_addr,
-            false,
             extMessage->type,
             extMessage->payload[0],  // parameter index
             extMessage->payload + 1  // start of parameter payload
