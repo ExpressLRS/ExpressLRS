@@ -391,7 +391,6 @@ local function changeDeviceId(devId) --change to selected device ID
   deviceName = device.name
   fields_count = device.fldcnt
   deviceIsELRS_TX = device.isElrs and devId == 0xEE or nil -- ELRS and ID is TX module
-  -- handsetId = deviceIsELRS_TX and 0xEF or 0xEA -- Address ELRS_LUA vs RADIO_TRANSMITTER for pre 4.1.0 TX firmwares
 
   allocateFields()
   reloadAllField()
