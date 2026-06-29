@@ -72,16 +72,79 @@ static uint32_t packetCnt;
 /******** Decimate 11bit to 10bit functions ********/
 typedef uint32_t (*Decimate11to10_fn)(uint32_t ch11bit);
 
-static uint32_t ICACHE_RAM_ATTR Decimate11to10_Limit(uint32_t ch11bit)
+// static uint32_t ICACHE_RAM_ATTR Decimate11to10_Limit(uint32_t ch11bit)
+// {
+//     // Limit 10-bit result to the range CRSF_CHANNEL_VALUE_STD_MIN/MAX
+//     return CRSF_to_UINT10(constrain(ch11bit, CRSF_CHANNEL_VALUE_STD_MIN, CRSF_CHANNEL_VALUE_STD_MAX));
+// }
+// static uint32_t ICACHE_RAM_ATTR Decimate11to10_Div2(uint32_t ch11bit)
+// {
+//     // Simple divide-by-2 to discard the bit
+//     return ch11bit >> 1;
+// }
+
+static uint32_t ICACHE_RAM_ATTR Decimate11to10_nlimit(uint32_t ch11bit)
 {
-    // Limit 10-bit result to the range CRSF_CHANNEL_VALUE_STD_MIN/MAX
-    return CRSF_to_UINT10(constrain(ch11bit, CRSF_CHANNEL_VALUE_STD_MIN, CRSF_CHANNEL_VALUE_STD_MAX));
+    // Non-linear piecewise map with don't-care endpoints (R=OTA_DECIMATE_R_NLIMIT)
+    // Inner region [691, 1293]: 1:1 mapping (603 values)
+    // Lower outer [172, 691): 520 values -> 311 levels [1, 311)
+    // Upper outer [1293, 1811]: 519 values -> 311 levels [712, 1022]
+    // Don't care: [0, 172) -> 0, (1811, 1984] -> 1023
+    constexpr uint32_t R = OTA_DECIMATE_R_NLIMIT;
+    constexpr uint32_t center = CRSF_CHANNEL_VALUE_MID;
+    constexpr uint32_t limit_lo = CRSF_CHANNEL_VALUE_STD_MIN;
+    constexpr uint32_t limit_hi = CRSF_CHANNEL_VALUE_STD_MAX;
+    constexpr uint32_t inner_size = 2 * R + 1; // 603
+    constexpr uint32_t half_outer_input = center - R - limit_lo; // 520
+    constexpr uint32_t outer_levels = 1023 - inner_size - 1; // 419
+    constexpr uint32_t half_outer_output = outer_levels / 2; // 209
+    constexpr uint32_t inner_offset = half_outer_output + 1; // 210
+
+    if (ch11bit < limit_lo)
+    {
+        return 0;
+    }
+    if (ch11bit > limit_hi)
+    {
+        return 1023;
+    }
+    if (ch11bit < center - R)
+    {
+        uint32_t offset = ch11bit - limit_lo;
+        return 1 + (offset * (half_outer_output - 1) + half_outer_input / 2) / half_outer_input;
+    }
+    if (ch11bit > center + R)
+    {
+        uint32_t offset = ch11bit - (center + R);
+        return inner_offset + inner_size + (offset * (half_outer_output - 1) + half_outer_input / 2) / half_outer_input;
+    }
+    return inner_offset + (ch11bit - (center - R));
 }
 
-static uint32_t ICACHE_RAM_ATTR Decimate11to10_Div2(uint32_t ch11bit)
+static uint32_t ICACHE_RAM_ATTR Decimate11to10_nmap(uint32_t ch11bit)
 {
-    // Simple divide-by-2 to discard the bit
-    return ch11bit >> 1;
+    // Non-linear piecewise map (R=OTA_DECIMATE_R_NMAP)
+    // Inner region [802, 1182]: 1:1 mapping (381 values)
+    // Lower outer [0, 802): 802 values -> 322 levels [0, 322)
+    // Upper outer [1182, 1984]: 803 values -> 322 levels [702, 1023]
+    constexpr uint32_t R = OTA_DECIMATE_R_NMAP;
+    constexpr uint32_t center = CRSF_CHANNEL_VALUE_MID;
+    constexpr uint32_t inner_size = 2 * R + 1; // 381
+    constexpr uint32_t half_outer_input = center - R; // 802
+    constexpr uint32_t outer_levels = 1023 - inner_size + 1; // 643
+    constexpr uint32_t half_outer_output = outer_levels / 2; // 321
+    constexpr uint32_t inner_offset = half_outer_output; // 321
+
+    if (ch11bit < center - R)
+    {
+        return (ch11bit * half_outer_output + half_outer_input / 2) / half_outer_input;
+    }
+    if (ch11bit > center + R)
+    {
+        uint32_t offset = ch11bit - (center + R);
+        return inner_offset + inner_size + (offset * half_outer_output + half_outer_input / 2) / half_outer_input;
+    }
+    return inner_offset + (ch11bit - (center - R));
 }
 
 /***
@@ -122,9 +185,9 @@ static void ICACHE_RAM_ATTR PackChannelDataHybridCommon(OTA_Packet4_s * const ot
     // Incremental packet counter for verification on the RX side, 32 bits shoved into CH1-CH4
     ota4->dbg_linkstats.packetNum = packetCnt++;
 #else
-    // CRSF input is 11bit and OTA will carry only 10bit. Discard the Extended Limits (E.Limits)
-    // range and use the full 10bits to carry only 998us - 2012us
-    PackUInt11ToChannels4x10(&channelData[0], &ota4->rc.ch, &Decimate11to10_Limit);
+    // CRSF input is 11bit and OTA will carry only 10bit. Use non-linear nlimit encoding
+    // for higher accuracy in the center range with don't-care endpoints
+    PackUInt11ToChannels4x10(&channelData[0], &ota4->rc.ch, &Decimate11to10_nlimit);
 
     // send armed status to receiver
     #if defined(UNIT_TEST)
@@ -267,8 +330,8 @@ static void ICACHE_RAM_ATTR GenerateChannelData8ch12ch(OTA_Packet8_s * const ota
         chSrcLow = 0;
         chSrcHigh = isHighAux ? 8 : 4;
     }
-    PackUInt11ToChannels4x10(&channelData[chSrcLow], &ota8->rc.chLow, &Decimate11to10_Div2);
-    PackUInt11ToChannels4x10(&channelData[chSrcHigh], &ota8->rc.chHigh, &Decimate11to10_Div2);
+    PackUInt11ToChannels4x10(&channelData[chSrcLow], &ota8->rc.chLow, &Decimate11to10_nmap);
+    PackUInt11ToChannels4x10(&channelData[chSrcHigh], &ota8->rc.chHigh, &Decimate11to10_nmap);
 #endif
 }
 
@@ -303,14 +366,83 @@ static bool OtaChannelDataComplete;
 uint32_t debugRcvrLinkstatsPacketId;
 #else
 
-static void UnpackChannels4x10ToUInt11(OTA_Channels_4x10 const * const srcChannels4x10, uint32_t * const dest)
+/******** Expand 10bit to 11bit functions ********/
+
+typedef uint32_t (*Expand10to11_fn)(uint32_t ch10bit);
+
+// static uint32_t ICACHE_RAM_ATTR Expand10to11_limit(uint32_t ch10bit)
+// {
+//     // Wraps the standard UINT10_to_CRSF for testing
+//     return UINT10_to_CRSF(ch10bit);
+// }
+// static uint32_t ICACHE_RAM_ATTR Expand10to11_div2(uint32_t ch10bit)
+// {
+//     // Wraps the standard << 1 for testing
+//     return ch10bit << 1;
+// }
+
+static uint32_t ICACHE_RAM_ATTR Expand10to11_nlimit(uint32_t ch10bit)
+{
+    // Reverse of Decimate11to10_nlimit (R=OTA_DECIMATE_R_NLIMIT)
+    // Don't care: [0] -> 172, [1023] -> 1811
+    // Lower outer [1, 210): 311 levels -> 520 values [172, 691)
+    // Inner [210, 813]: 603 values [691, 1293]
+    // Upper outer [814, 1022]: 311 levels -> 519 values [1293, 1811]
+    constexpr uint32_t R = OTA_DECIMATE_R_NLIMIT;
+    constexpr uint32_t center = CRSF_CHANNEL_VALUE_MID;
+    constexpr uint32_t limit_lo = CRSF_CHANNEL_VALUE_STD_MIN;
+    constexpr uint32_t limit_hi = CRSF_CHANNEL_VALUE_STD_MAX;
+    constexpr uint32_t inner_size = 2 * R + 1; // 603
+    constexpr uint32_t half_outer_input = center - R - limit_lo; // 520
+    constexpr uint32_t outer_levels = 1023 - inner_size - 1; // 419
+    constexpr uint32_t half_outer_output = outer_levels / 2; // 209
+    constexpr uint32_t inner_offset = half_outer_output + 1; // 210
+
+    if (ch10bit < inner_offset)
+    {
+        uint32_t offset = ch10bit - 1;
+        return limit_lo + (offset * half_outer_input + (half_outer_output - 1) / 2) / (half_outer_output - 1);
+    }
+    if (ch10bit >= inner_offset + inner_size)
+    {
+        uint32_t offset = ch10bit - (inner_offset + inner_size);
+        return (center + R) + (offset * half_outer_input + (half_outer_output - 1) / 2) / (half_outer_output - 1);
+    }
+    return (center - R) + (ch10bit - inner_offset);
+}
+
+static uint32_t ICACHE_RAM_ATTR Expand10to11_nmap(uint32_t ch10bit)
+{
+    // Reverse of Decimate11to10_nmap (R=OTA_DECIMATE_R_NMAP)
+    // Lower outer [0, 321): 322 levels -> 802 values [0, 802)
+    // Inner [321, 702]: 381 values [802, 1182]
+    // Upper outer [702, 1023]: 342 levels -> 803 values [1182, 1984]
+    constexpr uint32_t R = OTA_DECIMATE_R_NMAP;
+    constexpr uint32_t center = CRSF_CHANNEL_VALUE_MID;
+    constexpr uint32_t inner_size = 2 * R + 1; // 381
+    constexpr uint32_t half_outer_input = center - R; // 802
+    constexpr uint32_t outer_levels = 1023 - inner_size + 1; // 643
+    constexpr uint32_t half_outer_output = outer_levels / 2; // 321
+    constexpr uint32_t inner_offset = half_outer_output; // 321
+
+    if (ch10bit < inner_offset)
+    {
+        return (ch10bit * half_outer_input + half_outer_output / 2) / half_outer_output;
+    }
+    if (ch10bit >= inner_offset + inner_size)
+    {
+        uint32_t offset = ch10bit - (inner_offset + inner_size);
+        return (center + R) + (offset * half_outer_input + half_outer_output / 2) / half_outer_output;
+    }
+    return (center - R) + (ch10bit - inner_offset);
+}
+
+static void UnpackChannels4x10ToUInt11(OTA_Channels_4x10 const * const srcChannels4x10, uint32_t * const dest, Expand10to11_fn expand)
 {
     uint8_t const * const payload = (uint8_t const * const)srcChannels4x10;
     constexpr unsigned numOfChannels = 4;
     constexpr unsigned srcBits = 10;
-    constexpr unsigned dstBits = 11;
     constexpr unsigned inputChannelMask = (1 << srcBits) - 1;
-    constexpr unsigned precisionShift = dstBits - srcBits;
 
     // code from BetaFlight rx/crsf.cpp / bitpacker_unpack
     uint8_t bitsMerged = 0;
@@ -325,7 +457,7 @@ static void UnpackChannels4x10ToUInt11(OTA_Channels_4x10 const * const srcChanne
             bitsMerged += 8;
         }
         //printf("rv=%x(%x) bm=%u\n", readValue, (readValue & channelMask), bitsMerged);
-        dest[n] = (readValue & inputChannelMask) << precisionShift;
+        dest[n] = expand(readValue & inputChannelMask);
         readValue >>= srcBits;
         bitsMerged -= srcBits;
     }
@@ -339,16 +471,8 @@ static void ICACHE_RAM_ATTR UnpackChannelDataHybridCommon(OTA_Packet4_s const * 
 #if defined(DEBUG_RCVR_LINKSTATS)
     debugRcvrLinkstatsPacketId = ota4->dbg_linkstats.packetNum;
 #else
-    // The analog channels, encoded as 10bit where 0 = 998us and 1023 = 2012us
-    uint32_t rawChannelData[4];
-    UnpackChannels4x10ToUInt11(&ota4->rc.ch, rawChannelData);
-    // The unpacker simply does a << 1 to convert 10 to 11bit, but Hybrid/Wide modes
-    // only pack a subset of the full range CRSF data, so properly expand it
-    // This is ~80 bytes less code than passing an 10-to-11 expander fn to the unpacker
-    for (unsigned ch=0; ch<4; ++ch)
-    {
-        channelData[ch] = UINT10_to_CRSF(rawChannelData[ch] >> 1);
-    }
+    // The analog channels, encoded as 10bit with nlimit non-linear encoding (CRSF STD range)
+    UnpackChannels4x10ToUInt11(&ota4->rc.ch, channelData, &Expand10to11_nlimit);
     channelData[4] = BIT_to_CRSF(isArmed);
     // Copy the armed flag into CH14/AUX10 for consistency with fullres
     channelData[13] = channelData[4];
@@ -458,10 +582,10 @@ bool ICACHE_RAM_ATTR UnpackChannelData8ch(OTA_Packet_s const * const otaPktPtr, 
         channelData[13] = BIT_to_CRSF(isArmed);
     }
 
-    // Analog channels packed 10bit covering the entire CRSF extended range (i.e. not just 988-2012)
+    // Analog channels packed 10bit with nmap non-linear encoding (full CRSF EXT range)
     // ** Different than the 10bit encoding in Hybrid/Wide mode **
-    UnpackChannels4x10ToUInt11(&ota8->rc.chLow, &channelData[chDstLow]);
-    UnpackChannels4x10ToUInt11(&ota8->rc.chHigh, &channelData[chDstHigh]);
+    UnpackChannels4x10ToUInt11(&ota8->rc.chLow, &channelData[chDstLow], &Expand10to11_nmap);
+    UnpackChannels4x10ToUInt11(&ota8->rc.chHigh, &channelData[chDstHigh], &Expand10to11_nmap);
 #endif
     // Restore the uplink_TX_Power range 0-7 -> 1-8
     linkStats.uplink_TX_Power = constrain(ota8->rc.uplinkPower + 1, 1, 8);
