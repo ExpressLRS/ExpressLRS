@@ -212,12 +212,13 @@ static inline IRAM_ATTR uint32_t earliest(uint32_t a, uint32_t b) {
     return (da < db) ? a : b;
 }
 
-static inline IRAM_ATTR bool watchdogExpired(uint32_t now) {
+static inline IRAM_ATTR bool watchdogExpired() {
   if (!watchdogArmed) {
     return false;
   }
 
-  return static_cast<int32_t>(now - watchdogLastFeedCycle) >= static_cast<int32_t>(WATCHDOG_TIMEOUT_CYCLES);
+  uint32_t now = GetCycleCountIRQ();
+  return now - watchdogLastFeedCycle >= WATCHDOG_TIMEOUT_CYCLES;
 }
 
 static inline IRAM_ATTR void stopAllWaveformsFromWatchdog() {
@@ -264,11 +265,6 @@ static IRAM_ATTR void timer1Interrupt() {
   T1C = 0;
   T1I = 0;
   int32_t cycleDeltaNextEvent = MAXINTERVAL_CS;
-
-  if (watchdogExpired(GetCycleCountIRQ())) {
-    stopAllWaveformsFromWatchdog();
-    return;
-  }
 
   if (wvfState.waveformToEnable || wvfState.waveformToDisable) {
     // Handle enable/disable requests from main app
@@ -351,6 +347,11 @@ static IRAM_ATTR void timer1Interrupt() {
   // schedule the timer a little early to allow time to get to the pin switch code before the deadline
   T1L = (cycleDeltaNextEvent - PRESCHEDULE_CS) >> (turbo ? 1 : 0);
   T1C = (1 << TCTE); //timer1_enable(TIM_DIV1, TIM_EDGE, TIM_SINGLE)
+
+  if (watchdogExpired()) {
+    stopAllWaveformsFromWatchdog();
+    T1C = 0; // disable the timer since we're dead
+  }
 }
 
 #endif
