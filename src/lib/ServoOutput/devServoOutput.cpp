@@ -8,6 +8,10 @@
 #include "logging.h"
 #include "rxtx_intf.h"
 
+#if defined(PLATFORM_ESP32)
+#include <driver/periph_ctrl.h>
+#endif
+
 static int8_t servoPins[PWM_MAX_CHANNELS];
 static pwm_channel_t pwmChannels[PWM_MAX_CHANNELS];
 static uint16_t pwmChannelValues[PWM_MAX_CHANNELS];
@@ -353,6 +357,22 @@ static int timeout()
     // When disconnected, return a timeout to feed the ISR watchdog for the PWM signals
     return connectionState == disconnected ? DISCONNECTED_UPDATE_MS : DURATION_IMMEDIATELY;
 }
+
+#if defined(PLATFORM_ESP32)
+// High priority constructor function to reset the hardware modules used for PWM/DShot output.
+// Restarts can leave PWM/RMT peripherals running; so reset them early in the app start process.
+__attribute__((constructor(101))) void resetEsp32PwmDevices()
+{
+    periph_module_reset(PERIPH_LEDC_MODULE);
+    periph_module_reset(PERIPH_RMT_MODULE);
+#if SOC_MCPWM_SUPPORTED
+    periph_module_reset(PERIPH_PWM0_MODULE);
+#if SOC_MCPWM_GROUPS > 1
+    periph_module_reset(PERIPH_PWM1_MODULE);
+#endif
+#endif
+}
+#endif
 
 device_t ServoOut_device = {
     .initialize = initialize,
