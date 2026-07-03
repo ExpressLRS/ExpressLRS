@@ -70,7 +70,7 @@ protected:
 
     /**
      * Registers a parameter with the CRSF endpoint.
-     * 
+     *
      * @param definition Pointer to the parameter definition
      * @param callback Optional callback function to be called when the parameter is updated
      * @param parent Parent parameter index, defaults to 0 for root level parameters
@@ -85,18 +85,17 @@ protected:
 
     /**
      * Handles parameter update requests from the CRSF network.
-     * 
+     *
      * @param origin The address of the requesting device
-     * @param isElrs Boolean indicating if this is an ELRS-specific parameter
      * @param parameterType The type of parameter being updated
      * @param parameterIndex The index of the parameter to update
      * @param payload Pointer to the start of the parameter payload or chunk number for multipart parameters
      */
-    void parameterUpdateReq(crsf_addr_e origin, bool isElrs, uint8_t parameterType, uint8_t parameterIndex, void *payload);
+    void parameterUpdateReq(crsf_addr_e origin, uint8_t parameterType, uint8_t parameterIndex, void *payload);
 
     /**
      * Sends a command response back to the CRSF network.
-     * 
+     *
      * @param cmd Pointer to the command parameter structure
      * @param step The current step in the command execution
      * @param message Response message to send
@@ -200,8 +199,8 @@ private:
     static uint8_t *stringParameterToArray(const stringParameter *parameter, uint8_t *next);
     uint8_t *folderParameterToArray(const folderParameter *parameter, uint8_t *next) const;
 
-    uint8_t sendParameter(crsf_addr_e origin, bool isElrs, crsf_frame_type_e frameType, uint8_t fieldChunk, const propertiesCommon *parameter);
-    void pushResponseChunk(commandParameter *cmd, bool isElrs);
+    uint8_t sendParameter(crsf_addr_e origin, crsf_frame_type_e frameType, uint8_t fieldChunk, const propertiesCommon *parameter);
+    void pushResponseChunk(commandParameter *cmd);
 };
 
 #endif //CRSF_ENDPOINT_H

@@ -71,24 +71,20 @@ void TXModuleEndpoint::handleMessage(const crsf_header_t *message)
         || packetType == CRSF_FRAMETYPE_PARAMETER_READ
         || packetType == CRSF_FRAMETYPE_PARAMETER_WRITE)
     {
-        // dodgy hack because 'our' LUA script uses a different origin and we need to reply to the radio!
-        bool isElrsCalling = extMessage->orig_addr == CRSF_ADDRESS_ELRS_LUA;
-        crsf_addr_e requestOrigin = isElrsCalling ? CRSF_ADDRESS_RADIO_TRANSMITTER : extMessage->orig_addr;
-
         if (packetType == CRSF_FRAMETYPE_PARAMETER_WRITE)
         {
             if (extMessage->payload[0] == 0)
             {
                 // special case for elrs linkstat request
                 DBGVLN("ELRS status request");
-                sendELRSstatus(requestOrigin);
+                sendELRSstatus(extMessage->orig_addr);
             }
             else if (extMessage->payload[0] == 0x2E)
             {
                 supressCriticalErrors();
             }
         }
-        parameterUpdateReq(requestOrigin, isElrsCalling, packetType, extMessage->payload[0], extMessage->payload + 1);
+        parameterUpdateReq(extMessage->orig_addr, packetType, extMessage->payload[0], extMessage->payload + 1);
     }
 }
 

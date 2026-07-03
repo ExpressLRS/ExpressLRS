@@ -6,9 +6,9 @@
 ---- # License GPLv2: http://www.gnu.org/licenses/gpl-2.0.html               #
 ---- #                                                                       #
 ---- #########################################################################
-local EXITVER = "-- EXIT (Lua r17) --"
+local EXITVER = "-- EXIT (Lua r18) --"
 local deviceId = 0xEE
-local handsetId = 0xEF
+local handsetId = 0xEA
 local deviceName = nil
 local currentFolderName = nil
 local lineIndex = 1
@@ -391,7 +391,6 @@ local function changeDeviceId(devId) --change to selected device ID
   deviceName = device.name
   fields_count = device.fldcnt
   deviceIsELRS_TX = device.isElrs and devId == 0xEE or nil -- ELRS and ID is TX module
-  handsetId = deviceIsELRS_TX and 0xEF or 0xEA -- Address ELRS_LUA vs RADIO_TRANSMITTER
 
   allocateFields()
   reloadAllField()
