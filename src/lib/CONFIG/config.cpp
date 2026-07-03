@@ -1369,6 +1369,16 @@ RxConfig::SetForceTlmOff(bool forceTlmOff)
 }
 
 void
+RxConfig::SetMavlinkRCEnabled(bool enabled)
+{
+    if (GetMavlinkRCEnabled() != enabled)
+    {
+        m_config.mavlinkRcDisabled = !enabled;
+        m_modified = EVENT_CONFIG_MODEL_CHANGED;
+    }
+}
+
+void
 RxConfig::SetRateInitialIdx(uint8_t rateInitialIdx)
 {
     if (m_config.rateInitialIdx != rateInitialIdx)

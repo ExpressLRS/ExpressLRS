@@ -78,6 +78,13 @@ static int8Parameter luaSourceSysId = {
   STR_EMPTYSPACE
 };
 
+static selectionParameter luaMavlinkRC = {
+    {"MAVLink RC", CRSF_TEXT_SELECTION},
+    1,
+    "Off;On",
+    STR_EMPTYSPACE
+};
+
 static selectionParameter luaTlmPower = {
     {"Tlm Power", CRSF_TEXT_SELECTION},
     0, // value
@@ -540,6 +547,9 @@ void RXEndpoint::registerParameters()
   registerParameter(&luaSourceSysId, [](propertiesCommon* item, uint8_t arg){
     config.SetSourceSysId((uint8_t)arg);
   });
+  registerParameter(&luaMavlinkRC, [](propertiesCommon* item, uint8_t arg){
+    config.SetMavlinkRCEnabled(arg != 0);
+  });
 
   if (GPIO_PIN_ANT_CTRL != UNDEF_PIN)
   {
@@ -654,13 +664,16 @@ void RXEndpoint::updateParameters()
   {
     setUint8Value(&luaSourceSysId, config.GetSourceSysId() == 0 ? 255 : config.GetSourceSysId());  //display Source sysID if 0 display 255 to mimic logic in SerialMavlink.cpp
     setUint8Value(&luaTargetSysId, config.GetTargetSysId() == 0 ? 1 : config.GetTargetSysId());  //display Target sysID if 0 display 1 to mimic logic in SerialMavlink.cpp
+    setTextSelectionValue(&luaMavlinkRC, config.GetMavlinkRCEnabled() ? 1 : 0);
     LUA_FIELD_SHOW(luaSourceSysId)
     LUA_FIELD_SHOW(luaTargetSysId)
+    LUA_FIELD_SHOW(luaMavlinkRC)
   }
   else
   {
     LUA_FIELD_HIDE(luaSourceSysId)
     LUA_FIELD_HIDE(luaTargetSysId)
+    LUA_FIELD_HIDE(luaMavlinkRC)
   }
 }
 #endif
