@@ -508,6 +508,9 @@ static void GetConfiguration(AsyncWebServerRequest *request)
 #if defined(TARGET_RX)
     settings["module-type"] = "RX";
     settings["voltage_source_count"] = getDefinedVoltageSourceCount();
+#if HAS_USB_HID_GAMEPAD
+    settings["has_usb_hid_gamepad"] = true;
+#endif
 #endif
 #if defined(RADIO_SX128X)
     settings["radio-type"] = "SX128X";
@@ -647,6 +650,12 @@ static void JsonUidToConfig(JsonVariant &json)
 static void UpdateConfiguration(AsyncWebServerRequest *request, JsonVariant &json)
 {
   uint8_t protocol = json["serial-protocol"] | 0;
+#if !HAS_USB_HID_GAMEPAD
+  if (protocol == PROTOCOL_USB_HID_GAMEPAD)
+  {
+    protocol = PROTOCOL_CRSF;
+  }
+#endif
   config.SetSerialProtocol((eSerialProtocol)protocol);
 
 #if defined(PLATFORM_ESP32)
