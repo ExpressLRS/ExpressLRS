@@ -22,8 +22,11 @@ constexpr char kUsbManufacturerName[] = "ELRS";
 
 void configureUsbDeviceStrings()
 {
-    USB.productName(kUsbProductName);
-    USB.manufacturerName(kUsbManufacturerName);
+    if (rxGamepad != nullptr)
+    {
+        USB.productName(kUsbProductName);
+        USB.manufacturerName(kUsbManufacturerName);
+    }
 }
 
 void ensureUsbStarted()
@@ -110,11 +113,6 @@ uint32_t SerialUSBHID::sendRCFrame(bool frameAvailable, bool frameMissed, uint32
 
     const bool neutralize = failsafe || !connectionHasModelMatch || !teamraceHasModelMatch;
     if (!neutralize && !frameAvailable)
-    {
-        return DURATION_IMMEDIATELY;
-    }
-
-    if (rxGamepad == nullptr)
     {
         return DURATION_IMMEDIATELY;
     }

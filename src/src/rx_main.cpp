@@ -1284,6 +1284,12 @@ static void setupSerial()
         #else
         BackpackOrLogStrm = new NullStream();
         #endif
+        #if defined(PLATFORM_ESP32_S3)
+        if (RxUsbSerialSupported())
+        {
+            RxUsbSerialBegin(460800);
+        }
+        #endif
         serialIO = new SerialNOOP();
         return;
     }
@@ -1405,11 +1411,17 @@ static void setupSerial()
         serialIO = new SerialCRSF(SERIAL_PROTOCOL_TX, SERIAL_PROTOCOL_RX);
     }
 
-#if defined(DEBUG_ENABLED)
 #if defined(PLATFORM_ESP32_S3)
     if (RxUsbSerialSupported())
     {
         RxUsbSerialBegin(460800);
+    }
+#endif
+
+#if defined(DEBUG_ENABLED)
+#if defined(PLATFORM_ESP32_S3)
+    if (RxUsbSerialSupported())
+    {
         BackpackOrLogStrm = GetRxUsbSerialStream();
     }
     else
