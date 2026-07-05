@@ -27,6 +27,7 @@
 #include "rx-serial/SerialSmartAudio.h"
 #include "rx-serial/SerialDisplayport.h"
 #include "rx-serial/SerialGPS.h"
+#include "rx-serial/SerialUSBHID.h"
 
 #include "devAnalogVbat.h"
 #include "devBaro.h"
@@ -1259,21 +1260,35 @@ static void setupSerial()
 	bool sumdSerialOutput = false;
     bool mavlinkSerialOutput = false;
     bool hottTlmSerial = false;
+    bool usbHidOutput = false;
 
     if (OPT_CRSF_RCVR_NO_SERIAL)
     {
         // For PWM receivers with no serial pins defined, only turn on the Serial port if logging is on
         #if defined(DEBUG_LOG) || defined(DEBUG_RCVR_LINKSTATS)
-        #if defined(PLATFORM_ESP32_S3) && !defined(ESP32_S3_USB_JTAG_ENABLED)
-        // Requires pull-down on GPIO3.  If GPIO3 has a pull-up (for JTAG) this doesn't work.
-        USBSerial.begin(serialBaud);
-        BackpackOrLogStrm = &USBSerial;
+        #if defined(PLATFORM_ESP32_S3)
+        if (RxUsbSerialSupported())
+        {
+            RxUsbSerialBegin(serialBaud);
+            BackpackOrLogStrm = GetRxUsbSerialStream();
+        }
+        else
+        {
+            Serial.begin(serialBaud);
+            BackpackOrLogStrm = &Serial;
+        }
         #else
         Serial.begin(serialBaud);
         BackpackOrLogStrm = &Serial;
         #endif
         #else
         BackpackOrLogStrm = new NullStream();
+        #endif
+        #if defined(PLATFORM_ESP32_S3)
+        if (RxUsbSerialSupported())
+        {
+            RxUsbSerialBegin(460800);
+        }
         #endif
         serialIO = new SerialNOOP();
         return;
@@ -1310,6 +1325,12 @@ static void setupSerial()
     {
         serialBaud = 115200;
     }
+    #if HAS_USB_HID_GAMEPAD
+    else if (config.GetSerialProtocol() == PROTOCOL_USB_HID_GAMEPAD)
+    {
+        usbHidOutput = true;
+    }
+    #endif
     bool invert = config.GetSerialProtocol() == PROTOCOL_SBUS || config.GetSerialProtocol() == PROTOCOL_INVERTED_CRSF || config.GetSerialProtocol() == PROTOCOL_DJI_RS_PRO;
 
 #if defined(PLATFORM_ESP8266)
@@ -1327,27 +1348,30 @@ static void setupSerial()
     SerialMode mode = (sbusSerialOutput || sumdSerialOutput)  ? SERIAL_TX_ONLY : SERIAL_FULL;
     Serial.begin(serialBaud, serialConfig, mode, -1, invert);
 #elif defined(PLATFORM_ESP32)
-    uint32_t serialConfig = SERIAL_8N1;
-
-    if(sbusSerialOutput)
+    if (!usbHidOutput)
     {
-        serialConfig = SERIAL_8E2;
-    }
-    else if(hottTlmSerial)
-    {
-        serialConfig = SERIAL_8N2;
-    }
+        uint32_t serialConfig = SERIAL_8N1;
 
-    // ARDUINO_CORE_INVERT_FIX PT2
-    #if defined(ARDUINO_CORE_INVERT_FIX)
-    if(invert == false)
-    {
-        uart_set_line_inverse(0, UART_SIGNAL_INV_DISABLE);
-    }
-    #endif
-    // ARDUINO_CORE_INVERT_FIX PT2 end
+        if(sbusSerialOutput)
+        {
+            serialConfig = SERIAL_8E2;
+        }
+        else if(hottTlmSerial)
+        {
+            serialConfig = SERIAL_8N2;
+        }
 
-    Serial.begin(serialBaud, serialConfig, GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX, invert);
+        // ARDUINO_CORE_INVERT_FIX PT2
+        #if defined(ARDUINO_CORE_INVERT_FIX)
+        if(invert == false)
+        {
+            uart_set_line_inverse(0, UART_SIGNAL_INV_DISABLE);
+        }
+        #endif
+        // ARDUINO_CORE_INVERT_FIX PT2 end
+
+        Serial.begin(serialBaud, serialConfig, GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX, invert);
+    }
 #endif
 
     if (firmwareOptions.is_airport)
@@ -1378,13 +1402,33 @@ static void setupSerial()
     {
         serialIO = new SerialHoTT_TLM(SERIAL_PROTOCOL_TX, SERIAL_PROTOCOL_RX);
     }
+    else if (usbHidOutput)
+    {
+        serialIO = new SerialUSBHID();
+    }
     else
     {
         serialIO = new SerialCRSF(SERIAL_PROTOCOL_TX, SERIAL_PROTOCOL_RX);
     }
 
+#if defined(PLATFORM_ESP32_S3)
+    if (RxUsbSerialSupported())
+    {
+        RxUsbSerialBegin(460800);
+    }
+#endif
+
 #if defined(DEBUG_ENABLED)
-#if defined(PLATFORM_ESP32_S3) || defined(PLATFORM_ESP32_C3)
+#if defined(PLATFORM_ESP32_S3)
+    if (RxUsbSerialSupported())
+    {
+        BackpackOrLogStrm = GetRxUsbSerialStream();
+    }
+    else
+    {
+        BackpackOrLogStrm = &Serial;
+    }
+#elif defined(PLATFORM_ESP32_C3)
     USBSerial.begin(460800);
     BackpackOrLogStrm = &USBSerial;
 #else

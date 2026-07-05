@@ -19,6 +19,12 @@
 #include "SX12xxDriverCommon.h"
 #endif // UNIT_TEST
 
+#if defined(PLATFORM_ESP32_S3)
+#define HAS_USB_HID_GAMEPAD 1
+#else
+#define HAS_USB_HID_GAMEPAD 0
+#endif
+
 typedef enum : uint8_t
 {
     TLM_RATIO_STD = 0,   // Use suggested ratio from ModParams
@@ -225,7 +231,8 @@ enum eSerialProtocol : uint8_t
     PROTOCOL_HOTT_TLM,
     PROTOCOL_MAVLINK,
     PROTOCOL_MSP_DISPLAYPORT,
-    PROTOCOL_GPS
+    PROTOCOL_GPS,
+    PROTOCOL_USB_HID_GAMEPAD
 };
 
 #if defined(PLATFORM_ESP32)

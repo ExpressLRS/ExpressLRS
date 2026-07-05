@@ -508,6 +508,9 @@ static void GetConfiguration(AsyncWebServerRequest *request)
 #if defined(TARGET_RX)
     settings["module-type"] = "RX";
     settings["voltage_source_count"] = getDefinedVoltageSourceCount();
+#if HAS_USB_HID_GAMEPAD
+    settings["has_usb_hid_gamepad"] = true;
+#endif
 #endif
 #if defined(RADIO_SX128X)
     settings["radio-type"] = "SX128X";
