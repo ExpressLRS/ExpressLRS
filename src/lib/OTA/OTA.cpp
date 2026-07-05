@@ -83,68 +83,49 @@ typedef uint32_t (*Decimate11to10_fn)(uint32_t ch11bit);
 //     return ch11bit >> 1;
 // }
 
-static uint32_t ICACHE_RAM_ATTR Decimate11to10_nlimit(uint32_t ch11bit)
+static __attribute__((noinline)) uint32_t ICACHE_RAM_ATTR Decimate11to10_n(uint32_t ch11bit, uint32_t R, uint32_t lo, bool clamp)
 {
-    // Non-linear piecewise map with don't-care endpoints (R=OTA_DECIMATE_R_NLIMIT)
-    // Inner region [691, 1293]: 1:1 mapping (603 values)
-    // Lower outer [172, 691): 520 values -> 311 levels [1, 311)
-    // Upper outer [1293, 1811]: 519 values -> 311 levels [712, 1022]
-    // Don't care: [0, 172) -> 0, (1811, 1984] -> 1023
-    constexpr uint32_t R = OTA_DECIMATE_R_NLIMIT;
     constexpr uint32_t center = CRSF_CHANNEL_VALUE_MID;
-    constexpr uint32_t limit_lo = CRSF_CHANNEL_VALUE_STD_MIN;
-    constexpr uint32_t limit_hi = CRSF_CHANNEL_VALUE_STD_MAX;
-    constexpr uint32_t inner_size = 2 * R + 1; // 603
-    constexpr uint32_t half_outer_input = center - R - limit_lo; // 520
-    constexpr uint32_t outer_levels = 1023 - inner_size - 1; // 419
-    constexpr uint32_t half_outer_output = outer_levels / 2; // 209
-    constexpr uint32_t inner_offset = half_outer_output + 1; // 210
+    const uint32_t in_span = center - R - lo;
+    const uint32_t mult = 511 - R;
+    const uint32_t inner_offset = mult;
+    const uint32_t base_hi = inner_offset + (2 * R + 1);
 
-    if (ch11bit < limit_lo)
+    if (clamp)
     {
-        return 0;
-    }
-    if (ch11bit > limit_hi)
-    {
-        return 1023;
+        if (ch11bit < lo)
+        {
+            return 0;
+        }
+        // upper bound mirrors the lower one: center + R + in_span - 1
+        if (ch11bit > center + R + in_span - 1)
+        {
+            return 1023;
+        }
     }
     if (ch11bit < center - R)
     {
-        uint32_t offset = ch11bit - limit_lo;
-        return 1 + (offset * (half_outer_output - 1) + half_outer_input / 2) / half_outer_input;
+        uint32_t offset = ch11bit - lo;
+        return (offset * mult + in_span / 2) / in_span;
     }
     if (ch11bit > center + R)
     {
         uint32_t offset = ch11bit - (center + R);
-        return inner_offset + inner_size + (offset * (half_outer_output - 1) + half_outer_input / 2) / half_outer_input;
+        return base_hi + (offset * mult + in_span / 2) / in_span;
     }
     return inner_offset + (ch11bit - (center - R));
 }
 
+// nlimit: CRSF standard range, clamps out-of-range inputs to the extreme codes
+static uint32_t ICACHE_RAM_ATTR Decimate11to10_nlimit(uint32_t ch11bit)
+{
+    return Decimate11to10_n(ch11bit, OTA_DECIMATE_R_NLIMIT, CRSF_CHANNEL_VALUE_STD_MIN, true);
+}
+
+// nmap: full CRSF range, no clamp needed
 static uint32_t ICACHE_RAM_ATTR Decimate11to10_nmap(uint32_t ch11bit)
 {
-    // Non-linear piecewise map (R=OTA_DECIMATE_R_NMAP)
-    // Inner region [802, 1182]: 1:1 mapping (381 values)
-    // Lower outer [0, 802): 802 values -> 322 levels [0, 322)
-    // Upper outer [1182, 1984]: 803 values -> 322 levels [702, 1023]
-    constexpr uint32_t R = OTA_DECIMATE_R_NMAP;
-    constexpr uint32_t center = CRSF_CHANNEL_VALUE_MID;
-    constexpr uint32_t inner_size = 2 * R + 1; // 381
-    constexpr uint32_t half_outer_input = center - R; // 802
-    constexpr uint32_t outer_levels = 1023 - inner_size + 1; // 643
-    constexpr uint32_t half_outer_output = outer_levels / 2; // 321
-    constexpr uint32_t inner_offset = half_outer_output; // 321
-
-    if (ch11bit < center - R)
-    {
-        return (ch11bit * half_outer_output + half_outer_input / 2) / half_outer_input;
-    }
-    if (ch11bit > center + R)
-    {
-        uint32_t offset = ch11bit - (center + R);
-        return inner_offset + inner_size + (offset * half_outer_output + half_outer_input / 2) / half_outer_input;
-    }
-    return inner_offset + (ch11bit - (center - R));
+    return Decimate11to10_n(ch11bit, OTA_DECIMATE_R_NMAP, CRSF_CHANNEL_VALUE_EXT_MIN, false);
 }
 
 /***
@@ -381,60 +362,36 @@ typedef uint32_t (*Expand10to11_fn)(uint32_t ch10bit);
 //     return ch10bit << 1;
 // }
 
-static uint32_t ICACHE_RAM_ATTR Expand10to11_nlimit(uint32_t ch10bit)
+static __attribute__((noinline)) uint32_t ICACHE_RAM_ATTR Expand10to11_n(uint32_t ch10bit, uint32_t R, uint32_t lo)
 {
-    // Reverse of Decimate11to10_nlimit (R=OTA_DECIMATE_R_NLIMIT)
-    // Don't care: [0] -> 172, [1023] -> 1811
-    // Lower outer [1, 210): 311 levels -> 520 values [172, 691)
-    // Inner [210, 813]: 603 values [691, 1293]
-    // Upper outer [814, 1022]: 311 levels -> 519 values [1293, 1811]
-    constexpr uint32_t R = OTA_DECIMATE_R_NLIMIT;
     constexpr uint32_t center = CRSF_CHANNEL_VALUE_MID;
-    constexpr uint32_t limit_lo = CRSF_CHANNEL_VALUE_STD_MIN;
-    constexpr uint32_t limit_hi = CRSF_CHANNEL_VALUE_STD_MAX;
-    constexpr uint32_t inner_size = 2 * R + 1; // 603
-    constexpr uint32_t half_outer_input = center - R - limit_lo; // 520
-    constexpr uint32_t outer_levels = 1023 - inner_size - 1; // 419
-    constexpr uint32_t half_outer_output = outer_levels / 2; // 209
-    constexpr uint32_t inner_offset = half_outer_output + 1; // 210
+    const uint32_t in_span = center - R - lo;
+    const uint32_t mult = 511 - R;
+    const uint32_t inner_offset = mult;
+    const uint32_t base_hi = inner_offset + (2 * R + 1);
 
     if (ch10bit < inner_offset)
     {
-        uint32_t offset = ch10bit - 1;
-        return limit_lo + (offset * half_outer_input + (half_outer_output - 1) / 2) / (half_outer_output - 1);
+        return lo + (ch10bit * in_span + mult / 2) / mult;
     }
-    if (ch10bit >= inner_offset + inner_size)
+    if (ch10bit >= base_hi)
     {
-        uint32_t offset = ch10bit - (inner_offset + inner_size);
-        return (center + R) + (offset * half_outer_input + (half_outer_output - 1) / 2) / (half_outer_output - 1);
+        uint32_t offset = ch10bit - base_hi;
+        return (center + R) + (offset * in_span + mult / 2) / mult;
     }
     return (center - R) + (ch10bit - inner_offset);
 }
 
+// nlimit: reverse of Decimate11to10_nlimit
+static uint32_t ICACHE_RAM_ATTR Expand10to11_nlimit(uint32_t ch10bit)
+{
+    return Expand10to11_n(ch10bit, OTA_DECIMATE_R_NLIMIT, CRSF_CHANNEL_VALUE_STD_MIN);
+}
+
+// nmap: reverse of Decimate11to10_nmap
 static uint32_t ICACHE_RAM_ATTR Expand10to11_nmap(uint32_t ch10bit)
 {
-    // Reverse of Decimate11to10_nmap (R=OTA_DECIMATE_R_NMAP)
-    // Lower outer [0, 321): 322 levels -> 802 values [0, 802)
-    // Inner [321, 702]: 381 values [802, 1182]
-    // Upper outer [702, 1023]: 342 levels -> 803 values [1182, 1984]
-    constexpr uint32_t R = OTA_DECIMATE_R_NMAP;
-    constexpr uint32_t center = CRSF_CHANNEL_VALUE_MID;
-    constexpr uint32_t inner_size = 2 * R + 1; // 381
-    constexpr uint32_t half_outer_input = center - R; // 802
-    constexpr uint32_t outer_levels = 1023 - inner_size + 1; // 643
-    constexpr uint32_t half_outer_output = outer_levels / 2; // 321
-    constexpr uint32_t inner_offset = half_outer_output; // 321
-
-    if (ch10bit < inner_offset)
-    {
-        return (ch10bit * half_outer_input + half_outer_output / 2) / half_outer_output;
-    }
-    if (ch10bit >= inner_offset + inner_size)
-    {
-        uint32_t offset = ch10bit - (inner_offset + inner_size);
-        return (center + R) + (offset * half_outer_input + half_outer_output / 2) / half_outer_output;
-    }
-    return (center - R) + (ch10bit - inner_offset);
+    return Expand10to11_n(ch10bit, OTA_DECIMATE_R_NMAP, CRSF_CHANNEL_VALUE_EXT_MIN);
 }
 
 static void UnpackChannels4x10ToUInt11(OTA_Channels_4x10 const * const srcChannels4x10, uint32_t * const dest, Expand10to11_fn expand)

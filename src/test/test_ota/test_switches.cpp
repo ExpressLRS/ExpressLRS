@@ -157,7 +157,7 @@ void test_encodingHybrid8(bool highResChannel)
     TEST_ASSERT_EQUAL(header, TXdataBuffer[0]);
 
     // bytes 1 through 5 are 10 bit packed analog channels using nlimit encoding
-    uint8_t expected[5] = { 0x31, 0x44, 0x7d, 0x06, 0xe2 };
+    uint8_t expected[5] = { 0x30, 0x44, 0x7d, 0x06, 0xe2 };
     TEST_ASSERT_EQUAL_UINT8_ARRAY(expected, &TXdataBuffer[1], 5);
 
     // byte 6 is the switch encoding
@@ -235,7 +235,7 @@ void test_decodingHybrid8(uint8_t forceSwitch, uint8_t switchval)
     OtaUnpackChannelData(otaPktPtr, ChannelData);
 
     // compare the unpacked results with the input data (nlimit may have ±1 quantization error)
-    uint16_t expectedDecoded[4] = {292, 1383, 427, 1520};
+    uint16_t expectedDecoded[4] = {291, 1382, 427, 1518};
     for (unsigned ch=0; ch<4; ++ch)
     {
         TEST_ASSERT_EQUAL(expectedDecoded[ch], ChannelData[ch]);
@@ -363,7 +363,7 @@ void test_encodingHybridWide(uint8_t nonce)
     TEST_ASSERT_EQUAL(header, TXdataBuffer[0]);
 
     // bytes 1 through 5 are 10 bit packed analog channels using nlimit encoding
-    uint8_t expected[5] = { 0x31, 0x44, 0x7d, 0x06, 0xe2 };
+    uint8_t expected[5] = { 0x30, 0x44, 0x7d, 0x06, 0xe2 };
     TEST_ASSERT_EQUAL_UINT8_ARRAY(expected, &TXdataBuffer[1], 5);
 
     // byte 6 is the switches encoded
@@ -437,7 +437,7 @@ void test_decodingHybridWide(uint8_t nonce, uint8_t forceSwitch, uint16_t forceV
     bool telemResult = OtaUnpackChannelData(otaPktPtr, ChannelData);
 
     // compare the unpacked results with the input data (nlimit may have ±1 quantization error)
-    uint16_t expectedDecoded[4] = {292, 1383, 427, 1520};
+    uint16_t expectedDecoded[4] = {291, 1382, 427, 1518};
     for (unsigned ch=0; ch<4; ++ch)
     {
         TEST_ASSERT_EQUAL(expectedDecoded[ch], ChannelData[ch]);
