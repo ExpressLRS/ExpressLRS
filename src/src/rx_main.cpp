@@ -1319,14 +1319,12 @@ static void setupSerial()
     {
         serialBaud = 115200;
     }
+    #if HAS_USB_HID_GAMEPAD
     else if (config.GetSerialProtocol() == PROTOCOL_USB_HID_GAMEPAD)
     {
-#if HAS_USB_HID_GAMEPAD
         usbHidOutput = true;
-#else
-        serialBaud = firmwareOptions.uart_baud;
-#endif
     }
+    #endif
     bool invert = config.GetSerialProtocol() == PROTOCOL_SBUS || config.GetSerialProtocol() == PROTOCOL_INVERTED_CRSF || config.GetSerialProtocol() == PROTOCOL_DJI_RS_PRO;
 
 #if defined(PLATFORM_ESP8266)

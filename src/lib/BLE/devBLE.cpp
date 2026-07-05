@@ -60,7 +60,7 @@ void BluetoothJoystickBegin()
     gamepadConfig.setButtonCount(8);
     gamepadConfig.setHatSwitchCount(0);
 
-    bleGamepad = new BleGamepad("ELRS BLE Joystick", "ELRS", 100);
+    bleGamepad = new BleGamepad("ELRS Joystick", "ELRS", 100);
     bleGamepad->setTXPowerLevel(9);
     bleGamepad->begin(&gamepadConfig);
 
