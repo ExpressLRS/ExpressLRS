@@ -16,7 +16,7 @@
 #define TX_CONFIG_MAGIC     (0b01U << 30)
 #define RX_CONFIG_MAGIC     (0b10U << 30)
 
-#define TX_CONFIG_VERSION   8U
+#define TX_CONFIG_VERSION   9U
 #define RX_CONFIG_VERSION   11U
 
 class BindphraseConfigurable
@@ -110,7 +110,8 @@ typedef struct {
     uint8_t         vtxChannel; // 0=Ch1 -> 7=Ch8
     uint8_t         vtxPower;   // 0=Do not set, else power number
     uint8_t         vtxPitmode; // Off/On/AUX1^/AUX1v/etc
-    uint8_t         powerFanThreshold:4; // Power level to enable fan if present
+    uint8_t         powerFanThreshold:4, // Power level to enable fan if present
+                    dynamicPowerRampup:2; // Dynamic Power raise-up aggressiveness: 0=Normal, 1=Aggressive, 2=Very Aggressive
     model_config_t  model_config[CONFIG_TX_MODEL_CNT];
     uint8_t         fanMode;            // some value used by thermal?
     uint8_t         motionMode:2,       // bool, but space for 2 more modes
@@ -148,6 +149,7 @@ public:
     uint8_t  GetVtxPower() const { return m_config.vtxPower; }
     uint8_t  GetVtxPitmode() const { return m_config.vtxPitmode; }
     uint8_t GetPowerFanThreshold() const { return m_config.powerFanThreshold; }
+    uint8_t GetDynamicPowerRampup() const { return m_config.dynamicPowerRampup; }
     uint8_t  GetFanMode() const { return m_config.fanMode; }
     uint8_t  GetMotionMode() const { return m_config.motionMode; }
     uint8_t  GetDvrAux() const { return m_config.dvrAux; }
@@ -177,6 +179,7 @@ public:
     void SetVtxPower(uint8_t vtxPower);
     void SetVtxPitmode(uint8_t vtxPitmode);
     void SetPowerFanThreshold(uint8_t powerFanThreshold);
+    void SetDynamicPowerRampup(uint8_t dynamicPowerRampup);
     void SetFanMode(uint8_t fanMode);
     void SetMotionMode(uint8_t motionMode);
     void SetDvrAux(uint8_t dvrAux);
@@ -197,6 +200,7 @@ private:
     void UpgradeEepromV5ToV6();
     void UpgradeEepromV6ToV7();
     void UpgradeEepromV7ToV8();
+    void UpgradeEepromV8ToV9();
 #endif
 
     tx_config_t m_config;

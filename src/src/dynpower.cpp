@@ -17,7 +17,6 @@
 #define DYNPOWER_LQ_BOOST_THRESH_DIFF 20  // If LQ is dropped suddenly for this amount (relative), immediately boost to the max power configured.
 #define DYNPOWER_LQ_BOOST_THRESH_MIN  50  // If LQ is below this value (absolute), immediately boost to the max power configured.
 #define DYNPOWER_LQ_MOVING_AVG_K      8   // Number of previous values for calculating moving average. Best with power of 2.
-#define DYNPOWER_LQ_THRESH_UP         85  // Below this LQ, the RSSI/SNR code will increase the power if RSSI/SNR did nothing
 
 // RSSI-based increment defines
 #define DYNPOWER_RSSI_CNT 5               // Number of RSSI readings to average (straight average) to make an RSSI-based adjustment
@@ -25,8 +24,27 @@
 #define DYNPOWER_RSSI_THRESH_DN 21        // RSSI > (Sensitivity+Dn) >- lower power
 
 // SNR-based increment defines
-#define DYNPOWER_LQ_THRESH_DN 95          // Min LQ for lowering power using SNR-based power lowering
 constexpr int8_t SNR1dB = SNR_SCALE(1.0); // SNR 1dB scaled
+
+// Ramp-up aggressiveness, selected via config.GetDynamicPowerRampup() (Lua "Ramp-Up": 0=Normal, 1=Aggressive, 2=Very Aggressive)
+// Raising and lowering are adjusted together: raise thresholds move to trigger *sooner* (at better signal) while the
+// matching lower thresholds move to require *more* margin before backing off, so the raise/lower gap does not shrink
+// as aggressiveness increases (for RSSI and the pre-statistics SNR default it is provably constant; for the
+// statistics-derived SNR threshold and the bounded 0-100% LQ gate it shrinks much less than if only the raise side moved).
+// A runtime cap is still kept on every raise threshold as defense-in-depth in case these arrays are ever edited independently.
+#define DYNPOWER_RAMPUP_LEVEL_MAX 2
+static constexpr uint8_t DYNPOWER_RAMPUP_LQ_THRESH_UP[]     = {85, 90, 93};                     // Raise: below this LQ, raise power if RSSI/SNR did nothing this period. Step (+5,+3) is not perfectly linear like the rest -- 93 was chosen over the "linear" 95 to keep a 5-point gap against the Very Aggressive DN threshold (98) instead of narrowing to 3, which was firing too often on ordinary link noise
+static constexpr uint8_t DYNPOWER_RAMPUP_LQ_THRESH_DN[]     = {95, 97, 98};                     // Lower: lq_avg must be at least this to permit any RSSI/SNR-based lowering. Steps (+2,+1) are not perfectly linear like the rest -- 98 was chosen over the "linear" 99 to avoid requiring near-perfect LQ before Very Aggressive ever permits lowering
+static constexpr int8_t  DYNPOWER_RAMPUP_RSSI_BONUS[]       = {0, 4, 8};                        // Added to BOTH the RSSI raise and RSSI lower thresholds (dBm) -- gap stays fixed at 6dB
+static constexpr int8_t  DYNPOWER_RAMPUP_SNR_BONUS_SCALED[] = {0, SNR_SCALE(1), SNR_SCALE(2)};  // Added to BOTH the pre-statistics SNR raise and lower thresholds -- gap stays fixed at the per-rate compiled value
+static constexpr int32_t DYNPOWER_RAMPUP_SNR_SIGMA_UP_NUM[] = {13, 10, 7};                      // Raise: /4 sigma-multiple subtracted from the SNR mean (13/4=3.25sigma .. 7/4=1.75sigma)
+static constexpr int32_t DYNPOWER_RAMPUP_SNR_SIGMA_DN_NUM[] = {2, 5, 8};                        // Lower: /4 sigma-multiple added to the SNR mean (2/4=0.5sigma .. 8/4=2.0sigma). UP_NUM+DN_NUM==15 at every level, so the total up-to-down span stays a constant 3.75sigma
+// Missed-telemetry raise delay is scaled by NUM/DEN of the debounced (2x nominal telemetry period) delay, in linear
+// steps of 0.5 periods to match the linear shape of every other ramp-up parameter above:
+// Normal=2.0x (full debounce, waits for a 2nd miss), Aggressive=1.5x (reacts partway into the 2nd period),
+// Very Aggressive=1.0x (reacts on the 1st miss, every time -- no debounce). No lower-side counterpart exists for this mechanism.
+static constexpr uint8_t DYNPOWER_RAMPUP_TLM_NUM[] = {1, 3, 1};
+static constexpr uint8_t DYNPOWER_RAMPUP_TLM_DEN[] = {1, 4, 2};
 
 template<uint8_t K, uint8_t SHIFT>
 class MovingAvg
@@ -103,6 +121,8 @@ void DynamicPower_Update(uint32_t now)
   // The rest of the codes should be executeded only if dynamic power config is enabled
   //
 
+  const uint8_t rampup = std::min(config.GetDynamicPowerRampup(), (uint8_t)DYNPOWER_RAMPUP_LEVEL_MAX);
+
   // =============  DYNAMIC_POWER_BOOST: Switch-triggered power boost up ==============
   // Or if telemetry is lost while armed (done up here because dynpower_updated is only updated on telemetry)
   uint8_t boostChannel = config.GetBoostChannel();
@@ -126,7 +146,7 @@ void DynamicPower_Update(uint32_t now)
     if (isArmed && (powerHeadroom > 0))
     {
       uint32_t linkstatsInterval = ExpressLRS_currTlmDenom * ExpressLRS_currAirRate_Modparams->interval / (1000U / 2U);
-      linkstatsInterval = std::max(linkstatsInterval, (uint32_t)512U);
+      linkstatsInterval = std::max(linkstatsInterval, (uint32_t)512U) * DYNPOWER_RAMPUP_TLM_NUM[rampup] / DYNPOWER_RAMPUP_TLM_DEN[rampup];
       if ((now - dynpower_last_linkstats_millis) > (linkstatsInterval + 2U))
       {
         DBGLN("+power (tlm)");
@@ -172,15 +192,18 @@ void DynamicPower_Update(uint32_t now)
 
     if (dynpower_mean_rssi.getCount() >= DYNPOWER_RSSI_CNT)
     {
-      int8_t rssi_inc_threshold = expected_RXsensitivity + DYNPOWER_RSSI_THRESH_UP;
-      int8_t rssi_dec_threshold = expected_RXsensitivity + DYNPOWER_RSSI_THRESH_DN;
+      int8_t rssi_dec_threshold = expected_RXsensitivity + DYNPOWER_RSSI_THRESH_DN + DYNPOWER_RAMPUP_RSSI_BONUS[rampup];
+      // Cap the raise threshold at least 1dB below the lower threshold; a no-op given the shared bonus above, kept as defense-in-depth
+      int8_t rssi_inc_threshold = static_cast<int8_t>(std::min(
+          (int16_t)(expected_RXsensitivity + DYNPOWER_RSSI_THRESH_UP + DYNPOWER_RAMPUP_RSSI_BONUS[rampup]),
+          (int16_t)(rssi_dec_threshold - 1)));
       int8_t avg_rssi = dynpower_mean_rssi.mean(); // resets it too
       if ((avg_rssi < rssi_inc_threshold) && (powerHeadroom > 0))
       {
         DBGLN("+power (rssi)");
         POWERMGNT::incPower();
       }
-      else if (avg_rssi > rssi_dec_threshold && lq_avg >= DYNPOWER_LQ_THRESH_DN)
+      else if (avg_rssi > rssi_dec_threshold && lq_avg >= DYNPOWER_RAMPUP_LQ_THRESH_DN[rampup])
       {
         DBGVLN("-power (rssi)"); // Verbose because this spams when idle
         POWERMGNT::decPower();
@@ -190,8 +213,8 @@ void DynamicPower_Update(uint32_t now)
   else
   {
     // default thresholds from the config (as a fallback)
-    int8_t snr_stat_threshold_up = ExpressLRS_currAirRate_RFperfParams->DynpowerSnrThreshUp;
-    int8_t snr_stat_threshold_dn = ExpressLRS_currAirRate_RFperfParams->DynpowerSnrThreshDn;
+    int8_t snr_stat_threshold_up = ExpressLRS_currAirRate_RFperfParams->DynpowerSnrThreshUp + DYNPOWER_RAMPUP_SNR_BONUS_SCALED[rampup];
+    int8_t snr_stat_threshold_dn = ExpressLRS_currAirRate_RFperfParams->DynpowerSnrThreshDn + DYNPOWER_RAMPUP_SNR_BONUS_SCALED[rampup];
 
     // Incorporate the current value if LQ meets the desired LQ standard
     if (lq_current >= 99)
@@ -206,15 +229,16 @@ void DynamicPower_Update(uint32_t now)
       int32_t snr_stat_stdev = dynpower_stat_snr.standardDeviationRaw() >> (dynpower_stat_snr.FIXED_POINT_SHIFT - 4);
 
       // Fuzzy logic: reduce scale factor when LQ is getting low for more conservative power management
-      // Base scale factor is 13/4 (3.25), reduce it proportionally when LQ < 100
-      int32_t scale_factor_numerator = 13;
+      // Base scale factor is DYNPOWER_RAMPUP_SNR_SIGMA_UP_NUM/4 sigma below the mean, reduce it proportionally when LQ < 100
+      // (this LQ-based fuzz only applies to the raise side, same as before ramp-up presets existed)
+      int32_t scale_factor_numerator = DYNPOWER_RAMPUP_SNR_SIGMA_UP_NUM[rampup];
       if (lq_current < 100) {
         // scale factor will be 1 (=-0.25 sd for power up threshold) when LQ is 85
         scale_factor_numerator = std::max((int32_t)(scale_factor_numerator - ((100 - lq_current) * (scale_factor_numerator - 1)) / 15), (int32_t)1);
       }
 
-      int8_t snr_thre_up_scaled = static_cast<int8_t>((snr_stat_mean - (snr_stat_stdev * scale_factor_numerator) / 4) / 16);  // Dynamic scale based on LQ
-      int8_t snr_thre_dn_scaled = static_cast<int8_t>((snr_stat_mean + (snr_stat_stdev / 2)) / 16);                           // fixed +0.5sd
+      int8_t snr_thre_up_scaled = static_cast<int8_t>((snr_stat_mean - (snr_stat_stdev * scale_factor_numerator) / 4) / 16);            // Dynamic scale based on LQ
+      int8_t snr_thre_dn_scaled = static_cast<int8_t>((snr_stat_mean + (snr_stat_stdev * DYNPOWER_RAMPUP_SNR_SIGMA_DN_NUM[rampup]) / 4) / 16); // 0.5sd .. 2.0sd, growing with aggressiveness so lowering requires more margin above the mean
       int8_t snr_thre_up_limit = snr_thre_dn_scaled - SNR1dB;                                                                 // 1dB min threshold separation
 
       snr_stat_threshold_up = std::min(snr_thre_up_scaled, snr_thre_up_limit);
@@ -226,7 +250,7 @@ void DynamicPower_Update(uint32_t now)
     // =============  SNR-based power increment ==============
     // Decrease the power if SNR above threshold and LQ is good
     // Increase the power for each (X) SNR below the threshold
-    if (snrScaled >= snr_stat_threshold_dn && lq_avg >= DYNPOWER_LQ_THRESH_DN)
+    if (snrScaled >= snr_stat_threshold_dn && lq_avg >= DYNPOWER_RAMPUP_LQ_THRESH_DN[rampup])
     {
       if(POWERMGNT::currPower() > MinPower) // prevent spamming when idle
       {
@@ -236,7 +260,9 @@ void DynamicPower_Update(uint32_t now)
     }
 
     // use RSSI_DN threshold to make sure the signal is still in good range but with some distance for SNR to exhibit a fair distribution
-    bool isSignalBad = (rssi <= (expected_RXsensitivity + DYNPOWER_RSSI_THRESH_DN)) || (lq_avg <= 95);
+    // (ramped like the rest of this branch, so a stronger RSSI/LQ doesn't silently block the more aggressive presets'
+    // SNR-based raise from ever firing -- e.g. strong RSSI + good LQ but degraded SNR from 2.4GHz interference)
+    bool isSignalBad = (rssi <= (expected_RXsensitivity + DYNPOWER_RSSI_THRESH_DN + DYNPOWER_RAMPUP_RSSI_BONUS[rampup])) || (lq_avg <= DYNPOWER_RAMPUP_LQ_THRESH_DN[rampup]);
 
     while ((snrScaled <= snr_stat_threshold_up) && (powerHeadroom > 0) && isSignalBad)
     {
@@ -249,7 +275,9 @@ void DynamicPower_Update(uint32_t now)
   } // ^^ if SNR-based
 
   // If instant LQ is low, but the SNR/RSSI did nothing, inc power by one step
-  if ((powerHeadroom > 0) && (startPowerLevel == POWERMGNT::currPower()) && (lq_current <= DYNPOWER_LQ_THRESH_UP))
+  // Cap at least 1% below the (also ramp-adjusted) lowering-permission threshold; a no-op given the values chosen above, kept as defense-in-depth
+  uint8_t lqThreshUp = std::min(DYNPOWER_RAMPUP_LQ_THRESH_UP[rampup], (uint8_t)(DYNPOWER_RAMPUP_LQ_THRESH_DN[rampup] - 1));
+  if ((powerHeadroom > 0) && (startPowerLevel == POWERMGNT::currPower()) && (lq_current <= lqThreshUp))
   {
     DBGLN("+power (lq)");
     POWERMGNT::incPower();

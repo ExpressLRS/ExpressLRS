@@ -97,6 +97,33 @@ typedef struct {
     uint8_t         dvrStopDelay:3;
 } v7_tx_config_t;
 
+// V8 (model_config_t layout is unchanged in V9; only the top-level struct gained dynamicPowerRampup)
+typedef struct {
+    uint32_t        version;
+    uint8_t         vtxBand;
+    uint8_t         vtxChannel;
+    uint8_t         vtxPower;
+    uint8_t         vtxPitmode;
+    uint8_t         powerFanThreshold:4; // Power level to enable fan if present
+    model_config_t  model_config[64];
+    uint8_t         fanMode;
+    uint8_t         motionMode:2,
+                    dvrStopDelay:3,
+                    backpackDisable:1,
+                    backpackTlmMode:2;
+    uint8_t         dvrStartDelay:3,
+                    dvrAux:5;
+    tx_button_color_t buttonColors[2];
+} v8_tx_config_t;
+
+// UpgradeEepromV7ToV8() (config.cpp) still writes the *current* m_config (tx_config_t, i.e. v9) via the generic
+// Commit(), rather than a true v8_tx_config_t snapshot like UpgradeEepromV5ToV6/V6ToV7 do for their versions.
+// That's only safe because v8_tx_config_t and tx_config_t are byte-layout identical -- dynamicPowerRampup was
+// added as extra bits inside the existing powerFanThreshold byte, not a new field, so the struct size didn't
+// change. If a future version bump changes tx_config_t's size, this assert will fail at compile time, and
+// UpgradeEepromV7ToV8 must be updated to write a real v8_tx_config_t snapshot directly instead.
+static_assert(sizeof(v8_tx_config_t) == sizeof(tx_config_t), "v8_tx_config_t must stay byte-layout-compatible with tx_config_t -- see comment above");
+
 /***
  * RX config
  ***/

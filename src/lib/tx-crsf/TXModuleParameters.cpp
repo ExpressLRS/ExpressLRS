@@ -124,6 +124,13 @@ static selectionParameter luaFanThreshold = {
     STR_EMPTYSPACE // units embedded so it won't display "NevermW"
 };
 
+static selectionParameter luaDynamicPowerRampup = {
+    {"Ramp-Up", CRSF_TEXT_SELECTION},
+    0, // value
+    "Normal;Aggressive;Very Aggressive",
+    STR_EMPTYSPACE
+};
+
 #if defined(Regulatory_Domain_EU_CE_2400)
 static stringParameter luaCELimit = {
 #if defined(RADIO_LR1121)
@@ -879,6 +886,9 @@ void TXModuleEndpoint::registerParameters()
     registerParameter(&luaDynamicPower, [this](propertiesCommon *item, uint8_t arg) {
       SetDynamicPower(arg);
     }, luaPowerFolder.common.id);
+    registerParameter(&luaDynamicPowerRampup, [](propertiesCommon *item, uint8_t arg) {
+      config.SetDynamicPowerRampup(arg);
+    }, luaPowerFolder.common.id);
   }
   if (GPIO_PIN_FAN_EN != UNDEF_PIN || GPIO_PIN_FAN_PWM != UNDEF_PIN) {
     registerParameter(&luaFanThreshold, [](propertiesCommon *item, uint8_t arg){
@@ -1018,6 +1028,7 @@ void TXModuleEndpoint::updateParameters()
 
   uint8_t dynamic = config.GetDynamicPower() ? config.GetBoostChannel() + 1 : 0;
   setTextSelectionValue(&luaDynamicPower, dynamic);
+  setTextSelectionValue(&luaDynamicPowerRampup, config.GetDynamicPowerRampup());
 
   setTextSelectionValue(&luaVtxBand, config.GetVtxBand());
   setUint8Value(&luaVtxChannel, config.GetVtxChannel() + 1);

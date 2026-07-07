@@ -214,6 +214,10 @@ void TxConfig::Load()
     if (nvs_get_u8(handle, "fanthresh", &value8) == ESP_OK)
         m_config.powerFanThreshold = value8;
 
+    // dynamic power ramp-up aggressiveness (v9)
+    if (nvs_get_u8(handle, "rampup", &value8) == ESP_OK)
+        m_config.dynamicPowerRampup = value8;
+
     // Both of these were added to config v5 without incrementing the version
     if (nvs_get_u32(handle, "fan", &value) == ESP_OK)
         m_config.fanMode = value;
@@ -276,8 +280,9 @@ void TxConfig::Load()
                 nvs_set_u32(handle, model, Model_to_U32(newModel));
             }
 
-            if (version == TX_CONFIG_VERSION)
+            if (version >= 8)
             {
+                // model_config_t layout is unchanged between v8 and v9 (TX_CONFIG_VERSION)
                 U32_to_Model(value, &m_config.model_config[i]);
             }
 
@@ -335,6 +340,12 @@ void TxConfig::Load()
     if (version == 7)
     {
         UpgradeEepromV7ToV8();
+        version = 8;
+    }
+
+    if (version == 8)
+    {
+        UpgradeEepromV8ToV9();
     }
 }
 
@@ -420,6 +431,43 @@ void TxConfig::UpgradeEepromV7ToV8()
     m_config.version = 8U | TX_CONFIG_MAGIC;
     Commit();
 }
+
+void TxConfig::UpgradeEepromV8ToV9()
+{
+    v8_tx_config_t v8Config;
+    m_eeprom->Get(0, v8Config);
+
+    // Manual field copying since a new field (dynamicPowerRampup) was inserted
+    #define LAZY(member) m_config.member = v8Config.member
+    LAZY(vtxBand);
+    LAZY(vtxChannel);
+    LAZY(vtxPower);
+    LAZY(vtxPitmode);
+    LAZY(powerFanThreshold);
+    LAZY(fanMode);
+    LAZY(motionMode);
+    LAZY(dvrStopDelay);
+    LAZY(backpackDisable);
+    LAZY(backpackTlmMode);
+    LAZY(dvrStartDelay);
+    LAZY(dvrAux);
+    #undef LAZY
+    memcpy(m_config.buttonColors, v8Config.buttonColors, sizeof(m_config.buttonColors));
+
+    // model_config_t layout is unchanged between v8 and v9
+    for (unsigned i=0; i<CONFIG_TX_MODEL_CNT; i++)
+    {
+        m_config.model_config[i] = v8Config.model_config[i];
+    }
+
+    // dynamicPowerRampup is new in v9 and defaults to 0 (Normal) via SetDefaults(false)
+
+    m_modified = ALL_CHANGED;
+
+    // Full Commit now
+    m_config.version = 9U | TX_CONFIG_MAGIC;
+    Commit();
+}
 #endif
 
 uint32_t
@@ -467,6 +515,7 @@ TxConfig::Commit()
         nvs_set_u8(handle, "dvraux", m_config.dvrAux);
         nvs_set_u8(handle, "dvrstartdelay", m_config.dvrStartDelay);
         nvs_set_u8(handle, "dvrstopdelay", m_config.dvrStopDelay);
+        nvs_set_u8(handle, "rampup", m_config.dynamicPowerRampup);
     }
     if (m_modified & EVENT_CONFIG_BUTTON_CHANGED)
     {
@@ -632,6 +681,16 @@ TxConfig::SetPowerFanThreshold(uint8_t powerFanThreshold)
     {
         m_config.powerFanThreshold = powerFanThreshold;
         m_modified |= EVENT_CONFIG_FAN_CHANGED;
+    }
+}
+
+void
+TxConfig::SetDynamicPowerRampup(uint8_t dynamicPowerRampup)
+{
+    if (m_config.dynamicPowerRampup != dynamicPowerRampup)
+    {
+        m_config.dynamicPowerRampup = dynamicPowerRampup;
+        m_modified |= EVENT_CONFIG_MAIN_CHANGED;
     }
 }
 
