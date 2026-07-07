@@ -306,7 +306,7 @@ void MAVLinkHandset::processByte(uint8_t b)
 uint8_t MAVLinkHandset::buildHeartbeat(uint8_t *buf)
 {
     mavlink_message_t msg;
-    mavlink_msg_heartbeat_pack(1, 1, &msg, MAV_TYPE_GENERIC, MAV_AUTOPILOT_INVALID, 0, 0, MAV_STATE_ACTIVE);
+    mavlink_msg_heartbeat_pack(1, MAV_COMP_ID_TELEMETRY_RADIO, &msg, MAV_TYPE_GENERIC, MAV_AUTOPILOT_INVALID, 0, 0, MAV_STATE_ACTIVE);
     return (uint8_t)mavlink_msg_to_send_buffer(buf, &msg);
 }
 
