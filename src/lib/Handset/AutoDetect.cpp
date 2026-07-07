@@ -4,12 +4,16 @@
 
 #include "AutoDetect.h"
 #include "CRSFHandset.h"
+#include "MAVLinkHandset.h"
 #include "PPMHandset.h"
+#include "config.h"
 #include "logging.h"
 
 #include <driver/rmt.h>
 
 constexpr auto RMT_TICKS_PER_US = 4;
+
+bool AutoDetect::tryMavlinkFirst = true;
 
 void AutoDetect::Begin()
 {
@@ -56,7 +60,7 @@ void AutoDetect::startPPM() const
     migrateTo(new PPMHandset());
 }
 
-void AutoDetect::startCRSF() const
+void AutoDetect::startSerialProtocol() const
 {
     // Stop the RMT from running
     rmt_rx_stop(PPM_RMT_CHANNEL);
@@ -70,8 +74,28 @@ void AutoDetect::startCRSF() const
         // Initialise the UART
         Serial.begin(115200);
     }
-    // Now we can migrate to the CRSF handler
-    migrateTo(new CRSFHandset());
+
+    Handset *h = tryMavlinkFirst ? static_cast<Handset *>(new MAVLinkHandset())
+                                 : static_cast<Handset *>(new CRSFHandset());
+    h->markAutoDetected();
+    migrateTo(h);
+}
+
+void Handset::restartDetection()
+{
+    if (!hadConnected)
+        AutoDetect::tryMavlinkFirst = !isMavlinkHandset();
+
+    if (isMavlinkHandset() && !AutoDetect::tryMavlinkFirst)
+        config.SetLinkMode(TX_NORMAL_MODE);
+
+    auto *d = new AutoDetect();
+    d->setRcChannelsOverrideCallback(RcChannelsOverrideCallback);
+    d->setRCDataCallback(RCdataCallback);
+    d->registerCallbacks(connected, disconnected);
+    d->Begin();
+    handset = d;
+    delete this;
 }
 
 void AutoDetect::handleInput()
@@ -102,7 +126,7 @@ void AutoDetect::handleInput()
             {
                 DBGLN("Serial signal detected");
                 rmt_driver_uninstall(PPM_RMT_CHANNEL);
-                startCRSF();
+                startSerialProtocol();
             }
         }
     }

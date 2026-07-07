@@ -424,6 +424,12 @@ static inline uint16_t ICACHE_RAM_ATTR CRSF_to_US(uint16_t val)
     return fmap(val, CRSF_CHANNEL_VALUE_STD_MIN, CRSF_CHANNEL_VALUE_STD_MAX, US_CHANNEL_VALUE_STD_MIN, US_CHANNEL_VALUE_STD_MAX);
 }
 
+// Scale a 988-2012 (Taranis channel uS) value to a -100% to +100% crossfire value (inverse of CRSF_to_US)
+static inline uint16_t ICACHE_RAM_ATTR US_to_CRSF(uint16_t val)
+{
+    return fmap(val, US_CHANNEL_VALUE_STD_MIN, US_CHANNEL_VALUE_STD_MAX, CRSF_CHANNEL_VALUE_STD_MIN, CRSF_CHANNEL_VALUE_STD_MAX);
+}
+
 // Scale down a 10-bit value to a -100% to +100% crossfire value
 static inline uint16_t ICACHE_RAM_ATTR UINT10_to_CRSF(uint16_t val)
 {

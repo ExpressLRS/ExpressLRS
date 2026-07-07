@@ -335,6 +335,13 @@ static bool ICACHE_RAM_ATTR ProcessDownlinkPacket(SX12xxDriverCommon::rx_status 
   return true;
 }
 
+static bool txHandsetIsMavlink = false;
+
+ICACHE_RAM_ATTR bool mavlinkTunnelActive()
+{
+  return txHandsetIsMavlink || config.GetLinkMode() == TX_MAVLINK_MODE;
+}
+
 expresslrs_tlm_ratio_e ICACHE_RAM_ATTR UpdateTlmRatioEffective()
 {
   expresslrs_tlm_ratio_e ratioConfigured = (expresslrs_tlm_ratio_e)config.GetTlm();
@@ -368,6 +375,9 @@ expresslrs_tlm_ratio_e ICACHE_RAM_ATTR UpdateTlmRatioEffective()
   {
     retVal = ratioConfigured;
   }
+
+  if (mavlinkTunnelActive() && TLMratioEnumToValue(retVal) > 2)
+    retVal = TLM_RATIO_1_2;
 
   if (updateTelemDenom)
   {
@@ -518,9 +528,8 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   uint32_t lastRcData = handset->GetRCdataLastRecv();
   if (lastRcData && (micros() - lastRcData > 1000000))
   {
-    // The tx is in Mavlink mode and without a valid crsf or RC input.  Do not send stale or fake zero packet RC!
-    // Only send SYNC and DATA packets.
-    if (config.GetLinkMode() == TX_MAVLINK_MODE)
+    // MAVLink tunnel + no fresh RC: skip stale/zero RC but keep SYNC + DATA flowing so FC telemetry continues
+    if (mavlinkTunnelActive())
     {
       dontSendChannelData = true;
     }
@@ -574,7 +583,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
         otaPkt.full.data_ul.packageIndex = DataUlSender.GetCurrentPayload(
           otaPkt.full.data_ul.payload,
           sizeof(otaPkt.full.data_ul.payload));
-        if (config.GetLinkMode() == TX_MAVLINK_MODE)
+        if (mavlinkTunnelActive())
           otaPkt.full.data_ul.stubbornAck = DataDlReceiver.GetCurrentConfirm();
       }
       else
@@ -582,7 +591,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
         otaPkt.std.data_ul.packageIndex = DataUlSender.GetCurrentPayload(
           otaPkt.std.data_ul.payload,
           sizeof(otaPkt.std.data_ul.payload));
-        if (config.GetLinkMode() == TX_MAVLINK_MODE)
+        if (mavlinkTunnelActive())
           otaPkt.std.data_ul.stubbornAck = DataDlReceiver.GetCurrentConfirm();
       }
 
@@ -726,14 +735,20 @@ static void UARTconnected()
   webserverPreventAutoStart = true;
   rfModeLastChangedMS = millis(); // force syncspam on first packets
 
+  txHandsetIsMavlink = handset->isMavlinkHandset();
+
   auto index = adjustPacketRateForBaud(config.GetRate());
   config.SetRate(index);
   if (connectionState == noCrossfire || connectionState < MODE_STATES)
   {
-    // When CRSF first connects, always go into a brief delay before
-    // starting to transmit, to make sure a ModelID update isn't coming
-    // right behind it
-    setConnectionState(awaitingModelId);
+    if (handset->isMavlinkHandset())
+    {
+      setConnectionState(disconnected);
+    }
+    else
+    {
+      setConnectionState(awaitingModelId);
+    }
   }
   // But start the timer to get OpenTX sync going and a ModelID update sent
   hwTimer::resume();
@@ -1109,25 +1124,30 @@ static void HandleUARTin()
     size = TxUSB->readBytes(buf, size);
     if (connectionState > MODE_STATES) feedUSB(buf, size);
 
-    // If the data is MAVLink, then auto change LinkMode and start the radio link
-    // since the user might be operating the module as a standalone unit without a handset.
-    if (connectionState == noCrossfire)
+    if (handset->isMavlinkHandset())
     {
-      if (isThisAMavPacket(buf, size))
-      {
-        config.SetLinkMode(TX_MAVLINK_MODE);
-        UARTconnected();
-      }
-    }
-    if (config.GetLinkMode() == TX_MAVLINK_MODE)
-    {
-      uartInputBuffer.lock();
-      uartInputBuffer.pushBytes(buf, size);
-      uartInputBuffer.unlock();
+      (void)buf;
     }
     else
     {
-      crsfParser.processBytes(&usbConnector, buf, size);
+      if (connectionState == noCrossfire)
+      {
+        if (isThisAMavPacket(buf, size))
+        {
+          config.SetLinkMode(TX_MAVLINK_MODE);
+          UARTconnected();
+        }
+      }
+      if (config.GetLinkMode() == TX_MAVLINK_MODE)
+      {
+        uartInputBuffer.lock();
+        uartInputBuffer.pushBytes(buf, size);
+        uartInputBuffer.unlock();
+      }
+      else
+      {
+        crsfParser.processBytes(&usbConnector, buf, size);
+      }
     }
   }
 
@@ -1142,8 +1162,7 @@ static void HandleUARTin()
       uint8_t buf[size];
       BackpackOrLogStrm->readBytes(buf, size);
 
-      // If the TX is in Mavlink mode, push the bytes into the fifo buffer
-      if (config.GetLinkMode() == TX_MAVLINK_MODE)
+      if (!handset->isMavlinkHandset() && config.GetLinkMode() == TX_MAVLINK_MODE)
       {
         uartInputBuffer.lock();
         uartInputBuffer.pushBytes(buf, size);
@@ -1519,11 +1538,13 @@ void loop()
     {
       if (CRSFinBuffer[0] == CRSF_ADDRESS_USB)
       {
-        if (config.GetLinkMode() == TX_MAVLINK_MODE)
+        if (mavlinkTunnelActive())
         {
           const uint8_t count = CRSFinBuffer[CRSF_TELEMETRY_LENGTH_INDEX];
           // Convert to CRSF telemetry where we can and send to handset
           convert_mavlink_to_crsf_telem(CRSF_ADDRESS_RADIO_TRANSMITTER, CRSFinBuffer, count);
+          // Forward raw FC telemetry to the handset
+          handset->queueTelemetry(CRSFinBuffer + CRSF_FRAME_NOT_COUNTED_BYTES, count);
           // forward raw mavlink data to USB
           TxUSB->write(CRSFinBuffer + CRSF_FRAME_NOT_COUNTED_BYTES, count);
           // And to the backpack if we have one

@@ -355,7 +355,7 @@ static void BackpackPollAuxStates()
 
 void sendCRSFTelemetryToBackpack(const uint8_t *data)
 {
-    if (config.GetBackpackDisable() || config.GetBackpackTlmMode() == BACKPACK_TELEM_MODE_OFF || config.GetLinkMode() == TX_MAVLINK_MODE)
+    if (config.GetBackpackDisable() || config.GetBackpackTlmMode() == BACKPACK_TELEM_MODE_OFF || mavlinkTunnelActive())
     {
         return;
     }
