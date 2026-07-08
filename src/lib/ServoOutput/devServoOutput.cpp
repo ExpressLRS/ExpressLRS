@@ -8,10 +8,6 @@
 #include "logging.h"
 #include "rxtx_intf.h"
 
-#if defined(PLATFORM_ESP32)
-#include <driver/periph_ctrl.h>
-#endif
-
 static int8_t servoPins[PWM_MAX_CHANNELS];
 static pwm_channel_t pwmChannels[PWM_MAX_CHANNELS];
 static uint16_t pwmChannelValues[PWM_MAX_CHANNELS];
@@ -19,15 +15,21 @@ static bool initialized = false;
 
 #if defined(PLATFORM_ESP32)
 static DShotRMT *dshotInstances[PWM_MAX_CHANNELS] = {nullptr};
+// RMT TX channel count varies by chip:
+// ESP32 classic: 8 TX channels
+// ESP32-S3: 8 TX channels (all configurable)
+// ESP32-C3: 2 TX channels (fixed, ch 0-1 are TX, ch 2-3 are RX)
+#if defined(PLATFORM_ESP32_C3)
+const uint8_t RMT_MAX_CHANNELS = 2;
+#else
 const uint8_t RMT_MAX_CHANNELS = 8;
+#endif
 #endif
 
 // true when the RX has a new channels packet
-static volatile bool newChannelsAvailable;
-static uint32_t lastUpdate;
+static bool newChannelsAvailable;
 // Absolute max failsafe time if no update is received, regardless of LQ
 static constexpr uint32_t FAILSAFE_ABS_TIMEOUT_MS = 1000U;
-static constexpr uint32_t DISCONNECTED_UPDATE_MS = 10;
 
 typedef void (*servoWrite_fn)(uint8_t ch, uint16_t us);
 
@@ -149,18 +151,6 @@ static void servosFailsafe()
     }
 }
 
-static void servosEnterFailsafe()
-{
-    newChannelsAvailable = false;
-    lastUpdate = 0;
-
-    // Outputs are only allocated after the RX has reached connected once.
-    if (initialized)
-    {
-        servosFailsafe();
-    }
-}
-
 static void servoCalcAllChannels(servoWrite_fn write)
 {
     for (int ch = 0 ; ch < GPIO_PIN_PWM_OUTPUTS_COUNT ; ++ch)
@@ -212,12 +202,7 @@ void servoCurrentToFailsafeConfig()
 
 static void servosUpdate(unsigned long now)
 {
-    PWM.feedWatchdog();
-    if (connectionState != connected || !connectionHasModelMatch || !teamraceHasModelMatch)
-    {
-        servosEnterFailsafe();
-        return;
-    }
+    static uint32_t lastUpdate;
 
     if (newChannelsAvailable)
     {
@@ -302,9 +287,14 @@ static bool initialize()
 
 static int event()
 {
+    if (connectionState == disconnected)
+    {
+        // Disconnected should come after failsafe on the RX,
+        // so it is safe to shut down when disconnected
+        return DURATION_NEVER;
+    }
     if (connectionState == wifiUpdate)
     {
-        servosEnterFailsafe();
         for (int ch = 0; ch < GPIO_PIN_PWM_OUTPUTS_COUNT; ++ch)
         {
             if (pwmChannels[ch] != -1)
@@ -323,12 +313,6 @@ static int event()
         }
         return DURATION_NEVER;
     }
-    if (connectionState != connected)
-    {
-        servosEnterFailsafe();
-        // When disconnected, return a timeout to feed the ISR watchdog for the PWM signals
-        return connectionState == disconnected ? DISCONNECTED_UPDATE_MS : DURATION_IMMEDIATELY;
-    }
     if (!initialized && connectionState == connected)
     {
         initialized = true;
@@ -343,7 +327,7 @@ static int event()
 #if defined(PLATFORM_ESP32)
             else if ((eServoOutputMode)chConfig->val.mode == somDShot || (eServoOutputMode)chConfig->val.mode == somDShot3D)
             {
-                dshotInstances[ch]->begin(DSHOT300, false); // Set DShot protocol and bidirectional DShot bool
+                dshotInstances[ch]->begin(DSHOT300, false); // Set DShot protocol and bidirectional dshot bool
             }
 #endif
         }
@@ -354,25 +338,8 @@ static int event()
 static int timeout()
 {
     servosUpdate(millis());
-    // When disconnected, return a timeout to feed the ISR watchdog for the PWM signals
-    return connectionState == disconnected ? DISCONNECTED_UPDATE_MS : DURATION_IMMEDIATELY;
+    return DURATION_IMMEDIATELY;
 }
-
-#if defined(PLATFORM_ESP32)
-// High priority constructor function to reset the hardware modules used for PWM/DShot output.
-// Restarts can leave PWM/RMT peripherals running; so reset them early in the app start process.
-__attribute__((constructor(101))) void resetEsp32PwmDevices()
-{
-    periph_module_reset(PERIPH_LEDC_MODULE);
-    periph_module_reset(PERIPH_RMT_MODULE);
-#if SOC_MCPWM_SUPPORTED
-    periph_module_reset(PERIPH_PWM0_MODULE);
-#if SOC_MCPWM_GROUPS > 1
-    periph_module_reset(PERIPH_PWM1_MODULE);
-#endif
-#endif
-}
-#endif
 
 device_t ServoOut_device = {
     .initialize = initialize,

@@ -3,6 +3,7 @@
 #if defined(PLATFORM_ESP32)
 #include <driver/ledc.h>
 #include <driver/mcpwm.h>
+#include <driver/rmt.h>
 
 #include "logging.h"
 
@@ -13,16 +14,39 @@
 #endif
 
 #define MCPWM_CHANNELS 12
-#define LEDC_CHANNELS 8
+
+// LEDC channel count varies by chip
+#if defined(PLATFORM_ESP32_C3)
+#define LEDC_CHANNELS 6   // ESP32-C3: 6 LEDC channels (datasheet)
+#elif defined(PLATFORM_ESP32_S3)
+#define LEDC_CHANNELS 8   // ESP32-S3: 8 LEDC channels
+#else
+#define LEDC_CHANNELS 8   // Classic ESP32: 8 high-speed channels
+#endif
+
+// RMT TX channel count varies by chip
+#if defined(PLATFORM_ESP32_C3)
+// ESP32-C3: 4 RMT channels total, but only 2 are TX (ch 0-1), 2 are RX (ch 2-3)
+#define RMT_TX_CHANNELS  2
+#elif defined(PLATFORM_ESP32_S3)
+// ESP32-S3: 8 RMT channels, all configurable as TX
+#define RMT_TX_CHANNELS  8
+#else
+// Classic ESP32: 8 RMT channels, all configurable as TX
+#define RMT_TX_CHANNELS  8
+#endif
 
 #define MCPWM_CHANNEL_FLAG 0x100
 #define LEDC_CHANNEL_FLAG 0x200
+#define RMT_CHANNEL_FLAG  0x400
 
 #define IS_MCPWM_CHANNEL(ch) (ch & MCPWM_CHANNEL_FLAG)
 #define IS_LEDC_CHANNEL(ch) (ch & LEDC_CHANNEL_FLAG)
+#define IS_RMT_CHANNEL(ch)  (ch & RMT_CHANNEL_FLAG)
 
-#define LEDC_CHANNEL(ch) (ch & 0xFF)
+#define LEDC_CHANNEL(ch)  (ch & 0xFF)
 #define MCPWM_CHANNEL(ch) (ch & 0xFF)
+#define RMT_CHANNEL(ch)   (ch & 0xFF)
 
 #if SOC_MCPWM_SUPPORTED
 static const struct
@@ -58,6 +82,19 @@ static struct
     uint8_t tmr_idx;
 } ledc_config[LEDC_CHANNELS];
 static uint32_t ledcTimerConfigs[LEDC_TIMER_MAX] = {0};
+
+// RMT-based PWM emulation
+// Each RMT TX channel generates PWM using 1 item (high+low in one symbol) in loop mode
+// clk_div=80 gives 1us per tick, supporting periods up to ~32ms (good for servo PWM)
+#define RMT_PWM_CLK_DIV     80
+#define RMT_PWM_TICKS_PER_US 1
+static struct
+{
+    int8_t pin;
+    uint32_t period_ticks;  // total period in RMT ticks
+    bool attached;
+    rmt_item32_t rmt_items[2]; // [0]=PWM cycle, [1]=end marker
+} rmt_pwm_config[RMT_TX_CHANNELS];
 
 /*
  * Modified versions of the ledcSetup/ledcAttachPin from Arduino ESP32 Hal which allows
@@ -189,8 +226,85 @@ pwm_channel_t PWMController::allocate(uint8_t pin, uint32_t frequency)
         }
     }
 
-    // 3. bail out, nothing left
-    DBGLN("No MCPWM or LEDC channels available for frequency %dHz", frequency);
+    // 3. try for a RMT TX channel
+    // Allocate from the highest index downward to avoid conflict with DShot
+    // (DShot allocates RMT channels from index 0 upward)
+    {
+        uint32_t period_us = 1000000U / frequency;
+        uint32_t period_ticks = period_us * RMT_PWM_TICKS_PER_US;
+
+        // RMT duration is 15-bit signed, max positive is 32767
+        if (period_ticks <= 32767)
+        {
+            for (int ch = RMT_TX_CHANNELS - 1; ch >= 0; ch--)
+            {
+                if (rmt_pwm_config[ch].period_ticks == 0)
+                {
+                    // Probe: check if this RMT channel is already in use (e.g. by DShot)
+                    // by attempting to install the driver. If it fails, the channel is taken.
+                    auto err = rmt_driver_install((rmt_channel_t)ch, 0, 0);
+                    if (err != ESP_OK)
+                    {
+                        DBGLN("RMT ch%d already in use (err 0x%x), skipping", ch, err);
+                        continue;
+                    }
+                    // Channel is free, uninstall probe and reconfigure for PWM
+                    rmt_driver_uninstall((rmt_channel_t)ch);
+
+                    rmt_config_t rmt_tx_config = {
+                        .rmt_mode = RMT_MODE_TX,
+                        .channel = (rmt_channel_t)ch,
+                        .gpio_num = (gpio_num_t)pin,
+                        .clk_div = RMT_PWM_CLK_DIV,
+                        .mem_block_num = 1,
+                        .tx_config = {
+                            .idle_level = RMT_IDLE_LEVEL_LOW,
+                            .carrier_en = false,
+                            .loop_en = true,
+                            .idle_output_en = true,
+                        },
+                    };
+                    err = rmt_config(&rmt_tx_config);
+                    if (err != ESP_OK)
+                    {
+                        DBGLN("rmt_config failed with error 0x%x on pin %d, ch %d", err, pin, ch);
+                        continue;
+                    }
+                    err = rmt_driver_install((rmt_channel_t)ch, 0, 0);
+                    if (err != ESP_OK)
+                    {
+                        DBGLN("rmt_driver_install failed with error 0x%x on pin %d, ch %d", err, pin, ch);
+                        continue;
+                    }
+
+                    // Initialize with ~0% duty
+                    rmt_pwm_config[ch].rmt_items[0].level0 = 1;
+                    rmt_pwm_config[ch].rmt_items[0].duration0 = 1;
+                    rmt_pwm_config[ch].rmt_items[0].level1 = 0;
+                    rmt_pwm_config[ch].rmt_items[0].duration1 = period_ticks > 1 ? period_ticks - 1 : 1;
+                    // End marker
+                    rmt_pwm_config[ch].rmt_items[1].val = 0;
+
+                    rmt_pwm_config[ch].pin = pin;
+                    rmt_pwm_config[ch].period_ticks = period_ticks;
+                    rmt_pwm_config[ch].attached = true;
+
+                    rmt_fill_tx_items((rmt_channel_t)ch, rmt_pwm_config[ch].rmt_items, 2, 0);
+                    rmt_tx_start((rmt_channel_t)ch, true);
+
+                    DBGLN("allocate rmt_ch %d on pin %d, period: %uus (%u ticks)", ch, pin, period_us, period_ticks);
+                    return ch | RMT_CHANNEL_FLAG;
+                }
+            }
+        }
+        else
+        {
+            DBGLN("RMT: period %uus too long for 15-bit duration (%u ticks > 32767)", period_us, period_ticks);
+        }
+    }
+
+    // 4. bail out, nothing left
+    DBGLN("No MCPWM, LEDC or RMT channels available for frequency %dHz", frequency);
     return -1;
 }
 
@@ -213,6 +327,15 @@ void PWMController::release(pwm_channel_t channel)
         mcpwm_frequencies[ch] = 0;
     }
 #endif
+    else if (IS_RMT_CHANNEL(channel))
+    {
+        auto ch = RMT_CHANNEL(channel);
+        rmt_tx_stop((rmt_channel_t)ch);
+        rmt_driver_uninstall((rmt_channel_t)ch);
+        rmt_pwm_config[ch].pin = -1;
+        rmt_pwm_config[ch].period_ticks = 0;
+        rmt_pwm_config[ch].attached = false;
+    }
     else
     {
         ERRLN("Invalid PWM channel %x", channel);
@@ -260,6 +383,24 @@ void PWMController::setDuty(pwm_channel_t channel, uint16_t duty)
         mcpwm_set_duty(mcpwm_config[ch].unit, mcpwm_config[ch].timer, mcpwm_config[ch].generator, duty / 10.0f);
     }
 #endif
+    else if (IS_RMT_CHANNEL(channel))
+    {
+        auto ch = RMT_CHANNEL(channel);
+        uint32_t high_ticks = (uint32_t)duty * rmt_pwm_config[ch].period_ticks / 1000U;
+        // Clamp: RMT duration must be >= 1
+        if (high_ticks < 1) high_ticks = 1;
+        if (high_ticks >= rmt_pwm_config[ch].period_ticks) high_ticks = rmt_pwm_config[ch].period_ticks - 1;
+        uint32_t low_ticks = rmt_pwm_config[ch].period_ticks - high_ticks;
+
+        rmt_pwm_config[ch].rmt_items[0].level0 = 1;
+        rmt_pwm_config[ch].rmt_items[0].duration0 = high_ticks;
+        rmt_pwm_config[ch].rmt_items[0].level1 = 0;
+        rmt_pwm_config[ch].rmt_items[0].duration1 = low_ticks;
+
+        rmt_tx_stop((rmt_channel_t)ch);
+        rmt_fill_tx_items((rmt_channel_t)ch, rmt_pwm_config[ch].rmt_items, 2, 0);
+        rmt_tx_start((rmt_channel_t)ch, true);
+    }
 }
 
 void PWMController::setMicroseconds(pwm_channel_t channel, uint16_t microseconds)
@@ -279,10 +420,24 @@ void PWMController::setMicroseconds(pwm_channel_t channel, uint16_t microseconds
         mcpwm_set_duty_in_us(mcpwm_config[ch].unit, mcpwm_config[ch].timer, mcpwm_config[ch].generator, microseconds);
     }
 #endif
-}
+    else if (IS_RMT_CHANNEL(channel))
+    {
+        auto ch = RMT_CHANNEL(channel);
+        uint32_t high_ticks = microseconds * RMT_PWM_TICKS_PER_US;
+        // Clamp: RMT duration must be >= 1
+        if (high_ticks < 1) high_ticks = 1;
+        if (high_ticks >= rmt_pwm_config[ch].period_ticks) high_ticks = rmt_pwm_config[ch].period_ticks - 1;
+        uint32_t low_ticks = rmt_pwm_config[ch].period_ticks - high_ticks;
 
-void PWMController::feedWatchdog()
-{
+        rmt_pwm_config[ch].rmt_items[0].level0 = 1;
+        rmt_pwm_config[ch].rmt_items[0].duration0 = high_ticks;
+        rmt_pwm_config[ch].rmt_items[0].level1 = 0;
+        rmt_pwm_config[ch].rmt_items[0].duration1 = low_ticks;
+
+        rmt_tx_stop((rmt_channel_t)ch);
+        rmt_fill_tx_items((rmt_channel_t)ch, rmt_pwm_config[ch].rmt_items, 2, 0);
+        rmt_tx_start((rmt_channel_t)ch, true);
+    }
 }
 
 #endif

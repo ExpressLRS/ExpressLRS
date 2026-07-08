@@ -39,7 +39,7 @@ import shlex
 import sys
 import time
 
-from esptool.cmds import (
+from .cmds import (
     chip_id,
     detect_chip,
     detect_flash_size,
@@ -64,9 +64,9 @@ from esptool.cmds import (
     write_flash_status,
     write_mem,
 )
-from esptool.loader import DEFAULT_CONNECT_ATTEMPTS, ESPLoader, list_ports
-from esptool.targets import CHIP_DEFS, CHIP_LIST, ESP32ROM, ESP8266ROM
-from esptool.util import (
+from .loader import DEFAULT_CONNECT_ATTEMPTS, ESPLoader, list_ports
+from .targets import CHIP_DEFS, CHIP_LIST, ESP32ROM, ESP8266ROM
+from .util import (
     FatalError,
     NotImplementedInROMError,
     flash_size_bytes,
