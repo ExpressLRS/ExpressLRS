@@ -542,6 +542,7 @@ void ICACHE_RAM_ATTR LR2021Driver::SetPaConfig(const bool isSubGHz, const SX12XX
     // 7.3.1 SetPaConfig
     if (isSubGHz)
     {
+        // uint8_t power = pwrPendingLF != PWRPENDING_NONE ? pwrPendingLF : pwrCurrentLF;
         constexpr uint8_t Pabuf[] {
             LR2021_RADIO_PA_SEL_LF,
             7 << 4 | 6, // PaDutyCycle
@@ -551,10 +552,11 @@ void ICACHE_RAM_ATTR LR2021Driver::SetPaConfig(const bool isSubGHz, const SX12XX
     }
     else
     {
-        constexpr uint8_t Pabuf[] {
+        uint8_t power = pwrPendingHF != PWRPENDING_NONE ? pwrPendingHF : pwrCurrentHF;
+        const uint8_t Pabuf[] {
             LR2021_RADIO_PA_SEL_HF,
             6 << 4 | 7, // PaDutyCycle | PaSlices (default when not using LF)
-            30,         // PaHFDutyCycle
+            static_cast<uint8_t>(power == 24 ? 16 : 30),         // PaHFDutyCycle
         };
         CHECK("LR2021_RADIO_SET_PA_CFG_OC", hal.WriteCommand(LR2021_RADIO_SET_PA_CFG_OC, Pabuf, 3, radioNumber));
     }
