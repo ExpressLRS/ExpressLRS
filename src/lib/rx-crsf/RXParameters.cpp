@@ -95,7 +95,7 @@ static selectionParameter luaAntennaMode = {
 static selectionParameter luaAntennaGroup = {
     {"Ant. Group", CRSF_TEXT_SELECTION},
     0, // value
-    "u.FL;Builtin",
+    "External;Builtin",
     STR_EMPTYSPACE
 };
 
