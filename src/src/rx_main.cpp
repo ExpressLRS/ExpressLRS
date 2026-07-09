@@ -744,6 +744,10 @@ static void ICACHE_RAM_ATTR updateDiversity()
             antenna = config.GetAntennaMode();
         }
     }
+    if (GPIO_PIN_ANT_GROUP != UNDEF_PIN)
+    {
+        digitalWrite(GPIO_PIN_ANT_GROUP, config.GetAntennaGroup());
+    }
 }
 
 void ICACHE_RAM_ATTR HWtimerCallbackTock()
@@ -1537,6 +1541,11 @@ static void setupTarget()
     {
         pinMode(GPIO_PIN_ANT_CTRL, OUTPUT);
         digitalWrite(GPIO_PIN_ANT_CTRL, LOW);
+    }
+    if (GPIO_PIN_ANT_GROUP != UNDEF_PIN)
+    {
+        pinMode(GPIO_PIN_ANT_GROUP, OUTPUT);
+        digitalWrite(GPIO_PIN_ANT_GROUP, LOW);
     }
 
     setupTargetCommon();

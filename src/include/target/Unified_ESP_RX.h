@@ -25,6 +25,7 @@
 
 // Radio Antenna
 #define GPIO_PIN_ANT_CTRL hardware_pin(HARDWARE_ant_ctrl)
+#define GPIO_PIN_ANT_GROUP hardware_pin(HARDWARE_ant_group)
 
 // Radio power
 #define GPIO_PIN_PA_ENABLE hardware_pin(HARDWARE_power_enable)
