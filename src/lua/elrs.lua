@@ -10,7 +10,6 @@ local EXITVER = "-- EXIT (Lua r18) --"
 local deviceId = 0xEE
 local handsetId = 0xEA
 local deviceName = nil
-local currentFolderName = nil
 local lineIndex = 1
 local pageOffset = 0
 local edit = nil
@@ -27,6 +26,7 @@ local elrsFlagsInfo = ""
 local fields_count = 0
 local devicesRefreshTimeout = 50
 local currentFolderId = nil
+local currentFolderName = nil
 local commandRunningIndicator = 1
 local expectChunksRemain = -1
 local deviceIsELRS_TX = nil
@@ -310,7 +310,7 @@ end
 
 local function fieldFolderOpen(field)
   currentFolderId = field.id
-  currentFolderName = field.name
+  currentFolderName = string.match(field.name, "^(.-)%s*%(.*%)$") or field.name
 
   local backFld = fields[#fields]
   backFld.name = "----BACK----"
