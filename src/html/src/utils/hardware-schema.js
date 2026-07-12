@@ -164,16 +164,46 @@ const HARDWARE_SCHEMA = [
                 desc: 'SX127x PA to use, either the RFO_HF or PA_BOOST (depends on circuit design)'
             },
             /* /FEATURE: NOT HAS_SX128X */
-            /* FEATURE: HAS_DUAL_BAND */
+            /* FEATURE: HAS_LR1121 */
             {
                 id: 'radio_rfsw_ctrl',
-                label: 'LRxxxx RF Switch Controls',
+                label: 'LR1121 RF Switch Controls',
                 type: 'array',
                 size: 40,
                 icon: null,
-                desc: 'Comma-separated list of values used for setting the LRxxxx RF switch controls (8 values for LR1121, 7 for LR2021)'
+                desc: 'Comma-separated list of 8 values used for setting the LR1121 RF switch controls'
             },
-            /* /FEATURE: HAS_DUAL_BAND */
+            /* /FEATURE: HAS_LR1121 */
+            /* FEATURE: HAS_LR2021 */
+            {
+                id: 'radio_rfsw_ctrl',
+                label: 'LR2021 RF Switch Controls',
+                type: 'array',
+                size: 40,
+                icon: null,
+                desc: 'Comma-separated list of 7 values used for setting the LR2021 RF switch controls'
+            },
+            {
+                id: 'radio_tcxo',
+                label: 'LR2021 TCXO voltage select',
+                type: 'select',
+                options: [
+                    {value: -1, label: 'External'},
+                    {value: 0, label: '1.6V'}, {value: 1, label: '1.7V'}, {value: 2, label: '1.8V'},
+                    {value: 3, label: '2.2V'}, {value: 4, label: '2.4V'}, {value: 5, label: '2.7V'},
+                    {value: 6, label: '3.0V'}, {value: 7, label: '3.3V'}
+                ],
+                desc: 'Specify the voltage on the VTCXO pin. External, means the TCXO is externally powered'
+            },
+            {
+                id: 'radio_tcxo_delay',
+                label: 'LR2021 TCXO start time',
+                type: 'uint',
+                size: 11,
+                icon: null,
+                desc: 'How long (in ticks) for the TCXO to stabilize'
+            },
+            /* /FEATURE: HAS_LR2021 */
         ]
     },
 

@@ -116,8 +116,14 @@ bool LR2021Driver::Begin(const uint32_t lowBandFreq, const uint32_t highBandFreq
     CHECK("LR2021_SYSTEM_CLEAR_ERRORS_OC", hal.WriteCommand(LR2021_SYSTEM_CLEAR_ERRORS_OC, SX12XX_Radio_All)); // Remove later?  Might not be required???
 
     SetMode(LR2021_MODE_STDBY_RC, SX12XX_Radio_All);
-    constexpr uint8_t tcxoMode[] {7, 0, 0, 0xFA, 0x00};     // 3.3V, 64000 ticks to stable
-    CHECK("LR2021_SYSTEM_SET_TCXO_MODE_OC", hal.WriteCommand(LR2021_SYSTEM_SET_TCXO_MODE_OC, tcxoMode, sizeof(tcxoMode), SX12XX_Radio_All));
+    if (hardware_int(HARDWARE_radio_tcxo) != -1)
+    {
+        const uint8_t tcxo_volts = hardware_int(HARDWARE_radio_tcxo);
+        const uint32_t tcxo_delay = hardware_int(HARDWARE_radio_tcxo_delay);
+
+        const uint8_t tcxoMode[] {tcxo_volts, (uint8_t)(tcxo_delay >> 24), (uint8_t)(tcxo_delay >> 16), (uint8_t)(tcxo_delay >> 8), (uint8_t)tcxo_delay};
+        CHECK("LR2021_SYSTEM_SET_TCXO_MODE_OC", hal.WriteCommand(LR2021_SYSTEM_SET_TCXO_MODE_OC, tcxoMode, sizeof(tcxoMode), SX12XX_Radio_All));
+    }
 
     // 6.3.7 SetRxTxFallbackMode
     constexpr uint8_t FBbuf = LR2021_RADIO_FALLBACK_FS;
