@@ -181,11 +181,20 @@ const HARDWARE_SCHEMA = [
         title: 'Radio Antenna', rows: [
             {
                 id: 'ant_ctrl',
-                label: 'CTRL pin',
+                label: 'Antenna select pin',
                 type: 'uint',
                 icon: 'output',
-                desc: 'Pin connected to Antenna select pin on power amplifier'
+                desc: 'Pin connected to Antenna select pin on power amplifier or switch'
             },
+            /* FEATURE: NOT IS_TX */
+            {
+                id: 'ant_group',
+                label: 'Antenna group pin',
+                type: 'uint',
+                icon: 'output',
+                desc: 'Secondary pin connected to an antenna switch, used to select from internal/external antenna port(s) via Lua'
+            },
+            /* /FEATURE: NOT IS_TX */
         ]
     },
 
@@ -521,10 +530,11 @@ const HARDWARE_SCHEMA = [
                 label: 'Screen type',
                 type: 'select',
                 options: [
-                    {value: 0, label: 'None'}, {value: 1, label: 'I2C OLED (SSD1306 128x64)'},
-                    {value: 2, label: 'SPI OLED (SSD1306 128x64)'}, {value: 3, label: 'SPI OLED (small SSD1306 128x32)'},
+                    {value: 0, label: 'None'},
+                    {value: 1, label: 'I2C OLED (SSD1306 128x64)'},
+                    {value: 2, label: 'SPI OLED (SSD1306 128x64)'},
                     {value: 4, label: 'SPI TFT (ST7735 160x80)'}
-                ], desc: 'Type of OLED connected'
+                ], desc: 'Type of display connected'
             },
             {
                 id: 'screen_reversed',

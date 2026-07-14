@@ -148,8 +148,7 @@ typedef enum : uint8_t
 
 // These flags are or'ed with the field type above to hide the field from the normal LUA view
 #define CRSF_FIELD_HIDDEN       0x80     // marked as hidden in all LUA responses
-#define CRSF_FIELD_ELRS_HIDDEN  0x40     // marked as hidden when talking to ELRS specific LUA
-#define CRSF_FIELD_TYPE_MASK    ~(CRSF_FIELD_HIDDEN|CRSF_FIELD_ELRS_HIDDEN)
+#define CRSF_FIELD_TYPE_MASK    ~(CRSF_FIELD_HIDDEN)
 
 /**
  * Define the shape of a standard header
@@ -531,6 +530,15 @@ static inline uint32_t htobe32(uint32_t val)
     return val;
 #else
     return __builtin_bswap32(val);
+#endif
+}
+
+static inline uint32_t htobe24(uint32_t val)
+{
+#if (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
+    return val;
+#else
+    return __builtin_bswap32(val) >> 8;
 #endif
 }
 

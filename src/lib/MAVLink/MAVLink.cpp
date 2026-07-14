@@ -95,7 +95,7 @@ void convert_mavlink_to_crsf_telem(crsf_addr_e destination, uint8_t *CRSFinBuffe
     {
         mavlink_message_t msg;
         mavlink_status_t status;
-        bool have_message = mavlink_frame_char(MAVLINK_COMM_0, CRSFinBuffer[CRSF_FRAME_NOT_COUNTED_BYTES + i], &msg, &status);
+        bool have_message = mavlink_frame_char(MAVLINK_COMM_0, CRSFinBuffer[CRSF_FRAME_NOT_COUNTED_BYTES + i], &msg, &status) == MAVLINK_FRAMING_OK;
         // convert mavlink messages to CRSF messages
         if (have_message)
         {
@@ -124,7 +124,7 @@ void convert_mavlink_to_crsf_telem(crsf_addr_e destination, uint8_t *CRSFinBuffe
                 // mAh
                 crsfbatt.p.capacity = 0;
                 if (battery_status.current_consumed > 0){ // int32_t, -1 means invalid
-                    crsfbatt.p.capacity = htobe32(std::min(((uint32_t) battery_status.current_consumed), (uint32_t) 0xFFFFFFU)); // 24bit value
+                    crsfbatt.p.capacity = htobe24(std::min(((uint32_t) battery_status.current_consumed), (uint32_t) 0xFFFFFFU)); // 24bit value
                 }
                 // 0-100%
                 crsfbatt.p.remaining = 0;

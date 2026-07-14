@@ -178,7 +178,7 @@ uint8_t *CRSFEndpoint::folderParameterToArray(const folderParameter *parameter, 
     return childParameters;
 }
 
-uint8_t CRSFEndpoint::sendParameter(const crsf_addr_e origin, const bool isElrs, const crsf_frame_type_e frameType, const uint8_t fieldChunk, const propertiesCommon *parameter)
+uint8_t CRSFEndpoint::sendParameter(const crsf_addr_e origin, const crsf_frame_type_e frameType, const uint8_t fieldChunk, const propertiesCommon *parameter)
 {
     const uint8_t dataType = parameter->type & CRSF_FIELD_TYPE_MASK;
 
@@ -191,10 +191,6 @@ uint8_t CRSFEndpoint::sendParameter(const crsf_addr_e origin, const bool isElrs,
     chunkBuffer[3] = dataType;
     // Set the hidden flag
     chunkBuffer[3] |= parameter->type & CRSF_FIELD_HIDDEN ? 0x80 : 0;
-    if (isElrs)
-    {
-        chunkBuffer[3] |= parameter->type & CRSF_FIELD_ELRS_HIDDEN ? 0x80 : 0;
-    }
     uint8_t paramInformation[CRSF_MAX_PACKET_LEN];
 
     // Copy the name to the buffer starting at chunkBuffer[4]
@@ -257,10 +253,10 @@ uint8_t CRSFEndpoint::sendParameter(const crsf_addr_e origin, const bool isElrs,
     return chunkCnt - (fieldChunk + 1);
 }
 
-void CRSFEndpoint::pushResponseChunk(commandParameter *cmd, const bool isElrs)
+void CRSFEndpoint::pushResponseChunk(commandParameter *cmd)
 {
     DBGVLN("sending response for [%s] chunk=%u step=%u", cmd->common.name, nextStatusChunk, cmd->step);
-    if (sendParameter(requestOrigin, isElrs, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, nextStatusChunk, (propertiesCommon *)cmd) == 0)
+    if (sendParameter(requestOrigin, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, nextStatusChunk, (propertiesCommon *)cmd) == 0)
     {
         nextStatusChunk = 0;
     }
@@ -275,7 +271,7 @@ void CRSFEndpoint::sendCommandResponse(commandParameter *cmd, const commandStep_
     cmd->step = step;
     cmd->info = message;
     nextStatusChunk = 0;
-    pushResponseChunk(cmd, false);
+    pushResponseChunk(cmd);
 }
 
 void CRSFEndpoint::registerParameter(void *definition, const parameterHandlerCallback &callback, const uint8_t parent)
@@ -295,7 +291,7 @@ void CRSFEndpoint::registerParameter(void *definition, const parameterHandlerCal
     paramCallbacks[lastParameter] = callback;
 }
 
-void CRSFEndpoint::parameterUpdateReq(const crsf_addr_e origin, const bool isElrs, const uint8_t parameterType, const uint8_t parameterIndex, void *payload)
+void CRSFEndpoint::parameterUpdateReq(const crsf_addr_e origin, const uint8_t parameterType, const uint8_t parameterIndex, void *payload)
 {
     propertiesCommon *parameter = paramDefinitions[parameterIndex];
     requestOrigin = origin;
@@ -334,7 +330,7 @@ void CRSFEndpoint::parameterUpdateReq(const crsf_addr_e origin, const bool isElr
             // remaining chunks when nextStatusChunk != 0
             if (parameterArg == lcsQuery && nextStatusChunk != 0)
             {
-                pushResponseChunk((commandParameter *)parameter, isElrs);
+                pushResponseChunk((commandParameter *)parameter);
             }
             else
             {
@@ -349,7 +345,7 @@ void CRSFEndpoint::parameterUpdateReq(const crsf_addr_e origin, const bool isElr
         break;
 
     case CRSF_FRAMETYPE_PARAMETER_READ: {
-        DBGVLN("Read parameter %u %u", fieldId, fieldChunk);
+        DBGVLN("Read parameter %u %u", parameterIndex, parameterArg);
         if (parameterIndex < MAX_CRSF_PARAMETERS && parameter)
         {
             const auto field = (commandParameter *)parameter;
@@ -360,7 +356,7 @@ void CRSFEndpoint::parameterUpdateReq(const crsf_addr_e origin, const bool isElr
                 field->step = lcsIdle;
                 field->info = "";
             }
-            sendParameter(origin, isElrs, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, parameterArg, &field->common);
+            sendParameter(origin, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, parameterArg, &field->common);
         }
     }
     break;

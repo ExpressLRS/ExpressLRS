@@ -52,7 +52,6 @@ def compressFirmware(source, target, env):
         target_file = source_file + ".gz"
         binary_compress(target_file, source_file)
         os.remove(source_file)
-        os.rename(target_file, source_file)
 
 
 def compress_files(source, target, env):

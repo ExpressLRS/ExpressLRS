@@ -37,6 +37,14 @@ public:
      * @param microseconds the high time in microseconds
      */
     void setMicroseconds(pwm_channel_t channel, uint16_t microseconds);
+
+    /**
+     * @brief Service the watchdog timer to prevent an unintended runaway if there are no channel updates.
+     *
+     * Call this method periodically within the required watchdog timeout window to
+     * indicate that the system is still running correctly.
+     */
+    void feedWatchdog();
 };
 
 extern PWMController PWM;

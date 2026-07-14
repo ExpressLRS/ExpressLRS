@@ -1,8 +1,11 @@
 #include "devAnalogVbat.h"
 
+#if defined(TARGET_RX)
+
 #include "CRSFRouter.h"
 #include "logging.h"
 #include "median.h"
+#include "config.h"
 #include <Arduino.h>
 
 // Sample 5x samples over 500ms (unless SlowUpdate)
@@ -174,7 +177,7 @@ static void reportVbat()
     if (triggerPacket || (now - lastTelemSentMs >= VBAT_MIN_CRSFRATE))
     {
         // send battery packets (0x08) only if no external decive is sending 0x08 packets
-        if (!crsfBatterySensorDetected)
+        if (!crsfBatterySensorDetected && config.GetSerialProtocol() != PROTOCOL_MAVLINK)
         {
             // CRSF_FRAMETYPE_BATTERY (0x08)
             CRSF_MK_FRAME_T(crsf_sensor_battery_t) crsfbatt = { 0 };
@@ -249,3 +252,5 @@ device_t AnalogVbat_device = {
     .timeout = timeout,
     .subscribe = EVENT_NONE
 };
+
+#endif

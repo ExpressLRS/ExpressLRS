@@ -92,6 +92,24 @@ static void timer1Interrupt();
 extern "C" IRAM_ATTR int __wrap_stopWaveform(uint8_t pin) { return true; }
 extern "C" IRAM_ATTR bool __wrap__stopPWM(uint8_t pin) { return true; }
 
+static constexpr uint32_t WATCHDOG_TIMEOUT_US = 50000;
+static constexpr uint32_t WATCHDOG_TIMEOUT_CYCLES = microsecondsToClockCycles(WATCHDOG_TIMEOUT_US);
+
+static volatile uint32_t watchdogLastFeedCycle = 0;
+static volatile bool watchdogArmed = false;
+
+void feedWaveform8266()
+{
+  watchdogLastFeedCycle = ESP.getCycleCount();
+  watchdogArmed = true;
+  MEMBARRIER();
+}
+
+static inline void armWaveformWatchdog() {
+    watchdogLastFeedCycle = ESP.getCycleCount();
+    watchdogArmed = true;
+}
+
 static __attribute__((noinline)) void initTimer() {
   if (!wvfState.timerRunning) {
     timer1_disable();
@@ -117,6 +135,7 @@ static void disableIdleTimer() {
     timer1_disable();
     timer1_isr_init();
     wvfState.timerRunning = false;
+    watchdogArmed = false;
   }
 }
 
@@ -133,6 +152,7 @@ void startWaveform8266(uint8_t gpio, uint32_t timeHighUS, uint32_t timeLowUS) {
   MEMBARRIER();
   if (wvfState.waveformEnabled & mask) {
     wave->nextHighLowUs = (timeHighUS << 16) | timeLowUS;
+    armWaveformWatchdog();
     MEMBARRIER();
     // The waveform will be updated some time in the future on the next period for the signal
   } else { //  if (!(wvfState.waveformEnabled & mask)) {
@@ -141,6 +161,7 @@ void startWaveform8266(uint8_t gpio, uint32_t timeHighUS, uint32_t timeLowUS) {
     wave->nextHighLowUs = 0;
     wave->nextServiceCycle = ESP.getCycleCount() + microsecondsToClockCycles(1);
     wvfState.waveformToEnable |= mask;
+    armWaveformWatchdog();
     MEMBARRIER();
     initTimer();
     forceTimerInterrupt();
@@ -189,6 +210,38 @@ static inline IRAM_ATTR uint32_t earliest(uint32_t a, uint32_t b) {
     int32_t da = a - now;
     int32_t db = b - now;
     return (da < db) ? a : b;
+}
+
+static inline IRAM_ATTR bool watchdogExpired() {
+  if (!watchdogArmed) {
+    return false;
+  }
+
+  uint32_t now = GetCycleCountIRQ();
+  return now - watchdogLastFeedCycle >= WATCHDOG_TIMEOUT_CYCLES;
+}
+
+static inline IRAM_ATTR void stopAllWaveformsFromWatchdog() {
+  const uint32_t enabled = wvfState.waveformEnabled;
+  if (!enabled) {
+    watchdogArmed = false;
+    wvfState.timerRunning = false;
+    return;
+  }
+
+  GPOC = enabled & 0xffff;
+  if (enabled & (1 << 16)) {
+    GP16O = 0;
+  }
+
+  wvfState.waveformState &= ~enabled;
+  wvfState.waveformEnabled = 0;
+  wvfState.waveformToEnable = 0;
+  wvfState.waveformToDisable = 0;
+  wvfState.startPin = 0;
+  wvfState.endPin = 0;
+  watchdogArmed = false;
+  wvfState.timerRunning = false;
 }
 
 #if F_CPU == 80000000
@@ -294,6 +347,11 @@ static IRAM_ATTR void timer1Interrupt() {
   // schedule the timer a little early to allow time to get to the pin switch code before the deadline
   T1L = (cycleDeltaNextEvent - PRESCHEDULE_CS) >> (turbo ? 1 : 0);
   T1C = (1 << TCTE); //timer1_enable(TIM_DIV1, TIM_EDGE, TIM_SINGLE)
+
+  if (watchdogExpired()) {
+    stopAllWaveformsFromWatchdog();
+    T1C = 0; // disable the timer since we're dead
+  }
 }
 
 #endif

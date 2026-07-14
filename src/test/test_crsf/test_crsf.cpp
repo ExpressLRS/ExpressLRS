@@ -28,7 +28,7 @@ public:
         uint8_t payload[4] = {0};
         for (size_t i = 0; i < valueSize; ++i)
             payload[i] = static_cast<uint8_t>((value >> ((valueSize - 1 - i) * 8)) & 0xFF);
-        parameterUpdateReq(destAddr, false, paramId, paramIndex, payload);
+        parameterUpdateReq(destAddr, paramId, paramIndex, payload);
     }
 } crsfEndpoint;
 
