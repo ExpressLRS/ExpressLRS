@@ -156,8 +156,8 @@ void test_encodingHybrid8(bool highResChannel)
     uint8_t header = PACKET_TYPE_RCDATA;
     TEST_ASSERT_EQUAL(header, TXdataBuffer[0]);
 
-    // bytes 1 through 5 are 10 bit packed analog channels representing 998-2012 (CRSF_CHANNEL_VALUE_STD_MIN-CRSF_CHANNEL_VALUE_STD_MAX)
-    uint8_t expected[5] = { 0x4a, 0xd0, 0xfb, 0x49, 0xd2 };
+    // bytes 1 through 5 are 10 bit packed analog channels using nlimit encoding
+    uint8_t expected[5] = { 0x30, 0x44, 0x7d, 0x06, 0xe2 };
     TEST_ASSERT_EQUAL_UINT8_ARRAY(expected, &TXdataBuffer[1], 5);
 
     // byte 6 is the switch encoding
@@ -234,11 +234,12 @@ void test_decodingHybrid8(uint8_t forceSwitch, uint8_t switchval)
     // run the decoder, results in crsf->PackedRCdataOut
     OtaUnpackChannelData(otaPktPtr, ChannelData);
 
-    // compare the unpacked results with the input data
-    TEST_ASSERT_EQUAL(ChannelsIn[0], ChannelData[0]);
-    TEST_ASSERT_EQUAL(ChannelsIn[1], ChannelData[1]);
-    TEST_ASSERT_EQUAL(ChannelsIn[2], ChannelData[2]);
-    TEST_ASSERT_EQUAL(ChannelsIn[3], ChannelData[3]);
+    // compare the unpacked results with the input data (nlimit may have ±1 quantization error)
+    uint16_t expectedDecoded[4] = {291, 1382, 427, 1518};
+    for (unsigned ch=0; ch<4; ++ch)
+    {
+        TEST_ASSERT_EQUAL(expectedDecoded[ch], ChannelData[ch]);
+    }
 
     TEST_ASSERT_EQUAL(ChannelsIn[4+0], ChannelData[4]); // Switch 0 is sent on every packet
     if (forceSwitch == 7)
@@ -361,8 +362,8 @@ void test_encodingHybridWide(uint8_t nonce)
     uint8_t header = PACKET_TYPE_RCDATA;
     TEST_ASSERT_EQUAL(header, TXdataBuffer[0]);
 
-    // bytes 1 through 5 are 10 bit packed analog channels representing 998-2012 (CRSF_CHANNEL_VALUE_STD_MIN-CRSF_CHANNEL_VALUE_STD_MAX)
-    uint8_t expected[5] = { 0x4a, 0xd0, 0xfb, 0x49, 0xd2 };
+    // bytes 1 through 5 are 10 bit packed analog channels using nlimit encoding
+    uint8_t expected[5] = { 0x30, 0x44, 0x7d, 0x06, 0xe2 };
     TEST_ASSERT_EQUAL_UINT8_ARRAY(expected, &TXdataBuffer[1], 5);
 
     // byte 6 is the switches encoded
@@ -435,11 +436,12 @@ void test_decodingHybridWide(uint8_t nonce, uint8_t forceSwitch, uint16_t forceV
     // run the decoder, results in crsf->PackedRCdataOut
     bool telemResult = OtaUnpackChannelData(otaPktPtr, ChannelData);
 
-    // compare the unpacked results with the input data
-    TEST_ASSERT_EQUAL(ChannelsIn[0], ChannelData[0]);
-    TEST_ASSERT_EQUAL(ChannelsIn[1], ChannelData[1]);
-    TEST_ASSERT_EQUAL(ChannelsIn[2], ChannelData[2]);
-    TEST_ASSERT_EQUAL(ChannelsIn[3], ChannelData[3]);
+    // compare the unpacked results with the input data (nlimit may have ±1 quantization error)
+    uint16_t expectedDecoded[4] = {291, 1382, 427, 1518};
+    for (unsigned ch=0; ch<4; ++ch)
+    {
+        TEST_ASSERT_EQUAL(expectedDecoded[ch], ChannelData[ch]);
+    }
 
     // Switch 0 is sent on every packet
     TEST_ASSERT_EQUAL(ChannelData[4], ChannelData[4]);
@@ -521,20 +523,11 @@ void test_encodingFullres8ch()
     OtaUpdateSerializers(smWideOr8ch, OTA8_PACKET_SIZE);
     OtaPackChannelData(otaPktPtr, ChannelData, false);
 
-    // Low 4ch (CH1-CH4)
-    uint8_t expected[5];
-    expected[0] = ((ChannelsIn[0] >> 1) >> 0);
-    expected[1] = ((ChannelsIn[0] >> 1) >> 8) | ((ChannelsIn[1] >> 1) << 2);
-    expected[2] = ((ChannelsIn[1] >> 1) >> 6) | ((ChannelsIn[2] >> 1) << 4);
-    expected[3] = ((ChannelsIn[2] >> 1) >> 4) | ((ChannelsIn[3] >> 1) << 6);
-    expected[4] = ((ChannelsIn[3] >> 1) >> 2);
+    // Low 4ch (CH1-CH4) - nmap encoded
+    uint8_t expected[5] = {0x74, 0x38, 0xbc, 0x4a, 0xd1};
     TEST_ASSERT_EQUAL_UINT8_ARRAY(expected, &TXdataBuffer[offsetof(OTA_Packet8_s, rc.chLow)], 5);
-    // High 4ch (CH5-CH8)
-    expected[0] = ((ChannelsIn[4] >> 1) >> 0);
-    expected[1] = ((ChannelsIn[4] >> 1) >> 8) | ((ChannelsIn[5] >> 1) << 2);
-    expected[2] = ((ChannelsIn[5] >> 1) >> 6) | ((ChannelsIn[6] >> 1) << 4);
-    expected[3] = ((ChannelsIn[6] >> 1) >> 4) | ((ChannelsIn[7] >> 1) << 6);
-    expected[4] = ((ChannelsIn[7] >> 1) >> 2);
+    // High 4ch (CH5-CH8) - nmap encoded
+    expected[0] = 0xd3; expected[1] = 0xb4; expected[2] = 0xad; expected[3] = 0x10; expected[4] = 0xe9;
     TEST_ASSERT_EQUAL_UINT8_ARRAY(expected, &TXdataBuffer[offsetof(OTA_Packet8_s, rc.chHigh)], 5);
 
     // Check the header bits
@@ -562,38 +555,21 @@ void test_encodingFullres16ch()
     // ** PACKET ONE **
     memset(TXdataBuffer, 0, sizeof(TXdataBuffer)); // "destChannels4x10 must be zeroed"
     OtaPackChannelData(otaPktPtr, ChannelData, false);
-    // Low 4ch (CH1-CH4)
-    uint8_t expected[5];
-    expected[0] = ((ChannelsIn[0] >> 1) >> 0);
-    expected[1] = ((ChannelsIn[0] >> 1) >> 8) | ((ChannelsIn[1] >> 1) << 2);
-    expected[2] = ((ChannelsIn[1] >> 1) >> 6) | ((ChannelsIn[2] >> 1) << 4);
-    expected[3] = ((ChannelsIn[2] >> 1) >> 4) | ((ChannelsIn[3] >> 1) << 6);
-    expected[4] = ((ChannelsIn[3] >> 1) >> 2);
+    // Low 4ch (CH1-CH4) - nmap encoded
+    uint8_t expected[5] = {0x74, 0x38, 0xbc, 0x4a, 0xd1};
     TEST_ASSERT_EQUAL_UINT8_ARRAY(expected, &TXdataBuffer[offsetof(OTA_Packet8_s, rc.chLow)], 5);
-    // High 4ch, includes AUX1 (CH5-CH8)
-    expected[0] = ((ChannelsIn[4] >> 1) >> 0);
-    expected[1] = ((ChannelsIn[4] >> 1) >> 8) | ((ChannelsIn[5] >> 1) << 2);
-    expected[2] = ((ChannelsIn[5] >> 1) >> 6) | ((ChannelsIn[6] >> 1) << 4);
-    expected[3] = ((ChannelsIn[6] >> 1) >> 4) | ((ChannelsIn[7] >> 1) << 6);
-    expected[4] = ((ChannelsIn[7] >> 1) >> 2);
+    // High 4ch, includes AUX1 (CH5-CH8) - nmap encoded
+    expected[0] = 0xd3; expected[1] = 0xb4; expected[2] = 0xad; expected[3] = 0x10; expected[4] = 0xe9;
     TEST_ASSERT_EQUAL_UINT8_ARRAY(expected, &TXdataBuffer[offsetof(OTA_Packet8_s, rc.chHigh)], 5);
 
     // ** PACKET TWO **
     memset(TXdataBuffer, 0, sizeof(TXdataBuffer)); // "destChannels4x10 must be zeroed"
     OtaPackChannelData(otaPktPtr, ChannelData, false);
-    // Low 4ch (CH9-CH12)
-    expected[0] = ((ChannelsIn[8] >> 1) >> 0);
-    expected[1] = ((ChannelsIn[8] >> 1) >> 8) | ((ChannelsIn[9] >> 1) << 2);
-    expected[2] = ((ChannelsIn[9] >> 1) >> 6) | ((ChannelsIn[10] >> 1) << 4);
-    expected[3] = ((ChannelsIn[10] >> 1) >> 4) | ((ChannelsIn[11] >> 1) << 6);
-    expected[4] = ((ChannelsIn[11] >> 1) >> 2);
+    // Low 4ch (CH9-CH12) - nmap encoded
+    expected[0] = 0x34; expected[1] = 0x39; expected[2] = 0x8f; expected[3] = 0x1a; expected[4] = 0x01;
     TEST_ASSERT_EQUAL_UINT8_ARRAY(expected, &TXdataBuffer[offsetof(OTA_Packet8_s, rc.chLow)], 5);
-    // High 4ch (CH13-CH16)
-    expected[0] = ((ChannelsIn[12] >> 1) >> 0);
-    expected[1] = ((ChannelsIn[12] >> 1) >> 8) | ((ChannelsIn[13] >> 1) << 2);
-    expected[2] = ((ChannelsIn[13] >> 1) >> 6) | ((ChannelsIn[14] >> 1) << 4);
-    expected[3] = ((ChannelsIn[14] >> 1) >> 4) | ((ChannelsIn[15] >> 1) << 6);
-    expected[4] = ((ChannelsIn[15] >> 1) >> 2);
+    // High 4ch (CH13-CH16) - nmap encoded
+    expected[0] = 0x0e; expected[1] = 0x54; expected[2] = 0xaa; expected[3] = 0x04; expected[4] = 0xb9;
     TEST_ASSERT_EQUAL_UINT8_ARRAY(expected, &TXdataBuffer[offsetof(OTA_Packet8_s, rc.chHigh)], 5);
 }
 
@@ -614,38 +590,21 @@ void test_encodingFullres12ch()
     // ** PACKET ONE **
     memset(TXdataBuffer, 0, sizeof(TXdataBuffer)); // "destChannels4x10 must be zeroed"
     OtaPackChannelData(otaPktPtr, ChannelData, false);
-    // Low 4ch (CH1-CH4)
-    uint8_t expected[5];
-    expected[0] = ((ChannelsIn[0] >> 1) >> 0);
-    expected[1] = ((ChannelsIn[0] >> 1) >> 8) | ((ChannelsIn[1] >> 1) << 2);
-    expected[2] = ((ChannelsIn[1] >> 1) >> 6) | ((ChannelsIn[2] >> 1) << 4);
-    expected[3] = ((ChannelsIn[2] >> 1) >> 4) | ((ChannelsIn[3] >> 1) << 6);
-    expected[4] = ((ChannelsIn[3] >> 1) >> 2);
+    // Low 4ch (CH1-CH4) - nmap encoded
+    uint8_t expected[5] = {0x74, 0x38, 0xbc, 0x4a, 0xd1};
     TEST_ASSERT_EQUAL_UINT8_ARRAY(expected, &TXdataBuffer[offsetof(OTA_Packet8_s, rc.chLow)], 5);
-    // High 4ch (CH5-CH8)
-    expected[0] = ((ChannelsIn[4] >> 1) >> 0);
-    expected[1] = ((ChannelsIn[4] >> 1) >> 8) | ((ChannelsIn[5] >> 1) << 2);
-    expected[2] = ((ChannelsIn[5] >> 1) >> 6) | ((ChannelsIn[6] >> 1) << 4);
-    expected[3] = ((ChannelsIn[6] >> 1) >> 4) | ((ChannelsIn[7] >> 1) << 6);
-    expected[4] = ((ChannelsIn[7] >> 1) >> 2);
+    // High 4ch (CH5-CH8) - nmap encoded
+    expected[0] = 0xd3; expected[1] = 0xb4; expected[2] = 0xad; expected[3] = 0x10; expected[4] = 0xe9;
     TEST_ASSERT_EQUAL_UINT8_ARRAY(expected, &TXdataBuffer[offsetof(OTA_Packet8_s, rc.chHigh)], 5);
 
     // ** PACKET TWO **
     memset(TXdataBuffer, 0, sizeof(TXdataBuffer)); // "destChannels4x10 must be zeroed"
     OtaPackChannelData(otaPktPtr, ChannelData, false);
-    // Low 4ch (CH1-CH4)
-    expected[0] = ((ChannelsIn[0] >> 1) >> 0);
-    expected[1] = ((ChannelsIn[0] >> 1) >> 8) | ((ChannelsIn[1] >> 1) << 2);
-    expected[2] = ((ChannelsIn[1] >> 1) >> 6) | ((ChannelsIn[2] >> 1) << 4);
-    expected[3] = ((ChannelsIn[2] >> 1) >> 4) | ((ChannelsIn[3] >> 1) << 6);
-    expected[4] = ((ChannelsIn[3] >> 1) >> 2);
+    // Low 4ch (CH1-CH4) - nmap encoded
+    expected[0] = 0x74; expected[1] = 0x38; expected[2] = 0xbc; expected[3] = 0x4a; expected[4] = 0xd1;
     TEST_ASSERT_EQUAL_UINT8_ARRAY(expected, &TXdataBuffer[offsetof(OTA_Packet8_s, rc.chLow)], 5);
-    // Other high 4ch (CH9-CH12)
-    expected[0] = ((ChannelsIn[8] >> 1) >> 0);
-    expected[1] = ((ChannelsIn[8] >> 1) >> 8) | ((ChannelsIn[9] >> 1) << 2);
-    expected[2] = ((ChannelsIn[9] >> 1) >> 6) | ((ChannelsIn[10] >> 1) << 4);
-    expected[3] = ((ChannelsIn[10] >> 1) >> 4) | ((ChannelsIn[11] >> 1) << 6);
-    expected[4] = ((ChannelsIn[11] >> 1) >> 2);
+    // Other high 4ch (CH9-CH12) - nmap encoded
+    expected[0] = 0x34; expected[1] = 0x39; expected[2] = 0x8f; expected[3] = 0x1a; expected[4] = 0x01;
     TEST_ASSERT_EQUAL_UINT8_ARRAY(expected, &TXdataBuffer[offsetof(OTA_Packet8_s, rc.chHigh)], 5);
 }
 
@@ -667,18 +626,22 @@ void test_decodingFullres16chLow()
     memset(TXdataBuffer, 0, sizeof(TXdataBuffer)); // "destChannels4x10 must be zeroed"
     OtaPackChannelData(otaPktPtr, ChannelData, false);
     OtaUnpackChannelData(otaPktPtr, ChannelData);
+    // nmap decode expected values (may have ±1 quantization error vs original)
+    uint16_t expectedDecoded1[8] = {290, 1382, 427, 1519, 527, 1619, 665, 1757};
     for (unsigned ch=0; ch<8; ++ch)
     {
-        TEST_ASSERT_EQUAL(ChannelsIn[ch] & 0b11111111110, ChannelData[ch]);
+        TEST_ASSERT_EQUAL(expectedDecoded1[ch], ChannelData[ch]);
     }
 
     // ** PACKET TWO **
     memset(TXdataBuffer, 0, sizeof(TXdataBuffer)); // "destChannels4x10 must be zeroed"
     OtaPackChannelData(otaPktPtr, ChannelData, false);
     OtaUnpackChannelData(otaPktPtr, ChannelData);
-    for (unsigned ch=9; ch<16; ++ch)
+    // nmap decode expected values for CH9-CH15
+    uint16_t expectedDecoded2[7] = {1862, 905, 10, 35, 1142, 185, 1277};
+    for (unsigned i=0; i<7; ++i)
     {
-        TEST_ASSERT_EQUAL(ChannelsIn[ch] & 0b11111111110, ChannelData[ch]);
+        TEST_ASSERT_EQUAL(expectedDecoded2[i], ChannelData[9+i]);
     }
 }
 
@@ -694,6 +657,48 @@ void test_decodingHybridWide_AUXX_low()
     constexpr int N_SWITCHES = 8;
     for (int i=0; i<N_SWITCHES; ++i)
         test_decodingHybridWide(i, 0, CRSF_CHANNEL_VALUE_1000);
+}
+
+void test_n_quantization_common(size_t ota_packet_size, uint32_t R, uint32_t crsf_low, uint32_t crsf_high)
+{
+    uint8_t TXdataBuffer[ota_packet_size]{};
+    OTA_Packet_s * const otaPktPtr = (OTA_Packet_s *)TXdataBuffer;
+
+    OtaUpdateSerializers(smWideOr8ch, ota_packet_size);
+
+    constexpr uint32_t center = CRSF_CHANNEL_VALUE_MID;
+    uint32_t inner_lo = center - R;
+    uint32_t inner_hi = center + R;
+
+    for (uint32_t val = crsf_low; val <= crsf_high; ++val)
+    {
+        memset(ChannelData, 0, sizeof(ChannelData));
+        ChannelData[0] = val;
+        memset(TXdataBuffer, 0, sizeof(TXdataBuffer));
+
+        OtaPackChannelData(otaPktPtr, ChannelData, false);
+        OtaUnpackChannelData(otaPktPtr, ChannelData);
+
+        if (val >= inner_lo && val <= inner_hi)
+        {
+            TEST_ASSERT_EQUAL_MESSAGE(val, ChannelData[0], "inner region should decode exactly");
+        }
+        else
+        {
+            int diff = ChannelData[0] > val ? (int)ChannelData[0] - val : (int)val - ChannelData[0];
+            TEST_ASSERT_LESS_THAN_MESSAGE(2, diff, "outer region should be within +/-1");
+        }
+    }
+}
+
+void test_nlimit_quantization()
+{
+    test_n_quantization_common(OTA4_PACKET_SIZE, OTA_DECIMATE_R_NLIMIT, CRSF_CHANNEL_VALUE_STD_MIN, CRSF_CHANNEL_VALUE_STD_MAX);
+}
+
+void test_nmap_quantization()
+{
+    test_n_quantization_common(OTA8_PACKET_SIZE, OTA_DECIMATE_R_NMAP, CRSF_CHANNEL_VALUE_EXT_MIN, CRSF_CHANNEL_VALUE_EXT_MAX);
 }
 
 // Unity setup/teardown
@@ -726,6 +731,9 @@ int main(int argc, char **argv)
     RUN_TEST(test_encodingFullres16ch);
     RUN_TEST(test_encodingFullres12ch);
     RUN_TEST(test_decodingFullres16chLow);
+
+    RUN_TEST(test_nlimit_quantization);
+    RUN_TEST(test_nmap_quantization);
 
     UNITY_END();
 

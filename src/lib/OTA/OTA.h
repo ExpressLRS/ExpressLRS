@@ -167,6 +167,10 @@ typedef struct {
 
 enum OtaSwitchMode_e { smWideOr8ch = 0, smHybridOr16ch = 1, sm12ch = 2 };
 
+// Radius used for center-preserving Decimate/Expand functions (CRSF units)
+constexpr uint32_t OTA_DECIMATE_R_NLIMIT = 301;
+constexpr uint32_t OTA_DECIMATE_R_NMAP = 190;
+
 extern uint8_t UID[UID_LEN];
 extern elrsLinkStatistics_t linkStats;
 extern bool isArmed;
