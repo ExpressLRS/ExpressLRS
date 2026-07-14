@@ -388,6 +388,25 @@ void sendMAVLinkTelemetryToBackpack(const uint8_t *data)
     BackpackOrLogStrm->write(data + CRSF_FRAME_NOT_COUNTED_BYTES, count);
 }
 
+void sendTimeToBackpack(const uint8_t *timeData)
+{
+    if (config.GetBackpackDisable())
+    {
+        return;
+    }
+
+    mspPacket_t packet;
+    packet.reset();
+    packet.makeCommand();
+    packet.function = MSP_ELRS_BACKPACK_SET_RTC;
+    for (uint8_t i = 0; i < 6; ++i)
+    {
+        packet.addByte(timeData[i]);
+    }
+
+    MSP::sendPacket(&packet, BackpackOrLogStrm); // send to tx-backpack as MSP
+}
+
 static void sendConfigToBackpack()
 {
     // Send any config values to the tx-backpack, as one key/value pair per MSP msg

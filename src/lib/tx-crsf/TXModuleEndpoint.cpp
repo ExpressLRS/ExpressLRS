@@ -16,6 +16,7 @@ RTC_DATA_ATTR int rtcModelId = 0;
 #endif
 
 void ModelUpdateReq();
+void sendTimeToBackpack(const uint8_t *timeData);
 
 void TXModuleEndpoint::begin()
 {
@@ -82,6 +83,13 @@ void TXModuleEndpoint::handleMessage(const crsf_header_t *message)
             else if (extMessage->payload[0] == 0x2E)
             {
                 supressCriticalErrors();
+            }
+            else if (extMessage->payload[0] == 0x3C
+                && extMessage->frame_size >= 11) // type + dest + orig + fieldId + 6 time bytes + crc
+            {
+                // special case for elrs Lua time sync, payload is {year-1900, month 0-11, day, hour, minute, second}
+                sendTimeToBackpack(&extMessage->payload[1]);
+                return;
             }
         }
         parameterUpdateReq(extMessage->orig_addr, packetType, extMessage->payload[0], extMessage->payload + 1);
