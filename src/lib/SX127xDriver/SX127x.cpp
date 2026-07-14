@@ -44,7 +44,7 @@ SX127xDriver::SX127xDriver(): SX12xxDriverCommon()
   strongestReceivingRadio = SX12XX_Radio_1;
 }
 
-bool SX127xDriver::Begin(uint32_t minimumFrequency, uint32_t maximumFrequency)
+bool SX127xDriver::Begin()
 {
   hal.init();
   hal.IsrCallback_1 = &SX127xDriver::IsrCallback_1;

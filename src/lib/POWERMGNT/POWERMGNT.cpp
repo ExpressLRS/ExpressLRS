@@ -247,7 +247,7 @@ void POWERMGNT::setPower(PowerLevels_e Power)
     CurrentPower = Power;
 
     // When using SubHGz with CE, limit to a max of 25mW.
-    #if defined(Regulatory_Domain_EU_CE_2400) && defined(RADIO_LR1121)
+    #if defined(Regulatory_Domain_EU_CE_2400) && (defined(RADIO_LR1121) || defined(RADIO_LR2021))
     if (Power > PWR_25mW && isUsingPrimaryFreqBand())
     {
         Power = (MinPower > PWR_25mW) ? getMinPower() : PWR_25mW;
@@ -273,7 +273,7 @@ void POWERMGNT::setPower(PowerLevels_e Power)
         Radio.SetOutputPower(CurrentSX1280Power);
     }
 
-#if defined(RADIO_LR1121)
+#if defined(RADIO_LR1121) || defined(RADIO_LR2021)
     if (POWER_OUTPUT_VALUES_DUAL != nullptr)
     {
         Radio.SetOutputPower(SAFE_GET_POWER_VALUE(POWER_OUTPUT_VALUES_DUAL, powerIdx), false); // Set the high frequency power setting.

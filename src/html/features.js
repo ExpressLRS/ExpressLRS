@@ -12,14 +12,19 @@ const ENV = (typeof import.meta !== 'undefined' && import.meta && import.meta.en
   ? import.meta.env
   : (typeof process !== 'undefined' && process.env ? process.env : {})
 
-export const FEATURES = {
-  IS_TX: toBool(ENV.VITE_FEATURE_IS_TX, false),
-  IS_8285: toBool(ENV.VITE_FEATURE_IS_8285, false),
-  HAS_SX128X: toBool(ENV.VITE_FEATURE_HAS_SX128X, false),
-  HAS_SX127X: toBool(ENV.VITE_FEATURE_HAS_SX127X, false),
-  HAS_LR1121: toBool(ENV.VITE_FEATURE_HAS_LR1121, false),
-  // "derived" flags below, also check feature-blocks-plugins.js
-  HAS_SUBGHZ: toBool(ENV.VITE_FEATURE_HAS_LR1121, false) || toBool(ENV.VITE_FEATURE_HAS_SX127X, false),
+export function deriveFeatures(env = ENV) {
+  return {
+    IS_TX: toBool(env.VITE_FEATURE_IS_TX, false),
+    IS_8285: toBool(env.VITE_FEATURE_IS_8285, false),
+    HAS_SX128X: toBool(env.VITE_FEATURE_HAS_SX128X, false),
+    HAS_SX127X: toBool(env.VITE_FEATURE_HAS_SX127X, false),
+    HAS_LR1121: toBool(env.VITE_FEATURE_HAS_LR1121, false),
+    HAS_LR2021: toBool(env.VITE_FEATURE_HAS_LR2021, false),
+    HAS_SUBGHZ: toBool(env.VITE_FEATURE_HAS_LR1121, false) || toBool(env.VITE_FEATURE_HAS_LR2021, false) || toBool(env.VITE_FEATURE_HAS_SX127X, false),
+    HAS_DUAL_BAND: toBool(env.VITE_FEATURE_HAS_LR1121, false) || toBool(env.VITE_FEATURE_HAS_LR2021, false),
+  }
 }
+
+export const FEATURES = deriveFeatures(ENV)
 
 export default FEATURES
