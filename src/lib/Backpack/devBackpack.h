@@ -35,4 +35,14 @@ void sendCRSFTelemetryToBackpack(const uint8_t *data);
  */
 void sendMAVLinkTelemetryToBackpack(const uint8_t *data);
 
+/**
+ * @brief send the handset date/time to the backpack to set its RTC.
+ *
+ * The time is wrapped in an MSP packet of type `MSP_ELRS_BACKPACK_SET_RTC`
+ * and forwarded to the backpack.
+ *
+ * @param timeData 6 bytes: year-1900, month 0-11, day, hour, minute, second.
+ */
+void sendTimeToBackpack(const uint8_t *timeData);
+
 extern device_t Backpack_device;
