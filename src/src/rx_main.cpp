@@ -1,4 +1,5 @@
 #include "CRSFRouter.h"
+#include "CRSFGpsTime.h"
 #include "LowPassFilter.h"
 #include "rxtx_common.h"
 
@@ -2131,6 +2132,11 @@ void loop()
     uint8_t nextPlayloadSize = 0;
     if (!DataDlSender.IsActive() && otaConnector.GetNextPayload(&nextPlayloadSize, DataDlBuffer))
     {
+        if (DataDlBuffer[CRSF_TELEMETRY_TYPE_INDEX] == CRSF_FRAMETYPE_GPS_TIME && otaConnector.GetGpsTimeEnqueuedMs() != 0)
+        {
+            crsfGpsTimeAdvanceMs(DataDlBuffer, (uint16_t)(millis() - otaConnector.GetGpsTimeEnqueuedMs()));
+            crsfRecalcCrc(DataDlBuffer);
+        }
         DataDlSender.SetDataToTransmit(DataDlBuffer, nextPlayloadSize);
     }
 
