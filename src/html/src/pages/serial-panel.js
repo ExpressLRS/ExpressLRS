@@ -107,38 +107,38 @@ class SerialPanel extends LitElement {
                         <label for="enable-msp-osd">Enable MSP DisplayPort OSD</label>
                     </div>
                     ${this.enableMspOsd ? html`
-                    <div class="mui-checkbox">
-                        <input id="enable-osd-rssi" type='checkbox'
-                                ?checked="${this.enableOsdRssi}"
-                                @change="${(e) => {this.enableOsdRssi = e.target.checked}}"/>
-                        <label for="enable-osd-rssi">Show RSSI dBm on OSD</label>
-                    </div>
-                    <div class="mui-checkbox">
-                        <input id="enable-osd-lq" type='checkbox'
-                                ?checked="${this.enableOsdLq}"
-                                @change="${(e) => {this.enableOsdLq = e.target.checked}}"/>
-                        <label for="enable-osd-lq">Show Link Quality (LQ) on OSD</label>
-                    </div>
-                    <div id="channel-monitor-config">
-                        <div>RC Channel Monitor</div>
-                        Set 0 to disable, or greater than 0 to specify how many channels to monitor on OSD:<br/>
-                        <div class="mui-textfield">
-                            <input id="osd-channel-monitor" min="0" max="16" type='number'
-                                   @input=${(e) => this.osdChannelMonitor = isNaN(parseInt(e.target.value)) ? 0 : parseInt(e.target.value)}
-                                   .value="${this.osdChannelMonitor}"
-                                   @keypress="${_uintInput}"/>
-                            <label for="osd-channel-monitor">Channels to Monitor (0 = Disabled)</label>
-                        </div>
-                        ${this.osdChannelMonitor > 0 ? html`
                         <div class="mui-checkbox">
-                            <input id="osd-channel-use-percent" type='checkbox'
-                                    ?checked="${this.osdChannelUsePercent}"
-                                    @change="${(e) => {this.osdChannelUsePercent = e.target.checked}}"/>
-                            <label for="osd-channel-use-percent">Display channel values as percentage (-100% to 100%)</label>
+                            <input id="enable-osd-rssi" type='checkbox'
+                                    ?checked="${this.enableOsdRssi}"
+                                    @change="${(e) => {this.enableOsdRssi = e.target.checked}}"/>
+                            <label for="enable-osd-rssi">Show RSSI dBm on OSD</label>
+                        </div>
+                        <div class="mui-checkbox">
+                            <input id="enable-osd-lq" type='checkbox'
+                                    ?checked="${this.enableOsdLq}"
+                                    @change="${(e) => {this.enableOsdLq = e.target.checked}}"/>
+                            <label for="enable-osd-lq">Show Link Quality (LQ) on OSD</label>
+                        </div>
+                        <div id="channel-monitor-config">
+                            <div>RC Channel Monitor</div>
+                            Set 0 to disable, or greater than 0 to specify how many channels to monitor on OSD:<br/>
+                            <div class="mui-textfield">
+                                <input id="osd-channel-monitor" min="0" max="16" type='number'
+                                    @input=${(e) => {const v = parseInt(e.target.value); this.osdChannelMonitor = isNaN(v) ? 0 : v > 16 ? 16 : v;}}
+                                    .value="${this.osdChannelMonitor}"
+                                    @keypress="${_uintInput}"/>
+                                <label for="osd-channel-monitor">Channels to Monitor (0 = Disabled)</label>
+                            </div>
+                            ${this.osdChannelMonitor > 0 ? html`
+                                <div class="mui-checkbox">
+                                    <input id="osd-channel-use-percent" type='checkbox'
+                                            ?checked="${this.osdChannelUsePercent}"
+                                            @change="${(e) => {this.osdChannelUsePercent = e.target.checked}}"/>
+                                    <label for="osd-channel-use-percent">Display channel values as percentage (-100% to 100%)</label>
+                                </div>
+                            ` : ''}
                         </div>
                         ` : ''}
-                    </div>
-                    ` : ''}
                     ` : ''}
                     <button class="mui-btn mui-btn--small mui-btn--primary"
                             ?disabled="${!this.checkChanged()}"
