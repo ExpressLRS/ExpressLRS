@@ -83,6 +83,18 @@ void saveOptions(Stream &stream, bool customised)
     doc["rcvr-uart-baud"] = firmwareOptions.uart_baud;
     doc["lock-on-first-connection"] = firmwareOptions.lock_on_first_connection;
     doc["dji-permanently-armed"] = firmwareOptions.dji_permanently_armed;
+    doc["enable-msp-osd"] = firmwareOptions.enable_msp_osd;
+    doc["enable-osd-rssi"] = firmwareOptions.enable_osd_rssi;
+    doc["enable-osd-lq"] = firmwareOptions.enable_osd_lq;
+    doc["osd-channel-monitor"] = firmwareOptions.osd_channel_monitor;
+    doc["osd-channel-use-percent"] = firmwareOptions.osd_channel_use_percent;
+    doc["osd-rssi-row"] = firmwareOptions.osd_rssi_row;
+    doc["osd-rssi-col"] = firmwareOptions.osd_rssi_col;
+    doc["osd-lq-row"] = firmwareOptions.osd_lq_row;
+    doc["osd-lq-col"] = firmwareOptions.osd_lq_col;
+    doc["osd-channel-row"] = firmwareOptions.osd_channel_row;
+    doc["osd-channel-col"] = firmwareOptions.osd_channel_col;
+
     #endif
     doc["is-airport"] = firmwareOptions.is_airport;
     doc["domain"] = firmwareOptions.domain;
@@ -199,6 +211,18 @@ static void options_LoadFromFlashOrFile(EspFlashStream &strmFlash)
     #endif
     firmwareOptions.lock_on_first_connection = doc["lock-on-first-connection"] | true;
     firmwareOptions.dji_permanently_armed = doc["dji-permanently-armed"] | false;
+    firmwareOptions.enable_msp_osd = doc["enable-msp-osd"] | false;
+    firmwareOptions.enable_osd_rssi = doc["enable-osd-rssi"] | false;
+    firmwareOptions.enable_osd_lq = doc["enable-osd-lq"] | false;
+    firmwareOptions.osd_channel_monitor = doc["osd-channel-monitor"] | 0;
+    firmwareOptions.osd_channel_use_percent = doc["osd-channel-use-percent"] | false;
+    firmwareOptions.osd_rssi_row = doc["osd-rssi-row"] | 1;
+    firmwareOptions.osd_rssi_col = doc["osd-rssi-col"] | 1;
+    firmwareOptions.osd_lq_row = doc["osd-lq-row"] | 2;
+    firmwareOptions.osd_lq_col = doc["osd-lq-col"] | 1;
+    firmwareOptions.osd_channel_row = doc["osd-channel-row"] | 5;
+    firmwareOptions.osd_channel_col = doc["osd-channel-col"] | 1;
+
     #endif
     firmwareOptions.domain = doc["domain"] | 0;
     firmwareOptions.flash_discriminator = doc["flash-discriminator"] | 0U;
