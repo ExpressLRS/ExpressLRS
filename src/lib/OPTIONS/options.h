@@ -41,6 +41,12 @@ typedef struct _options {
     bool        enable_osd_lq:1;
     uint8_t     osd_channel_monitor;
     bool        osd_channel_use_percent:1;
+    uint8_t     osd_rssi_row;
+    uint8_t     osd_rssi_col;
+    uint8_t     osd_lq_row;
+    uint8_t     osd_lq_col;
+    uint8_t     osd_channel_row;
+    uint8_t     osd_channel_col;
 #endif
 #if defined(TARGET_TX) || defined(UNIT_TEST)
     uint32_t    tlm_report_interval;

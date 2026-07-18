@@ -97,7 +97,7 @@ void SerialDisplayport::sendMspDisplayPort(uint32_t *channelData)
     {
         int32_t rssiDBM = linkStats.active_antenna == 0 ? -linkStats.uplink_RSSI_1 : -linkStats.uplink_RSSI_2;
         snprintf(buf, sizeof(buf), "\x01 %d", rssiDBM);
-        sendDisplayPortString(1, 1, buf);
+        sendDisplayPortString(firmwareOptions.osd_rssi_row, firmwareOptions.osd_rssi_col, buf);
     }
 
     // Draw OSD ELRS Link Quality
@@ -106,7 +106,7 @@ void SerialDisplayport::sendMspDisplayPort(uint32_t *channelData)
         uint8_t rfMode = linkStats.rf_Mode;
         uint8_t linkQuality = linkStats.uplink_Link_quality;
         snprintf(buf, sizeof(buf), "\x7B %d:%d", rfMode, linkQuality);
-        sendDisplayPortString(2, 1, buf);
+        sendDisplayPortString(firmwareOptions.osd_lq_row, firmwareOptions.osd_lq_col, buf);
     }
 
     // Channel Monitor
@@ -121,7 +121,7 @@ void SerialDisplayport::sendMspDisplayPort(uint32_t *channelData)
             }
             
             snprintf(buf, sizeof(buf), "CH%d:%d", i+1, ch);
-            sendDisplayPortString(5+i, 1, buf);
+            sendDisplayPortString(firmwareOptions.osd_channel_row+i, firmwareOptions.osd_channel_col, buf);
         }
     }
     
