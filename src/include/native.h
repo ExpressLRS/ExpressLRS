@@ -41,6 +41,19 @@ public:
     virtual int peek() = 0;
     virtual void flush() = 0;
 
+    size_t readBytes(uint8_t *buffer, size_t length)
+    {
+        size_t count = 0;
+        while (count < length && available() > 0)
+        {
+            const int value = read();
+            if (value < 0)
+                break;
+            buffer[count++] = static_cast<uint8_t>(value);
+        }
+        return count;
+    }
+
     // Print methods
     virtual size_t write(uint8_t c) = 0;
     virtual size_t write(const uint8_t *s, size_t l) = 0;

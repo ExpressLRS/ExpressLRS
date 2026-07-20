@@ -47,7 +47,7 @@ ExpressLRS has the following features:
 - Oled & TFT Displays
 - 2.4 GHz, 900 MHz, and Dual-Band RC Link
 - SMD Antenna - allows for easier installation into micros
-- Supported receiver protocols: CRSF, SBUS, SUMD, HoTT Telemetry, MAVLink, and PWM
+- Supported receiver protocols: CRSF, SBUS, SUMD, HoTT Telemetry, Scorpion Telemetry, MAVLink, and PWM
 - VTX and VRX Frequency adjustments from the Lua, including SmartAudio and Tramp support
 - Bind Phrases - no need for button binding
 

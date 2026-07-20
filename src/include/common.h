@@ -216,6 +216,7 @@ enum eServoOutputFailsafeMode : uint8_t
 
 enum eSerialProtocol : uint8_t
 {
+    // Values are persisted in rx_config_t; append new protocols only.
     PROTOCOL_CRSF,
     PROTOCOL_INVERTED_CRSF,
     PROTOCOL_SBUS,
@@ -225,12 +226,14 @@ enum eSerialProtocol : uint8_t
     PROTOCOL_HOTT_TLM,
     PROTOCOL_MAVLINK,
     PROTOCOL_MSP_DISPLAYPORT,
-    PROTOCOL_GPS
+    PROTOCOL_GPS,
+    PROTOCOL_SCORPION_TLM
 };
 
 #if defined(PLATFORM_ESP32)
 enum eSerial1Protocol : uint8_t
 {
+    // Values are persisted in rx_config_t; append new protocols only.
     PROTOCOL_SERIAL1_OFF,
     PROTOCOL_SERIAL1_CRSF,
     PROTOCOL_SERIAL1_INVERTED_CRSF,
@@ -242,7 +245,8 @@ enum eSerial1Protocol : uint8_t
     PROTOCOL_SERIAL1_TRAMP,
     PROTOCOL_SERIAL1_SMARTAUDIO,
     PROTOCOL_SERIAL1_MSP_DISPLAYPORT,
-    PROTOCOL_SERIAL1_GPS
+    PROTOCOL_SERIAL1_GPS,
+    PROTOCOL_SERIAL1_SCORPION_TLM
 };
 #endif
 
