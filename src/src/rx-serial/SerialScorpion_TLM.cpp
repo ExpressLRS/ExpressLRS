@@ -50,26 +50,10 @@ constexpr uint8_t SLOW_TELEMETRY_INTERVAL = 5;
 constexpr uint16_t CRC_POLYNOMIAL = 0x8408;
 }
 
-#if defined(TARGET_RX)
 SerialScorpion_TLM::SerialScorpion_TLM(Stream &outputPort, Stream &inputPort)
-    : SerialIO(&outputPort, &inputPort),
-      router(crsfRouter),
-      batterySensorDetected(crsfBatterySensorDetected),
-      timeProvider(millis)
+        : SerialIO(&outputPort, &inputPort)
 {
 }
-#endif
-
-#if defined(UNIT_TEST)
-SerialScorpion_TLM::SerialScorpion_TLM(Stream &outputPort, Stream &inputPort, CRSFRouter &router,
-    bool &batterySensorDetected, TimeProvider timeProvider)
-    : SerialIO(&outputPort, &inputPort),
-      router(router),
-      batterySensorDetected(batterySensorDetected),
-      timeProvider(timeProvider)
-{
-}
-#endif
 
 uint32_t SerialScorpion_TLM::sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t *channelData)
 {
@@ -82,8 +66,8 @@ uint32_t SerialScorpion_TLM::sendRCFrame(bool frameAvailable, bool frameMissed, 
 void SerialScorpion_TLM::sendQueuedData(uint32_t maxBytesToSend)
 {
     (void)maxBytesToSend;
-    const uint32_t now = timeProvider();
-    if (framePosition != 0 && now - lastReceivedByteMs >= PARTIAL_FRAME_TIMEOUT_MS)
+    const uint32_t now = millis();
+    if (framePosition != 0 && partialFrameTimedOut(now, lastReceivedByteMs))
     {
         resetParser();
     }
@@ -131,10 +115,10 @@ void SerialScorpion_TLM::resynchronizeParser()
 
 void SerialScorpion_TLM::processByte(uint8_t value)
 {
-    const uint32_t now = timeProvider();
+    const uint32_t now = millis();
 
     // Discard an incomplete frame after a gap in the serial stream.
-    if (framePosition != 0 && now - lastReceivedByteMs >= PARTIAL_FRAME_TIMEOUT_MS)
+    if (framePosition != 0 && partialFrameTimedOut(now, lastReceivedByteMs))
     {
         resetParser();
     }
@@ -168,7 +152,6 @@ void SerialScorpion_TLM::processByte(uint8_t value)
     if (validateFrame())
     {
         decodeFrame();
-        batterySensorDetected = true;
         scheduleTelemetry();
         resetParser();
     }
@@ -234,6 +217,8 @@ void SerialScorpion_TLM::scheduleTelemetry()
 
 void SerialScorpion_TLM::sendCRSFbattery()
 {
+    crsfBatterySensorDetected = true;
+
     // Pack voltage, current and consumed capacity share the standard CRSF battery sensor.
     CRSF_MK_FRAME_T(crsf_sensor_battery_t) crsfBattery = {0};
     crsfBattery.p.voltage = htobe16(decoded.voltageDeciVolts);
@@ -241,9 +226,9 @@ void SerialScorpion_TLM::sendCRSFbattery()
     crsfBattery.p.capacity = htobe24(decoded.consumedMah);
     crsfBattery.p.remaining = 0;
 
-    router.SetHeaderAndCrc(&crsfBattery.h, CRSF_FRAMETYPE_BATTERY_SENSOR,
+    crsfRouter.SetHeaderAndCrc(&crsfBattery.h, CRSF_FRAMETYPE_BATTERY_SENSOR,
         CRSF_FRAME_SIZE(sizeof(crsf_sensor_battery_t)));
-    router.deliverMessageTo(CRSF_ADDRESS_RADIO_TRANSMITTER, &crsfBattery.h);
+    crsfRouter.deliverMessageTo(CRSF_ADDRESS_RADIO_TRANSMITTER, &crsfBattery.h);
 }
 
 void SerialScorpion_TLM::sendCRSFrpm()
@@ -253,8 +238,8 @@ void SerialScorpion_TLM::sendCRSFrpm()
     crsfRpm.p.rpm0 = htobe24(decoded.rpm);
 
     constexpr uint8_t payloadSize = SIZE_8BIT + SIZE_24BIT;
-    router.SetHeaderAndCrc(&crsfRpm.h, CRSF_FRAMETYPE_RPM, CRSF_FRAME_SIZE(payloadSize));
-    router.deliverMessageTo(CRSF_ADDRESS_RADIO_TRANSMITTER, &crsfRpm.h);
+    crsfRouter.SetHeaderAndCrc(&crsfRpm.h, CRSF_FRAMETYPE_RPM, CRSF_FRAME_SIZE(payloadSize));
+    crsfRouter.deliverMessageTo(CRSF_ADDRESS_RADIO_TRANSMITTER, &crsfRpm.h);
 }
 
 void SerialScorpion_TLM::sendCRSFtemp()
@@ -264,8 +249,8 @@ void SerialScorpion_TLM::sendCRSFtemp()
     crsfTemperature.p.temperature[0] = htobe16(decoded.temperatureDeciCelsius);
 
     constexpr uint8_t payloadSize = SIZE_8BIT + SIZE_16BIT;
-    router.SetHeaderAndCrc(&crsfTemperature.h, CRSF_FRAMETYPE_TEMP, CRSF_FRAME_SIZE(payloadSize));
-    router.deliverMessageTo(CRSF_ADDRESS_RADIO_TRANSMITTER, &crsfTemperature.h);
+    crsfRouter.SetHeaderAndCrc(&crsfTemperature.h, CRSF_FRAMETYPE_TEMP, CRSF_FRAME_SIZE(payloadSize));
+    crsfRouter.deliverMessageTo(CRSF_ADDRESS_RADIO_TRANSMITTER, &crsfTemperature.h);
 }
 
 void SerialScorpion_TLM::sendCRSFbecVoltage()
@@ -276,8 +261,8 @@ void SerialScorpion_TLM::sendCRSFbecVoltage()
     crsfBecVoltage.p.cell[0] = htobe16(decoded.becMillivolts);
 
     constexpr uint8_t payloadSize = SIZE_8BIT + SIZE_16BIT;
-    router.SetHeaderAndCrc(&crsfBecVoltage.h, CRSF_FRAMETYPE_CELLS, CRSF_FRAME_SIZE(payloadSize));
-    router.deliverMessageTo(CRSF_ADDRESS_RADIO_TRANSMITTER, &crsfBecVoltage.h);
+    crsfRouter.SetHeaderAndCrc(&crsfBecVoltage.h, CRSF_FRAMETYPE_CELLS, CRSF_FRAME_SIZE(payloadSize));
+    crsfRouter.deliverMessageTo(CRSF_ADDRESS_RADIO_TRANSMITTER, &crsfBecVoltage.h);
 }
 
 uint16_t SerialScorpion_TLM::readU16LE(const uint8_t *data)
@@ -313,6 +298,11 @@ uint16_t SerialScorpion_TLM::calculateCrc(const uint8_t *data, size_t length)
     }
 
     return crc;
+}
+
+bool SerialScorpion_TLM::partialFrameTimedOut(uint32_t now, uint32_t lastReceived)
+{
+    return static_cast<uint32_t>(now - lastReceived) >= PARTIAL_FRAME_TIMEOUT_MS;
 }
 
 #endif

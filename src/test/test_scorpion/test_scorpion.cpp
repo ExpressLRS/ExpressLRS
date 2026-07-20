@@ -9,6 +9,9 @@
 #include "rx-serial/SerialScorpion_TLM.h"
 #include "common.h"
 
+CRSFRouter crsfRouter;
+bool crsfBatterySensorDetected = false;
+
 // Receiver serial implementations live in the application source tree, which
 // PlatformIO does not link into individual native test programs by default.
 using std::min;
@@ -20,13 +23,6 @@ static_assert(PROTOCOL_SCORPION_TLM < 16, "Scorpion protocol does not fit persis
 
 namespace
 {
-uint32_t fakeNowMs = 100;
-
-unsigned long fakeMillis()
-{
-    return fakeNowMs;
-}
-
 class MockStream : public Stream
 {
 public:
@@ -121,16 +117,16 @@ ScorpionFrame embeddedSyncFrame()
 struct Fixture
 {
     Fixture()
-        : serial(output, input, router, batterySensorDetected, fakeMillis)
+        : serial(output, input)
     {
-        router.addConnector(&connector);
+        crsfRouter.addConnector(&connector);
     }
+
+    ~Fixture() { crsfRouter.removeConnector(&connector); }
 
     MockStream output;
     MockStream input;
-    CRSFRouter router;
     MockConnector connector;
-    bool batterySensorDetected = false;
     SerialScorpion_TLM serial;
 };
 }
@@ -141,6 +137,12 @@ public:
     static void process(SerialScorpion_TLM &serial, const uint8_t *data, size_t length)
     {
         serial.processBytes(const_cast<uint8_t *>(data), static_cast<uint16_t>(length));
+    }
+
+    static void setLastReceivedByteMs(SerialScorpion_TLM &serial, uint32_t value) { serial.lastReceivedByteMs = value; }
+    static bool partialFrameTimedOut(uint32_t now, uint32_t lastReceived)
+    {
+        return SerialScorpion_TLM::partialFrameTimedOut(now, lastReceived);
     }
 
     static uint8_t framePosition(const SerialScorpion_TLM &serial) { return serial.framePosition; }
@@ -175,7 +177,7 @@ void test_valid_frame_decodes_all_fields()
     TEST_ASSERT_EQUAL_UINT16(8200, SerialScorpionTlmTestAccess::becMillivolts(fixture.serial));
     TEST_ASSERT_EQUAL_UINT32(66990, SerialScorpionTlmTestAccess::rpm(fixture.serial));
     TEST_ASSERT_EQUAL_HEX8(0xA5, SerialScorpionTlmTestAccess::status(fixture.serial));
-    TEST_ASSERT_TRUE(fixture.batterySensorDetected);
+    TEST_ASSERT_TRUE(crsfBatterySensorDetected);
     TEST_ASSERT_EQUAL_UINT8(0, SerialScorpionTlmTestAccess::framePosition(fixture.serial));
 }
 
@@ -188,7 +190,7 @@ void test_incorrect_crc_is_rejected()
     SerialScorpionTlmTestAccess::process(fixture.serial, frame.data(), frame.size());
 
     TEST_ASSERT_EQUAL_UINT32(0, SerialScorpionTlmTestAccess::validFrameCount(fixture.serial));
-    TEST_ASSERT_FALSE(fixture.batterySensorDetected);
+    TEST_ASSERT_FALSE(crsfBatterySensorDetected);
     TEST_ASSERT_TRUE(fixture.connector.frames.empty());
 }
 
@@ -250,11 +252,12 @@ void test_partial_frame_timeout_boundary()
     SerialScorpionTlmTestAccess::process(fixture.serial, frame.data(), 10);
     TEST_ASSERT_EQUAL_UINT8(10, SerialScorpionTlmTestAccess::framePosition(fixture.serial));
 
-    fakeNowMs += 49;
+    SerialScorpionTlmTestAccess::setLastReceivedByteMs(fixture.serial, static_cast<uint32_t>(millis()));
     fixture.serial.sendQueuedData(0);
     TEST_ASSERT_EQUAL_UINT8(10, SerialScorpionTlmTestAccess::framePosition(fixture.serial));
 
-    fakeNowMs += 1;
+    SerialScorpionTlmTestAccess::setLastReceivedByteMs(
+        fixture.serial, static_cast<uint32_t>(millis()) - 50U);
     fixture.serial.sendQueuedData(0);
     TEST_ASSERT_EQUAL_UINT8(0, SerialScorpionTlmTestAccess::framePosition(fixture.serial));
 
@@ -306,19 +309,8 @@ void test_serialio_continuous_noise_is_bounded()
 
 void test_partial_frame_timeout_handles_millis_wrap()
 {
-    Fixture fixture;
-    const ScorpionFrame frame = goldenFrame();
-
-    fakeNowMs = UINT32_MAX - 20;
-    SerialScorpionTlmTestAccess::process(fixture.serial, frame.data(), 10);
-
-    fakeNowMs = 28;
-    fixture.serial.sendQueuedData(0);
-    TEST_ASSERT_EQUAL_UINT8(10, SerialScorpionTlmTestAccess::framePosition(fixture.serial));
-
-    fakeNowMs = 29;
-    fixture.serial.sendQueuedData(0);
-    TEST_ASSERT_EQUAL_UINT8(0, SerialScorpionTlmTestAccess::framePosition(fixture.serial));
+    TEST_ASSERT_FALSE(SerialScorpionTlmTestAccess::partialFrameTimedOut(28, UINT32_MAX - 20));
+    TEST_ASSERT_TRUE(SerialScorpionTlmTestAccess::partialFrameTimedOut(29, UINT32_MAX - 20));
 }
 
 void test_corrupt_frame_followed_by_valid_frame_resynchronizes()
@@ -427,7 +419,7 @@ void test_driver_does_not_write_to_esc()
 
 void setUp()
 {
-    fakeNowMs = 100;
+    crsfBatterySensorDetected = false;
 }
 
 void tearDown()

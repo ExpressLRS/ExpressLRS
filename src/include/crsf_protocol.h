@@ -533,15 +533,6 @@ static inline uint32_t htobe32(uint32_t val)
 #endif
 }
 
-static inline uint32_t htobe24(uint32_t val)
-{
-#if (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
-    return val;
-#else
-    return __builtin_bswap32(val) >> 8;
-#endif
-}
-
 static inline uint32_t be32toh(uint32_t val)
 {
 #if (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
@@ -551,3 +542,13 @@ static inline uint32_t be32toh(uint32_t val)
 #endif
 }
 #endif
+
+// Unlike the standard 16- and 32-bit conversions, libc provides no 24-bit equivalent.
+static inline uint32_t htobe24(uint32_t val)
+{
+#if (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
+    return val;
+#else
+    return __builtin_bswap32(val) >> 8;
+#endif
+}

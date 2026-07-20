@@ -7,7 +7,6 @@
 
 #if defined(TARGET_RX) || defined(UNIT_TEST)
 
-class CRSFRouter;
 class SerialScorpionTlmTestAccess;
 
 // Receive-only bridge for unsolicited Scorpion Tribunus telemetry.
@@ -15,15 +14,7 @@ class SerialScorpionTlmTestAccess;
 class SerialScorpion_TLM final : public SerialIO
 {
 public:
-    using TimeProvider = unsigned long (*)();
-
-#if defined(TARGET_RX)
     SerialScorpion_TLM(Stream &outputPort, Stream &inputPort);
-#endif
-#if defined(UNIT_TEST)
-    SerialScorpion_TLM(Stream &outputPort, Stream &inputPort, CRSFRouter &router,
-        bool &batterySensorDetected, TimeProvider timeProvider);
-#endif
     ~SerialScorpion_TLM() override = default;
 
     uint32_t sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t *channelData) override;
@@ -73,6 +64,7 @@ private:
     static uint16_t readU16LE(const uint8_t *data);
     static uint32_t readU24LE(const uint8_t *data);
     static uint16_t calculateCrc(const uint8_t *data, size_t length);
+    static bool partialFrameTimedOut(uint32_t now, uint32_t lastReceived);
 
     uint8_t frame[FRAME_LENGTH] = {};
     uint8_t framePosition = 0;
@@ -82,10 +74,6 @@ private:
     bool sendTemperatureNext = true;
 
     DecodedData decoded;
-
-    CRSFRouter &router;
-    bool &batterySensorDetected;
-    TimeProvider timeProvider;
 };
 
 #endif

@@ -108,7 +108,11 @@ inline void delay(int32_t time) {
 }
 
 #define bit(x) (1 << (x))
-inline unsigned long millis() { return 0; }
+inline unsigned long millis() {
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    return static_cast<uint32_t>(tv.tv_sec * (uint64_t)1000 + tv.tv_usec / 1000);
+}
 inline void delayMicroseconds(int delay) { }
 inline char *itoa(int32_t value, char *str, int base) { sprintf(str, "%d", value); return str; }
 inline char *utoa(uint32_t value, char *str, int base) { sprintf(str, "%u", value); return str; }
