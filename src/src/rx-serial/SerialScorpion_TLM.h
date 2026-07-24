@@ -18,7 +18,6 @@ public:
     ~SerialScorpion_TLM() override = default;
 
     uint32_t sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t *channelData) override;
-    void sendQueuedData(uint32_t maxBytesToSend) override;
 
 private:
     friend class SerialScorpionTlmTestAccess;

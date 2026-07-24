@@ -48,6 +48,16 @@ constexpr uint16_t RPM_SCALE = 5;
 
 constexpr uint8_t SLOW_TELEMETRY_INTERVAL = 5;
 constexpr uint16_t CRC_POLYNOMIAL = 0x8408;
+
+uint32_t toBigEndian24(uint32_t value)
+{
+#if (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
+    return value;
+#else
+    return __builtin_bswap32(value) >> 8;
+#endif
+}
+
 }
 
 SerialScorpion_TLM::SerialScorpion_TLM(Stream &outputPort, Stream &inputPort)
@@ -63,18 +73,19 @@ uint32_t SerialScorpion_TLM::sendRCFrame(bool frameAvailable, bool frameMissed, 
     return DURATION_IMMEDIATELY;
 }
 
-void SerialScorpion_TLM::sendQueuedData(uint32_t maxBytesToSend)
+void SerialScorpion_TLM::processBytes(uint8_t *bytes, uint16_t size)
 {
-    (void)maxBytesToSend;
     const uint32_t now = millis();
     if (framePosition != 0 && partialFrameTimedOut(now, lastReceivedByteMs))
     {
         resetParser();
     }
-}
 
-void SerialScorpion_TLM::processBytes(uint8_t *bytes, uint16_t size)
-{
+    if (size != 0)
+    {
+        lastReceivedByteMs = now;
+    }
+
     for (uint16_t i = 0; i < size; ++i)
     {
         processByte(bytes[i]);
@@ -115,14 +126,6 @@ void SerialScorpion_TLM::resynchronizeParser()
 
 void SerialScorpion_TLM::processByte(uint8_t value)
 {
-    const uint32_t now = millis();
-
-    // Discard an incomplete frame after a gap in the serial stream.
-    if (framePosition != 0 && partialFrameTimedOut(now, lastReceivedByteMs))
-    {
-        resetParser();
-    }
-
     if (framePosition == 0)
     {
         if (value != PACKET_TYPE)
@@ -131,12 +134,10 @@ void SerialScorpion_TLM::processByte(uint8_t value)
         }
 
         frame[framePosition++] = value;
-        lastReceivedByteMs = now;
         return;
     }
 
     frame[framePosition++] = value;
-    lastReceivedByteMs = now;
 
     if (framePosition == LENGTH_OFFSET + 1 && frame[LENGTH_OFFSET] != FRAME_LENGTH)
     {
@@ -220,10 +221,10 @@ void SerialScorpion_TLM::sendCRSFbattery()
     crsfBatterySensorDetected = true;
 
     // Pack voltage, current and consumed capacity share the standard CRSF battery sensor.
-    CRSF_MK_FRAME_T(crsf_sensor_battery_t) crsfBattery = {0};
+    CRSF_MK_FRAME_T(crsf_sensor_battery_t) crsfBattery {};
     crsfBattery.p.voltage = htobe16(decoded.voltageDeciVolts);
     crsfBattery.p.current = htobe16(decoded.currentDeciAmps);
-    crsfBattery.p.capacity = htobe24(decoded.consumedMah);
+    crsfBattery.p.capacity = toBigEndian24(decoded.consumedMah);
     crsfBattery.p.remaining = 0;
 
     crsfRouter.SetHeaderAndCrc(&crsfBattery.h, CRSF_FRAMETYPE_BATTERY_SENSOR,
@@ -233,9 +234,9 @@ void SerialScorpion_TLM::sendCRSFbattery()
 
 void SerialScorpion_TLM::sendCRSFrpm()
 {
-    CRSF_MK_FRAME_T(crsf_sensor_rpm_t) crsfRpm = {0};
+    CRSF_MK_FRAME_T(crsf_sensor_rpm_t) crsfRpm {};
     crsfRpm.p.source_id = RPM_SOURCE_ID;
-    crsfRpm.p.rpm0 = htobe24(decoded.rpm);
+    crsfRpm.p.rpm0 = toBigEndian24(decoded.rpm);
 
     constexpr uint8_t payloadSize = SIZE_8BIT + SIZE_24BIT;
     crsfRouter.SetHeaderAndCrc(&crsfRpm.h, CRSF_FRAMETYPE_RPM, CRSF_FRAME_SIZE(payloadSize));
@@ -244,7 +245,7 @@ void SerialScorpion_TLM::sendCRSFrpm()
 
 void SerialScorpion_TLM::sendCRSFtemp()
 {
-    CRSF_MK_FRAME_T(crsf_sensor_temp_t) crsfTemperature = {0};
+    CRSF_MK_FRAME_T(crsf_sensor_temp_t) crsfTemperature {};
     crsfTemperature.p.source_id = TEMPERATURE_SOURCE_ID;
     crsfTemperature.p.temperature[0] = htobe16(decoded.temperatureDeciCelsius);
 
@@ -256,7 +257,7 @@ void SerialScorpion_TLM::sendCRSFtemp()
 void SerialScorpion_TLM::sendCRSFbecVoltage()
 {
     // Source IDs 128 and above are shown as independent Volt sensors by EdgeTX.
-    CRSF_MK_FRAME_T(crsf_sensor_cells_t) crsfBecVoltage = {0};
+    CRSF_MK_FRAME_T(crsf_sensor_cells_t) crsfBecVoltage {};
     crsfBecVoltage.p.source_id = BEC_VOLTAGE_SOURCE_ID;
     crsfBecVoltage.p.cell[0] = htobe16(decoded.becMillivolts);
 
@@ -280,9 +281,8 @@ uint32_t SerialScorpion_TLM::readU24LE(const uint8_t *data)
 
 uint16_t SerialScorpion_TLM::calculateCrc(const uint8_t *data, size_t length)
 {
-    // Reflected CRC16, polynomial 0x8408, initial value 0. The protocol layout and
-    // CRC parameters were referenced from Rotorflight's GPLv3 Scorpion implementation:
-    // https://github.com/rotorflight/rotorflight-firmware/blob/master/src/main/sensors/esc_sensor.c
+    // Crc2Byte is MSB-first, while Scorpion uses an LSB-first reflected CRC.
+    // Keeping this local avoids input/output bit reversal and shared helper changes.
     uint16_t crc = 0;
 
     while (length-- != 0)

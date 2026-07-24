@@ -253,12 +253,12 @@ void test_partial_frame_timeout_boundary()
     TEST_ASSERT_EQUAL_UINT8(10, SerialScorpionTlmTestAccess::framePosition(fixture.serial));
 
     SerialScorpionTlmTestAccess::setLastReceivedByteMs(fixture.serial, static_cast<uint32_t>(millis()));
-    fixture.serial.sendQueuedData(0);
+    SerialScorpionTlmTestAccess::process(fixture.serial, nullptr, 0);
     TEST_ASSERT_EQUAL_UINT8(10, SerialScorpionTlmTestAccess::framePosition(fixture.serial));
 
     SerialScorpionTlmTestAccess::setLastReceivedByteMs(
         fixture.serial, static_cast<uint32_t>(millis()) - 50U);
-    fixture.serial.sendQueuedData(0);
+    SerialScorpionTlmTestAccess::process(fixture.serial, nullptr, 0);
     TEST_ASSERT_EQUAL_UINT8(0, SerialScorpionTlmTestAccess::framePosition(fixture.serial));
 
     SerialScorpionTlmTestAccess::process(fixture.serial, frame.data(), frame.size());
