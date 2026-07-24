@@ -1100,7 +1100,10 @@ const HARDWARE_SCHEMA = [
                 label: 'Gyro type',
                 type: 'select',
                 options: [
-                    {value: 0, label: 'None'}, {value: 1, label: 'MP6050 (I2C)'}, {value: 2, label: 'LSM6DXX (SPI)'}
+                    {value: 0, label: 'None'},
+                    {value: 1, label: 'MP6050 (I2C)'},
+                    {value: 2, label: 'LSM6DXX (SPI)'},
+                    {value: 3, label: 'SC7U22 (I2C)'}
                 ], desc: 'Type of Gyro connected'
             },
             {
