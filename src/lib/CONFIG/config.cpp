@@ -1406,6 +1406,14 @@ void RxConfig::SetSerial1Protocol(eSerial1Protocol serialProtocol)
         m_modified = EVENT_CONFIG_SERIAL_CHANGE;
     }
 }
+void RxConfig::SetSerial2Protocol(eSerial2Protocol serialProtocol)
+{
+    if (m_config.serial2Protocol != serialProtocol)
+    {
+        m_config.serial2Protocol = serialProtocol;
+        m_modified = EVENT_CONFIG_SERIAL_CHANGE;
+    }
+}
 #endif
 
 void RxConfig::SetTeamraceChannel(uint8_t teamraceChannel)

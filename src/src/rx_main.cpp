@@ -78,7 +78,8 @@ device_affinity_t ui_devices[] = {
 #if defined(PLATFORM_ESP32)
   {&Serial1_device, 1},
   {&SerialUpdate_device, 1},
-#endif
+  {&Serial2_device, 1},
+#endif    
   {&LED_device, 0},
   {&RXLUA_device, 0},
   {&RGB_device, 0},
@@ -124,9 +125,14 @@ uint32_t serialBaud;
     const Stream *serial1_protocol_tx = &(SERIAL1_PROTOCOL_TX);
 
     SerialIO *serial1IO = nullptr;
+    
+    SerialIO *serial2IO = nullptr;
+    #define SERIAL2_PROTOCOL_TX Serial2
+    #define SERIAL2_PROTOCOL_RX Serial2
 #endif
 
 SerialIO *serialIO = nullptr;
+
 
 #define SERIAL_PROTOCOL_RX Serial
 #define SERIAL1_PROTOCOL_RX Serial1
@@ -1490,9 +1496,107 @@ void reconfigureSerial1()
     serial1Shutdown();
     setupSerial1();
 }
+
+static void serial2Shutdown()
+{
+    if(serial2IO != nullptr)
+    {
+        Serial2.end();
+        delete serial2IO;
+        serial2IO = nullptr;
+    }
+}
+
+static void setupSerial2()
+{
+    //
+    // init secondary serial and protocol
+    //
+    int8_t serial2RXpin = GPIO_PIN_SERIAL2_RX;
+
+    if (serial2RXpin == UNDEF_PIN)
+    {
+        for (uint8_t ch = 0; ch < GPIO_PIN_PWM_OUTPUTS_COUNT; ch++)
+        {
+            if (config.GetPwmChannel(ch)->val.mode == somSerial2RX)
+                serial2RXpin = GPIO_PIN_PWM_OUTPUTS[ch];
+        }
+    }
+
+    int8_t serial2TXpin = GPIO_PIN_SERIAL2_TX;
+
+    if (serial2TXpin == UNDEF_PIN)
+    {
+        for (uint8_t ch = 0; ch < GPIO_PIN_PWM_OUTPUTS_COUNT; ch++)
+        {
+            if (config.GetPwmChannel(ch)->val.mode == somSerial2TX)
+                serial2TXpin = GPIO_PIN_PWM_OUTPUTS[ch];
+        }
+    }
+
+    if ((serial2TXpin == UNDEF_PIN) || (serial2RXpin == UNDEF_PIN)) 
+    {
+        return;
+    }
+    
+    switch(config.GetSerial2Protocol())
+    {
+        case PROTOCOL_SERIAL2_OFF:
+            break;
+        case PROTOCOL_SERIAL2_CRSF:
+            Serial2.begin(firmwareOptions.uart_baud, SERIAL_8N1, serial2RXpin, serial2TXpin, false);
+            serial2IO = new SerialCRSF(SERIAL2_PROTOCOL_TX, SERIAL2_PROTOCOL_RX);
+            break;
+        case PROTOCOL_SERIAL2_INVERTED_CRSF:
+            Serial2.begin(firmwareOptions.uart_baud, SERIAL_8N1, serial2RXpin, serial2TXpin, true);
+            serial2IO = new SerialCRSF(SERIAL2_PROTOCOL_TX, SERIAL2_PROTOCOL_RX);
+            break;
+        case PROTOCOL_SERIAL2_SBUS:
+        case PROTOCOL_SERIAL2_DJI_RS_PRO:
+            Serial2.begin(100000, SERIAL_8E2, UNDEF_PIN, serial2TXpin, true);
+            serial2IO = new SerialSBUS(SERIAL2_PROTOCOL_TX, SERIAL2_PROTOCOL_RX);
+            break;
+        case PROTOCOL_SERIAL2_INVERTED_SBUS:
+            Serial2.begin(100000, SERIAL_8E2, UNDEF_PIN, serial2TXpin, false);
+            serial2IO = new SerialSBUS(SERIAL2_PROTOCOL_TX, SERIAL2_PROTOCOL_RX);
+            break;
+        case PROTOCOL_SERIAL2_SUMD:
+            Serial2.begin(115200, SERIAL_8N1, UNDEF_PIN, serial2TXpin, false);
+            serial2IO = new SerialSUMD(SERIAL2_PROTOCOL_TX, SERIAL2_PROTOCOL_RX);
+            break;
+        case PROTOCOL_SERIAL2_HOTT_TLM:
+            Serial2.begin(19200, SERIAL_8N2, serial2RXpin, serial2TXpin, false);
+            serial2IO = new SerialHoTT_TLM(SERIAL2_PROTOCOL_TX, SERIAL2_PROTOCOL_RX, serial2TXpin);
+            break;
+        case PROTOCOL_SERIAL2_TRAMP:
+            Serial2.begin(9600, SERIAL_8N1, UNDEF_PIN, serial2TXpin, false);
+            serial2IO = new SerialTramp(SERIAL2_PROTOCOL_TX, SERIAL2_PROTOCOL_RX, serial2TXpin);
+            break;
+        case PROTOCOL_SERIAL2_SMARTAUDIO:
+            Serial2.begin(4800, SERIAL_8N2, UNDEF_PIN, serial2TXpin, false);
+            serial2IO = new SerialSmartAudio(SERIAL2_PROTOCOL_TX, SERIAL2_PROTOCOL_RX, serial2TXpin);
+            break;
+        case PROTOCOL_SERIAL2_MSP_DISPLAYPORT:
+            Serial2.begin(115200, SERIAL_8N1, UNDEF_PIN, serial2TXpin, false);
+            serial2IO = new SerialDisplayport(SERIAL2_PROTOCOL_TX, SERIAL2_PROTOCOL_RX);
+            break;
+        case PROTOCOL_SERIAL2_GPS:
+            Serial2.begin(115200, SERIAL_8N1, serial2RXpin, serial2TXpin, false);
+            serial2IO = new SerialGPS(SERIAL2_PROTOCOL_TX, SERIAL2_PROTOCOL_RX);
+            break;
+    }
+}
+
+void reconfigureSerial2()
+{
+    serial2Shutdown();
+    setupSerial2();
+}
 #else
     void setupSerial1() {};
     void reconfigureSerial1() {};
+    void setupSerial2() {};
+    void reconfigureSerial2() {};
 #endif
 
 static void serialShutdown()
@@ -2030,6 +2134,7 @@ void setup()
         crsfRouter.addConnector(&otaConnector);
         setupSerial();
         setupSerial1();
+        setupSerial2();
 
         devicesRegister(ui_devices, ARRAY_SIZE(ui_devices));
         devicesInit();

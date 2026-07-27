@@ -230,11 +230,11 @@ typedef union {
         uint32_t failsafe:11,    // us output during failsafe +476 (e.g. 1024 here would be 1500us)
                  inputChannel:4, // 0-based input channel
                  inverted:1,     // invert channel output
-                 mode:4,         // Output mode (eServoOutputMode)
+                 mode:5,         // Output mode (eServoOutputMode)
                  stretched:1,    // expand the channel input to 500us - 2500us
                  narrow:1,       // Narrow output mode (half pulse width)
                  failsafeMode:2, // failsafe output mode (eServoOutputFailsafeMode)
-                 unused:8;       // FUTURE: When someone complains "everyone" uses inverted polarity PWM or something :/
+                 unused:7;       // FUTURE: When someone complains "everyone" uses inverted polarity PWM or something :/
     } val;
     uint32_t raw;
 } rx_config_pwm_t;
@@ -244,7 +244,7 @@ typedef struct __attribute__((packed)) {
     uint8_t     uid[UID_LEN];
     uint8_t     unused_padding;
     uint8_t     serial1Protocol:4,  // secondary serial protocol
-                serial1Protocol_unused:4;
+                serial2Protocol:4;  // ternary serial protocol
     uint32_t    flash_discriminator;
     struct __attribute__((packed)) {
         uint16_t    scale;          // FUTURE: Override compiled vbat scale
@@ -297,6 +297,7 @@ public:
     eSerialProtocol GetSerialProtocol() const { return (eSerialProtocol)m_config.serialProtocol; }
 #if defined(PLATFORM_ESP32)
     eSerial1Protocol GetSerial1Protocol() const { return (eSerial1Protocol)m_config.serial1Protocol; }
+    eSerial2Protocol GetSerial2Protocol() const { return (eSerial2Protocol)m_config.serial2Protocol; }
 #endif
     uint8_t GetTeamraceChannel() const { return m_config.teamraceChannel; }
     uint8_t GetTeamracePosition() const { return m_config.teamracePosition; }
@@ -322,7 +323,9 @@ public:
     void SetSerialProtocol(eSerialProtocol serialProtocol);
 #if defined(PLATFORM_ESP32)
     void SetSerial1Protocol(eSerial1Protocol serial1Protocol);
+    void SetSerial2Protocol(eSerial2Protocol serial2Protocol);
 #endif
+    
     void SetTeamraceChannel(uint8_t teamraceChannel);
     void SetTeamracePosition(uint8_t teamracePosition);
     void SetFailsafeMode(eFailsafeMode failsafeMode);
