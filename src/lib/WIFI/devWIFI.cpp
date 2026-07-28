@@ -1236,6 +1236,11 @@ static void startServices()
     addLR1121Handlers(server);
   #endif
 
+  #if defined(TARGET_RX)
+    wifi2tcp.begin();
+    server.addHandler(wifi2tcp.getWSserver());
+  #endif
+
   addCaptivePortalHandlers();
 
   server.onNotFound(WebUpdateHandleNotFound);
@@ -1253,9 +1258,6 @@ static void startServices()
 
   servicesStarted = true;
   DBGLN("HTTPUpdateServer ready! Open http://%s.local in your browser", wifi_hostname);
-  #if defined(TARGET_RX)
-  wifi2tcp.begin();
-  #endif
 }
 
 static void HandleWebUpdate()
