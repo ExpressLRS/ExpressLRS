@@ -185,7 +185,8 @@ static int32_t nmeaDdmToDd(const char *field)
     int32_t degrees = atoi(field) / 100;
 
     // Minutes is always two digits. Find the decimal and look 2 characters before it
-    char *minutes = strchr(field, '.');
+    // (const, because the C++ overload of strchr returns a const char* for a const argument)
+    const char *minutes = strchr(field, '.');
     if (minutes == nullptr)
         return 0;
     int32_t minutesPart = parseDecimalToScaled(minutes - 2, 10000000) / 60;
