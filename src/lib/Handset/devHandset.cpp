@@ -3,6 +3,7 @@
 #ifdef TARGET_TX
 
 #include "CRSFHandset.h"
+#include "SBUSHandset.h"
 #include "POWERMGNT.h"
 #include "devHandset.h"
 
@@ -17,6 +18,19 @@ Handset *handset;
 static bool initialize()
 {
 #if defined(PLATFORM_ESP32)
+    // Check if SBUS mode is enabled via hardware configuration
+    // If GPIO_PIN_RCSIGNAL_RX is set to a different pin than the default CRSF pin,
+    // or if a specific SBUS flag is set, use SBUSHandset
+    int sbusPin = hardware_pin(HARDWARE_serial1_rx);
+    
+    if (sbusPin != -1 && sbusPin != UNDEF_PIN)
+    {
+        DBGLN("SBUS mode enabled on pin %d", sbusPin);
+        handset = new SBUSHandset();
+        return true;
+    }
+    
+    // Auto-detect between CRSF and PPM if using half-duplex pin
     if (GPIO_PIN_RCSIGNAL_RX == GPIO_PIN_RCSIGNAL_TX)
     {
         handset = new AutoDetect();

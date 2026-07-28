@@ -20,20 +20,20 @@ const HARDWARE_SCHEMA = [
 
     /* FEATURE: NOT IS_8285 */
     {
-        title: 'Serial2 Pins', rows: [
+        title: 'Serial2 Pins (SBUS Input)', rows: [
             {
                 id: 'serial1_rx',
                 label: 'RX pin',
                 type: 'uint',
                 icon: 'input',
-                desc: 'Serial2 RX - ESP32 targets only'
+                desc: 'SBUS input pin - ESP32 targets only. Set this pin to enable SBUS handset mode'
             },
             {
                 id: 'serial1_tx',
                 label: 'TX pin',
                 type: 'uint',
                 icon: 'output',
-                desc: 'Serial2 TX - ESP32 targets only'
+                desc: 'Serial2 TX - ESP32 targets only (not used for SBUS)'
             },
         ]
     },
