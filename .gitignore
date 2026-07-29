@@ -1,1 +1,1 @@
-(src/lib/WIFI/devWIFI.cpp)
+Nothing needs to be added to .gitignore since only a JavaScript source file was modified and no build artifacts, dependencies, or temporary files were detected in the changes.

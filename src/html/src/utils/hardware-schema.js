@@ -19,6 +19,7 @@ const HARDWARE_SCHEMA = [
     },
 
     /* FEATURE: NOT IS_8285 */
+    /* FEATURE: HAS_SERIAL1_PINS */
     {
         title: 'SBUS Pins', rows: [
             {
@@ -37,6 +38,7 @@ const HARDWARE_SCHEMA = [
             },
         ]
     },
+    /* /FEATURE: HAS_SERIAL1_PINS */
     /* /FEATURE: NOT IS_8285 */
 
     {
