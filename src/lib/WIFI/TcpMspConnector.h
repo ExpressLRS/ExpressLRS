@@ -31,9 +31,7 @@ public:
     static void handleNewClient(void *arg, AsyncClient *client);
     static void handleDataIn(void *arg, AsyncClient *client, void *data, size_t len);
     static void handleDisconnect(void *arg, AsyncClient *client);
-    static void handleTimeOut(void *arg, AsyncClient *client, uint32_t time);
     static void handleError(void *arg, AsyncClient *client, int8_t error);
-    static constexpr uint32_t clientTimeoutS = 10U;
 
     void initConnection();
     void clientConnect(AsyncClient * client);

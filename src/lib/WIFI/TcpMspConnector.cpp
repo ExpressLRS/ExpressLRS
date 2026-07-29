@@ -47,11 +47,6 @@ void TcpMspConnector::handleDisconnect(void *arg, AsyncClient *client)
     ((TcpMspConnector *)arg)->clientDisconnect(client);
 }
 
-void TcpMspConnector::handleTimeOut(void *arg, AsyncClient *client, uint32_t time)
-{
-    DBGLN("TCP(%x) timeout", client);
-}
-
 void TcpMspConnector::handleError(void *arg, AsyncClient *client, int8_t error)
 {
     DBGLN("TCP(%x) connection error %s", client, client->errorToString(error));
@@ -93,8 +88,6 @@ void TcpMspConnector::clientConnect(AsyncClient *client)
     client->onData(handleDataIn, this);
     client->onError(handleError, this);
     client->onDisconnect(handleDisconnect, this);
-    client->onTimeout(handleTimeOut, this);
-    client->setRxTimeout(clientTimeoutS);
 }
 
 void TcpMspConnector::clientDisconnect(AsyncClient *client)
@@ -144,7 +137,7 @@ void TcpMspConnector::processData(AsyncClient *client, void *data, const size_t 
 
 void TcpMspConnector::forwardMessage(const crsf_header_t *message)
 {
-    if ((message->type != CRSF_FRAMETYPE_MSP_RESP && message->type != CRSF_FRAMETYPE_MSP_REQ))
+    if (message->type != CRSF_FRAMETYPE_MSP_RESP && message->type != CRSF_FRAMETYPE_MSP_REQ)
     {
         return;
     }
