@@ -491,6 +491,12 @@ static void GetConfiguration(AsyncWebServerRequest *request)
     {
         settings["has_serial_pins"] = true;
     }
+    #if defined(PLATFORM_ESP32)
+    if (GPIO_PIN_SERIAL1_RX != UNDEF_PIN && GPIO_PIN_SERIAL1_TX != UNDEF_PIN)
+    {
+        settings["has_serial1_pins"] = true;
+    }
+    #endif
     #endif
     settings["product_name"] = product_name;
     settings["lua_name"] = device_name;
