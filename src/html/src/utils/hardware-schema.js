@@ -20,7 +20,7 @@ const HARDWARE_SCHEMA = [
 
     /* FEATURE: NOT IS_8285 */
     {
-        title: 'Serial2 Pins (SBUS Input)', rows: [
+        title: 'SBUS Pins', rows: [
             {
                 id: 'serial1_rx',
                 label: 'RX pin',
