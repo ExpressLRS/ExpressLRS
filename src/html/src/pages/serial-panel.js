@@ -100,7 +100,7 @@ class SerialPanel extends LitElement {
             <div class="mui-panel info-bg">
                 ${this._canConfigureSerialOnPwm() || elrsState.settings.has_serial_pins ? 
                     html`This is a PWM receiver and none of the pins have been configured as serial IO pins.<br>
-                    To enable serial IO, go to the <a href="#connections">connections</a> menu and configure one or more pins as Serial RX, Serial TX, Serial2 RX, or Serial2 TX.
+                    To enable serial IO, go to the <a href="#connections">connections</a> menu and configure one or more pins as Serial RX, Serial TX, SBUS RX, or SBUS TX.
                     ` : html`This receiver does not have any serial-capable PWM pins available.`
                 }
             </div>

@@ -149,10 +149,10 @@ class ConnectionsPanel extends LitElement {
         else if (!!(features & 4)) str.push(html`<span style="color: #696969; background-color: #fab4a8" class="badge">SCL</span>`)
         else if (!!(features & 8)) str.push(html`<span style="color: #696969; background-color: #fab4a8" class="badge">SDA</span>`)
 
-        // Serial2
-        if ((features & 96) === 96) str.push(html`<span style="color: #696969; background-color: #36b5ff" class="badge">Serial2</span>`)
-        else if (!!(features & 32)) str.push(html`<span style="color: #696969; background-color: #36b5ff" class="badge">RX2</span>`)
-        else if (!!(features & 64)) str.push(html`<span style="color: #696969; background-color: #36b5ff" class="badge">TX2</span>`)
+        // SBUS
+        if ((features & 96) === 96) str.push(html`<span style="color: #696969; background-color: #36b5ff" class="badge">SBUS</span>`)
+        else if (!!(features & 32)) str.push(html`<span style="color: #696969; background-color: #36b5ff" class="badge">SBUS RX</span>`)
+        else if (!!(features & 64)) str.push(html`<span style="color: #696969; background-color: #36b5ff" class="badge">SBUS TX</span>`)
 
         return str
     }
@@ -188,8 +188,8 @@ class ConnectionsPanel extends LitElement {
             modes.push(features & 4 ? 'I2C SCL' : undefined)
             modes.push(features & 8 ? 'I2C SDA' : undefined)
             modes.push(undefined)  // true PWM (not yet supported)
-            modes.push(features & 32 ? 'Serial2 RX' : undefined)
-            modes.push(features & 64 ? 'Serial2 TX' : undefined)
+            modes.push(features & 32 ? 'SBUS RX' : undefined)
+            modes.push(features & 64 ? 'SBUS TX' : undefined)
             const selectedMode = modes[mode] ? mode : 0
 
             htmlFields.push(html`
