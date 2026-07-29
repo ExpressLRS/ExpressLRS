@@ -19,7 +19,6 @@ const HARDWARE_SCHEMA = [
     },
 
     /* FEATURE: NOT IS_8285 */
-    /* FEATURE: HAS_SERIAL1_PINS */
     {
         title: 'SBUS Pins', rows: [
             {
@@ -36,9 +35,9 @@ const HARDWARE_SCHEMA = [
                 icon: 'output',
                 desc: 'Serial2 TX - ESP32 targets only (not used for SBUS)'
             },
-        ]
+        ],
+        featureCheck: 'has_serial1_pins'
     },
-    /* /FEATURE: HAS_SERIAL1_PINS */
     /* /FEATURE: NOT IS_8285 */
 
     {

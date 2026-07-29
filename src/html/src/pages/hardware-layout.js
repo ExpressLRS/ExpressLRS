@@ -1,6 +1,7 @@
 import {html, LitElement, nothing} from 'lit'
 import {customElement, state} from 'lit/decorators.js'
 import {loadJSON, postWithFeedback, saveJSONWithReboot} from '../utils/feedback.js'
+import {elrsState} from '../utils/state.js'
 import '../components/filedrag.js'
 import HARDWARE_SCHEMA from '../utils/hardware-schema.js'
 import {_arrayInput, _floatInput, _intInput, _uintInput} from "../utils/libs.js"
@@ -53,7 +54,12 @@ export class HardwareLayout extends LitElement {
         return html`
             <table>
                 <tbody>
-                ${this.constructor.SCHEMA.map(section => html`
+                ${this.constructor.SCHEMA.map(section => {
+                    // Check if section has a feature requirement
+                    if (section.featureCheck && !elrsState.settings[section.featureCheck]) {
+                        return nothing;
+                    }
+                    return html`
                     <tr>
                         <td colspan="4"><b>${section.title}</b></td>
                     </tr>
@@ -65,7 +71,8 @@ export class HardwareLayout extends LitElement {
                             <td>${row.desc || ''}</td>
                         </tr>
                     `)}
-                `)}
+                `;
+                })}
                 </tbody>
             </table>
         `
