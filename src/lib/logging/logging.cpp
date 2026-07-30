@@ -65,10 +65,11 @@ void debugPrintf(const char* fmt, ...)
 
 void hexdump(const void *p, size_t len)
 {
-    char linebuf[67];
+    __attribute__((aligned(4))) char linebuf[68];
+    linebuf[sizeof(linebuf) - 4] = '\r';
+    linebuf[sizeof(linebuf) - 3] = '\n';
+    linebuf[sizeof(linebuf) - 2] = '\0';
     linebuf[sizeof(linebuf) - 1] = '\0';
-    linebuf[sizeof(linebuf) - 2] = '\n';
-    linebuf[sizeof(linebuf) - 3] = '\r';
 
     const char *data = (const char *)p;
     while (len > 0)
