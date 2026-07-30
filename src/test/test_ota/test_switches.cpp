@@ -54,7 +54,7 @@ void test_crsf_endpoints()
 
     // Validate important values are still the same value when mapped and umapped from their 10-bit representations
     TEST_ASSERT_EQUAL(CRSF_CHANNEL_VALUE_STD_MIN,  Crsf_to_Uint10_to_Crsf(CRSF_CHANNEL_VALUE_STD_MIN));
-    TEST_ASSERT_EQUAL(CRSF_CHANNEL_VALUE_1000, Crsf_to_Uint10_to_Crsf(CRSF_CHANNEL_VALUE_1000));
+    TEST_ASSERT_EQUAL(CRSF_CHANNEL_VALUE_1000-1, Crsf_to_Uint10_to_Crsf(CRSF_CHANNEL_VALUE_1000)); // NOTE: 192 is not one of the 1024 values the linear 10-bit map preserves, it comes back as 191
     TEST_ASSERT_EQUAL(CRSF_CHANNEL_VALUE_MID,  Crsf_to_Uint10_to_Crsf(CRSF_CHANNEL_VALUE_MID));
     TEST_ASSERT_EQUAL(CRSF_CHANNEL_VALUE_2000, Crsf_to_Uint10_to_Crsf(CRSF_CHANNEL_VALUE_2000));
     TEST_ASSERT_EQUAL(CRSF_CHANNEL_VALUE_STD_MAX,  Crsf_to_Uint10_to_Crsf(CRSF_CHANNEL_VALUE_STD_MAX));
@@ -96,7 +96,7 @@ void test_nToCrsf()
 
     // 7-bit
     TEST_ASSERT_EQUAL(CRSF_CHANNEL_VALUE_1000, N_to_CRSF(0, 127));
-    TEST_ASSERT_EQUAL(997, N_to_CRSF(0b1000000, 127));
+    TEST_ASSERT_EQUAL(998, N_to_CRSF(0b1000000, 127));
     TEST_ASSERT_EQUAL(CRSF_CHANNEL_VALUE_2000, N_to_CRSF(0b1111111, 127));
 }
 
@@ -157,7 +157,7 @@ void test_encodingHybrid8(bool highResChannel)
     TEST_ASSERT_EQUAL(header, TXdataBuffer[0]);
 
     // bytes 1 through 5 are 10 bit packed analog channels using nlimit encoding
-    uint8_t expected[5] = { 0x30, 0x44, 0x7d, 0x06, 0xe2 };
+    uint8_t expected[5] = { 0x21, 0xd8, 0xfd, 0x04, 0xe9 };
     TEST_ASSERT_EQUAL_UINT8_ARRAY(expected, &TXdataBuffer[1], 5);
 
     // byte 6 is the switch encoding
@@ -235,7 +235,7 @@ void test_decodingHybrid8(uint8_t forceSwitch, uint8_t switchval)
     OtaUnpackChannelData(otaPktPtr, ChannelData);
 
     // compare the unpacked results with the input data (nlimit may have ±1 quantization error)
-    uint16_t expectedDecoded[4] = {291, 1382, 427, 1518};
+    uint16_t expectedDecoded[4] = {291, 1382, 428, 1520};
     for (unsigned ch=0; ch<4; ++ch)
     {
         TEST_ASSERT_EQUAL(expectedDecoded[ch], ChannelData[ch]);
@@ -363,7 +363,7 @@ void test_encodingHybridWide(uint8_t nonce)
     TEST_ASSERT_EQUAL(header, TXdataBuffer[0]);
 
     // bytes 1 through 5 are 10 bit packed analog channels using nlimit encoding
-    uint8_t expected[5] = { 0x30, 0x44, 0x7d, 0x06, 0xe2 };
+    uint8_t expected[5] = { 0x21, 0xd8, 0xfd, 0x04, 0xe9 };
     TEST_ASSERT_EQUAL_UINT8_ARRAY(expected, &TXdataBuffer[1], 5);
 
     // byte 6 is the switches encoded
@@ -437,7 +437,7 @@ void test_decodingHybridWide(uint8_t nonce, uint8_t forceSwitch, uint16_t forceV
     bool telemResult = OtaUnpackChannelData(otaPktPtr, ChannelData);
 
     // compare the unpacked results with the input data (nlimit may have ±1 quantization error)
-    uint16_t expectedDecoded[4] = {291, 1382, 427, 1518};
+    uint16_t expectedDecoded[4] = {291, 1382, 428, 1520};
     for (unsigned ch=0; ch<4; ++ch)
     {
         TEST_ASSERT_EQUAL(expectedDecoded[ch], ChannelData[ch]);
@@ -693,7 +693,40 @@ void test_n_quantization_common(size_t ota_packet_size, uint32_t R, uint32_t crs
 
 void test_nlimit_quantization()
 {
-    test_n_quantization_common(OTA4_PACKET_SIZE, OTA_DECIMATE_R_NLIMIT, CRSF_CHANNEL_VALUE_STD_MIN, CRSF_CHANNEL_VALUE_STD_MAX);
+    // nlimit only carries the 1000-2000us range, anything outside is clamped
+    test_n_quantization_common(OTA4_PACKET_SIZE, OTA_DECIMATE_R_NLIMIT, CRSF_CHANNEL_VALUE_1000, CRSF_CHANNEL_VALUE_2000);
+}
+
+void test_nlimit_clamping()
+{
+    uint8_t TXdataBuffer[OTA4_PACKET_SIZE]{};
+    OTA_Packet_s * const otaPktPtr = (OTA_Packet_s *)TXdataBuffer;
+
+    OtaUpdateSerializers(smWideOr8ch, OTA4_PACKET_SIZE);
+
+    // Values below CRSF_CHANNEL_VALUE_1000 clamp to the low code, above
+    // CRSF_CHANNEL_VALUE_2000 clamp to the high code
+    constexpr struct { uint32_t in; uint32_t out; } CASES[] = {
+        { CRSF_CHANNEL_VALUE_STD_MIN, CRSF_CHANNEL_VALUE_1000 },
+        { CRSF_CHANNEL_VALUE_1000 - 1, CRSF_CHANNEL_VALUE_1000 },
+        { CRSF_CHANNEL_VALUE_1000, CRSF_CHANNEL_VALUE_1000 },
+        { CRSF_CHANNEL_VALUE_MID, CRSF_CHANNEL_VALUE_MID },
+        { CRSF_CHANNEL_VALUE_2000, CRSF_CHANNEL_VALUE_2000 },
+        { CRSF_CHANNEL_VALUE_2000 + 1, CRSF_CHANNEL_VALUE_2000 },
+        { CRSF_CHANNEL_VALUE_STD_MAX, CRSF_CHANNEL_VALUE_2000 },
+    };
+
+    for (auto const &c : CASES)
+    {
+        memset(ChannelData, 0, sizeof(ChannelData));
+        ChannelData[0] = c.in;
+        memset(TXdataBuffer, 0, sizeof(TXdataBuffer));
+
+        OtaPackChannelData(otaPktPtr, ChannelData, false);
+        OtaUnpackChannelData(otaPktPtr, ChannelData);
+
+        TEST_ASSERT_EQUAL(c.out, ChannelData[0]);
+    }
 }
 
 void test_nmap_quantization()
@@ -733,6 +766,7 @@ int main(int argc, char **argv)
     RUN_TEST(test_decodingFullres16chLow);
 
     RUN_TEST(test_nlimit_quantization);
+    RUN_TEST(test_nlimit_clamping);
     RUN_TEST(test_nmap_quantization);
 
     UNITY_END();

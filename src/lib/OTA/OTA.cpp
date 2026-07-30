@@ -116,10 +116,10 @@ static __attribute__((noinline)) uint32_t ICACHE_RAM_ATTR Decimate11to10_n(uint3
     return inner_offset + (ch11bit - (center - R));
 }
 
-// nlimit: CRSF standard range, clamps out-of-range inputs to the extreme codes
+// nlimit: 1000-2000us range, clamps out-of-range inputs to the extreme codes
 static uint32_t ICACHE_RAM_ATTR Decimate11to10_nlimit(uint32_t ch11bit)
 {
-    return Decimate11to10_n(ch11bit, OTA_DECIMATE_R_NLIMIT, CRSF_CHANNEL_VALUE_STD_MIN, true);
+    return Decimate11to10_n(ch11bit, OTA_DECIMATE_R_NLIMIT, CRSF_CHANNEL_VALUE_1000, true);
 }
 
 // nmap: full CRSF range, no clamp needed
@@ -385,7 +385,7 @@ static __attribute__((noinline)) uint32_t ICACHE_RAM_ATTR Expand10to11_n(uint32_
 // nlimit: reverse of Decimate11to10_nlimit
 static uint32_t ICACHE_RAM_ATTR Expand10to11_nlimit(uint32_t ch10bit)
 {
-    return Expand10to11_n(ch10bit, OTA_DECIMATE_R_NLIMIT, CRSF_CHANNEL_VALUE_STD_MIN);
+    return Expand10to11_n(ch10bit, OTA_DECIMATE_R_NLIMIT, CRSF_CHANNEL_VALUE_1000);
 }
 
 // nmap: reverse of Decimate11to10_nmap
@@ -428,7 +428,7 @@ static void ICACHE_RAM_ATTR UnpackChannelDataHybridCommon(OTA_Packet4_s const * 
 #if defined(DEBUG_RCVR_LINKSTATS)
     debugRcvrLinkstatsPacketId = ota4->dbg_linkstats.packetNum;
 #else
-    // The analog channels, encoded as 10bit with nlimit non-linear encoding (CRSF STD range)
+    // The analog channels, encoded as 10bit with nlimit non-linear encoding (1000-2000us range)
     UnpackChannels4x10ToUInt11(&ota4->rc.ch, channelData, &Expand10to11_nlimit);
     channelData[4] = BIT_to_CRSF(isArmed);
     // Copy the armed flag into CH14/AUX10 for consistency with fullres
