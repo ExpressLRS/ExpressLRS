@@ -79,10 +79,10 @@ void hexdump(const void *p, size_t len)
         for (uint8_t linepos=0; len>0 && linepos<16; ++linepos)
         {
             constexpr char HEX_CHARS[] = "0123456789abcdef";
-            const char c = *data;
+            const unsigned char c = *data;
             linebuf[linepos*3 + 0] = HEX_CHARS[c >> 4];
             linebuf[linepos*3 + 1] = HEX_CHARS[c & 0x0f];
-            linebuf[(16*3) + linepos] = (c < ' ') ? '.' : c;
+            linebuf[(16*3) + linepos] = (c < ' ' || c > '~') ? '.' : c;
             ++data;
             --len;
         }
