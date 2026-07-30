@@ -17,7 +17,7 @@
 ### REGULATORY DOMAIN: ###
 
 # Domain is used to define correct frequency band for 900MHz hardware.
-#-DRegulatory_Domain_AU_915
+-DRegulatory_Domain_AU_915
 #-DRegulatory_Domain_EU_868
 #-DRegulatory_Domain_IN_866
 #-DRegulatory_Domain_AU_433
