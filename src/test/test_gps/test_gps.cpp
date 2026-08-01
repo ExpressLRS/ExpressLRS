@@ -707,6 +707,175 @@ static void test_no_tx_pin_never_writes(void)
     teardownDriver();
 }
 
+// ---------------------------------------------------------------------------
+// Adversarial / edge cases
+// ---------------------------------------------------------------------------
+
+/// @brief Feed a byte stream one byte per processSerialInput call, to prove the UBX/NMEA state
+/// machine survives arbitrary fragmentation across reads
+static void feedByteByByte(const std::vector<uint8_t> &b)
+{
+    for (uint8_t x : b)
+    {
+        port->rx.push_back(x);
+        gps->processSerialInput();
+    }
+    gps->sendQueuedData(128);
+}
+
+static std::vector<uint8_t> navPvtLen(unsigned len)
+{
+    auto p = navPvt(3, 0x01, 11, REF_LON, REF_LAT, 545400, 2833, 5470000, 0x03);
+    p.resize(len);   // truncate to a shorter protocol version's length
+    return p;
+}
+
+// The driver's ubx_nav_pvt_t is truncated at pDOP (78 bytes). A real NAV-PVT is 84 bytes
+// (protocol 14) or 92 (protocol 15+); both must be accepted, and everything we read lives in the
+// first 68 bytes. Anything shorter than the struct must be ignored, not read out of bounds.
+static void test_ubx_navpvt_84_byte_protocol14_accepted(void)
+{
+    setupDriver();
+    port->feed(ubx(0x01, 0x07, navPvtLen(84)));
+    pump();
+    const uint8_t *p = connector->lastPayload(CRSF_FRAMETYPE_GPS);
+    TEST_ASSERT_NOT_NULL(p);
+    TEST_ASSERT_EQUAL_INT32(REF_LAT, be32(p));
+    TEST_ASSERT_EQUAL_UINT16(REF_HEADING_CRSF, be16(p + 10));
+    teardownDriver();
+}
+
+static void test_ubx_navpvt_78_byte_exact_accepted(void)
+{
+    setupDriver();
+    port->feed(ubx(0x01, 0x07, navPvtLen(78)));
+    pump();
+    TEST_ASSERT_NOT_NULL(connector->lastPayload(CRSF_FRAMETYPE_GPS));
+    teardownDriver();
+}
+
+static void test_ubx_navpvt_too_short_ignored(void)
+{
+    setupDriver();
+    port->feed(ubx(0x01, 0x07, navPvtLen(77)));   // one below the struct size
+    pump();
+    // No telemetry, no crash, no out-of-bounds read
+    TEST_ASSERT_EQUAL_UINT32(0, connector->count(CRSF_FRAMETYPE_GPS));
+    teardownDriver();
+}
+
+static void test_ubx_fragmented_one_byte_per_read(void)
+{
+    setupDriver();
+    feedByteByByte(ubx(0x01, 0x07, navPvt(3, 0x01, 11, REF_LON, REF_LAT, 545400, 2833, 5470000, 0x03)));
+    const uint8_t *p = connector->lastPayload(CRSF_FRAMETYPE_GPS);
+    TEST_ASSERT_NOT_NULL(p);
+    TEST_ASSERT_EQUAL_INT32(REF_LAT, be32(p));
+    teardownDriver();
+}
+
+static void test_nmea_fragmented_one_byte_per_read(void)
+{
+    setupDriver();
+    std::string s = nmea(GGA);
+    feedByteByByte(std::vector<uint8_t>(s.begin(), s.end()));
+    TEST_ASSERT_NOT_NULL(connector->lastPayload(CRSF_FRAMETYPE_GPS));
+    teardownDriver();
+}
+
+static void test_stray_sync1_then_garbage_resyncs(void)
+{
+    setupDriver();
+    // 0xB5 not followed by 0x62, then junk, then a real message: parser must recover
+    port->feed(std::vector<uint8_t>{0xb5, 0x41, 0x42, 0xb5, 0x00, 0x11});
+    port->feed(ubx(0x01, 0x07, navPvt(3, 0x01, 11, REF_LON, REF_LAT, 545400, 2833, 5470000, 0x03)));
+    pump();
+    TEST_ASSERT_NOT_NULL(connector->lastPayload(CRSF_FRAMETYPE_GPS));
+    teardownDriver();
+}
+
+static void test_double_sync1_handled(void)
+{
+    setupDriver();
+    // 0xB5 0xB5 0x62 ... — a repeated sync byte must still frame correctly
+    std::vector<uint8_t> f = ubx(0x01, 0x07, navPvt(3, 0x01, 11, REF_LON, REF_LAT, 545400, 2833, 5470000, 0x03));
+    f.insert(f.begin(), 0xb5);
+    port->feed(f);
+    pump();
+    TEST_ASSERT_NOT_NULL(connector->lastPayload(CRSF_FRAMETYPE_GPS));
+    teardownDriver();
+}
+
+static void test_navrate_38400_is_10hz_no_raise(void)
+{
+    setupDriver();
+    lockOnAt(38400);
+    port->tx.clear();
+    port->feed(ubx(0x05, 0x01, { 0x06, 0x8a }));   // ACK the VALSET
+    pump();
+    tick();
+    // 38400 is exactly the "fast enough" threshold: request 10Hz, and do NOT raise the baud
+    auto frames = parseTx();
+    TEST_ASSERT_EQUAL_UINT32(1, frames.size());
+    TEST_ASSERT_EQUAL_UINT32(100, valsetValue(frames[0], 0x30210001, 2));
+    tick(GPS_BAUD_SETTLE_MS + 10);
+    TEST_ASSERT_EQUAL_UINT32(38400, port->baud);   // unchanged
+    teardownDriver();
+}
+
+static void test_navrate_19200_is_5hz_then_raises(void)
+{
+    setupDriver();
+    lockOnAt(19200);
+    port->tx.clear();
+    port->feed(ubx(0x05, 0x01, { 0x06, 0x8a }));
+    pump();
+    tick();
+    auto frames = parseTx();
+    TEST_ASSERT_EQUAL_UINT32(2, frames.size());
+    TEST_ASSERT_EQUAL_UINT32(200, valsetValue(frames[0], 0x30210001, 2));   // 5Hz
+    TEST_ASSERT_EQUAL_UINT32(57600, valsetValue(frames[1], 0x40520001, 4)); // raise
+    teardownDriver();
+}
+
+static void test_valset_slow_ack_still_accepted(void)
+{
+    setupDriver();
+    lockOn();
+    port->tx.clear();
+    // A u-blox at 1Hz can take most of a second to ACK. Advance well past the old 500ms timeout
+    // but within the real window; the driver must still be waiting, not already on the legacy path.
+    tick(900);
+    TEST_ASSERT_EQUAL_UINT32(0, port->tx.size());   // no legacy CFG-MSG sent yet
+    // Now the delayed ACK arrives -> VALSET path completes and the 10Hz rate is requested
+    port->feed(ubx(0x05, 0x01, { 0x06, 0x8a }));
+    pump();
+    tick();
+    auto frames = parseTx();
+    TEST_ASSERT_EQUAL_UINT32(1, frames.size());
+    TEST_ASSERT_EQUAL_UINT32(100, valsetValue(frames[0], 0x30210001, 2));  // CFG-RATE-MEAS, not CFG-MSG
+    teardownDriver();
+}
+
+static void test_ack_for_wrong_message_ignored(void)
+{
+    setupDriver();
+    lockOn();
+    port->tx.clear();
+    // ACK for some other CFG message must NOT complete our VALSET wait
+    port->feed(ubx(0x05, 0x01, { 0x06, 0x24 }));   // ACK-ACK of CFG-NAV5, not VALSET
+    pump();
+    tick();
+    // still waiting: no rate/further config sent, no premature "configured"
+    TEST_ASSERT_EQUAL_UINT32(0, port->tx.size());
+    // the real VALSET ACK still works afterwards
+    port->feed(ubx(0x05, 0x01, { 0x06, 0x8a }));
+    pump();
+    tick();
+    TEST_ASSERT_TRUE(port->tx.size() > 0);
+    teardownDriver();
+}
+
 void setUp() {}
 void tearDown() {}
 
@@ -735,5 +904,16 @@ int main(int argc, char **argv)
     RUN_TEST(test_gps_time_is_rate_limited);
     RUN_TEST(test_non_ublox_is_left_alone);
     RUN_TEST(test_no_tx_pin_never_writes);
+    RUN_TEST(test_ubx_navpvt_84_byte_protocol14_accepted);
+    RUN_TEST(test_ubx_navpvt_78_byte_exact_accepted);
+    RUN_TEST(test_ubx_navpvt_too_short_ignored);
+    RUN_TEST(test_ubx_fragmented_one_byte_per_read);
+    RUN_TEST(test_nmea_fragmented_one_byte_per_read);
+    RUN_TEST(test_stray_sync1_then_garbage_resyncs);
+    RUN_TEST(test_double_sync1_handled);
+    RUN_TEST(test_navrate_38400_is_10hz_no_raise);
+    RUN_TEST(test_navrate_19200_is_5hz_then_raises);
+    RUN_TEST(test_valset_slow_ack_still_accepted);
+    RUN_TEST(test_ack_for_wrong_message_ignored);
     return UNITY_END();
 }

@@ -78,7 +78,12 @@ static constexpr uint8_t GPS_FAST_BAUD_INDEX = 3;    // 57600
 static constexpr uint32_t GPS_PROBE_DWELL_MS = 2500;
 static constexpr uint8_t GPS_PROBE_FRAMES = 2;
 static constexpr uint32_t GPS_SILENCE_MS = 5000;
-static constexpr uint32_t GPS_ACK_TIMEOUT_MS = 500;
+// A u-blox does not guarantee a prompt CFG ACK: it may defer the ACK-ACK until the end of its
+// current navigation epoch, which at the 1Hz factory default is up to a second away. Time out
+// short of that and a slow module gets bounced to the legacy path (and, on an M9/M10 that rejects
+// the legacy CFG-MSG, never gets its rate raised). u-blox's own tooling and the common SparkFun
+// library wait 1100ms for this reason.
+static constexpr uint32_t GPS_ACK_TIMEOUT_MS = 1100;
 static constexpr uint8_t GPS_MAX_CONFIG_ATTEMPTS = 3;
 static constexpr uint32_t GPS_TICK_MS = 100;
 
