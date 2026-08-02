@@ -40,6 +40,10 @@
     --svg: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='24' height='24'%3E%3Cpath fill='black' d='M7 20v-1H6q-1.25 0-2.125-.875T3 16v-3H1v-2h2V8q0-1.25.875-2.125T6 5h1V4h2v16zm-1-3h1V7H6q-.425 0-.712.288T5 8v8q0 .425.288.713T6 17m9 3v-4h-4v-2h4v-4h-4V8h4V4h2v1h1q1.25 0 2.125.875T21 8v3h2v2h-2v3q0 1.25-.875 2.125T18 19h-1v1zm2-3h1q.425 0 .713-.288T19 16V8q0-.425-.288-.712T18 7h-1zm0-5'/%3E%3C/svg%3E");
 }
 
+.icon--symbols--gps {
+    --svg: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='24' height='24'%3E%3Cpath fill='black' d='M12 11.5A2.5 2.5 0 0 1 9.5 9A2.5 2.5 0 0 1 12 6.5A2.5 2.5 0 0 1 14.5 9a2.5 2.5 0 0 1-2.5 2.5M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7'/%3E%3C/svg%3E");
+}
+
 .icon--symbols--serial {
     --svg: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cg fill='none' stroke='%23000' stroke-linecap='round' stroke-linejoin='round' stroke-width='2'%3E%3Cpath d='M17 19a1 1 0 0 1-1-1v-2a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2a1 1 0 0 1-1 1zm0 2v-2'/%3E%3Cpath d='M19 14V6.5a1 1 0 0 0-7 0v11a1 1 0 0 1-7 0V10m16 11v-2M3 5V3'/%3E%3Cpath d='M4 10a2 2 0 0 1-2-2V6a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2a2 2 0 0 1-2 2zm3-5V3'/%3E%3C/g%3E%3C/svg%3E");
 }

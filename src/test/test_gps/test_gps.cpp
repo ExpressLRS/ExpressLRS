@@ -876,6 +876,118 @@ static void test_ack_for_wrong_message_ignored(void)
     teardownDriver();
 }
 
+// ---------------------------------------------------------------------------
+// Status snapshot for the WebUI
+// ---------------------------------------------------------------------------
+
+static void test_status_no_driver_returns_false(void)
+{
+    // No SerialGPS has been constructed in this scenario
+    delete gps;
+    delete port;
+    delete connector;
+    gps = nullptr;
+    port = nullptr;
+    connector = nullptr;
+
+    gps_telemetry_t info;
+    TEST_ASSERT_FALSE(SerialGPS::getTelemetryInfo(info));
+}
+
+static void test_status_reports_ubx_running(void)
+{
+    setupDriver();
+    lockOnAt(115200);
+    port->feed(ubx(0x05, 0x01, { 0x06, 0x8a }));    // ACK the VALSET
+    pump();
+    tick();
+    // 115200 already carries 10Hz, so the driver settles straight into running
+    port->feed(ubx(0x01, 0x07, navPvt(3, 0x01, 11, REF_LON, REF_LAT, 545400, 2833, 5470000, 0x03)));
+    pump();
+
+    gps_telemetry_t info;
+    TEST_ASSERT_TRUE(SerialGPS::getTelemetryInfo(info));
+    TEST_ASSERT_EQUAL_UINT8(4, info.state);         // gsRunning
+    TEST_ASSERT_EQUAL_UINT32(115200, info.baud);
+    TEST_ASSERT_TRUE(info.canConfigure);
+    TEST_ASSERT_EQUAL_UINT8(2, info.protocol);      // UBX
+    TEST_ASSERT_TRUE(info.ubxConfigured);
+    TEST_ASSERT_TRUE(info.usedValset);
+    TEST_ASSERT_EQUAL_UINT16(100, info.navIntervalMs);
+    TEST_ASSERT_EQUAL_UINT8(3, info.fixType);
+    TEST_ASSERT_TRUE(info.fixValid);
+    TEST_ASSERT_EQUAL_UINT8(11, info.satellites);
+    TEST_ASSERT_EQUAL_INT32(REF_LAT, info.lat);
+    TEST_ASSERT_EQUAL_INT32(REF_LON, info.lon);
+    TEST_ASSERT_EQUAL_INT32(54540, info.altCm);     // 545400mm / 10
+    TEST_ASSERT_TRUE(info.timeValid);
+    TEST_ASSERT_EQUAL_UINT16(2025, info.year);
+    teardownDriver();
+}
+
+static void test_status_measures_update_rate(void)
+{
+    setupDriver();
+    lockOnAt(115200);
+    port->feed(ubx(0x05, 0x01, { 0x06, 0x8a }));
+    pump();
+    tick();
+    // Feed NAV-PVT frames 100ms apart; the measured interval should converge on 100ms (10Hz)
+    const auto pvt = ubx(0x01, 0x07, navPvt(3, 0x01, 11, REF_LON, REF_LAT, 545400, 2833, 5470000, 0x03));
+    for (unsigned i = 0; i < 10; i++)
+    {
+        nativeClockMs() += 100;
+        port->feed(pvt);
+        pump();
+    }
+
+    gps_telemetry_t info;
+    TEST_ASSERT_TRUE(SerialGPS::getTelemetryInfo(info));
+    TEST_ASSERT_EQUAL_UINT16(100, info.updateIntervalMs);
+    TEST_ASSERT_EQUAL_UINT32(0, info.ageMs);        // the last frame is the current instant
+    teardownDriver();
+}
+
+static void test_status_reports_nmea_readonly(void)
+{
+    // No TX line, so the module can only be listened to as NMEA
+    setupDriver(UNDEF_PIN);
+    lockOn();
+    tick();
+    port->feed(nmea("GPGGA,123519.00,4807.038,N,01131.000,E,1,08,0.9,545.4,M,46.9,M,,"));
+    pump();
+
+    gps_telemetry_t info;
+    TEST_ASSERT_TRUE(SerialGPS::getTelemetryInfo(info));
+    TEST_ASSERT_EQUAL_UINT8(4, info.state);         // gsRunning, configuration was skipped
+    TEST_ASSERT_FALSE(info.canConfigure);
+    TEST_ASSERT_FALSE(info.ubxConfigured);
+    TEST_ASSERT_EQUAL_UINT8(1, info.protocol);      // NMEA
+    TEST_ASSERT_EQUAL_UINT8(3, info.fixType);       // GGA reports any fix as 3D
+    TEST_ASSERT_TRUE(info.fixValid);
+    TEST_ASSERT_EQUAL_UINT8(8, info.satellites);
+    teardownDriver();
+}
+
+static void test_status_no_fix_has_no_position(void)
+{
+    setupDriver(UNDEF_PIN);
+    lockOn();
+    tick();
+    // Fix quality 0: the module has no usable position yet, only a satellite count
+    port->feed(nmea("GPGGA,123519.00,4807.038,N,01131.000,E,0,04,0.9,545.4,M,46.9,M,,"));
+    pump();
+
+    gps_telemetry_t info;
+    TEST_ASSERT_TRUE(SerialGPS::getTelemetryInfo(info));
+    TEST_ASSERT_FALSE(info.fixValid);
+    TEST_ASSERT_EQUAL_UINT8(0, info.fixType);
+    TEST_ASSERT_EQUAL_UINT8(4, info.satellites);    // still surfaced so it can be watched climbing
+    TEST_ASSERT_EQUAL_INT32(0, info.lat);
+    TEST_ASSERT_EQUAL_INT32(0, info.lon);
+    teardownDriver();
+}
+
 void setUp() {}
 void tearDown() {}
 
@@ -915,5 +1027,10 @@ int main(int argc, char **argv)
     RUN_TEST(test_navrate_19200_is_5hz_then_raises);
     RUN_TEST(test_valset_slow_ack_still_accepted);
     RUN_TEST(test_ack_for_wrong_message_ignored);
+    RUN_TEST(test_status_no_driver_returns_false);
+    RUN_TEST(test_status_reports_ubx_running);
+    RUN_TEST(test_status_measures_update_rate);
+    RUN_TEST(test_status_reports_nmea_readonly);
+    RUN_TEST(test_status_no_fix_has_no_position);
     return UNITY_END();
 }

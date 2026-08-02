@@ -69,6 +69,9 @@ export class App extends LitElement {
                             <li><a id="menu-connections" href="#connections"><span class="mui--align-middle icon--symbols icon--symbols--connections"></span>Connections</a></li>
                             ` : ''}
                             <li><a id="menu-serial" href="#serial"><span class="mui--align-middle icon--symbols icon--symbols--serial"></span>Serial</a></li>
+                            ${elrsState.settings?.has_gps ? html`
+                            <li><a id="menu-gps" href="#gps"><span class="mui--align-middle icon--symbols icon--symbols--gps"></span>GPS</a></li>
+                            ` : ''}
                             <!-- /FEATURE:NOT IS_TX -->
                             <li><a id="menu-wifi" href="#wifi"><span class="mui--align-middle icon--symbols icon--symbols--wifi"></span>WiFi</a></li>
                             <li><a id="menu-update" href="#update"><span class="mui--align-middle icon--symbols icon--symbols--update"></span>Update</a></li>
@@ -226,6 +229,8 @@ export class App extends LitElement {
                 return elrsState.config.pwm !== undefined ? html`<connections-panel></connections-panel>` : null
             case 'serial':
                 return html`<serial-panel></serial-panel>`
+            case 'gps':
+                return elrsState.settings?.has_gps ? html`<gps-panel></gps-panel>` : null
             case 'voltage':
                 return elrsState.settings?.voltage_source_count > 0 ? html`<voltage-calibration-panel></voltage-calibration-panel>` : null
             // /FEATURE:NOT IS_TX
@@ -272,7 +277,7 @@ export class App extends LitElement {
     }
 
     ensureLoadedForRoute(route) {
-        if (['binding', 'options', 'wifi', 'update', 'connections', 'serial', 'buttons', 'models'].includes(route)) {
+        if (['binding', 'options', 'wifi', 'update', 'connections', 'serial', 'gps', 'buttons', 'models'].includes(route)) {
             return this.loadGeneralGroup()
         }
         if (['hardware', 'voltage', 'cw', 'lr1121'].includes(route)) {

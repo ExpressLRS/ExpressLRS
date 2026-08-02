@@ -3,6 +3,7 @@
 #include "SerialIO.h"
 
 #include "device.h"
+#include "gpsTelemetry.h"
 
 typedef struct
 {
@@ -40,13 +41,18 @@ public:
      * in which case auto-configuration is skipped and the module is only listened to.
      */
     explicit SerialGPS(HardwareSerial &port, int8_t txPin)
-        : SerialIO(&port, &port), _port(&port), _txPin(txPin) { beginProbe(); }
-    ~SerialGPS() override = default;
+        : SerialIO(&port, &port), _port(&port), _txPin(txPin) { _active = this; beginProbe(); }
+    ~SerialGPS() override { if (_active == this) _active = nullptr; }
 
     typedef void (*gpsFieldParser_t)(SerialGPS *ctx, uint8_t fieldIdx, char *field);
 
     /// @brief No RC data is sent to a GPS, this is used as the tick for the detect/configure state machine
     uint32_t sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t *channelData) override;
+
+    /// @brief Fill @p out with a snapshot of the active GPS driver's state, for the WebUI status
+    /// page and any other observer.
+    /// @return false when no GPS driver has been created, in which case @p out is untouched.
+    static bool getTelemetryInfo(gps_telemetry_t &out);
 
 private:
     enum gpsState_e : uint8_t
@@ -145,4 +151,20 @@ private:
     gpsAck_e ackState = gaIdle;
     uint8_t ackClass = 0;
     uint8_t ackId = 0;
+
+    // Live diagnostics for the status page, updated as messages are parsed. None of this feeds the
+    // detect/configure logic, it is read-only telemetry about what the driver is doing.
+    uint8_t detectedProtocol = 0;   // 0 unknown, 1 NMEA, 2 UBX
+    uint8_t fixType = 0;            // 0/1 no fix, 2 = 2D, 3 = 3D
+    uint16_t navIntervalMs = 0;     // the navigation interval last requested of the module
+    uint32_t lastPosFrameMs = 0;    // arrival time of the previous position frame
+    uint16_t posIntervalMs = 0;     // smoothed interval between position frames
+    // A separate copy of the UTC time, because gpsData.year is cleared once its telemetry frame is sent
+    bool utcValid = false;
+    uint16_t utcYear = 0;
+    uint8_t utcMonth = 0, utcDay = 0, utcHour = 0, utcMinute = 0, utcSecond = 0;
+
+    // The most recently constructed driver, so an observer with no pointer to the instance (the
+    // WebUI) can still read its state. Only one GPS is active in practice.
+    static SerialGPS *_active;
 };

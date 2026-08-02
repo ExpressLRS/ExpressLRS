@@ -214,6 +214,11 @@ uint8_t getLq()
     return LQCalc.getLQ();
 }
 
+bool getGpsTelemetry(gps_telemetry_t &out)
+{
+    return SerialGPS::getTelemetryInfo(out);
+}
+
 static inline void checkGeminiMode()
 {
     if (isDualRadio())

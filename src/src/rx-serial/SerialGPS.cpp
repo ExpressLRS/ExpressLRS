@@ -3,6 +3,8 @@
 #include "CRSFRouter.h"
 #include <crsf_protocol.h>
 
+SerialGPS *SerialGPS::_active = nullptr;
+
 // UBX-NAV-PVT, truncated after pDOP. Protocol 15+ sends a 92 byte message and protocol 14 sends
 // 84 bytes, both have an identical first 78 bytes so only those are described here.
 typedef struct
@@ -264,8 +266,10 @@ void SerialGPS::fieldParseGGA(SerialGPS *ctx, uint8_t fieldIdx, char *field)
                 ctx->gpsData.lon = -ctx->gpsData.lon;
             break;
         case 6:
-            // Fix quality, 0 means the position that came with it is meaningless
+            // Fix quality, 0 means the position that came with it is meaningless. GGA does not
+            // distinguish 2D from 3D, so any fix is reported as 3D for the status page.
             ctx->gpsData.fixValid = !blank && field[0] != '0';
+            ctx->fixType = ctx->gpsData.fixValid ? 3 : 0;
             break;
         case 7:
             ctx->gpsData.satellites = atoi(field);
@@ -325,6 +329,7 @@ void SerialGPS::fieldParseRMC(SerialGPS *ctx, uint8_t fieldIdx, char *field)
 
 void SerialGPS::processSentence(char *sentence, uint8_t size)
 {
+    detectedProtocol = 1;   // NMEA
     if (sentence[3] == 'G' && sentence[4] == 'G' && sentence[5] == 'A') {
         splitSentenceFields(sentence, size, &fieldParseGGA);
         if (!gpsData.fixValid)
@@ -344,6 +349,17 @@ void SerialGPS::processSentence(char *sentence, uint8_t size)
     }
     else if (sentence[3] == 'R' && sentence[4] == 'M' && sentence[5] == 'C') {
         splitSentenceFields(sentence, size, &fieldParseRMC);
+        // Snapshot the wall clock for the status page before sendGpsTimeTelemetryFrame() clears it
+        if (gpsData.year != 0)
+        {
+            utcValid = true;
+            utcYear = gpsData.year;
+            utcMonth = gpsData.month;
+            utcDay = gpsData.day;
+            utcHour = gpsData.hour;
+            utcMinute = gpsData.minute;
+            utcSecond = gpsData.second;
+        }
         sendGpsTimeTelemetryFrame();
     }
     // Maybe we need to think about ZDA as well so we can adjust UTC to local time!
@@ -355,6 +371,8 @@ void SerialGPS::processNavPvt()
 
     lastPvtMs = millis();
     pvtSeen = true;
+    detectedProtocol = 2;   // UBX
+    fixType = pvt->fixType;
     // The module is doing what we asked of it, so any configuration retry budget is unspent
     configAttempts = 0;
 
@@ -394,6 +412,14 @@ void SerialGPS::processNavPvt()
         gpsData.second = pvt->sec;
         // nano is the correction to apply to the second above, and can be negative
         gpsData.millisecond = (pvt->nano > 0) ? pvt->nano / 1000000 : 0;
+        // Snapshot for the status page before sendGpsTimeTelemetryFrame() clears gpsData.year
+        utcValid = true;
+        utcYear = gpsData.year;
+        utcMonth = gpsData.month;
+        utcDay = gpsData.day;
+        utcHour = gpsData.hour;
+        utcMinute = gpsData.minute;
+        utcSecond = gpsData.second;
         sendGpsTimeTelemetryFrame();
     }
 }
@@ -553,6 +579,16 @@ void SerialGPS::sendGpsTimeTelemetryFrame()
 
 void SerialGPS::sendTelemetryFrame()
 {
+    // Measure how often a position frame actually goes out, which is the update rate the handset
+    // sees. Smoothed with a light EWMA (alpha 1/4) so a single late frame does not swing it.
+    const uint32_t nowMs = millis();
+    if (lastPosFrameMs != 0)
+    {
+        const uint32_t dt = nowMs - lastPosFrameMs;
+        posIntervalMs = (posIntervalMs == 0) ? (uint16_t)dt : (uint16_t)((posIntervalMs * 3 + dt) / 4);
+    }
+    lastPosFrameMs = nowMs;
+
     // CRSF altitude is metres with a 1000m offset, so it can represent -1000m to 64535m
     int32_t altitude = gpsData.alt / 100 + 1000;
     if (altitude < 0)
@@ -652,6 +688,7 @@ static uint8_t valsetKey(uint8_t *payload, uint32_t key)
 
 void SerialGPS::queueNavRate(uint16_t measRateMs)
 {
+    navIntervalMs = measRateMs;
     if (usedValset)
     {
         uint8_t payload[4 + 4 + 2];
@@ -728,6 +765,9 @@ void SerialGPS::setBaud(uint32_t baud)
     bufferIndex = 0;
     ackState = gaIdle;
     pvtSeen = false;
+    // The measured update rate belonged to the old baud rate, don't carry it across
+    lastPosFrameMs = 0;
+    posIntervalMs = 0;
 }
 
 void SerialGPS::frameReceived()
@@ -741,6 +781,9 @@ void SerialGPS::beginProbe()
 {
     state = gsProbing;
     goodFrames = 0;
+    // Nothing is known about the module again until it starts talking
+    detectedProtocol = 0;
+    fixType = 0;
     // A module that stopped talking may have reset back to its own defaults, in which case it
     // needs moving up to a usable baud rate again
     baudRaiseDone = false;
@@ -910,4 +953,41 @@ uint32_t SerialGPS::sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t 
     }
 
     return GPS_TICK_MS;
+}
+
+bool SerialGPS::getTelemetryInfo(gps_telemetry_t &out)
+{
+    const SerialGPS *gps = _active;
+    if (gps == nullptr)
+        return false;
+
+    out.state = gps->state;
+    out.baud = gps->currentBaud();
+    out.canConfigure = gps->_txPin != UNDEF_PIN;
+    out.protocol = gps->detectedProtocol;
+    out.ubxConfigured = gps->configApplied;
+    out.usedValset = gps->usedValset;
+    out.navIntervalMs = gps->navIntervalMs;
+    out.updateIntervalMs = gps->posIntervalMs;
+
+    out.satellites = gps->gpsData.satellites;
+    out.fixType = gps->fixType;
+    out.fixValid = gps->gpsData.fixValid;
+    out.lat = gps->gpsData.lat;
+    out.lon = gps->gpsData.lon;
+    out.altCm = gps->gpsData.alt;
+    out.speedKmh100 = gps->gpsData.speed;
+    out.heading100 = gps->gpsData.heading;
+
+    out.timeValid = gps->utcValid;
+    out.year = gps->utcYear;
+    out.month = gps->utcMonth;
+    out.day = gps->utcDay;
+    out.hour = gps->utcHour;
+    out.minute = gps->utcMinute;
+    out.second = gps->utcSecond;
+
+    // lastFrameMs stays 0 until the first valid frame, don't report a bogus multi-day age for that
+    out.ageMs = gps->lastFrameMs == 0 ? 0xffffffff : millis() - gps->lastFrameMs;
+    return true;
 }
