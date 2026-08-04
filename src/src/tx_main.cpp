@@ -963,36 +963,6 @@ static void CheckReadyToSend()
   }
 }
 
-void OnPowerGetCalibration(mspPacket_t *packet)
-{
-  uint8_t index = packet->readByte();
-  UNUSED(index);
-  int8_t values[PWR_COUNT] = {0};
-  POWERMGNT::GetPowerCaliValues(values, PWR_COUNT);
-  DBGLN("power get calibration value %d",  values[index]);
-}
-
-void OnPowerSetCalibration(mspPacket_t *packet)
-{
-  uint8_t index = packet->readByte();
-  int8_t value = packet->readByte();
-
-  if((index < 0) || (index >= PWR_COUNT))
-  {
-    DBGLN("calibration error index %d out of range", index);
-    return;
-  }
-  hwTimer::stop();
-  delay(20);
-
-  int8_t values[PWR_COUNT] = {0};
-  POWERMGNT::GetPowerCaliValues(values, PWR_COUNT);
-  values[index] = value;
-  POWERMGNT::SetPowerCaliValues(values, PWR_COUNT);
-  DBGLN("power calibration done %d, %d", index, value);
-  hwTimer::resume();
-}
-
 void SendUIDOverMSP()
 {
   MSPDataPackage[0] = MSP_ELRS_BIND;
@@ -1057,25 +1027,7 @@ void ProcessMSPPacket(uint32_t now, mspPacket_t *packet)
 {
 #if defined(PLATFORM_ESP32)
   // Inspect packet for ELRS specific opcodes
-  if (packet->function == MSP_ELRS_FUNC)
-  {
-    uint8_t opcode = packet->readByte();
-
-    CHECK_PACKET_PARSING();
-
-    switch (opcode)
-    {
-    case MSP_ELRS_POWER_CALI_GET:
-      OnPowerGetCalibration(packet);
-      break;
-    case MSP_ELRS_POWER_CALI_SET:
-      OnPowerSetCalibration(packet);
-      break;
-    default:
-      break;
-    }
-  }
-  else if (packet->function == MSP_SET_VTX_CONFIG)
+  if (packet->function == MSP_SET_VTX_CONFIG)
   {
     if (packet->payload[0] < 48) // Standard 48 channel VTx table size e.g. A, B, E, F, R, L
     {
