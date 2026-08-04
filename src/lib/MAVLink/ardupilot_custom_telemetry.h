@@ -84,9 +84,10 @@ uint32_t format_velandyaw(float climb_mps, float airspeed_mps, float groundspeed
 /*
  * Adapted from Ardupilot's AP_Frsky_SPort_Passthrough::calc_attiandrng()
  * This is the content of the 0x5006 Attitude and RangeFinder.
- * We don't provide Rangefinder here.
+ * rangefinder_cm is the downward rangefinder distance in cm, or 0 when there
+ * is no rangefinder.
  */
-uint32_t format_attiandrng(float pitch_rad, float roll_rad);
+uint32_t format_attiandrng(float pitch_rad, float roll_rad, int32_t rangefinder_cm);
 
 /*
  * Adapted from Ardupilot's AP_Frsky_SPort_Passthrough::calc_param()
@@ -111,4 +112,10 @@ uint32_t format_terrain(uint32_t altitude_terrain);
  * This is the content of the 0x500B terrain.
  */
 uint32_t format_waypoint(uint8_t heading, uint16_t distance, uint16_t number);
+
+/*
+ * Adapted from Ardupilot's AP_Frsky_SPort_Passthrough::calc_wind()
+ * This is the content of the 0x500C wind value.
+ */
+uint32_t format_wind(float direction_deg, float speed_mps);
 
