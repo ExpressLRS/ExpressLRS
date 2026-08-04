@@ -10,6 +10,8 @@
 #include "ardupilot_custom_telemetry.h"
 #include "ardupilot_protocol.h"
 
+#include <math.h>
+
 /*
  * Helper function to send an ardupilot specific CRSF passthrough frame
  * with a single data item appid is the function that produces the data.
@@ -94,6 +96,12 @@ void convert_mavlink_to_crsf_telem(crsf_addr_e destination, uint8_t *CRSFinBuffe
     // Store the home position for distance and bearing calculation
     static int32_t home_latitude_degE7 = 0;
     static int32_t home_longitude_degE7 = 0;
+
+    // Store the latest downward rangefinder distance for the attitude/rangefinder packet
+    static int32_t rangefinder_cm = 0;
+    // DISTANCE_SENSOR is the primary source. RANGEFINDER is the fallback for
+    // flight controllers that do not send DISTANCE_SENSOR.
+    static bool have_distance_sensor = false;
 
     for (uint8_t i = 0; i < count; i++)
     {
@@ -211,7 +219,7 @@ void convert_mavlink_to_crsf_telem(crsf_addr_e destination, uint8_t *CRSFinBuffe
                 crsfRouter.deliverMessageTo(destination, &crsfatt.h);
 
                 // send the attitude message to Yaapu Telemetry Script
-                ap_send_crsf_passthrough_single(destination, 0x5006, format_attiandrng(attitude.pitch, attitude.roll));
+                ap_send_crsf_passthrough_single(destination, 0x5006, format_attiandrng(attitude.pitch, attitude.roll, rangefinder_cm));
                 break;
             }
             case MAVLINK_MSG_ID_HEARTBEAT: {
@@ -328,6 +336,39 @@ void convert_mavlink_to_crsf_telem(crsf_addr_e destination, uint8_t *CRSFinBuffe
                 mavlink_msg_rpm_decode(&msg, &rpm);
                 // send the rpm message to Yaapu Telemetry Script
                 ap_send_crsf_passthrough_single(destination, 0x500A, format_rpm(rpm.rpm1, rpm.rpm2));
+                break;
+            }
+            case MAVLINK_MSG_ID_DISTANCE_SENSOR: {
+                mavlink_distance_sensor_t distance_sensor;
+                mavlink_msg_distance_sensor_decode(&msg, &distance_sensor);
+                // ArduPilot 4.7 and later send DISTANCE_SENSOR in place of RANGEFINDER.
+                // The vehicle sends one message for each sensor. Use only the
+                // downward sensor, because that is the sensor this field shows.
+                if (distance_sensor.orientation == MAV_SENSOR_ROTATION_PITCH_270)
+                {
+                    have_distance_sensor = true;
+                    // stash the distance in cm for the next attitude/rangefinder packet
+                    rangefinder_cm = distance_sensor.current_distance;
+                }
+                break;
+            }
+            case MAVLINK_MSG_ID_RANGEFINDER: {
+                // Fallback only. DISTANCE_SENSOR gives the orientation, so it wins.
+                if (have_distance_sensor)
+                {
+                    break;
+                }
+                mavlink_rangefinder_t rangefinder;
+                mavlink_msg_rangefinder_decode(&msg, &rangefinder);
+                // stash the distance in cm for the next attitude/rangefinder packet
+                rangefinder_cm = (int32_t)lroundf(rangefinder.distance * 100);
+                break;
+            }
+            case MAVLINK_MSG_ID_WIND: {
+                mavlink_wind_t wind;
+                mavlink_msg_wind_decode(&msg, &wind);
+                // send the wind message to Yaapu Telemetry Script
+                ap_send_crsf_passthrough_single(destination, 0x500C, format_wind(wind.direction, wind.speed));
                 break;
             }
             }
