@@ -55,7 +55,9 @@ extern char version_domain[];
 
 // create and randomise an FHSS sequence
 void FHSSrandomiseFHSSsequence(uint32_t seed);
-void FHSSrandomiseFHSSsequenceBuild(uint32_t seed, uint32_t freqCount, uint_fast8_t sync_channel, uint8_t *sequence);
+// build one band's sequence from freqCount alone and return the number of
+// entries written, always a whole multiple of freqCount
+uint16_t FHSSrandomiseFHSSsequenceBuild(uint32_t seed, uint32_t freqCount, uint_fast8_t sync_channel, uint8_t *sequence);
 
 // add domain info for Lua
 void addDomainInfo(char *version_domain, uint8_t maxlen);
@@ -83,7 +85,8 @@ static inline uint32_t FHSSgetChannelCount(void)
     }
 }
 
-// get the number of entries in the FHSS sequence
+// how far the shared hop index may advance in the current mode. This is not any
+// one band's table length, so never size a sequence build from it
 static inline uint16_t FHSSgetSequenceCount()
 {
     if (FHSSuseDualBand) // Use the smaller of the 2 bands as not to go beyond the max index for each sequence.
