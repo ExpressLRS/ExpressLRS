@@ -30,6 +30,10 @@ enum deviceEvent_t {
     EVENT_CONFIG_SERIAL_CHANGE = 1 << 17,
     EVENT_CONFIG_VERSION_CHANGED = 1 << 18,
 
+#if defined(GYRO_SUPPORT)
+    EVENT_CONFIG_GYRO_CHANGED    = 1 << 19,
+#endif
+
     EVENT_ALL = 0xFFFFFFFF
 };
 

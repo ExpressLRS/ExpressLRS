@@ -6,7 +6,7 @@
 ---- # License GPLv2: http://www.gnu.org/licenses/gpl-2.0.html               #
 ---- #                                                                       #
 ---- #########################################################################
-local EXITVER = "-- EXIT (Lua r18) --"
+local EXITVER = "-- EXIT (Lua r18 Gyro) --"
 local deviceId = 0xEE
 local handsetId = 0xEA
 local deviceName = nil
@@ -957,8 +957,18 @@ local function run(event, touchState)
 
   if fieldPopup ~= nil then
     runPopupPage(event)
+    backFromPopup = 1
   elseif event ~= 0 or forceRedraw or edit then
     runDevicePage(event)
+    if backFromPopup==1 then
+      backFromPopup = 0
+      local field = getField(lineIndex)
+      if (field and currentFolderId) then
+        -- Farzu: returning from command execution on a sub-folder
+        -- refresh the data
+        reloadRelatedFields(field)
+      end
+    end
   end
 
   return exitscript

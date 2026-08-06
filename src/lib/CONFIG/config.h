@@ -6,6 +6,10 @@
 #include "common.h"
 #include "OTA.h"
 
+#if defined(GYRO_SUPPORT)
+#include "gyro_types.h"
+#endif
+
 #if defined(PLATFORM_ESP32)
 #include <nvs_flash.h>
 #include <nvs.h>
@@ -267,6 +271,10 @@ typedef struct __attribute__((packed)) {
                 teamracePitMode:1;  // FUTURE: Enable pit mode when disabling model
     uint8_t     targetSysId;
     uint8_t     sourceSysId;
+
+#if defined(GYRO_SUPPORT)
+    rx_config_gyro_t gyro;
+#endif
 } rx_config_t;
 
 class RxConfig : public BindphraseConfigurable
@@ -292,6 +300,26 @@ public:
     uint8_t GetAntennaGroup() const { return m_config.antennaGroup; }
     bool     IsModified() const { return m_modified != 0; }
     const rx_config_pwm_t *GetPwmChannel(uint8_t ch) const { return &m_config.pwmChannels[ch]; }
+
+#if defined(GYRO_SUPPORT)
+    const bool GetPwmChannelInverted(uint8_t ch) const { return m_config.pwmChannels[ch].val.inverted; }
+    const rx_config_pwm_limits_t *GetPwmChannelLimits(uint8_t ch) const { return &m_config.gyro.pwmLimits[ch]; }
+
+    const rx_config_gyro_channel_t *GetGyroChannel(uint8_t ch) const { return &m_config.gyro.gyroChannels[ch]; }
+    //const rx_config_gyro_timings_t *GetGyroChannelTimings(uint8_t ch) const { return &m_config.gyroTimings[ch]; }
+    const rx_config_gyro_PID_t *GetGyroPID(gyro_pidgroup_t group, gyro_axis_t axis) const { return &m_config.gyro.gyroPIDs[group][axis]; }
+    const rx_config_gyro_fmode_t *GetGyroFMode(gyro_mode_t fm) const { return (fm>=GYRO_MODE_RATE)?&m_config.gyro.gyroFModes[fm-GYRO_MODE_RATE] : nullptr; }
+
+    const rx_config_gyro_mode_pos_t *GetGyroModePos() const { return &m_config.gyro.gyroModeSwitch;}
+    const uint8_t GetGyroOrientationH() const { return m_config.gyro.orientationH; }
+    const uint8_t GetGyroOrientationV() const { return m_config.gyro.orientationV; }    
+    const bool GetGyroEnabled() const { return m_config.gyro.gyroEnabled; }
+    const uint8_t GetGyroConfigVersion() const { return m_config.gyro.configVersion; }
+    const gyro_gain_factor_t GetGyroGainFactor() const {return (gyro_gain_factor_t) m_config.gyro.gainFactor; };
+    const rx_config_gyro_calibration_t *GetAccelCalibration() const { return &m_config.gyro.accelCalibration; }
+    const rx_config_gyro_calibration_t *GetGyroCalibration() const { return &m_config.gyro.gyroCalibration; }
+#endif
+
     bool GetForceTlmOff() const { return m_config.forceTlmOff; }
     uint8_t GetRateInitialIdx() const { return m_config.rateInitialIdx; }
     eSerialProtocol GetSerialProtocol() const { return (eSerialProtocol)m_config.serialProtocol; }
@@ -317,6 +345,27 @@ public:
     void SetStorageProvider(ELRS_EEPROM *eeprom);
     void SetPwmChannel(uint8_t ch, uint16_t failsafe, uint8_t inputCh, bool inverted, uint8_t mode, uint8_t stretched);
     void SetPwmChannelRaw(uint8_t ch, uint32_t raw);
+
+    #if defined(GYRO_SUPPORT)
+    void SetGyroDefaults(bool commit);
+
+    void SetGyroConfigVersion(uint8_t value);
+    void SetGyroEnabled(bool);
+    void SetGyroGainFactor(gyro_gain_factor_t factor);
+    void SetAccelCalibration(uint16_t x, uint16_t y, uint16_t z);
+    void SetGyroCalibration(uint16_t x, uint16_t y, uint16_t z);
+    void SetGyroOrientation(uint8_t oh, uint8_t ov);
+
+    void SetPwmChannelLimits(uint8_t ch, uint16_t min, uint16_t max, uint16_t mid);
+    void SetPwmChannelLimitsRaw(uint8_t ch, uint64_t raw);
+
+    void SetGyroChannel(uint8_t ch, uint8_t output_mode, bool master, bool inverted);
+    void SetGyroChannelRaw(uint8_t ch, uint32_t raw);
+    void SetGyroFModeRaw(gyro_mode_t fm, uint64_t raw);
+    void SetGyroModePos(uint8_t pos, gyro_mode_t mode);
+    void SetGyroPIDRate(gyro_pidgroup_t group, gyro_axis_t axis, gyro_rate_variable_t var, uint8_t value);
+    #endif   
+    
     void SetForceTlmOff(bool forceTlmOff);
     void SetRateInitialIdx(uint8_t rateInitialIdx);
     void SetSerialProtocol(eSerialProtocol serialProtocol);
@@ -339,6 +388,11 @@ private:
     void UpgradeEepromV6();
     void UpgradeEepromV7V8(uint8_t ver);
     void UpgradeEepromV9V10(uint8_t ver);
+
+#if defined(GYRO_SUPPORT)
+    void GyroCheckUpgrade();
+	void debugGyroConfiguration();
+#endif
 
     rx_config_t m_config;
     ELRS_EEPROM *m_eeprom;

@@ -1068,6 +1068,71 @@ const HARDWARE_SCHEMA = [
         ]
     },
     /* /FEATURE: NOT IS_8285 */
+    {
+        title: 'SPI', rows: [
+            {
+                id: 'spi_sck',
+                label: 'SCK pin',
+                type: 'uint',
+                icon: 'output',
+                desc: 'SPI Clock pin used to communicate with SPI devices'
+            },
+            {
+                id: 'spi_miso',
+                label: 'MISO pin',
+                type: 'uint',
+                icon: 'input',
+                desc: 'SPI MISO pin used to communicate with SPI devices'
+            },
+            {
+                id: 'spi_mosi',
+                label: 'MOSI pin',
+                type: 'uint',
+                icon: 'output',
+                desc: 'SPI MOSI pin used to communicate with SPI devices'
+            },
+            {
+                id: 'spi_rst',
+                label: 'RST pin',
+                type: 'uint',
+                icon: 'output',
+                desc: 'SPI RST pin connected to (posibly) multiple with SPI devices'
+            },
+        ]
+    },
+    {
+        title: 'Gyro', rows: [
+            {
+                id: 'gyro_type',
+                label: 'Gyro type',
+                type: 'select',
+                options: [
+                    {value: 0, label: 'None'}, {value: 1, label: 'MP6050 (I2C)'}, {value: 2, label: 'LSM6DXX (SPI)'}
+                ], desc: 'Type of Gyro connected'
+            },
+            {
+                id: 'spi_nss',
+                label: 'SPI NSS pin',
+                type: 'uint',
+                icon: 'output',
+                desc: 'Chip select pin for SPI Gyro'
+            },
+            {
+                id: 'spi_busy',
+                label: 'SPI BUSY pin',
+                type: 'uint',
+                icon: 'output',
+                desc: 'Input busy pin for SPI Gyro'
+            },
+            {
+                id: 'spi_int',
+                label: 'SPI Int pin',
+                type: 'uint',
+                icon: 'output',
+                desc: 'Interrupt pin for SPI Gyro'
+            },
+        ]
+    },
     /* /FEATURE: NOT IS_TX */
 ]
 

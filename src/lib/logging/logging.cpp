@@ -15,6 +15,7 @@ void debugPrintf(const char* fmt, ...)
   char c;
   const char *v = nullptr;
   char buf[21];
+  char buf_dec[4];
   va_list  vlist;
   va_start(vlist,fmt);
 
@@ -45,7 +46,10 @@ void debugPrintf(const char* fmt, ...)
             itoa((int32_t)val, buf, DEC);
             strcat(buf, ".");
             int32_t decimals = abs((int32_t)(val * 1000)) % 1000;
-            itoa(decimals, buf + strlen(buf), DEC);
+            itoa(decimals, buf_dec, DEC);
+            // add leading 0s after the "."
+            for (int i=strlen(buf_dec);i<3;i++) { strcat(buf,"0"); } 
+            strcat(buf,buf_dec);
           }
           break;
         default:
