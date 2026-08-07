@@ -1,9 +1,8 @@
 #pragma once
 
-//#include "helper_3dmath.h"
 #include "gyro_types.h"
-#include "../drivers/imu_driver.h"
 #include "biasFilter.h"
+#include "../drivers/imu_driver.h"
 
 class AHRS
 {

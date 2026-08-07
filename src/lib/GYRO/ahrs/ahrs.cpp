@@ -1,12 +1,11 @@
 #include "targets.h"
 
-#if defined(GYRO_SUPPORT)
+#if defined(GYRO_SUPPORT) && defined(PLATFORM_ESP32)
 #include "ahrs.h"
-#include "logging.h"
-#include "config.h"
 #include "biasFilter.h"
+#include "devGyro.h"
 #include "filter.h"
-//#include <Wire.h>
+#include "logging.h"
 
 #define MAX_GYRO_DIFF 200       
 #define MAX_ACC_DIFF  500 
@@ -79,12 +78,12 @@ void AHRS::start() {
     initialized = false;
     DBGLN("Ahrs:Start()");
 
-    if (!config.GetGyroEnabled() || driver == nullptr) return; //not enabled
+    if (!gyroConfig->GetGyroEnabled() || driver == nullptr) return; //not enabled
 
     driver->start();
 
-    memcpy(&calAccelOffets,config.GetAccelCalibration(),sizeof(rx_config_gyro_calibration_t));
-    memcpy(&calGyroOffsets,config.GetGyroCalibration(),sizeof(rx_config_gyro_calibration_t));
+    memcpy(&calAccelOffets,gyroConfig->GetAccelCalibration(),sizeof(rx_config_gyro_calibration_t));
+    memcpy(&calGyroOffsets,gyroConfig->GetGyroCalibration(),sizeof(rx_config_gyro_calibration_t));
     DBGLN("Acc Offs:  x=%d,y=%d,z=%d",calAccelOffets.x, calAccelOffets.y,calAccelOffets.z);
     DBGLN("Gyro Offs:  x=%d,y=%d,z=%d",calGyroOffsets.x, calGyroOffsets.y,calGyroOffsets.z);
 
@@ -93,7 +92,7 @@ void AHRS::start() {
     read_errors = 0; // Reset Errors
 
      // Reload Madwick Configuration
-    const rx_config_gyro_PID_t *madwickPI = config.GetGyroPID(GYRO_PID_GROUP_MADWICK,GYRO_AXIS_ROLL);
+    const rx_config_gyro_PID_t *madwickPI = gyroConfig->GetGyroPID(GYRO_PID_GROUP_MADWICK,GYRO_AXIS_ROLL);
     AHRS_KP = (float) madwickPI->p / 10;
     AHRS_KI = (float) madwickPI->i / 10;
 
@@ -271,13 +270,13 @@ bool AHRS::readAndUpdate() {
     }
 
     // Apply Calibration offsets
-    v_accel.x -= calAccelOffets.x;
-    v_accel.y -= calAccelOffets.y;
-    v_accel.z -= calAccelOffets.z;
+    v_accel.x -= calAccelOffets.val.x;
+    v_accel.y -= calAccelOffets.val.y;
+    v_accel.z -= calAccelOffets.val.z;
     
-    v_gyro.x -= calGyroOffsets.x;
-    v_gyro.y -= calGyroOffsets.y;
-    v_gyro.z -= calGyroOffsets.z;
+    v_gyro.x -= calGyroOffsets.val.x;
+    v_gyro.y -= calGyroOffsets.val.y;
+    v_gyro.z -= calGyroOffsets.val.z;
 
     applyOrientation(&v_accel);
     applyOrientation(&v_gyro);
@@ -358,8 +357,8 @@ void AHRS::setupOrientation()
 {
     uint8_t idx;
     orientationIsWrong = false;
-    imuOrientationH = config.GetGyroOrientationH();
-    imuOrientationV = config.GetGyroOrientationV();
+    imuOrientationH = gyroConfig->GetGyroOrientationH();
+    imuOrientationV = gyroConfig->GetGyroOrientationV();
 
     if (imuOrientationH>5 || imuOrientationV>5 ) 
     {
@@ -447,11 +446,11 @@ void AHRS::OrientationVerticalExecute() {
     DBGLN("Upper face (with nose up) is %s",mpuOrientationNames[idx]);
     imuOrientationV =  idx ; // save the orientationV
 
-    config.SetGyroOrientation(imuOrientationH,imuOrientationV);  
+    gyroConfig->SetGyroOrientation(imuOrientationH,imuOrientationV);
 
     // Save the Calibration
-    config.SetAccelCalibration(calAccelOffets.x, calAccelOffets.y, calAccelOffets.z);
-    config.SetGyroCalibration(calGyroOffsets.x, calGyroOffsets.y, calGyroOffsets.z);
+    gyroConfig->SetAccelCalibration(calAccelOffets.val.x, calAccelOffets.val.y, calAccelOffets.val.z);
+    gyroConfig->SetGyroCalibration(calGyroOffsets.val.x, calGyroOffsets.val.y, calGyroOffsets.val.z);
 
     // Restart with the saved config Offsets
     start();
@@ -610,9 +609,9 @@ bool AHRS::calibrateGyro(int8_t loops, rx_config_gyro_calibration_t *offsets)
 	gyAccum /= (ACCEL_NUM_AVG_SAMPLES - errors);
 	gzAccum /= (ACCEL_NUM_AVG_SAMPLES - errors);
    
-    offsets->x = (int16_t)(gxAccum);
-	offsets->y = (int16_t)(gyAccum);
-	offsets->z = (int16_t)(gzAccum);
+    offsets->val.x = (int16_t)(gxAccum);
+	offsets->val.y = (int16_t)(gyAccum);
+	offsets->val.z = (int16_t)(gzAccum);
  
     DBGLN("Gyr Offs:  x=%d,y=%d,z=%d",offsets->x, offsets->y,offsets->z);
     isCalibrating = false;
@@ -693,9 +692,9 @@ bool AHRS::calibrateAccel(int8_t loops, rx_config_gyro_calibration_t *offsets)
     azAccum /= (ACCEL_NUM_AVG_SAMPLES - errors);
 
     // we store the values
-    offsets->x = (int16_t)(axAccum);
-	offsets->y = (int16_t)(ayAccum);
-	offsets->z = (int16_t)(azAccum);
+    offsets->val.x = (int16_t)(axAccum);
+	offsets->val.y = (int16_t)(ayAccum);
+	offsets->val.z = (int16_t)(azAccum);
 
     DBGLN("Acc Offs:  x=%d,y=%d,z=%d",offsets->x, offsets->y,offsets->z);
     isCalibrating = false;
@@ -710,15 +709,15 @@ void AHRS::calibrate(bool save)
 
     if (!save) return;
 
-    config.SetAccelCalibration(
-        calAccelOffets.x,
-        calAccelOffets.y,
-        calAccelOffets.z
+    gyroConfig->SetAccelCalibration(
+        calAccelOffets.val.x,
+        calAccelOffets.val.y,
+        calAccelOffets.val.z
     );
-    config.SetGyroCalibration(
-        calGyroOffsets.x,
-        calGyroOffsets.y,
-        calGyroOffsets.z
+    gyroConfig->SetGyroCalibration(
+        calGyroOffsets.val.x,
+        calGyroOffsets.val.y,
+        calGyroOffsets.val.z
     );
 }
 

@@ -2,12 +2,8 @@
 #include "targets.h"
 
 #if defined(GYRO_SUPPORT)
-#include "device.h"
-#include "config.h"
 #include "pid.h"
 #include "gyro_types.h"
-#include <math.h>
-//#include "helper_3dmath.h"
 #include "ahrs/ahrs.h"
 #include "modes/mode.h"
 

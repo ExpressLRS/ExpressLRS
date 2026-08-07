@@ -1,8 +1,7 @@
 #include "targets.h"
 
-#if defined(GYRO_SUPPORT)
+#if defined(GYRO_SUPPORT) && defined(PLATFORM_ESP32)
 #include "logging.h"
-#include "config.h"
 #include "lsm6dXX.h"
 #include "lsm6dxx_regs.h"
 

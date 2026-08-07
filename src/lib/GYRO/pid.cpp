@@ -1,8 +1,6 @@
 #include "targets.h"
 #include "pid.h"
 
-
-
 PID::PID() {
     PID(0,0,0,0,0);
 }

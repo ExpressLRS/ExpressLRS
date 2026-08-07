@@ -1,8 +1,9 @@
+#if defined(GYRO_SUPPORT) && defined(PLATFORM_ESP32)
+
 #include "mode_hover.h"
-#include "config.h"
+#include "devGyro.h"
 #include "logging.h"
 
-#if defined(GYRO_SUPPORT)
 /**
  * Airplane Hover Mode
  *
@@ -21,7 +22,7 @@
 void HoverController::initialize(gyro_mode_t mode) {
     RateController::initialize(mode);
 
-    fm_angle_settings.raw =  config.GetGyroFMode(mode)->raw; // Default settings for ALL
+    fm_angle_settings.raw =  gyroConfig->GetGyroFMode(mode)->raw; // Default settings for ALL
 
     hoverStrengthPitch = (float) fm_angle_settings.val.gainPitch / 100;
     hoverStrengthYaw   = (float) fm_angle_settings.val.gainYaw / 100;

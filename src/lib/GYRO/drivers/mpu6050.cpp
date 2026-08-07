@@ -1,11 +1,9 @@
 #include "targets.h"
 
-#if defined(GYRO_SUPPORT)
+#if defined(GYRO_SUPPORT) && defined(PLATFORM_ESP32)
 #include "mpu6050.h"
 #include "mpu6050_regs.h"
-//#include "MPU6050_6Axis_MotionApps612.h"
 #include "logging.h"
-#include "config.h"
 #include <Wire.h>
 
 #define I2C_MASTER_FREQ_HZ 400000

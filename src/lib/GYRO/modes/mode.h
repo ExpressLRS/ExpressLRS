@@ -1,9 +1,6 @@
 #pragma once
 #include "gyro_types.h"
 
-extern int8_t gyro_trim_encode(int8_t n);
-extern int8_t gyro_trim_decode(int8_t n);
-
 class Mode_Base
 {
     public:

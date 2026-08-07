@@ -1,29 +1,28 @@
 #include "targets.h"
 
-#if defined(GYRO_SUPPORT)
+#if defined(GYRO_SUPPORT) && defined(PLATFORM_ESP32)
 #include "gyro.h"
-//#include "utils.h"
 #include "logging.h"
-#include "elrs_eeprom.h" // only needed to satisfy PIO
-#include "config.h"
+
 #include "CRSFRouter.h"
+#include "device.h"
+#include "gyro_config.h"
 
-
-#include "drivers/mpu6050.h"
 #include "drivers/lsm6dXX.h"
-
+#include "drivers/mpu6050.h"
 
 extern boolean i2c_enabled;
 extern boolean spi_enabled;
 
 Gyro gyro = Gyro();
 AHRS ahrs = AHRS();
+GyroConfig *gyroConfig;
 
 static IMU_Driver *driver = nullptr;
 
 static bool initialize()
 {
-    if (! OPT_HAS_GYRO) return false;
+    if (!OPT_HAS_GYRO) return false;
 
     driver = nullptr;
 
@@ -77,6 +76,9 @@ static int start()
         DBGLN("Gyro initialization failed");
         return DURATION_NEVER;
     }
+    gyroConfig = new GyroConfig();
+    gyroConfig->Load();
+
     gyro.start();
     ahrs.start();
     return DURATION_IMMEDIATELY; // Call timeout() immediately;

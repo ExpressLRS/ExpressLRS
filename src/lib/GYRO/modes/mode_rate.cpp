@@ -1,8 +1,8 @@
-#if defined(GYRO_SUPPORT)
+#if defined(GYRO_SUPPORT) && defined(PLATFORM_ESP32)
 
 #include "gyro.h"
 #include "mode_rate.h"
-#include "pid.h"
+#include "devGyro.h"
 #include "logging.h"
 #include "utils.h"
 
@@ -15,15 +15,9 @@
  * angular rates.
  */
 
-void _make_gyro_debug_string(PID *pid, char *str) {
-    sprintf(str, "Setpoint: %5.2f PV: %5.2f I:%5.2f D:%5.2f Error: %5.2f Out: %5.2f",
-        pid->setpoint, pid->pv, pid->Iout, pid->Dout, pid->error, pid->output);
-
+RateController::RateController()
+{
 }
-
- RateController::RateController()
- {
- }
 
 void RateController::configure_pid_gains(PID *pid, const rx_config_gyro_PID_t *pid_params, int8_t gain,
                          float max, float min)
@@ -45,9 +39,9 @@ void RateController::configure_pid_gains(PID *pid, const rx_config_gyro_PID_t *p
 }
 
 void  RateController::applyFModeSettings(gyro_mode_t fm) {
-    fm_settings.raw =  config.GetGyroFMode(GYRO_MODE_RATE)->raw; // Default settings for ALL
+    fm_settings.raw =  gyroConfig->GetGyroFMode(GYRO_MODE_RATE)->raw; // Default settings for ALL
 
-    auto rate_settings = config.GetGyroFMode(fm); // Get settings for Specific flight Mode
+    auto rate_settings = gyroConfig->GetGyroFMode(fm); // Get settings for Specific flight Mode
 
     if (fm == GYRO_MODE_LEVEL || fm == GYRO_MODE_ENVELOPE) { // Override
         fm_settings.val.maxAnglePitch = rate_settings->val.maxAnglePitch;
@@ -102,9 +96,9 @@ void RateController::initialize(gyro_mode_t mode)
 
     applyFModeSettings(mode);
 
-    const rx_config_gyro_PID_t *roll_pid_params     = config.GetGyroPID(GYRO_PID_GROUP_RATE, GYRO_AXIS_ROLL);
-    const rx_config_gyro_PID_t *pitch_pid_params    = config.GetGyroPID(GYRO_PID_GROUP_RATE, GYRO_AXIS_PITCH);
-    const rx_config_gyro_PID_t *yaw_pid_params      = config.GetGyroPID(GYRO_PID_GROUP_RATE, GYRO_AXIS_YAW);
+    const rx_config_gyro_PID_t *roll_pid_params     = gyroConfig->GetGyroPID(GYRO_PID_GROUP_RATE, GYRO_AXIS_ROLL);
+    const rx_config_gyro_PID_t *pitch_pid_params    = gyroConfig->GetGyroPID(GYRO_PID_GROUP_RATE, GYRO_AXIS_PITCH);
+    const rx_config_gyro_PID_t *yaw_pid_params      = gyroConfig->GetGyroPID(GYRO_PID_GROUP_RATE, GYRO_AXIS_YAW);
 
     configure_pid_gains(&pid_roll,  roll_pid_params,    fm_settings.val.gainRoll,   roll_limit, -1.0 * roll_limit);
     configure_pid_gains(&pid_pitch, pitch_pid_params,   fm_settings.val.gainPitch,  pitch_limit, -1.0 * pitch_limit);
@@ -162,25 +156,30 @@ void RateController::calculate_pid(float input_rpy[], float gyro_rpy[], float an
 }
 
 #if defined(DEBUG_LOG)
+void _make_gyro_debug_string(PID *pid, char *str) {
+    sprintf(str, "Setpoint: %5.2f PV: %5.2f I:%5.2f D:%5.2f Error: %5.2f Out: %5.2f",
+        pid->setpoint, pid->pv, pid->Iout, pid->Dout, pid->error, pid->output);
+}
+
 void RateController::printState() {
-        char piddebug[128];
-        DBGLN("TOTAL MASTER GAIN %f.  IMU: Read Err=%d Int_Err=%d", gyro.master_gain * gyro.gain_factor, gyro.ahrs->read_errors, gyro.ahrs->int_errors);
-        sprintf(piddebug,"Roll:%5.2f Pitch:%5.2f Yaw:%5.2f", radToDeg(gyro.ahrs->angle_rpy[0]), radToDeg(gyro.ahrs->angle_rpy[1]), radToDeg(gyro.ahrs->angle_rpy[2])); 
-        DBGLN("Angles:  %s",piddebug);
-        sprintf(piddebug,"Roll:%5.2f Pitch:%5.2f Yaw:%5.2f", input_rpy[GYRO_AXIS_ROLL], input_rpy[GYRO_AXIS_PITCH], input_rpy[GYRO_AXIS_YAW]);    
-        DBGLN("Cmds:    %s",piddebug);
+    char piddebug[128];
+    DBGLN("TOTAL MASTER GAIN %f.  IMU: Read Err=%d Int_Err=%d", gyro.master_gain * gyro.gain_factor, gyro.ahrs->read_errors, gyro.ahrs->int_errors);
+    sprintf(piddebug,"Roll:%5.2f Pitch:%5.2f Yaw:%5.2f", radToDeg(gyro.ahrs->angle_rpy[0]), radToDeg(gyro.ahrs->angle_rpy[1]), radToDeg(gyro.ahrs->angle_rpy[2]));
+    DBGLN("Angles:  %s",piddebug);
+    sprintf(piddebug,"Roll:%5.2f Pitch:%5.2f Yaw:%5.2f", input_rpy[GYRO_AXIS_ROLL], input_rpy[GYRO_AXIS_PITCH], input_rpy[GYRO_AXIS_YAW]);
+    DBGLN("Cmds:    %s",piddebug);
 
-        sprintf(piddebug,"Roll:%5.2f Pitch:%5.2f Yaw:%5.2f", stick_pri[GYRO_AXIS_ROLL], stick_pri[GYRO_AXIS_PITCH], stick_pri[GYRO_AXIS_YAW]);
-        DBGLN("StickPri:%s",piddebug);
-        sprintf(piddebug,"Roll:%5.2f Pitch:%5.2f Yaw:%5.2f",corr[GYRO_AXIS_ROLL], corr[GYRO_AXIS_PITCH], corr[GYRO_AXIS_YAW]);
-        DBGLN("Corr    :%s",piddebug);
+    sprintf(piddebug,"Roll:%5.2f Pitch:%5.2f Yaw:%5.2f", stick_pri[GYRO_AXIS_ROLL], stick_pri[GYRO_AXIS_PITCH], stick_pri[GYRO_AXIS_YAW]);
+    DBGLN("StickPri:%s",piddebug);
+    sprintf(piddebug,"Roll:%5.2f Pitch:%5.2f Yaw:%5.2f",corr[GYRO_AXIS_ROLL], corr[GYRO_AXIS_PITCH], corr[GYRO_AXIS_YAW]);
+    DBGLN("Corr    :%s",piddebug);
 
-        _make_gyro_debug_string(&pid_pitch, piddebug);
-        DBGLN("PID Pitch %s", piddebug);
-        _make_gyro_debug_string(&pid_roll, piddebug);
-        DBGLN("PID Roll  %s", piddebug);
-        _make_gyro_debug_string(&pid_yaw, piddebug);
-        DBGLN("PID Yaw   %s", piddebug);
+    _make_gyro_debug_string(&pid_pitch, piddebug);
+    DBGLN("PID Pitch %s", piddebug);
+    _make_gyro_debug_string(&pid_roll, piddebug);
+    DBGLN("PID Roll  %s", piddebug);
+    _make_gyro_debug_string(&pid_yaw, piddebug);
+    DBGLN("PID Yaw   %s", piddebug);
 }
 #endif 
 

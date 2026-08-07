@@ -75,10 +75,8 @@ void setupSPI()
     int gpio_miso = GPIO_PIN_SPI_MISO;
     int gpio_nss = GPIO_PIN_SPI_NSS;
     int gpio_mosi = GPIO_PIN_SPI_MOSI;
-    int gpio_rst = GPIO_PIN_SPI_RST;
-    int gpio_buys = GPIO_PIN_SPI_BUSY;
     int gpio_int = GPIO_PIN_SPI_INT;
-    DBGLN("SPI: gpio_sck :%d ,gpio_miso: %d , gpio_mosi: %d ,gpio_nss: %d",gpio_sck,gpio_miso,gpio_mosi,gpio_nss);
+    DBGLN("SPI: gpio_sck :%d, gpio_miso: %d, gpio_mosi: %d, gpio_nss: %d, gpio_int", gpio_sck, gpio_miso, gpio_mosi, gpio_nss, gpio_int);
 
     for (int ch = 0 ; ch < GPIO_PIN_PWM_OUTPUTS_COUNT ; ++ch)
     {

@@ -41,7 +41,7 @@
 
 #include <LittleFS.h>
 
-#ifdef GYRO_SUPPORT
+#if defined(GYRO_SUPPORT) && defined(PLATFORM_ESP32)
 #include "devGyro.h"
 #include "gyro.h"
 #endif
@@ -92,7 +92,7 @@ device_affinity_t ui_devices[] = {
   {&Button_device, 0},
   {&AnalogVbat_device, 0},
   {&ServoOut_device, 1},
-#ifdef GYRO_SUPPORT
+#if defined(GYRO_SUPPORT) && defined(PLATFORM_ESP32)
   // Run it on Core1,  If we run it on Core0, can't get more than 125Hz refresh rate
   {&Gyro_device, 1},
 #else
@@ -1946,10 +1946,17 @@ static void updateSwitchMode()
 
 static void CheckConfigChangePending()
 {
-    if (config.IsModified() && !InBindingMode && connectionState < NO_CONFIG_SAVE_STATES)
+    bool modified = config.IsModified();
+#if defined(GYRO_SUPPORT) && defined(PLATFORM_ESP32)
+    modified |= gyroConfig->IsModified();
+#endif
+    if (modified && !InBindingMode && connectionState < NO_CONFIG_SAVE_STATES)
     {
         LostConnection(false);
         uint32_t changes = config.Commit();
+#if defined(GYRO_SUPPORT) && defined(PLATFORM_ESP32)
+        changes |= gyroConfig->Commit();
+#endif
         devicesTriggerEvent(changes);
         LbtEnableIfRequired();
         Radio.RXnb();

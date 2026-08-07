@@ -1,12 +1,11 @@
 #include "targets.h"
 
-#if defined(GYRO_SUPPORT)
+#if defined(GYRO_SUPPORT) && defined(PLATFORM_ESP32)
 #include "config.h"
-#include "utils.h"
-#include "gyro.h"
-#include "logging.h"
 #include "crsf_protocol.h"
-
+#include "devGyro.h"
+#include "gyro.h"
+#include "utils.h"
 
 /**
  *  Apply a correction to a servo PWM value
@@ -25,8 +24,8 @@ float us_command_to_float(uint16_t us)
 float crsf_command_to_float(uint16_t command)
 {
     return command <= CRSF_CHANNEL_VALUE_MID
-        ? float (command - CRSF_CHANNEL_VALUE_MID) / (CRSF_CHANNEL_VALUE_MID - CRSF_CHANNEL_VALUE_MIN)
-        : float (command - CRSF_CHANNEL_VALUE_MID) / (CRSF_CHANNEL_VALUE_MAX - CRSF_CHANNEL_VALUE_MID);
+        ? float (command - CRSF_CHANNEL_VALUE_MID) / (CRSF_CHANNEL_VALUE_MID - CRSF_CHANNEL_VALUE_STD_MIN)
+        : float (command - CRSF_CHANNEL_VALUE_MID) / (CRSF_CHANNEL_VALUE_STD_MAX - CRSF_CHANNEL_VALUE_MID);
 }
 
 /**
@@ -36,7 +35,7 @@ float crsf_command_to_float(uint16_t command)
  */
 float us_command_to_float(uint8_t ch, uint16_t us)
 {
-    const rx_config_pwm_limits_t *limits = config.GetPwmChannelLimits(ch);
+    const rx_config_pwm_limits_t *limits = gyroConfig->GetPwmChannelLimits(ch);
     const uint16_t mid = limits->val.mid;
     return us <= mid
         ? float(us - mid) / (mid - limits->val.min)
@@ -50,7 +49,7 @@ float us_command_to_float(uint8_t ch, uint16_t us)
  */
 uint16_t float_to_us(uint8_t ch, float value)
 {
-    const rx_config_pwm_limits_t *limits = config.GetPwmChannelLimits(ch);
+    const rx_config_pwm_limits_t *limits = gyroConfig->GetPwmChannelLimits(ch);
     const uint16_t mid = limits->val.mid;
 
     return value < 0

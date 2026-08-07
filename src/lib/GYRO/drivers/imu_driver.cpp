@@ -1,9 +1,9 @@
 #include "imu_driver.h"
 
 
-#if defined(GYRO_SUPPORT)
+#if defined(GYRO_SUPPORT) && defined(PLATFORM_ESP32)
 
-#include <wire.h>
+#include <Wire.h>
 #include "SPI.h"
 extern SPIClass _spi;
 

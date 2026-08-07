@@ -209,11 +209,8 @@ enum eServoOutputMode : uint8_t
     somSCK,         // 16: SPI clock signal
     somMISO,        // 17: SPI MISO
     somMOSI,        // 18: SPI MOSI
-    somRST,         // 19: SPI 
     somNSS,         // 20: SPI
-    somDIO1,        // 21: SPI
-    somBUSY,        // 22: SPI
-    somINT,         // 23: SPI
+    somINT,         // 21: SPI
 };
 
 enum eServoOutputFailsafeMode : uint8_t

@@ -1,6 +1,9 @@
 #pragma once
+#if defined(GYRO_SUPPORT) && defined(PLATFORM_ESP32)
 
-#include "common.h"
 #include "device.h"
+#include "gyro_config.h"
 
+extern GyroConfig *gyroConfig;
 extern device_t Gyro_device;
+#endif

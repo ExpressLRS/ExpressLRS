@@ -1,10 +1,8 @@
-#include "gyro.h"
+#if defined(GYRO_SUPPORT) && defined(PLATFORM_ESP32)
 
-#if defined(GYRO_SUPPORT)
-#include "config.h"
-#include "crsf_protocol.h"
+#include "gyro.h"
 #include "mode_envelope.h"
-#include "pid.h"
+#include "devGyro.h"
 #include "gyro_types.h"
 #include "logging.h"
 
@@ -92,10 +90,10 @@ void AngEnvelopeController::initialize(gyro_mode_t mode)
 {
     RateController::initialize(mode);
 
-    fm_angle_settings.raw =  config.GetGyroFMode(mode)->raw; // Default settings for ALL
+    fm_angle_settings.raw =  gyroConfig->GetGyroFMode(mode)->raw; // Default settings for ALL
 
-    const rx_config_gyro_PID_t *roll_pid_params     = config.GetGyroPID(GYRO_PID_GROUP_ANGLE, GYRO_AXIS_ROLL);
-    const rx_config_gyro_PID_t *pitch_pid_params    = config.GetGyroPID(GYRO_PID_GROUP_ANGLE, GYRO_AXIS_PITCH);
+    const rx_config_gyro_PID_t *roll_pid_params     = gyroConfig->GetGyroPID(GYRO_PID_GROUP_ANGLE, GYRO_AXIS_ROLL);
+    const rx_config_gyro_PID_t *pitch_pid_params    = gyroConfig->GetGyroPID(GYRO_PID_GROUP_ANGLE, GYRO_AXIS_PITCH);
    
     float roll_limit = 1.0;
     float pitch_limit = 1.0;

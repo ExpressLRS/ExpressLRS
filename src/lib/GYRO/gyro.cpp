@@ -1,19 +1,20 @@
 #include "targets.h"
 
-#if defined(GYRO_SUPPORT)
-#include "config.h"
+#if defined(GYRO_SUPPORT) && defined(PLATFORM_ESP32)
 #include "gyro.h"
+
+#include "config.h"
 #include "gyro_types.h"
 #include "utils.h"
 
+#include "crsf_protocol.h"
+#include "devGyro.h"
+#include "logging.h"
 #include "ahrs/ahrs.h"
-#include "modes/mode_envelope.h"
 #include "modes/mode_auto_level.h"
 #include "modes/mode_hover.h"
 #include "modes/mode_rate.h"
-#include "logging.h"
-#include "crsf_protocol.h"
-
+#include "modes/mode_envelope.h"
 
 // Comment to Remove Debug of State
 #if defined(DEBUG_LOG)
@@ -75,7 +76,7 @@ static int8_t GetGyroFunChannelNumber(gyro_output_channel_function_t mode, gyro_
 {
     int8_t result = -1;
     for (int8_t i = start_ch; i < GYRO_MAX_CHANNELS; i++) {
-        auto info =  config.GetGyroChannel(i);
+        auto info =  gyroConfig->GetGyroChannel(i);
         if (info->val.output_mode == mode ||
             info->val.output_mode == mode2) {
             if (result==-1) {
@@ -129,7 +130,7 @@ void Gyro::start()
     DBGLN("Gyro:Start()");
     initialized = false;
     ahrs->start();
-    if (!config.GetGyroEnabled()) return; //not enabled
+    if (!gyroConfig->GetGyroEnabled()) return; //not enabled
     if (ahrs->getImuDriver()== nullptr) return; // No Gyro Detected
     
     gyro_mode = GYRO_MODE_OFF;
@@ -137,7 +138,7 @@ void Gyro::start()
     initialized = ahrs->isRunning() && !isStickCalibrationNeeded();
 
     gain_factor = 1.0;
-    gyro_gain_factor_t gainFactorEnum = config.GetGyroGainFactor();
+    gyro_gain_factor_t gainFactorEnum = gyroConfig->GetGyroGainFactor();
     switch (gainFactorEnum) {
         case GYRO_GAIN_FACTOR_0_5X: gain_factor = 0.5; break;
         case GYRO_GAIN_FACTOR_1X: gain_factor = 1.0; break;
@@ -179,7 +180,7 @@ void Gyro::start()
 
 gyro_status_t Gyro::getStatus() 
 {
-    if (!config.GetGyroEnabled()) return GYRO_STATUS_OFF;
+    if (!gyroConfig->GetGyroEnabled()) return GYRO_STATUS_OFF;
     if (ahrs->getImuDriver() == nullptr) return GYRO_STATUS_NOT_DETECTED;
     if (!ahrs->isRunning()) return GYRO_STATUS_NEED_RX_ORIENTATION; 
     if (isStickCalibrationNeeded()) return GYRO_STATUS_NEED_STICK_CAL;
@@ -197,7 +198,7 @@ void Gyro::calibrate()
 
 void Gyro::detect_mode(uint16_t us)
 {
-    const rx_config_gyro_mode_pos_t *modes = config.GetGyroModePos();
+    const rx_config_gyro_mode_pos_t *modes = gyroConfig->GetGyroModePos();
     const uint16_t width = (GYRO_US_MAX - GYRO_US_MIN) / 5;
     uint8_t channel_position = (us - GYRO_US_MIN) / width;
     channel_position = channel_position > 4 ? 4 : channel_position;
@@ -271,24 +272,24 @@ void Gyro::mixerInput()
     float input_rpy[3]  = {0.0, 0.0, 0.0};
    
     if (roll_ch >= 0)   {
-        auto info =  config.GetGyroChannel(roll_ch);
+        auto info =  gyroConfig->GetGyroChannel(roll_ch);
         input_rpy[GYRO_AXIS_ROLL]   = channel_command(roll_ch) * ((info->val.inverted)?-1:+1);
     }
 
     if (pitch_ch >= 0)  {
-        auto info =  config.GetGyroChannel(pitch_ch);
+        auto info =  gyroConfig->GetGyroChannel(pitch_ch);
         input_rpy[GYRO_AXIS_PITCH]  = channel_command(pitch_ch) * ((info->val.inverted)?-1:+1);
     }
 
     if (yaw_ch >= 0) {
-        auto info =  config.GetGyroChannel(yaw_ch);
+        auto info =  gyroConfig->GetGyroChannel(yaw_ch);
         input_rpy[GYRO_AXIS_YAW]    = channel_command(yaw_ch) * ((info->val.inverted)?-1:+1);
     }
 
     // ELEVON LOGIC if no aileron/elevator
     if (elevon1_ch >= 0 && elevon2_ch >= 0) {
-        auto i1 =  config.GetGyroChannel(elevon1_ch);
-        auto i2 =  config.GetGyroChannel(elevon2_ch);
+        auto i1 =  gyroConfig->GetGyroChannel(elevon1_ch);
+        auto i2 =  gyroConfig->GetGyroChannel(elevon2_ch);
 
         auto e1  = channel_command(elevon1_ch) * ((i1->val.inverted)?-1:+1);
         auto e2  = channel_command(elevon2_ch) * ((i2->val.inverted)?-1:+1);
@@ -309,8 +310,8 @@ void Gyro::mixerInput()
 
     if (vtail1_ch >= 0 && vtail2_ch >= 0) {
         // Try VTail
-        auto i1 =  config.GetGyroChannel(vtail1_ch);
-        auto i2 =  config.GetGyroChannel(vtail2_ch);
+        auto i1 =  gyroConfig->GetGyroChannel(vtail1_ch);
+        auto i2 =  gyroConfig->GetGyroChannel(vtail2_ch);
 
         auto v1  = channel_command(vtail1_ch) * ((i1->val.inverted)?-1:+1);
         auto v2  = channel_command(vtail2_ch) * ((i2->val.inverted)?-1:+1);;
@@ -343,7 +344,7 @@ void Gyro::mixerInput()
  */
 void Gyro::mixerOutput(uint8_t ch, uint16_t *us)
 {
-    auto ch_info = config.GetGyroChannel(ch);
+    auto ch_info = gyroConfig->GetGyroChannel(ch);
     auto output_mode = (gyro_output_channel_function_t) ch_info->val.output_mode;
 
     // Learning Sticks can happen at any time
@@ -371,7 +372,7 @@ void Gyro::mixerOutput(uint8_t ch, uint16_t *us)
 
     // Limit output values to configured limits when is a channel controlled by Gyro
     if (output_mode != FN_NONE) {
-        const rx_config_pwm_limits_t *limits = config.GetPwmChannelLimits(ch);
+        const rx_config_pwm_limits_t *limits = gyroConfig->GetPwmChannelLimits(ch);
         *us = constrain(*us, limits->val.min, limits->val.max);
     }
 }
@@ -432,18 +433,18 @@ void Gyro::StickLimitCalibration(bool done)
    if (done) {
         learn_state = GYRO_LEARN_LIMIT_DONE;
         // save the Range
-        for (int ch=0;ch<PWM_MAX_CHANNELS;ch++) {
-            auto ch_info = config.GetGyroChannel(ch);
+        for (int ch=0;ch<GYRO_MAX_CHANNELS;ch++) {
+            auto ch_info = gyroConfig->GetGyroChannel(ch);
             auto output_mode = (gyro_output_channel_function_t) ch_info->val.output_mode;
             if (output_mode!= FN_NONE && output_mode != FN_GYRO_GAIN && output_mode != FN_GYRO_MODE) {
                 // Only moving surfaces
                 auto pwm_limits =  &temp_limits[ch];
                 DBGLN("Ch%d: Min: %d Max: %d Center: %d", 
                     ch, (uint16_t) pwm_limits->val.min, (uint16_t) pwm_limits->val.max, (uint16_t) pwm_limits->val.mid);
-                config.SetPwmChannelLimitsRaw(ch,pwm_limits->raw);
+                gyroConfig->SetPwmChannelLimitsRaw(ch,pwm_limits->raw);
             }
         }
-        config.Commit();
+        gyroConfig->Commit();
    } else {
         learn_state = GYRO_LEARN_LIMIT_START;
    }
@@ -454,9 +455,9 @@ bool Gyro::isStickCalibrationNeeded() {
     //DBGLN("IsStickCalibrationNeeded: Start");
 
     for (int ch=0;ch < PWM_MAX_CHANNELS; ch++) {
-            auto ch_info = config.GetGyroChannel(ch);
+            auto ch_info = gyroConfig->GetGyroChannel(ch);
             auto output_mode = (gyro_output_channel_function_t) ch_info->val.output_mode;
-            auto limits =  config.GetPwmChannelLimits(ch);
+            auto limits =  gyroConfig->GetPwmChannelLimits(ch);
             if (output_mode!= FN_NONE && output_mode != FN_GYRO_GAIN && output_mode != FN_GYRO_MODE) {
                 // Only valid surfaces are checked
                 if ((limits->val.max == GYRO_US_MAX && limits->val.min == GYRO_US_MIN) ||  // Default

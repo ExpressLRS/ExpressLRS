@@ -1,5 +1,6 @@
 #pragma once
 #include <stdint.h>
+#include "config.h"
 
 typedef union {
     struct {
@@ -18,17 +19,6 @@ typedef enum {
     GYRO_STATUS_NEED_STICK_CAL,
     GYRO_STATUS_OK
 } gyro_status_t;
-
-/*
-typedef enum
-{
-    GYRO_EVENT_NONE,
-    GYRO_EVENT_CALIBRATE,
-    GYRO_EVENT_HORIZONTAL_CALIBRATE,
-    GYRO_EVENT_VERTICAL_CALIBRATE,
-    GYRO_EVENT_SUBTRIMS
-} gyro_event_t;
-*/
 
 typedef enum { // values are important
     GYRO_GAIN_FACTOR_0_5X,
@@ -54,17 +44,6 @@ typedef enum
     GYRO_MODE_MAX = GYRO_MODE_END
 } gyro_mode_t;
 
-/*
-typedef enum {
-    FN_IN_NONE,
-    FN_IN_ROLL,
-    FN_IN_PITCH,
-    FN_IN_YAW,
-    FN_IN_GYRO_MODE,
-    FN_IN_GYRO_GAIN
-} gyro_input_channel_function_t;
-*/
-
 typedef enum {
     GYRO_PID_GROUP_RATE,
     GYRO_PID_GROUP_ANGLE,
@@ -74,9 +53,7 @@ typedef enum {
     GYRO_PID_GROUP_MAX = GYRO_PID_GROUP_END
 } gyro_pidgroup_t;
 
-
 #define GYRO_N_AXES 3
-
 typedef enum {
     GYRO_AXIS_ROLL,
     GYRO_AXIS_PITCH,
@@ -88,7 +65,6 @@ typedef enum {
     GYRO_RATE_VARIABLE_I,
     GYRO_RATE_VARIABLE_D
 } gyro_rate_variable_t;
-
 
 typedef enum {
     FN_NONE,
@@ -102,7 +78,6 @@ typedef enum {
     FN_GYRO_MODE,
     FN_GYRO_GAIN
 } gyro_output_channel_function_t;
-
 
 typedef enum { 
     STICK_PRIORITY_100  =0,
@@ -126,22 +101,11 @@ typedef enum {
     GYRO_UI_MAX_ANGLE
 } gyro_ui_vibility_t;
 
-
-
 typedef struct __attribute__((packed)) {
     uint8_t p;
     uint8_t i;
     uint8_t d;
-    uint8_t gain; // Deprecated
 } rx_config_gyro_PID_t;
-
-/*
-typedef struct {
-    uint16_t min;
-    uint16_t mid;
-    uint16_t max;
-} rx_config_gyro_timings_t;
-*/
 
 typedef union __attribute__((packed)) {
     struct {
@@ -185,10 +149,14 @@ typedef union __attribute__((packed)) {
     uint32_t raw;
 } rx_config_gyro_mode_pos_t;
 
-typedef struct __attribute__((packed)) {
-    int16_t x;
-    int16_t y;
-    int16_t z;
+typedef union __attribute__((packed)) {
+    struct
+    {
+        int16_t x;
+        int16_t y;
+        int16_t z;
+    } val;
+    uint64_t raw;
 } rx_config_gyro_calibration_t;
 
 constexpr uint8_t GYRO_MAX_CHANNELS = 16;
@@ -204,7 +172,7 @@ typedef struct __attribute__((packed)) {
  
     rx_config_gyro_calibration_t accelCalibration;
     rx_config_gyro_calibration_t gyroCalibration;
-    rx_config_pwm_limits_t pwmLimits[GYRO_MAX_CHANNELS];
+    rx_config_pwm_limits_t pwmLimits[PWM_MAX_CHANNELS];
     rx_config_gyro_channel_t gyroChannels[GYRO_MAX_CHANNELS];
 
     rx_config_gyro_mode_pos_t gyroModeSwitch; // Gyro functions for switch positions
