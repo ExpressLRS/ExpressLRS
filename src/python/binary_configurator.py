@@ -26,6 +26,7 @@ class RegulatoryDomain(Enum):
     eu_868 = 'eu_868'
     au_915 = 'au_915'
     fcc_915 = 'fcc_915'
+    th_920_925 = 'th_920_925'
 
     def __str__(self):
         return self.value
@@ -66,6 +67,8 @@ def domain_number(domain):
         return 6
     elif domain == RegulatoryDomain.us_433_wide:
         return 7
+    elif domain == RegulatoryDomain.th_920_925:
+        return 8
 
 def patch_unified(args, options):
     json_flags = {}
