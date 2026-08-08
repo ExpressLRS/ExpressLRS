@@ -101,10 +101,13 @@ typedef enum {
     GYRO_UI_MAX_ANGLE
 } gyro_ui_vibility_t;
 
-typedef struct __attribute__((packed)) {
-    uint8_t p;
-    uint8_t i;
-    uint8_t d;
+typedef union __attribute__((packed)) {
+    struct {
+        uint8_t p;
+        uint8_t i;
+        uint8_t d;
+    } val;
+    uint32_t raw;
 } rx_config_gyro_PID_t;
 
 typedef union __attribute__((packed)) {
@@ -159,17 +162,24 @@ typedef union __attribute__((packed)) {
     uint64_t raw;
 } rx_config_gyro_calibration_t;
 
+typedef union __attribute__((packed)) {
+    struct
+    {
+        uint32_t orientationH:3,
+                 orientationV:3,
+                 gyroEnabled:1,
+                 gainFactor:3, // 0.5, 1, 1.5, 2
+                 unused:22;  // More global settings
+    } val;
+    uint32_t raw;
+} rx_config_gyro_global_t;
+
 constexpr uint8_t GYRO_MAX_CHANNELS = 16;
 constexpr uint8_t GYRO_CONFIG_VERSION = 3;
 
 typedef struct __attribute__((packed)) {
     uint8_t  configVersion;
-    uint16_t orientationH:3,
-             orientationV:3,
-             gyroEnabled:1,
-             gainFactor:3, // 0.5, 1, 1.5, 2
-             unused_a:6;  // More global settings
- 
+    rx_config_gyro_global_t global;
     rx_config_gyro_calibration_t accelCalibration;
     rx_config_gyro_calibration_t gyroCalibration;
     rx_config_pwm_limits_t pwmLimits[PWM_MAX_CHANNELS];

@@ -7,7 +7,7 @@
 #include "ahrs/ahrs.h"
 #include "modes/mode.h"
 
-#define GYRO_CODE_VERSION   1.17
+#define GYRO_CODE_VERSION   1.18
 
 #define GYRO_US_MIN 885             // was 988
 #define GYRO_US_MID 1500

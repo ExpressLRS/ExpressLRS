@@ -28,11 +28,11 @@ public:
     const rx_config_gyro_fmode_t *GetGyroFMode(gyro_mode_t fm) const { return (fm>=GYRO_MODE_RATE)?&m_config.gyroFModes[fm-GYRO_MODE_RATE] : nullptr; }
 
     const rx_config_gyro_mode_pos_t *GetGyroModePos() const { return &m_config.gyroModeSwitch;}
-    const uint8_t GetGyroOrientationH() const { return m_config.orientationH; }
-    const uint8_t GetGyroOrientationV() const { return m_config.orientationV; }
-    const bool GetGyroEnabled() const { return m_config.gyroEnabled; }
+    const uint8_t GetGyroOrientationH() const { return m_config.global.val.orientationH; }
+    const uint8_t GetGyroOrientationV() const { return m_config.global.val.orientationV; }
+    const bool GetGyroEnabled() const { return m_config.global.val.gyroEnabled; }
     const uint8_t GetGyroConfigVersion() const { return m_config.configVersion; }
-    const gyro_gain_factor_t GetGyroGainFactor() const {return (gyro_gain_factor_t) m_config.gainFactor; };
+    const gyro_gain_factor_t GetGyroGainFactor() const {return (gyro_gain_factor_t) m_config.global.val.gainFactor; };
     const rx_config_gyro_calibration_t *GetAccelCalibration() const { return &m_config.accelCalibration; }
     const rx_config_gyro_calibration_t *GetGyroCalibration() const { return &m_config.gyroCalibration; }
 

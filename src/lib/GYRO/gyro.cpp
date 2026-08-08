@@ -109,7 +109,7 @@ static float channel_command(uint8_t ch)
 
 void Gyro::init(AHRS *ahrs)
 {
-    DBGLN("Gyro:Init()");
+    DBGLN("Gyro Init");
     
     this->ahrs      = ahrs;
     initialized     = false;
@@ -127,7 +127,7 @@ void Gyro::init(AHRS *ahrs)
 
 void Gyro::start()
 {
-    DBGLN("Gyro:Start()");
+    DBGLN("Gyro Start");
     initialized = false;
     ahrs->start();
     if (!gyroConfig->GetGyroEnabled()) return; //not enabled
@@ -175,7 +175,7 @@ void Gyro::start()
     }
     #endif
     
-    DBGLN("Gyro:Start() END");
+    //DBGLN("Gyro Start Completed");
 }
 
 gyro_status_t Gyro::getStatus() 
@@ -412,7 +412,7 @@ void Gyro::learn_sticks(uint8_t ch, uint16_t us) {
 
 void Gyro::StickCenterCalibration() {
 
-    DBGLN("Gyro(): Stick Center Calibration (Init)");
+    DBGLN("Gyro: Stick Center Calibration (Init)");
     stick_subtrim_cycles = 0;
 
     //initialize min,max, mid
@@ -428,7 +428,7 @@ void Gyro::StickCenterCalibration() {
 
 void Gyro::StickLimitCalibration(bool done)
 {
-   DBGLN("Gyro(): Stick Range Calibration (%s)",done?"Complete":"Started");
+   DBGLN("Gyro: Stick Range Calibration (%s)",done?"Complete":"Started");
 
    if (done) {
         learn_state = GYRO_LEARN_LIMIT_DONE;

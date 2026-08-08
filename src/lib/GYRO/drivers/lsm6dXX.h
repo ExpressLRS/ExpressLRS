@@ -9,6 +9,7 @@ class IMU_LSM6DXX_I2C : public IMU_Driver_I2C
 {
     using IMU_Driver_I2C::IMU_Driver_I2C;
     public:
+        ~IMU_LSM6DXX_I2C() = default;
         const char *GetMPUName();
         bool initialize();
         void start();
@@ -21,8 +22,8 @@ class IMU_LSM6DXX_I2C : public IMU_Driver_I2C
 
 class IMU_LSM6DXX_SPI : public IMU_Driver_SPI
 {
-    using IMU_Driver_SPI::IMU_Driver_SPI;
     public:
+        ~IMU_LSM6DXX_SPI() = default;
         const char *GetMPUName();
         bool initialize();
         void start();

@@ -6,6 +6,8 @@
 class IMU_Driver
 {
     public:
+        virtual ~IMU_Driver() = default;
+
         uint16_t gyroSampleRate = 1000;
         uint16_t period_us      = 1000;
         
@@ -33,6 +35,7 @@ class IMU_Driver
 class IMU_Driver_I2C : public IMU_Driver 
 {
     public:
+        virtual ~IMU_Driver_I2C() = default;
         uint8_t m_address;
     
         uint8_t readRegister(uint8_t reg);
@@ -44,6 +47,7 @@ class IMU_Driver_I2C : public IMU_Driver
 class IMU_Driver_SPI : public IMU_Driver 
 {
     public:
+        virtual ~IMU_Driver_SPI() = default;
         SPISettings _spiSettings;
         uint8_t cs_pin = 0;
         uint8_t int_pin = 0;

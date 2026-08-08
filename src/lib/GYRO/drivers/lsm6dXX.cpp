@@ -31,9 +31,8 @@ static bool lsm6dxxDetect(IMU_Driver *driver)
 {
     // Read chip ID
     uint8_t id = driver->readRegister(LSM6DXX_REG_WHO_AM_I);
-    DBGLN("SPI DEV LSM6D ID: 0x%x", id);
+    DBGLN("Gyro Id returned = 0x%x%x", id);
     if (id != LSM6DSO_CHIP_ID && id != LSM6DSL_CHIP_ID) {  // 0x6C=LSM6DSO, 0x6A=LSM6DSL
-        DBGLN("SPI DEV Unknown chip ID!");
         return false;
     }
 

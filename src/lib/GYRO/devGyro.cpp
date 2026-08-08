@@ -32,9 +32,8 @@ static bool initialize()
         if (driver == nullptr  && OPT_HAS_GYRO_MPU6050)
         {
             driver = new IMU_MPU6050();
-            if (driver->initialize()) {
-                DBGLN("devGyro.init(): Detected MPU6050 Gyro");
-            } else {
+            if (!driver->initialize()) {
+                delete driver;
                 driver = nullptr;
             } 
         }
@@ -45,16 +44,15 @@ static bool initialize()
         if (driver == nullptr && OPT_HAS_GYRO_LSM6DXX)
         {
             driver = new IMU_LSM6DXX_SPI();
-            if (driver->initialize()) {
-                DBGLN("devGyro.init(): Detected LSM6DXX Gyro");
-            } else {
+            if (!driver->initialize()) {
+                delete driver;
                 driver=nullptr;
             }
         }
     } // if SPI
 
     if (driver==nullptr) {
-         DBGLN("devGyro.init(): Gyro Not Detected");
+         DBGLN("devGyro: Gyro Not Detected");
     }
 
     // Call Init even when driver is null to disable other parts looking 
@@ -71,7 +69,7 @@ static bool gyro_detect() {
 
 static int start()
 {
-    DBGLN("devGyro.start()");
+    DBGLN("devGyro start");
     if (!gyro_detect()) {
         DBGLN("Gyro initialization failed");
         return DURATION_NEVER;
@@ -80,7 +78,8 @@ static int start()
     gyroConfig->Load();
 
     gyro.start();
-    ahrs.start();
+    // ahrs.start(); /// Not needed, called from Gyro.start()   
+
     return DURATION_IMMEDIATELY; // Call timeout() immediately;
 }
 

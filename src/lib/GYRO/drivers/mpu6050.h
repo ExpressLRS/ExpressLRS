@@ -9,6 +9,7 @@ class IMU_MPU6050 : public IMU_Driver_I2C
 {
     using IMU_Driver_I2C::IMU_Driver_I2C;
     public:
+        ~IMU_MPU6050() = default;
         const char *GetMPUName();
         bool initialize();
         void start();

@@ -20,7 +20,7 @@ static bool testConnection(IMU_Driver* mpu) {
     // Get Device ID
     bool ok = mpu->readRegister(MPU6050_RA_WHO_AM_I, &id, 1);
     id = (id >> 1) & 0x3F; // Bit 0 is reserved, starts at bit 1, 6 bits
-    DBGLN("Id returned = 0x%x",id);
+    DBGLN("Gyro Id returned = 0x%x",id);
 
     // 0x34 is the ID expected for this chip, the other are known alernatives
     bool known_mpu6050_id = (id == 0x34 || id == 0x38 || id == 0x39);

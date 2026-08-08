@@ -22,14 +22,14 @@ RateController::RateController()
 void RateController::configure_pid_gains(PID *pid, const rx_config_gyro_PID_t *pid_params, int8_t gain,
                          float max, float min)
 {
-    DBG("Config gains: [P=%d I=%d D=%d G=%d] ", pid_params->p, pid_params->i, pid_params->d, (int8_t) gain);
+    DBG("Config gains: [P=%d I=%d D=%d G=%d] ", pid_params->val.p, pid_params->val.i, pid_params->val.d, (int8_t) gain);
     if (max == 0.0 && min == 0.0) {
         // not gyro correction on this axis
         pid->configure(0.0, 0.0, 0.0, 0.0, 0.0);
     } else {
-        float p = gain * pid_params->p / 1000.0;
-        float i = gain * pid_params->i / 1000.0;
-        float d = gain * pid_params->d / 1000.0;
+        float p = gain * pid_params->val.p / 1000.0;
+        float i = gain * pid_params->val.i / 1000.0;
+        float d = gain * pid_params->val.d / 1000.0;
         DBG("PID: [P=%f I=%f D=%f]", p, i, d);
 
         pid->configure(p, i, d, max, min);

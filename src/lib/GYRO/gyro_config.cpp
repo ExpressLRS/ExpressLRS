@@ -13,6 +13,8 @@ GyroConfig::GyroConfig()
 
 void GyroConfig::Load()
 {
+    DBGLN("Gyro Config Load");
+
     m_modified = 0;
 
     // Initialize NVS
@@ -25,10 +27,10 @@ void GyroConfig::Load()
     ESP_ERROR_CHECK( err );
     ESP_ERROR_CHECK(nvs_open("GYRO", NVS_READWRITE, &handle));
 
-    // Try to load the version and make sure it is a TX config
+    // Try to load the version and make sure it is a Gyro config
     uint32_t version = 0;
     nvs_get_u32(handle, "version", &version);
-    DBGLN("Config version %u", version);
+    DBGLN("Gyro Config: version %u", version);
 
     // Can't downgrade when flashing a previous version, just use defaults.
     if (version > GYRO_CONFIG_VERSION)
@@ -37,117 +39,101 @@ void GyroConfig::Load()
         return;
     }
 
-    SetDefaults(false);
-
     uint32_t value32;
     uint64_t value64;
 
-    if (nvs_get_u32(handle, "global", &value32) == ESP_OK)
-    {
-        m_config.orientationH = value32;
-        m_config.orientationV = value32 >> 3;
-        m_config.gyroEnabled = value32 >> 6;
-        m_config.gainFactor = value32 >> 7;
-    }
+     #define LOAD(get, key, tmp, newValue ) \
+        { if (get(handle, key, & tmp) == ESP_OK) { newValue = tmp; } }
 
-    if (nvs_get_u64(handle, "accel", &value64) == ESP_OK)
-    {
-        m_config.accelCalibration.raw = value64;
-    }
+    #define LOAD_32(key,newValue) LOAD(nvs_get_u32, key, value32, newValue)
+    #define LOAD_64(key,newValue) LOAD(nvs_get_u64, key, value64, newValue)
 
-    if (nvs_get_u64(handle, "gyro", &value64) == ESP_OK)
-    {
-        m_config.gyroCalibration.raw = value64;
-    }
+    LOAD_32("global", m_config.global.raw);
+    LOAD_64("cal_accel", m_config.accelCalibration.raw);
+    LOAD_64("cal_gyro", m_config.gyroCalibration.raw);
+    LOAD_32("mode_sw", m_config.gyroModeSwitch.raw);
 
-    for (int i=0 ; i<PWM_MAX_CHANNELS ; i++)
+    for (int i=0 ; i < PWM_MAX_CHANNELS ; i++)
     {
         char pwm[10] = "pwm_";
         itoa(i, pwm+4, 10);
-        if (nvs_get_u64(handle, pwm, &value64) == ESP_OK)
-        {
-            m_config.pwmLimits[i].raw = value64;
-        }
-    }
-    for (int i=0 ; i<GYRO_MAX_CHANNELS ; i++)
-    {
-        char gyro_ch[10] = "gyro_";
-        itoa(i, gyro_ch+5, 10);
-        if (nvs_get_u32(handle, gyro_ch, &value32) == ESP_OK)
-        {
-            m_config.gyroChannels[i].raw = value32;
-        }
+        LOAD_64(pwm, m_config.pwmLimits[i].raw);
     }
 
-    if (nvs_get_u32(handle, "mode_sw", &value32) == ESP_OK)
+    for (int i=0 ; i < GYRO_MAX_CHANNELS ; i++)
     {
-        m_config.gyroModeSwitch.raw = value32;
+        char gyro_ch[10] = "ch_";
+        itoa(i, gyro_ch+3, 10);
+        LOAD_32(gyro_ch, m_config.gyroChannels[i].raw);
     }
 
-    for (int i=0 ; i<GYRO_PID_GROUP_MAX ; i++)
+    for (int i=0 ; i < GYRO_PID_GROUP_MAX ; i++)
     {
         char pid[16] = "pid_";
         itoa(i, pid+4, 10);
-        for (int j=0 ; j<GYRO_N_AXES ; j++)
+        for (int j=0 ; j < GYRO_N_AXES ; j++)
         {
             strcat(pid, "_");
             itoa(i, pid+strlen(pid), 10);
-            if (nvs_get_u32(handle, pid, &value32) == ESP_OK)
-            {
-                m_config.gyroPIDs[i][j].p = value32 >> 16;
-                m_config.gyroPIDs[i][j].i = value32 >> 8;
-                m_config.gyroPIDs[i][j].d = value32;
-            }
-        }
+            LOAD_32(pid, m_config.gyroPIDs[i][j].raw);
+        }        
     }
 
-    for (int i=0 ; i<GYRO_MODE_MAX ; i++)
+    for (int i=0 ; i < GYRO_MODE_MAX ; i++)
     {
         char fmode[10] = "fmode_";
         itoa(i, fmode+6, 10);
-        if (nvs_get_u64(handle, fmode, &value64) == ESP_OK)
-        {
-            m_config.gyroFModes[i].raw = value64;
-        }
+        LOAD_64(fmode, m_config.gyroFModes[i].raw);
     }
 
     if (version != GYRO_CONFIG_VERSION)
     {
         m_modified |= EVENT_CONFIG_VERSION_CHANGED;
-        Commit();
     }
 }
 
 uint32_t
 GyroConfig::Commit()
 {
+    DBGLN("Gyro Config Commit");
+
+    int changes = 0;
+    uint32_t value32;
+    uint64_t value64;
+
+    #define SET_IF_CHAGED(get, set, key, oldValue, newValue ) \
+        { get(handle, key, & oldValue); if (oldValue != newValue) { set(handle, key, newValue); changes++; } }
+
+    #define SET_IF_CHAGED_32(key,newValue) SET_IF_CHAGED(nvs_get_u32, nvs_set_u32, key, value32, newValue)
+    #define SET_IF_CHAGED_64(key,newValue) SET_IF_CHAGED(nvs_get_u64, nvs_set_u64, key, value64, newValue)
+   
     if (!m_modified)
     {
         DBGLN("No changes");
         return 0;
     }
 
-    uint32_t value32 = m_config.orientationH | m_config.orientationV << 3 | m_config.gyroEnabled << 6 | m_config.gainFactor << 7;
-    nvs_set_u32(handle, "global", value32);
-    nvs_set_u64(handle, "accel", m_config.accelCalibration.raw);
-    nvs_set_u64(handle, "gyro", m_config.gyroCalibration.raw);
+    SET_IF_CHAGED_32("version", m_config.configVersion);
+    SET_IF_CHAGED_32("global", m_config.global.raw);
+    SET_IF_CHAGED_64("cal_accel", m_config.accelCalibration.raw);
+    SET_IF_CHAGED_64("cal_gyro", m_config.gyroCalibration.raw);
+    SET_IF_CHAGED_32("mode_sw", m_config.gyroModeSwitch.raw);
 
-    for (int i=0 ; i<PWM_MAX_CHANNELS ; i++)
+    for (int i=0 ; i < PWM_MAX_CHANNELS ; i++)
     {
         char pwm[10] = "pwm_";
         itoa(i, pwm+4, 10);
-        nvs_set_u64(handle, pwm, m_config.pwmLimits[i].raw);
+        SET_IF_CHAGED_64(pwm, m_config.pwmLimits[i].raw);
     }
-    for (int i=0 ; i<GYRO_MAX_CHANNELS ; i++)
+    
+    for (int i=0 ; i < GYRO_MAX_CHANNELS ; i++)
     {
-        char gyro_ch[10] = "gyro_";
-        itoa(i, gyro_ch+5, 10);
-        nvs_set_u32(handle, gyro_ch, m_config.gyroChannels[i].raw);
+        char gyro_ch[10] = "ch_";
+        itoa(i, gyro_ch+3, 10);
+        SET_IF_CHAGED_32(gyro_ch, m_config.gyroChannels[i].raw);
     }
 
-    nvs_set_u32(handle, "mode_sw", m_config.gyroModeSwitch.raw);
-
-    for (int i=0 ; i<GYRO_PID_GROUP_MAX ; i++)
+    for (int i=0 ; i < GYRO_PID_GROUP_MAX ; i++)
     {
         char pid[16] = "pid_";
         itoa(i, pid+4, 10);
@@ -155,24 +141,23 @@ GyroConfig::Commit()
         {
             strcat(pid, "_");
             itoa(i, pid+strlen(pid), 10);
-            if (nvs_get_u32(handle, pid, &value32) == ESP_OK)
-            {
-                m_config.gyroPIDs[i][j].p = value32 >> 16;
-                m_config.gyroPIDs[i][j].i = value32 >> 8;
-                m_config.gyroPIDs[i][j].d = value32;
-            }
+            SET_IF_CHAGED_32(pid,m_config.gyroPIDs[i][j].raw);
         }
     }
 
-    for (int i=0 ; i<GYRO_MODE_MAX ; i++)
+    for (int i=0 ; i < GYRO_MODE_MAX ; i++)
     {
         char fmode[10] = "fmode_";
         itoa(i, fmode+6, 10);
-        nvs_set_u64(handle, fmode, m_config.gyroFModes[i].raw);
+        SET_IF_CHAGED_64(fmode, m_config.gyroFModes[i].raw);
+    }
+
+    if (changes > 0) {
+        DBGLN("Saved %d changes.",changes);
     }
 
     nvs_commit(handle);
-    const uint32_t changes = m_modified;
+    changes = m_modified;
     m_modified = 0;
     return changes;
 }
@@ -181,7 +166,6 @@ GyroConfig::Commit()
 
 void GyroConfig::SetDefaults(bool commit)
 {
-    DBGLN("GyroConfig:SetoDefaults(Begin)");
     memset(&m_config, 0, sizeof(m_config));
 
     SetGyroConfigVersion(GYRO_CONFIG_VERSION);
@@ -216,7 +200,7 @@ void GyroConfig::SetDefaults(bool commit)
     // Configure channel Functions
     for (int ch = 0; ch < CRSF_NUM_CHANNELS; ch++)
     {
-        SetGyroChannel(0, FN_NONE, false, false);
+        SetGyroChannel(ch, FN_NONE, false, false);
     }
 
     // Configure Gyro Switch
@@ -256,15 +240,14 @@ void GyroConfig::SetDefaults(bool commit)
 
         SetGyroFModeRaw((gyro_mode_t)fm, tmp.raw);
     }
-    m_modified = EVENT_CONFIG_GYRO_CHANGED;
-
+    
     if (commit)
     {
-        nvs_set_u32(handle, "version", GYRO_CONFIG_VERSION);
+        m_modified = EVENT_CONFIG_GYRO_CHANGED;
         Commit();
+    } else {
+        m_modified = 0;
     }
-
-    DBGLN("GyroConfig:SetDefaults(End)");
 }
 
 void GyroConfig::debugGyroConfiguration()
@@ -370,13 +353,13 @@ void GyroConfig::SetGyroPIDRate(gyro_pidgroup_t group, gyro_axis_t axis, gyro_ra
     switch (var)
     {
     case GYRO_RATE_VARIABLE_P:
-        old_value = config->p;
+        old_value = config->val.p;
         break;
     case GYRO_RATE_VARIABLE_I:
-        old_value = config->i;
+        old_value = config->val.i;
         break;
     case GYRO_RATE_VARIABLE_D:
-        old_value = config->d;
+        old_value = config->val.d;
         break;
     }
 
@@ -386,13 +369,13 @@ void GyroConfig::SetGyroPIDRate(gyro_pidgroup_t group, gyro_axis_t axis, gyro_ra
     switch (var)
     {
     case GYRO_RATE_VARIABLE_P:
-        config->p = new_value;
+        config->val.p = new_value;
         break;
     case GYRO_RATE_VARIABLE_I:
-        config->i = new_value;
+        config->val.i = new_value;
         break;
     case GYRO_RATE_VARIABLE_D:
-        config->d = new_value;
+        config->val.d = new_value;
         break;
     }
 
@@ -401,20 +384,20 @@ void GyroConfig::SetGyroPIDRate(gyro_pidgroup_t group, gyro_axis_t axis, gyro_ra
 
 void GyroConfig::SetGyroOrientation(uint8_t newOrientationH, uint8_t newOrientationV)
 {
-    if (m_config.orientationH != newOrientationH ||
-        m_config.orientationV != newOrientationV)
+    if (m_config.global.val.orientationH != newOrientationH ||
+        m_config.global.val.orientationV != newOrientationV)
     {
-        m_config.orientationH = newOrientationH;
-        m_config.orientationV = newOrientationV;
+        m_config.global.val.orientationH = newOrientationH;
+        m_config.global.val.orientationV = newOrientationV;
         m_modified = EVENT_CONFIG_GYRO_CHANGED;
     }
 }
 
 void GyroConfig::SetGyroEnabled(bool value)
 {
-    if (m_config.gyroEnabled != value)
+    if (m_config.global.val.gyroEnabled != value)
     {
-        m_config.gyroEnabled = value;
+        m_config.global.val.gyroEnabled = value;
         m_modified = EVENT_CONFIG_GYRO_CHANGED;
     }
 }
@@ -430,9 +413,9 @@ void GyroConfig::SetGyroConfigVersion(uint8_t value)
 
 void GyroConfig::SetGyroGainFactor(gyro_gain_factor_t value)
 {
-    if (m_config.gainFactor != value)
+    if (m_config.global.val.gainFactor != value)
     {
-        m_config.gainFactor = value;
+        m_config.global.val.gainFactor = value;
         m_modified = EVENT_CONFIG_GYRO_CHANGED;
     }
 }
@@ -478,6 +461,7 @@ GyroConfig::SetPwmChannelLimits(uint8_t ch, uint16_t min, uint16_t max, uint16_t
 
     pwm->raw = new_limits.raw;
     m_modified = EVENT_CONFIG_GYRO_CHANGED;
+    Commit();
 }
 
 void

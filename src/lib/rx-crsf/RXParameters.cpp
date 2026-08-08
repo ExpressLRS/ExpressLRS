@@ -1777,9 +1777,9 @@ void RXEndpoint::updateParameters()
     }
     LUA_FIELD_VISIBLE(luaGyroPID_Select_Axis,group!=GYRO_PID_GROUP_MADWICK);
     const rx_config_gyro_PID_t *gyroPIDs = gyroConfig->GetGyroPID(group, axis);
-    setUint8Value(&luaGyroPID_RateP, gyroPIDs->p);
-    setUint8Value(&luaGyroPID_RateI, gyroPIDs->i);
-    setUint8Value(&luaGyroPID_RateD, gyroPIDs->d);
+    setUint8Value(&luaGyroPID_RateP, gyroPIDs->val.p);
+    setUint8Value(&luaGyroPID_RateI, gyroPIDs->val.i);
+    setUint8Value(&luaGyroPID_RateD, gyroPIDs->val.d);
 
     setTextSelectionValue(&luaGyroOrientationH, gyroConfig->GetGyroOrientationH());
     setTextSelectionValue(&luaGyroOrientationV, gyroConfig->GetGyroOrientationV());

@@ -76,7 +76,7 @@ void AHRS::pause()
 
 void AHRS::start() {
     initialized = false;
-    DBGLN("Ahrs:Start()");
+    DBGLN("Gyro AHRS Start");
 
     if (!gyroConfig->GetGyroEnabled() || driver == nullptr) return; //not enabled
 
@@ -84,8 +84,8 @@ void AHRS::start() {
 
     memcpy(&calAccelOffets,gyroConfig->GetAccelCalibration(),sizeof(rx_config_gyro_calibration_t));
     memcpy(&calGyroOffsets,gyroConfig->GetGyroCalibration(),sizeof(rx_config_gyro_calibration_t));
-    DBGLN("Acc Offs:  x=%d,y=%d,z=%d",calAccelOffets.x, calAccelOffets.y,calAccelOffets.z);
-    DBGLN("Gyro Offs:  x=%d,y=%d,z=%d",calGyroOffsets.x, calGyroOffsets.y,calGyroOffsets.z);
+    DBGLN("Acc Offs:  x=%d,y=%d,z=%d",calAccelOffets.val.x, calAccelOffets.val.y,calAccelOffets.val.z);
+    DBGLN("Gyro Offs:  x=%d,y=%d,z=%d",calGyroOffsets.val.x, calGyroOffsets.val.y,calGyroOffsets.val.z);
 
     setupOrientation();
 
@@ -93,10 +93,10 @@ void AHRS::start() {
 
      // Reload Madwick Configuration
     const rx_config_gyro_PID_t *madwickPI = gyroConfig->GetGyroPID(GYRO_PID_GROUP_MADWICK,GYRO_AXIS_ROLL);
-    AHRS_KP = (float) madwickPI->p / 10;
-    AHRS_KI = (float) madwickPI->i / 10;
+    AHRS_KP = (float) madwickPI->val.p / 10;
+    AHRS_KI = (float) madwickPI->val.i / 10;
 
-    accLpfCutHz = gyroLpfCutHz = madwickPI->d;
+    accLpfCutHz = gyroLpfCutHz = madwickPI->val.d;
 
     DBGLN("Setting Madwick kP=%f, kI=%f",AHRS_KP, AHRS_KI);
     DBGLN("LPF Gyro Settings %d HZ",accLpfCutHz);
@@ -613,7 +613,7 @@ bool AHRS::calibrateGyro(int8_t loops, rx_config_gyro_calibration_t *offsets)
 	offsets->val.y = (int16_t)(gyAccum);
 	offsets->val.z = (int16_t)(gzAccum);
  
-    DBGLN("Gyr Offs:  x=%d,y=%d,z=%d",offsets->x, offsets->y,offsets->z);
+    DBGLN("Gyr Offs:  x=%d,y=%d,z=%d",offsets->val.x, offsets->val.y,offsets->val.z);
     isCalibrating = false;
     return true;
 }
@@ -696,7 +696,7 @@ bool AHRS::calibrateAccel(int8_t loops, rx_config_gyro_calibration_t *offsets)
 	offsets->val.y = (int16_t)(ayAccum);
 	offsets->val.z = (int16_t)(azAccum);
 
-    DBGLN("Acc Offs:  x=%d,y=%d,z=%d",offsets->x, offsets->y,offsets->z);
+    DBGLN("Acc Offs:  x=%d,y=%d,z=%d",offsets->val.x, offsets->val.y,offsets->val.z);
     isCalibrating = false;
     return true;
 }

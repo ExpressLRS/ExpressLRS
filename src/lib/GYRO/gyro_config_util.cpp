@@ -88,7 +88,7 @@ bool gyroIsVisible(gyro_mode_t fm, gyro_ui_vibility_t category) {
 
     if (version == 3) {
         const rx_config_gyro_PID_t *madwickPI = gyroConfig->GetGyroPID(GYRO_PID_GROUP_MADWICK,GYRO_AXIS_ROLL);
-        if (madwickPI->p==0) {  // Madwick not configured
+        if (madwickPI->val.p==0) {  // Madwick not configured
             DBGLN("Setting Defaults for Madwick-AHRS");
             // MADWICK PI  (P=2.0, I=0.0)
             gyroConfig->SetGyroPIDRate(GYRO_PID_GROUP_MADWICK, GYRO_AXIS_ROLL, GYRO_RATE_VARIABLE_P, 20);
