@@ -60,6 +60,7 @@ extern void setButtonColors(uint8_t b1, uint8_t b2);
 static char station_ssid[33];
 static char station_password[65];
 
+volatile bool wifiModeActive = false;
 static bool wifiStarted = false;
 bool webserverPreventAutoStart = false;
 
@@ -98,10 +99,13 @@ static const char VERSION[] = {LATEST_VERSION, 0};
 
 void setWifiUpdateMode()
 {
-  // No need to ExitBindingMode(), the radio will be stopped stopped when start the Wifi service.
-  // Need to change this before the mode change event so the LED is updated
   InBindingMode = false;
+#if defined(TARGET_RX)
+  wifiModeActive = true;
+  devicesTriggerEvent(EVENT_CONNECTION_CHANGED);
+#else
   setConnectionState(wifiUpdate);
+#endif
 }
 
 /** Is this an IP? */
@@ -908,6 +912,18 @@ static void WebUploadDataHandler(AsyncWebServerRequest *request, const String& f
     #if defined(TARGET_TX) && defined(PLATFORM_ESP32)
       WifiJoystick::StopJoystickService();
     #endif
+#if defined(TARGET_RX)
+    if (connectionState < FAILURE_STATES && connectionState != wifiUpdate) {
+      hwTimer::stop();
+#if defined(PLATFORM_ESP32)
+      disableVTxSpi();
+#endif
+      POWERMGNT::setPower(MinPower);
+      setConnectionState(wifiUpdate);
+      DBGLN("Stopping Radio");
+      Radio.End();
+    }
+#endif
 
     size_t filesize = request->header("X-FileSize").toInt();
     DBGLN("Update: '%s' size %u", filename.c_str(), filesize);
@@ -1101,20 +1117,15 @@ static void startWiFi(unsigned long now)
     return;
   }
 
+#if defined(TARGET_TX)
   if (connectionState < FAILURE_STATES) {
     hwTimer::stop();
-#if defined(TARGET_RX) && defined(PLATFORM_ESP32)
-    disableVTxSpi();
-#endif
-
-    // Set transmit power to minimum
     POWERMGNT::setPower(MinPower);
-
     setWifiUpdateMode();
-
     DBGLN("Stopping Radio");
     Radio.End();
   }
+#endif
 
   DBGLN("Begin Webupdater");
 
@@ -1333,6 +1344,14 @@ static void HandleWebUpdate()
   unsigned long now = millis();
   wl_status_t status = WiFi.status();
 
+#if defined(TARGET_RX)
+  // Cleanup disconnected WebSocket clients to prevent memory leaks
+  if (wifi2tcp.getWSserver() != nullptr)
+  {
+    wifi2tcp.getWSserver()->cleanupClients();
+  }
+#endif
+
   if (status != laststatus && wifiMode == WIFI_STA) {
     DBGLN("WiFi status %d", status);
     switch(status) {
@@ -1438,21 +1457,12 @@ static int start()
 
 static int event()
 {
-  if (connectionState == wifiUpdate || connectionState > FAILURE_STATES)
+  if (connectionState == wifiUpdate || connectionState > FAILURE_STATES || wifiModeActive)
   {
     if (!wifiStarted) {
       startWiFi(millis());
       return DURATION_IMMEDIATELY;
     }
-  }
-  else if (wifiStarted)
-  {
-    wifiStarted = false;
-    WiFi.disconnect(true);
-    WiFi.mode(WIFI_OFF);
-    #if defined(PLATFORM_ESP8266)
-    WiFi.forceSleepBegin();
-    #endif
   }
   return DURATION_IGNORE;
 }
@@ -1462,18 +1472,9 @@ static int timeout()
   if (wifiStarted)
   {
     HandleWebUpdate();
-#if defined(PLATFORM_ESP8266)
-    // When in STA mode, a small delay reduces power use from 90mA to 30mA when idle
-    // In AP mode, it doesn't seem to make a measurable difference, but does not hurt
-    // Only done on 8266 as the ESP32 runs a throttled task
-    if (!Update.isRunning())
-      delay(1);
-    return DURATION_IMMEDIATELY;
-#else
     // All the web traffic is async apart from changing modes and MSP2WIFI
-    // No need to run balls-to-the-wall; the wifi runs on this core too (0)
+    // No need to run balls-to-the-wall
     return 2;
-#endif
   }
 
   #if defined(TARGET_TX)

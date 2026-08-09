@@ -3,3 +3,5 @@
 #include "device.h"
 
 extern device_t WIFI_device;
+
+extern volatile bool wifiModeActive;

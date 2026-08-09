@@ -1,6 +1,7 @@
 #include "targets.h"
 #include "common.h"
 #include "devLED.h"
+#include "devWIFI.h"
 
 #if defined(TARGET_TX)
 #include "config.h"
@@ -412,7 +413,7 @@ static int timeout()
         return flashLED(blinkyColor, 192, 0, LEDSEQ_BINDING, sizeof(LEDSEQ_BINDING));
     }
 #endif
-    switch (connectionState)
+    switch (wifiModeActive && connectionState < FAILURE_STATES ? wifiUpdate : connectionState)
     {
     case connected:
 #if defined(TARGET_RX)
