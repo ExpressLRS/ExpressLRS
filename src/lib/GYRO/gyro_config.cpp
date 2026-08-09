@@ -94,6 +94,7 @@ void GyroConfig::Load()
     if (version != GYRO_CONFIG_VERSION)
     {
         m_modified |= EVENT_CONFIG_VERSION_CHANGED;
+        Commit();
     }
 }
 
@@ -125,7 +126,7 @@ GyroConfig::Commit()
         return 0;
     }
 
-    SET_IF_CHAGED_32("version", m_config.configVersion);
+    SET_IF_CHAGED_32("version", GYRO_CONFIG_VERSION);
     SET_IF_CHAGED_32("global", m_config.global.raw);
     SET_IF_CHAGED_64("cal_accel", m_config.accelCalibration.raw);
     SET_IF_CHAGED_64("cal_gyro", m_config.gyroCalibration.raw);
@@ -181,7 +182,6 @@ void GyroConfig::SetDefaults(bool commit)
 {
     memset(&m_config, 0, sizeof(m_config));
 
-    SetGyroConfigVersion(GYRO_CONFIG_VERSION);
     SetGyroEnabled(false);
     SetGyroOrientation(6, 6); // 6=No orientation Set
     SetGyroGainFactor(GYRO_GAIN_FACTOR_1X);
@@ -413,15 +413,6 @@ void GyroConfig::SetGyroEnabled(bool value)
     if (m_config.global.val.gyroEnabled != value)
     {
         m_config.global.val.gyroEnabled = value;
-        m_modified = EVENT_CONFIG_GYRO_CHANGED;
-    }
-}
-
-void GyroConfig::SetGyroConfigVersion(uint8_t value)
-{
-    if (m_config.configVersion != value)
-    {
-        m_config.configVersion = value;
         m_modified = EVENT_CONFIG_GYRO_CHANGED;
     }
 }
