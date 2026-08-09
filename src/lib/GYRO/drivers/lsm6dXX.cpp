@@ -166,8 +166,8 @@ const char * IMU_LSM6DXX_SPI::GetMPUName() {
 
 bool IMU_LSM6DXX_SPI::initialize() {
     // Initialize CS
-    cs_pin = GPIO_PIN_SPI_NSS;
-    int_pin = GPIO_PIN_SPI_INT;
+    cs_pin = GPIO_PIN_GYRO_NSS;
+    int_pin = GPIO_PIN_GYRO_INT;
     DBGLN("LSM6DXX(SPI) NSS Pin=%d, INT Pin=%d",cs_pin, int_pin);
 
     pinMode(cs_pin, OUTPUT);

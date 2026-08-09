@@ -1104,17 +1104,17 @@ const HARDWARE_SCHEMA = [
                 ], desc: 'Type of Gyro connected'
             },
             {
-                id: 'spi_nss',
-                label: 'SPI NSS pin',
+                id: 'gyro_nss',
+                label: 'Gyro NSS pin',
                 type: 'uint',
                 icon: 'output',
                 desc: 'Chip select pin for SPI Gyro'
             },
             {
-                id: 'spi_int',
-                label: 'SPI Int pin',
+                id: 'gyro_int',
+                label: 'Gyro INT pin',
                 type: 'uint',
-                icon: 'output',
+                icon: 'input',
                 desc: 'Interrupt pin for SPI Gyro'
             },
         ]

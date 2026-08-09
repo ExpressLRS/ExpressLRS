@@ -73,15 +73,6 @@
 #define GPIO_PIN_SCL hardware_pin(HARDWARE_i2c_scl)
 #define GPIO_PIN_SDA hardware_pin(HARDWARE_i2c_sda)
 
-// SPI DEVICES
-#define GPIO_PIN_SPI_SCK hardware_pin(HARDWARE_spi_sck)
-#define GPIO_PIN_SPI_MISO hardware_pin(HARDWARE_spi_miso)
-#define GPIO_PIN_SPI_MOSI hardware_pin(HARDWARE_spi_mosi)
-#define GPIO_PIN_SPI_NSS hardware_pin(HARDWARE_spi_nss)
-#define GPIO_PIN_SPI_RST hardware_pin(HARDWARE_spi_rst)
-#define GPIO_PIN_SPI_BUSY hardware_pin(HARDWARE_spi_busy)
-#define GPIO_PIN_SPI_INT hardware_pin(HARDWARE_spi_int)
-
 // PWM
 #define GPIO_PIN_PWM_OUTPUTS hardware_i16_array(HARDWARE_pwm_outputs)
 #define GPIO_PIN_PWM_OUTPUTS_COUNT hardware_int(HARDWARE_pwm_outputs_count)
@@ -90,12 +81,18 @@
 
 #if defined(PLATFORM_ESP32)
 
+// SPI DEVICES
+#define GPIO_PIN_SPI_SCK hardware_pin(HARDWARE_spi_sck)
+#define GPIO_PIN_SPI_MISO hardware_pin(HARDWARE_spi_miso)
+#define GPIO_PIN_SPI_MOSI hardware_pin(HARDWARE_spi_mosi)
+
 // Gyro
 //#define GYRO_SUPPORT
-
 #define OPT_HAS_GYRO (hardware_int(HARDWARE_gyro_type) > 0)
 #define OPT_HAS_GYRO_MPU6050 (hardware_int(HARDWARE_gyro_type) == 1)
 #define OPT_HAS_GYRO_LSM6DXX (hardware_int(HARDWARE_gyro_type) == 2)
+#define GPIO_PIN_GYRO_NSS hardware_pin(HARDWARE_gyro_nss)
+#define GPIO_PIN_GYRO_INT hardware_pin(HARDWARE_gyro_int)
 
 // VTX
 #define OPT_HAS_VTX_SPI (hardware_pin(HARDWARE_vtx_nss) != UNDEF_PIN)

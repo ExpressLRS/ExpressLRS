@@ -27,14 +27,13 @@
     "led_rgb": 21,
     "led_rgb_isgrb": true,
 
-    "gyro_type": 2,
-
     "spi_sck": 23,
     "spi_miso": 34,
     "spi_mosi": 18,
-    "spi_nss": 10,
-    "spi_int": 35,
 
+    "gyro_type": 2,
+    "gyro_nss": 10,
+    "gyro_int": 35,
 
     "vbat": 39,
     "button": 0,

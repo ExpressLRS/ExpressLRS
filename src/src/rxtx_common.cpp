@@ -72,9 +72,9 @@ void setupSPI()
     //spi dev
     int8_t gpio_sck = GPIO_PIN_SPI_SCK;
     int8_t gpio_miso = GPIO_PIN_SPI_MISO;
-    int8_t gpio_nss = GPIO_PIN_SPI_NSS;
     int8_t gpio_mosi = GPIO_PIN_SPI_MOSI;
-    int8_t gpio_int = GPIO_PIN_SPI_INT;
+    int8_t gpio_nss = GPIO_PIN_GYRO_NSS;
+    int8_t gpio_int = GPIO_PIN_GYRO_INT;
     DBGLN("SPI: gpio_sck :%d, gpio_miso: %d, gpio_mosi: %d, gpio_nss: %d, gpio_int", gpio_sck, gpio_miso, gpio_mosi, gpio_nss, gpio_int);
 
     if(gpio_sck != UNDEF_PIN && gpio_miso != UNDEF_PIN && gpio_mosi != UNDEF_PIN && gpio_nss != UNDEF_PIN)
