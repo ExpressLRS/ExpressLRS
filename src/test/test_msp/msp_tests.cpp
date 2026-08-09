@@ -1,7 +1,10 @@
 #include <cstdint>
 #include <iostream>
 #include <unity.h>
+#include "crsf_protocol.h"
+#include "data_ul_model_match.h"
 #include "msp.h"
+#include "msptypes.h"
 #include "common.h"
 #include "mock_serial.h"
 
@@ -105,6 +108,16 @@ void test_msp_send(void)
     TEST_ASSERT_EQUAL(224, (uint8_t)buf[9]);     // crc
 }
 
+void test_data_ul_model_match_policy(void)
+{
+    TEST_ASSERT_TRUE(shouldProcessDataUlPayload(MSP_ELRS_SET_RX_WIFI_MODE, false));
+    TEST_ASSERT_FALSE(shouldProcessDataUlPayload(MSP_ELRS_MAVLINK_TLM, false));
+    TEST_ASSERT_FALSE(shouldProcessDataUlPayload(CRSF_ADDRESS_FLIGHT_CONTROLLER, false));
+
+    TEST_ASSERT_TRUE(shouldProcessDataUlPayload(MSP_ELRS_MAVLINK_TLM, true));
+    TEST_ASSERT_TRUE(shouldProcessDataUlPayload(CRSF_ADDRESS_FLIGHT_CONTROLLER, true));
+}
+
 extern void test_encapsulated_msp_send(void);
 extern void test_encapsulated_msp_send_not_too_long(void);
 extern void test_encapsulated_msp_send_too_long(void);
@@ -118,6 +131,7 @@ int main(int argc, char **argv)
     UNITY_BEGIN();
     RUN_TEST(test_msp_receive);
     RUN_TEST(test_msp_send);
+    RUN_TEST(test_data_ul_model_match_policy);
 
     RUN_TEST(test_encapsulated_msp_send);
     RUN_TEST(test_encapsulated_msp_send_not_too_long);
