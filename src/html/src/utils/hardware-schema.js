@@ -1091,13 +1091,6 @@ const HARDWARE_SCHEMA = [
                 icon: 'output',
                 desc: 'SPI MOSI pin used to communicate with SPI devices'
             },
-            {
-                id: 'spi_rst',
-                label: 'RST pin',
-                type: 'uint',
-                icon: 'output',
-                desc: 'SPI RST pin connected to (posibly) multiple with SPI devices'
-            },
         ]
     },
     {
@@ -1116,13 +1109,6 @@ const HARDWARE_SCHEMA = [
                 type: 'uint',
                 icon: 'output',
                 desc: 'Chip select pin for SPI Gyro'
-            },
-            {
-                id: 'spi_busy',
-                label: 'SPI BUSY pin',
-                type: 'uint',
-                icon: 'output',
-                desc: 'Input busy pin for SPI Gyro'
             },
             {
                 id: 'spi_int',
