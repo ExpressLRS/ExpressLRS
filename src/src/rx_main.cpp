@@ -1948,14 +1948,14 @@ static void CheckConfigChangePending()
 {
     bool modified = config.IsModified();
 #if defined(GYRO_SUPPORT) && defined(PLATFORM_ESP32)
-    modified |= gyroConfig->IsModified();
+    if (gyroDetected()) modified |= gyroConfig->IsModified();
 #endif
     if (modified && !InBindingMode && connectionState < NO_CONFIG_SAVE_STATES)
     {
         LostConnection(false);
         uint32_t changes = config.Commit();
 #if defined(GYRO_SUPPORT) && defined(PLATFORM_ESP32)
-        changes |= gyroConfig->Commit();
+        if (gyroDetected()) changes |= gyroConfig->Commit();
 #endif
         devicesTriggerEvent(changes);
         LbtEnableIfRequired();

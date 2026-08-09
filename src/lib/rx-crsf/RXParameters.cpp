@@ -1466,17 +1466,19 @@ void RXEndpoint::registerParameters()
     {
         luaparamMappingChannelOut(&luaMappingOutputMode.common, luaMappingChannelOut.properties.u.value);
         registerParameter(&luaMappingFolder);
-        registerParameter(&luaMappingChannelOut, [&](propertiesCommon *item, uint8_t arg) {
-            luaparamMappingChannelOut(item, arg);
+        registerParameter(&luaMappingChannelOut,
+            [&](propertiesCommon *item, uint8_t arg) {
+                luaparamMappingChannelOut(item, arg);
 #if defined(GYRO_SUPPORT) && defined(PLATFORM_ESP32)
-            // Update Gyro limits when Output channel changes
-            const rx_config_pwm_limits_t *limits = gyroConfig->GetPwmChannelLimits(luaMappingChannelOut.properties.u.value - 1);
-            setUint16Value(&luaMappingChannelLimitMin, (uint16_t)limits->val.min);
-            setUint16Value(&luaMappingChannelLimitMax, (uint16_t)limits->val.max);
-            setUint16Value(&luaMappingChannelCenter, (uint16_t)limits->val.mid);
+                // Update Gyro limits when Output channel changes
+                const rx_config_pwm_limits_t *limits = gyroConfig->GetPwmChannelLimits(luaMappingChannelOut.properties.u.value - 1);
+                setUint16Value(&luaMappingChannelLimitMin, (uint16_t)limits->val.min);
+                setUint16Value(&luaMappingChannelLimitMax, (uint16_t)limits->val.max);
+                setUint16Value(&luaMappingChannelCenter, (uint16_t)limits->val.mid);
 #endif
-        },
-                          luaMappingFolder.common.id);
+            },
+            luaMappingFolder.common.id
+        );
         registerParameter(&luaMappingChannelIn, &luaparamMappingChannelIn, luaMappingFolder.common.id);
         registerParameter(&luaMappingOutputMode, &luaparamMappingOutputMode, luaMappingFolder.common.id);
         registerParameter(&luaMappingInverted, &luaparamMappingInverted, luaMappingFolder.common.id);
@@ -1485,7 +1487,7 @@ void RXEndpoint::registerParameters()
         });
 
 #if defined(GYRO_SUPPORT) && defined(PLATFORM_ESP32)
-        if (OPT_HAS_GYRO)
+        if (OPT_HAS_GYRO && gyroDetected())
         {
             DBGLN("RxPratameters.registerParameters(): Setting up GYRO LUA");
             // -- Servo Output Limits
@@ -1745,7 +1747,7 @@ void RXEndpoint::updateParameters()
     }
 
 #if defined(GYRO_SUPPORT) && defined(PLATFORM_ESP32)
-    if (OPT_HAS_GYRO && connectionState == connected)
+    if (OPT_HAS_GYRO && gyroDetected() && connectionState == connected)
     {
         DBGLN("updateParameters(): Updating Gyro LUA values");
 
