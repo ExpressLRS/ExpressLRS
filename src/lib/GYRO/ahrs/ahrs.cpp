@@ -91,14 +91,14 @@ void AHRS::start() {
 
     read_errors = 0; // Reset Errors
 
-     // Reload Madwick Configuration
-    const rx_config_gyro_PID_t *madwickPI = gyroConfig->GetGyroPID(GYRO_PID_GROUP_MADWICK,GYRO_AXIS_ROLL);
-    AHRS_KP = (float) madwickPI->val.p / 10;
-    AHRS_KI = (float) madwickPI->val.i / 10;
+     // Reload Madgwick Configuration
+    const rx_config_gyro_PID_t *madgwickPI = gyroConfig->GetGyroPID(GYRO_PID_GROUP_MADGWICK,GYRO_AXIS_ROLL);
+    AHRS_KP = (float) madgwickPI->val.p / 10;
+    AHRS_KI = (float) madgwickPI->val.i / 10;
 
-    accLpfCutHz = gyroLpfCutHz = madwickPI->val.d;
+    accLpfCutHz = gyroLpfCutHz = madgwickPI->val.d;
 
-    DBGLN("Setting Madwick kP=%f, kI=%f",AHRS_KP, AHRS_KI);
+    DBGLN("Setting Madgwick kP=%f, kI=%f",AHRS_KP, AHRS_KI);
     DBGLN("LPF Gyro Settings %d HZ",accLpfCutHz);
     
     gyroBias.Initialise(driver->gyroSampleRate);

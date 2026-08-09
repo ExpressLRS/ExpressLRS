@@ -1790,12 +1790,12 @@ void RXEndpoint::updateParameters()
         const auto group = (gyro_pidgroup_t)luaGyroPID_Select_Group.value;
         auto axis = (gyro_axis_t)luaGyroPID_Select_Axis.value;
 
-        // No Axis with Group MADWICK
-        if (group == GYRO_PID_GROUP_MADWICK)
+        // No Axis with Group MADGWICK
+        if (group == GYRO_PID_GROUP_MADGWICK)
         {
             axis = GYRO_AXIS_ROLL; // 0
         }
-        LUA_FIELD_VISIBLE(luaGyroPID_Select_Axis, group != GYRO_PID_GROUP_MADWICK);
+        LUA_FIELD_VISIBLE(luaGyroPID_Select_Axis, group != GYRO_PID_GROUP_MADGWICK);
         const rx_config_gyro_PID_t *gyroPIDs = gyroConfig->GetGyroPID(group, axis);
         setUint8Value(&luaGyroPID_RateP, gyroPIDs->val.p);
         setUint8Value(&luaGyroPID_RateI, gyroPIDs->val.i);
