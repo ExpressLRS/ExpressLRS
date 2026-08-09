@@ -93,26 +93,27 @@ static selectionParameter luaSBUSFailsafeMode = {
 };
 
 static int8Parameter luaTargetSysId = {
-  {"Target SysID", CRSF_UINT8},
-  {
+    {"Target SysID", CRSF_UINT8},
     {
-      (uint8_t)1,       // value - default to 1
-      (uint8_t)1,       // min
-      (uint8_t)255,     // max
-    }
-  },
-  STR_EMPTYSPACE
+        {
+            (uint8_t)1,       // value - default to 1
+            (uint8_t)1,       // min
+            (uint8_t)255,     // max
+        }
+    },
+    STR_EMPTYSPACE
 };
+
 static int8Parameter luaSourceSysId = {
-  {"Source SysID", CRSF_UINT8},
-  {
+    {"Source SysID", CRSF_UINT8},
     {
-      (uint8_t)255,       // value - default to 255
-      (uint8_t)1,         // min
-      (uint8_t)255,       // max
-    }
-  },
-  STR_EMPTYSPACE
+        {
+            (uint8_t)255,       // value - default to 255
+            (uint8_t)1,         // min
+            (uint8_t)255,       // max
+        }
+    },
+    STR_EMPTYSPACE
 };
 
 static selectionParameter luaTlmPower = {
@@ -179,7 +180,6 @@ static auto wingTypeStr = "Empty;Normal;2-Ail;Delta";
 static const char *tailTypeName[] {"Empty","Normal","V-Tail","Taileron","Rud-Only"};
 static auto tailTypeStr = "Empty;Normal;V-Tail;Taileron;Rud-only";
 
-
 static selectionParameter luaGyroEnabled = {
     {"Enable Gyro", CRSF_TEXT_SELECTION},
     0, // value
@@ -209,7 +209,6 @@ static struct commandParameter luaGyroMainRefresh = {
     lcsIdle, // step
     STR_EMPTYSPACE
 };
-
 
 static folderParameter luaGyroMainFolder = {
     {"Gyro", CRSF_FOLDER},
@@ -286,19 +285,17 @@ static selectionParameter luaGyroModePos5 = {
     STR_EMPTYSPACE
 };
 
-
-
 //------------  Output Channel Settings -------------
 static int8Parameter luaGyroOutputCh_Select = {
-  {"Output Ch ->", CRSF_UINT8},
-  {
+    {"Output Ch ->", CRSF_UINT8},
     {
-      (uint8_t)1,       // value, not zero-based
-      1,                // min
-      PWM_MAX_CHANNELS, // max
-    }
-  },
-  STR_EMPTYSPACE
+        {
+            (uint8_t)1,       // value, not zero-based
+            1,                // min
+            PWM_MAX_CHANNELS, // max
+        }
+    },
+    STR_EMPTYSPACE
 };
 
 static selectionParameter luaGyroOutputCh_Mode = {
@@ -349,22 +346,22 @@ static void luaparamGyroOutputCh_Mode(propertiesCommon *item, uint8_t arg)
 
 static void luaparamGyroOutputCh_Master(propertiesCommon *item, uint8_t arg)
 {
-  const uint8_t ch = luaGyroOutputCh_Select.properties.u.value - 1;
-  rx_config_gyro_channel_t newCh;
-  newCh.raw = gyroConfig->GetGyroChannel(ch)->raw;
-  newCh.val.master = arg;
-  gyroConfig->SetGyroChannelRaw(ch, newCh.raw);
-  gyro.reload();
+    const uint8_t ch = luaGyroOutputCh_Select.properties.u.value - 1;
+    rx_config_gyro_channel_t newCh;
+    newCh.raw = gyroConfig->GetGyroChannel(ch)->raw;
+    newCh.val.master = arg;
+    gyroConfig->SetGyroChannelRaw(ch, newCh.raw);
+    gyro.reload();
 }
 
 static void luaparamGyroOutputCh_Inverted(propertiesCommon *item, uint8_t arg)
 {
-  const uint8_t ch = luaGyroOutputCh_Select.properties.u.value - 1;
-  rx_config_gyro_channel_t newCh;
-  newCh.raw = gyroConfig->GetGyroChannel(ch)->raw;
-  newCh.val.inverted = arg;
-  gyroConfig->SetGyroChannelRaw(ch, newCh.raw);
-  gyro.reload();
+    const uint8_t ch = luaGyroOutputCh_Select.properties.u.value - 1;
+    rx_config_gyro_channel_t newCh;
+    newCh.raw = gyroConfig->GetGyroChannel(ch)->raw;
+    newCh.val.inverted = arg;
+    gyroConfig->SetGyroChannelRaw(ch, newCh.raw);
+    gyro.reload();
 }
 
 //------------  Gyro Gains Settings -------------
@@ -383,63 +380,60 @@ static selectionParameter luaGyroPID_Select_Axis = {
 };
 
 static int8Parameter luaGyroPID_RateP = {
-  {"P Rate", CRSF_UINT8},
-  {
+    {"P Rate", CRSF_UINT8},
     {
-      (uint8_t)1,    // value
-      0,             // min
-      100            // max
-    }
-  },
-  STR_EMPTYSPACE
-};
+        {
+            (uint8_t)1, // value
+            0,          // min
+            100         // max
+        }
+    },
+    STR_EMPTYSPACE};
 
 static int8Parameter luaGyroPID_RateI = {
-  {"I Rate", CRSF_UINT8},
-  {
+    {"I Rate", CRSF_UINT8},
     {
-      (uint8_t)1,    // value
-      0,             // min
-      100            // max
-    }
-  },
-  STR_EMPTYSPACE
-};
+        {
+            (uint8_t)1, // value
+            0,          // min
+            100         // max
+        }
+    },
+    STR_EMPTYSPACE};
 
 static int8Parameter luaGyroPID_RateD = {
-  {"D Rate/LPF HZ", CRSF_UINT8},
-  {
+    {"D Rate/LPF HZ", CRSF_UINT8},
     {
-      (uint8_t)1,    // value
-      0,             // min
-      100            // max
-    }
-  },
-  STR_EMPTYSPACE
-};
+        {
+            (uint8_t)1, // value
+            0,          // min
+            100         // max
+        }
+    },
+    STR_EMPTYSPACE};
 
 static void luaparamGyroPID_RateP(propertiesCommon *item, uint8_t arg)
 {
-  const gyro_pidgroup_t group = (gyro_pidgroup_t) luaGyroPID_Select_Group.value;
-  const gyro_axis_t axis = (gyro_axis_t) luaGyroPID_Select_Axis.value;
-  gyroConfig->SetGyroPIDRate(group, axis, GYRO_RATE_VARIABLE_P, arg);
-  gyro.reload();
+    const gyro_pidgroup_t group = (gyro_pidgroup_t) luaGyroPID_Select_Group.value;
+    const gyro_axis_t axis = (gyro_axis_t) luaGyroPID_Select_Axis.value;
+    gyroConfig->SetGyroPIDRate(group, axis, GYRO_RATE_VARIABLE_P, arg);
+    gyro.reload();
 }
 
 static void luaparamGyroPID_RateI(propertiesCommon *item, uint8_t arg)
 {
-  const gyro_pidgroup_t group = (gyro_pidgroup_t) luaGyroPID_Select_Group.value;
-  const gyro_axis_t axis = (gyro_axis_t) luaGyroPID_Select_Axis.value;
-  gyroConfig->SetGyroPIDRate(group, axis, GYRO_RATE_VARIABLE_I, arg);
-  gyro.reload();
+    const gyro_pidgroup_t group = (gyro_pidgroup_t) luaGyroPID_Select_Group.value;
+    const gyro_axis_t axis = (gyro_axis_t) luaGyroPID_Select_Axis.value;
+    gyroConfig->SetGyroPIDRate(group, axis, GYRO_RATE_VARIABLE_I, arg);
+    gyro.reload();
 }
 
 static void luaparamGyroPID_RateD(propertiesCommon *item, uint8_t arg)
 {
-  const gyro_pidgroup_t group = (gyro_pidgroup_t) luaGyroPID_Select_Group.value;
-  const gyro_axis_t axis = (gyro_axis_t) luaGyroPID_Select_Axis.value;
-  gyroConfig->SetGyroPIDRate(group, axis, GYRO_RATE_VARIABLE_D, arg);
-  gyro.reload();
+    const gyro_pidgroup_t group = (gyro_pidgroup_t) luaGyroPID_Select_Group.value;
+    const gyro_axis_t axis = (gyro_axis_t) luaGyroPID_Select_Axis.value;
+    gyroConfig->SetGyroPIDRate(group, axis, GYRO_RATE_VARIABLE_D, arg);
+    gyro.reload();
 }
 
 //------------  Gyro RX Orientation Info -------------
@@ -457,7 +451,6 @@ static selectionParameter luaGyroOrientationV = {
     STR_EMPTYSPACE};
 
 //---------  Reset Commands ---------------------
-
 
 static selectionParameter luaGyroQuickSetup_wingType_Select = {
     {"Wing Type ->", CRSF_TEXT_SELECTION},
@@ -481,57 +474,65 @@ static struct commandParameter luaGyroQuickPreset = {
 
 void RXEndpoint::luaparamGyroQuickPreset(propertiesCommon *item, uint8_t arg)
 {
-  static char temp[50];
-  static int8_t step = 0;
+    static char temp[50];
+    static int8_t step = 0;
 
-  commandStep_e newStep;
-  const char *msg;
-  if (arg == lcsClick)
-  {
-    step = 0;
-    newStep = lcsAskConfirm;
-    if (luaGyroQuickSetup_wingType_Select.value==0) {
-      msg = "Reset to EMPTY model ?";
-    } else {
-      sprintf(temp, "Reset Model to W=%s T=%s?",wingTypeName[luaGyroQuickSetup_wingType_Select.value], tailTypeName[luaGyroQuickSetup_tailType_Select.value]);
-      msg = temp;
+    commandStep_e newStep;
+    const char *msg;
+    if (arg == lcsClick)
+    {
+        step = 0;
+        newStep = lcsAskConfirm;
+        if (luaGyroQuickSetup_wingType_Select.value == 0)
+        {
+            msg = "Reset to EMPTY model ?";
+        }
+        else
+        {
+            sprintf(temp, "Reset Model to W=%s T=%s?", wingTypeName[luaGyroQuickSetup_wingType_Select.value], tailTypeName[luaGyroQuickSetup_tailType_Select.value]);
+            msg = temp;
+        }
     }
-  }
-  else if (arg == lcsConfirmed)
-  {
-    // This is generally not seen by the user, since we'll disconnect to commit config
-    // and the handset will send another lcdQuery that will overwrite it with idle
-    newStep = lcsExecuting;
-    if (step==0) {
-      msg = "Creating Model";
-      gyroQuickModelSetup(luaGyroQuickSetup_wingType_Select.value,luaGyroQuickSetup_tailType_Select.value);
-      step++;
-    } else {
-      // Done confirmation
-      newStep = lcsIdle;
-      msg = STR_EMPTYSPACE;
+    else if (arg == lcsConfirmed)
+    {
+        // This is generally not seen by the user, since we'll disconnect to commit config
+        // and the handset will send another lcdQuery that will overwrite it with idle
+        newStep = lcsExecuting;
+        if (step == 0)
+        {
+            msg = "Creating Model";
+            gyroQuickModelSetup(luaGyroQuickSetup_wingType_Select.value, luaGyroQuickSetup_tailType_Select.value);
+            step++;
+        }
+        else
+        {
+            // Done confirmation
+            newStep = lcsIdle;
+            msg = STR_EMPTYSPACE;
+        }
     }
-  }
-  else if (arg == lcsQuery)
-  {
-    if (step==1) {
-      // Step 1: Done
-      newStep = lcsAskConfirm;
-      msg = "Done: Restart LUA script ";
-    } else {
-      newStep = lcsIdle;
-      msg = STR_EMPTYSPACE;
+    else if (arg == lcsQuery)
+    {
+        if (step == 1)
+        {
+            // Step 1: Done
+            newStep = lcsAskConfirm;
+            msg = "Done: Restart LUA script ";
+        }
+        else
+        {
+            newStep = lcsIdle;
+            msg = STR_EMPTYSPACE;
+        }
     }
-  }      
-  else
-  {
-    newStep = lcsIdle;
-    msg = STR_EMPTYSPACE;
-  }
+    else
+    {
+        newStep = lcsIdle;
+        msg = STR_EMPTYSPACE;
+    }
 
-  sendCommandResponse((commandParameter *)item, newStep, msg);
+    sendCommandResponse((commandParameter *)item, newStep, msg);
 }
-
 
 //-----------  Gyro Calibration ------------------------
 static struct commandParameter luaGyroCalibration = {
@@ -542,33 +543,33 @@ static struct commandParameter luaGyroCalibration = {
 
 void RXEndpoint::luaparamGyroCalibration(propertiesCommon *item, uint8_t arg)
 {
-  commandStep_e newStep;
-  const char *msg;
-  if (arg == lcsClick)
-  {
-    newStep = lcsAskConfirm;
-    msg = "Plane/RX Level??";
-    gyro.pause();
-  }
-  else if (arg == lcsConfirmed)
-  {
-    // This is generally not seen by the user, since we'll disconnect to commit config
-    // and the handset will send another lcdQuery that will overwrite it with idle
-    newStep = lcsExecuting;
-    msg = "Level Cal";
-    sendCommandResponse((commandParameter *)item, newStep, msg);
-    gyro.calibrate();
-    gyro.reload();
-    return;
-  }
-  else
-  {
-    newStep = lcsIdle;
-    msg = STR_EMPTYSPACE;
-    gyro.reload();
-  }
+    commandStep_e newStep;
+    const char *msg;
+    if (arg == lcsClick)
+    {
+        newStep = lcsAskConfirm;
+        msg = "Plane/RX Level??";
+        gyro.pause();
+    }
+    else if (arg == lcsConfirmed)
+    {
+        // This is generally not seen by the user, since we'll disconnect to commit config
+        // and the handset will send another lcdQuery that will overwrite it with idle
+        newStep = lcsExecuting;
+        msg = "Level Cal";
+        sendCommandResponse((commandParameter *)item, newStep, msg);
+        gyro.calibrate();
+        gyro.reload();
+        return;
+    }
+    else
+    {
+        newStep = lcsIdle;
+        msg = STR_EMPTYSPACE;
+        gyro.reload();
+    }
 
-  sendCommandResponse((commandParameter *)item, newStep, msg);
+    sendCommandResponse((commandParameter *)item, newStep, msg);
 }
 
 //--------------------- RX Orientation Calibration -----------------
@@ -580,79 +581,85 @@ static struct commandParameter luaGyroAutoOrientation = {
 
 void RXEndpoint::luaparamGyroOrientationCal(propertiesCommon *item, uint8_t arg)
 {
-  static uint8_t calStep = 0; //Global
+    static uint8_t calStep = 0; // Global
 
-  commandStep_e newStep;
-  const char *msg=STR_EMPTYSPACE;
- 
-  //DBGLN("Calibration Workflow BEGIN: command=[%d],calStep=[%d]",arg,calStep);
-  if (arg == lcsClick)
-  {
-    // Step 1: Horizontal
-    calStep = 0;
-    DBGLN("Calibrating Gyro: Gyro Ready=%s",gyro.initialized?"True":"False");
-    newStep = lcsAskConfirm;
-    msg = "Plane/RX Level?";
-    gyro.pause(); // Suspend Gyro
-  }
-  else if (arg == lcsConfirmed)
-  {
-    // This is generally not seen by the user, since we'll disconnect to commit config
-    // and the handset will send another lcdQuery that will overwrite it with idle
-    newStep = lcsExecuting;
-    if (calStep == 0) {
-      msg = "Level Cal";
-      sendCommandResponse((commandParameter *)item, newStep, msg);
-      calStep++;
-      gyro.ahrs->OrientationHorizontalExecute();
-      return;
-    } else
-    if (calStep == 1) {
-      msg = "Vertical Det";
-      sendCommandResponse((commandParameter *)item, newStep, msg);
-      calStep++;
-      gyro.ahrs->OrientationVerticalExecute();
-      gyro.reload(); // This will resume Gyro
-      return;
-    } else
-    if (calStep == 2) {
-      // Calibration Done
-      newStep = lcsIdle;
-      msg = STR_EMPTYSPACE;
-    }
-  }
-  else if (arg == lcsQuery)
-  {
-    if (calStep==1) {
-      // Step 2: Vertical
-      newStep = lcsAskConfirm;
-      msg = "Plane Nose Up?";
-    } else
-    if (calStep==2) {
-      // Step 3: Done
-      newStep = lcsAskConfirm;
-      msg = "Calibration Done";      
-    } else {
-      msg = STR_EMPTYSPACE;
-      newStep = lcsIdle;
-    }
-  }
-  else if (arg == lcsCancel)
-  {
-    gyro.reload(); // Reactivate Gyro if cancelation
-    newStep = lcsIdle;
-    msg = STR_EMPTYSPACE;
-  } 
-  else // idle
-  {
-      newStep = lcsIdle;
-      msg = STR_EMPTYSPACE;
-  }
+    commandStep_e newStep;
+    const char *msg = STR_EMPTYSPACE;
 
-  //DBGLN("Calibrating Workflow RETURN: newStep=[%d],msg=[%s], calStep=[%d]",newStep,msg,calStep);
-  sendCommandResponse((commandParameter *)item, newStep, msg);
+    // DBGLN("Calibration Workflow BEGIN: command=[%d],calStep=[%d]",arg,calStep);
+    if (arg == lcsClick)
+    {
+        // Step 1: Horizontal
+        calStep = 0;
+        DBGLN("Calibrating Gyro: Gyro Ready=%s", gyro.initialized ? "True" : "False");
+        newStep = lcsAskConfirm;
+        msg = "Plane/RX Level?";
+        gyro.pause(); // Suspend Gyro
+    }
+    else if (arg == lcsConfirmed)
+    {
+        // This is generally not seen by the user, since we'll disconnect to commit config
+        // and the handset will send another lcdQuery that will overwrite it with idle
+        newStep = lcsExecuting;
+        if (calStep == 0)
+        {
+            msg = "Level Cal";
+            sendCommandResponse((commandParameter *)item, newStep, msg);
+            calStep++;
+            gyro.ahrs->OrientationHorizontalExecute();
+            return;
+        }
+        else if (calStep == 1)
+        {
+            msg = "Vertical Det";
+            sendCommandResponse((commandParameter *)item, newStep, msg);
+            calStep++;
+            gyro.ahrs->OrientationVerticalExecute();
+            gyro.reload(); // This will resume Gyro
+            return;
+        }
+        else if (calStep == 2)
+        {
+            // Calibration Done
+            newStep = lcsIdle;
+            msg = STR_EMPTYSPACE;
+        }
+    }
+    else if (arg == lcsQuery)
+    {
+        if (calStep == 1)
+        {
+            // Step 2: Vertical
+            newStep = lcsAskConfirm;
+            msg = "Plane Nose Up?";
+        }
+        else if (calStep == 2)
+        {
+            // Step 3: Done
+            newStep = lcsAskConfirm;
+            msg = "Calibration Done";
+        }
+        else
+        {
+            msg = STR_EMPTYSPACE;
+            newStep = lcsIdle;
+        }
+    }
+    else if (arg == lcsCancel)
+    {
+        gyro.reload(); // Reactivate Gyro if cancelation
+        newStep = lcsIdle;
+        msg = STR_EMPTYSPACE;
+    }
+    else // idle
+    {
+        newStep = lcsIdle;
+        msg = STR_EMPTYSPACE;
+    }
+
+    // DBGLN("Calibrating Workflow RETURN: newStep=[%d],msg=[%s], calStep=[%d]",newStep,msg,calStep);
+    sendCommandResponse((commandParameter *)item, newStep, msg);
 }
-
 
 //--------------------- RX Stick Limit/subtrim Calibration -----------------
 static struct commandParameter luaGyroStickCal = {
@@ -663,75 +670,82 @@ static struct commandParameter luaGyroStickCal = {
 
 void RXEndpoint::luaparamGyroStickCal(propertiesCommon *item, uint8_t arg)
 {
-  static uint8_t calStep = 0; //Global
+    static uint8_t calStep = 0; // Global
 
-  commandStep_e newStep;
-  const char *msg=STR_EMPTYSPACE;
- 
-  //DBGLN("Calibration Workflow BEGIN: command=[%d],calStep=[%d]",arg,calStep);
-  if (arg == lcsClick)
-  {
-    // Step 1: Horizontal
-    calStep = 0;
-    DBGLN("Gyro(): Calibrating Sticks");
-    newStep = lcsAskConfirm;
-    msg = "Sticks Centered?";
-  }
-  else if (arg == lcsConfirmed)
-  {
-    // This is generally not seen by the user, since we'll disconnect to commit config
-    // and the handset will send another lcdQuery that will overwrite it with idle
-    newStep = lcsExecuting;
-    if (calStep == 0) {
-      msg = "Stick Center";
-      calStep++;
-      gyro.StickCenterCalibration();
-    } else
-    if (calStep == 1) {
-      msg = "Stick Range";
-      calStep++;
-    } else
-    if (calStep == 2) {
-      // Calibration Done
-      newStep = lcsIdle;
-      msg = STR_EMPTYSPACE;
-    }
-  }
-  else if (arg == lcsQuery)
-  {
-    if (calStep==1) {
-      // Step 2: Stick Range Cal
-      newStep = lcsAskConfirm;
-      msg = "Moved to all Sides?";
-      gyro.StickLimitCalibration(false); // Start
-    } else
-    if (calStep==2) {
-      // Step 3: Done
-      newStep = lcsAskConfirm;
-      msg = "Calibration Done";     
-      gyro.StickLimitCalibration(true); 
-      gyro.reload();
-      sendCommandResponse((commandParameter *)item, newStep, msg);
-      return;
-    } else {
-      msg = STR_EMPTYSPACE;
-      newStep = lcsIdle;
-    }
-  }
-  else if (arg == lcsCancel)
-  {
-    gyro.reload(); // Reactivate Gyro if cancelation
-    newStep = lcsIdle;
-    msg = STR_EMPTYSPACE;
-  } 
-  else // idle
-  {
-      newStep = lcsIdle;
-      msg = STR_EMPTYSPACE;
-  }
+    commandStep_e newStep;
+    const char *msg = STR_EMPTYSPACE;
 
-  //DBGLN("Calibrating Workflow RETURN: newStep=[%d],msg=[%s], calStep=[%d]",newStep,msg,calStep);
-  sendCommandResponse((commandParameter *)item, newStep, msg);
+    // DBGLN("Calibration Workflow BEGIN: command=[%d],calStep=[%d]",arg,calStep);
+    if (arg == lcsClick)
+    {
+        // Step 1: Horizontal
+        calStep = 0;
+        DBGLN("Gyro(): Calibrating Sticks");
+        newStep = lcsAskConfirm;
+        msg = "Sticks Centered?";
+    }
+    else if (arg == lcsConfirmed)
+    {
+        // This is generally not seen by the user, since we'll disconnect to commit config
+        // and the handset will send another lcdQuery that will overwrite it with idle
+        newStep = lcsExecuting;
+        if (calStep == 0)
+        {
+            msg = "Stick Center";
+            calStep++;
+            gyro.StickCenterCalibration();
+        }
+        else if (calStep == 1)
+        {
+            msg = "Stick Range";
+            calStep++;
+        }
+        else if (calStep == 2)
+        {
+            // Calibration Done
+            newStep = lcsIdle;
+            msg = STR_EMPTYSPACE;
+        }
+    }
+    else if (arg == lcsQuery)
+    {
+        if (calStep == 1)
+        {
+            // Step 2: Stick Range Cal
+            newStep = lcsAskConfirm;
+            msg = "Moved to all Sides?";
+            gyro.StickLimitCalibration(false); // Start
+        }
+        else if (calStep == 2)
+        {
+            // Step 3: Done
+            newStep = lcsAskConfirm;
+            msg = "Calibration Done";
+            gyro.StickLimitCalibration(true);
+            gyro.reload();
+            sendCommandResponse((commandParameter *)item, newStep, msg);
+            return;
+        }
+        else
+        {
+            msg = STR_EMPTYSPACE;
+            newStep = lcsIdle;
+        }
+    }
+    else if (arg == lcsCancel)
+    {
+        gyro.reload(); // Reactivate Gyro if cancelation
+        newStep = lcsIdle;
+        msg = STR_EMPTYSPACE;
+    }
+    else // idle
+    {
+        newStep = lcsIdle;
+        msg = STR_EMPTYSPACE;
+    }
+
+    // DBGLN("Calibrating Workflow RETURN: newStep=[%d],msg=[%s], calStep=[%d]",newStep,msg,calStep);
+    sendCommandResponse((commandParameter *)item, newStep, msg);
 }
 
 // ------------------- Flight Mode Settings ----------------------
@@ -762,27 +776,27 @@ static stringParameter luaGyroFMode_AngLimitSubHeader = {
 };
 
 static int8Parameter luaGyroFMode_AngLimitPitch = {
-  {"Limit Pitch", CRSF_UINT8},
-  {
+    {"Limit Pitch", CRSF_UINT8},
     {
-      (uint8_t)10, // value, not zero-based
-      10,           // min
-      50,          // max
-    }
-  },
-  " deg"
+        {
+            (uint8_t)10, // value, not zero-based
+            10,          // min
+            50,          // max
+        }
+    },
+    " deg"
 };
 
 static int8Parameter luaGyroFMode_AngLimitRoll = {
-  {"Limit Roll", CRSF_UINT8},
-  {
+    {"Limit Roll", CRSF_UINT8},
     {
-      (uint8_t)30, // value, not zero-based
-      30,           // min
-      90,          // max
-    }
-  },
-  " deg"
+        {
+            (uint8_t)30, // value, not zero-based
+            30,          // min
+            90,          // max
+        }
+    },
+    " deg"
 };
 
 static stringParameter luaGyroFMode_TrimSubHeader = {
@@ -791,27 +805,27 @@ static stringParameter luaGyroFMode_TrimSubHeader = {
 };
 
 static int8Parameter luaGyroFMode_TrimPitch = {
-  {"Trim Pitch", CRSF_INT8},
-  {
+    {"Trim Pitch", CRSF_INT8},
     {
-      (uint8_t) 0,    // value
-      (uint8_t) 226U, // min (226U = -30)
-      (uint8_t) +30,  // max
-    }
-  },
-  " deg (+Up)"
+        {
+            (uint8_t) 0,    // value
+            (uint8_t) 226U, // min (226U = -30)
+            (uint8_t) +30,  // max
+        }
+    },
+    " deg (+Up)"
 };
 
 static int8Parameter luaGyroFMode_TrimRoll = {
-  {"Trim Roll", CRSF_INT8},
-  {
+    {"Trim Roll", CRSF_INT8},
     {
-      (uint8_t) 0,    // value
-      (uint8_t) 226U, // min  (226U = -30)
-      (uint8_t) +30,  // max
-    }
-  },
-  " deg (+Left)"
+        {
+            (uint8_t) 0,    // value
+            (uint8_t) 226U, // min  (226U = -30)
+            (uint8_t) +30,  // max
+        }
+    },
+    " deg (+Left)"
 };
 
 static stringParameter luaGyroFMode_Gain_SubHeader = {
@@ -820,39 +834,39 @@ static stringParameter luaGyroFMode_Gain_SubHeader = {
 };
 
 static int8Parameter luaGyroFMode_GainPitch = {
-  {"Gain Pitch", CRSF_UINT8},
-  {
+    {"Gain Pitch", CRSF_UINT8},
     {
-      (uint8_t)1,    // value
-      0,             // min
-      250            // max
-    }
-  },
-  STR_EMPTYSPACE
+        {
+            (uint8_t)1,    // value
+            0,             // min
+            250            // max
+        }
+    },
+    STR_EMPTYSPACE
 };
 
 static int8Parameter luaGyroFMode_GainRoll = {
-  {"Gain Roll", CRSF_UINT8},
-  {
+    {"Gain Roll", CRSF_UINT8},
     {
-      (uint8_t)1,    // value
-      0,             // min
-      250            // max
-    }
-  },
-  STR_EMPTYSPACE
+        {
+            (uint8_t)1,    // value
+            0,             // min
+            250            // max
+        }
+    },
+    STR_EMPTYSPACE
 };
 
 static int8Parameter luaGyroFMode_GainYaw = {
-  {"Gain Yaw", CRSF_UINT8},
-  {
+    {"Gain Yaw", CRSF_UINT8},
     {
-      (uint8_t)1,    // value
-      0,             // min
-      250            // max
-    }
-  },
-  STR_EMPTYSPACE
+        {
+            (uint8_t)1,    // value
+            0,             // min
+            250            // max
+        }
+    },
+    STR_EMPTYSPACE
 };
 
 
@@ -936,10 +950,7 @@ static void luaparamGyroFMode_GainYaw(propertiesCommon *item, uint8_t arg) {
     gyroConfig->SetGyroFModeRaw(f_mode, newFm.raw);
     gyro.reload();
 }
-
-
 #endif // USE_GYRO
-
 
 //---------------------------- WiFi -----------------------------
 
@@ -950,27 +961,27 @@ static folderParameter luaMappingFolder = {
 };
 
 static int8Parameter luaMappingChannelOut = {
-  {"Output Ch", CRSF_UINT8},
-  {
+    {"Output Ch", CRSF_UINT8},
     {
-      (uint8_t)5,       // value - start on AUX1, value is 1-16, not zero-based
-      1,                // min
-      PWM_MAX_CHANNELS, // max
-    }
-  },
-  STR_EMPTYSPACE
+        {
+            (uint8_t)5,       // value - start on AUX1, value is 1-16, not zero-based
+            1,                // min
+            PWM_MAX_CHANNELS, // max
+        }
+    },
+    STR_EMPTYSPACE
 };
 
 static int8Parameter luaMappingChannelIn = {
-  {"Input Ch", CRSF_UINT8},
-  {
+    {"Input Ch", CRSF_UINT8},
     {
-      0,                 // value
-      1,                 // min
-      CRSF_NUM_CHANNELS, // max
-    }
-  },
-  STR_EMPTYSPACE
+        {
+            0,                 // value
+            1,                 // min
+            CRSF_NUM_CHANNELS, // max
+        }
+    },
+    STR_EMPTYSPACE
 };
 
 static selectionParameter luaMappingOutputMode = {
@@ -996,39 +1007,39 @@ static commandParameter luaSetFailsafe = {
 #if defined(GYRO_SUPPORT) && defined(PLATFORM_ESP32)
 const char STR_US[] = " us";
 static int16Parameter luaMappingChannelLimitMin = {
-  {"Limit Min us", CRSF_UINT16},
-  {
+    {"Limit Min us", CRSF_UINT16},
     {
-      900,  // value
-      900,  // min
-      1501, // max
-    }
-  },
-  STR_US
+        {
+            900,  // value
+            900,  // min
+            1501, // max
+        }
+    },
+    STR_US
 };
 
 static int16Parameter luaMappingChannelLimitMax = {
-  {"Limit Max us", CRSF_INT16},
-  {
+    {"Limit Max us", CRSF_INT16},
     {
-      2135, // value
-      1501, // min
-      2135, // max
-    }
-  },
-  STR_US
+        {
+            2135, // value
+            1501, // min
+            2135, // max
+        }
+    },
+    STR_US
 };
 
 static int16Parameter luaMappingChannelCenter = {
-  {"Center us", CRSF_INT16},
-  {
+    {"Center us", CRSF_INT16},
     {
-      1500, // value
-      1000, // min
-      2000, // max
-    }
-  },
-  STR_US
+        {
+            1500, // value
+            1000, // min
+            2000, // max
+        }
+    },
+    STR_US
 };
 #endif
 
@@ -1062,43 +1073,42 @@ void RXEndpoint::luaparamMappingChannelOut(propertiesCommon *item, uint8_t arg)
     bool serial1txAssigned = false;
 #endif
 
-    const char *no1Option    = ";";
-    const char *no2Options   = ";;";
-    const char *serial_RX    = ";Serial RX";
-    const char *serial_TX    = ";Serial TX";
-    const char *i2c_SCL      = ";I2C SCL;";
-    const char *i2c_SDA      = ";;I2C SDA";
-    const char *i2c_BOTH     = ";I2C SCL;I2C SDA";
+    const char *no1Option = ";";
+    const char *no2Options = ";;";
+    const char *serial_RX = ";Serial RX";
+    const char *serial_TX = ";Serial TX";
+    const char *i2c_SCL = ";I2C SCL;";
+    const char *i2c_SDA = ";;I2C SDA";
+    const char *i2c_BOTH = ";I2C SCL;I2C SDA";
 #if defined(PLATFORM_ESP32)
-    const char *serial1_RX   = ";Serial2 RX;";
-    const char *serial1_TX   = ";;Serial2 TX";
+    const char *serial1_RX = ";Serial2 RX;";
+    const char *serial1_TX = ";;Serial2 TX";
     const char *serial1_BOTH = ";Serial2 RX;Serial2 TX";
-    const char *dshot        = ";DShot;DShot 3D";
+    const char *dshot = ";DShot;DShot 3D";
 #endif
 
     const char *pModeString;
 
-
     // find out if use once only modes have already been assigned
     for (uint8_t ch = 0; ch < GPIO_PIN_PWM_OUTPUTS_COUNT; ch++)
     {
-      if (ch == (arg -1))
-        continue;
+        if (ch == (arg - 1))
+            continue;
 
-      eServoOutputMode mode = (eServoOutputMode)config.GetPwmChannel(ch)->val.mode;
+        eServoOutputMode mode = (eServoOutputMode)config.GetPwmChannel(ch)->val.mode;
 
-      if (mode == somSCL)
-        sclAssigned = true;
+        if (mode == somSCL)
+            sclAssigned = true;
 
-      if (mode == somSDA)
-        sdaAssigned = true;
+        if (mode == somSDA)
+            sdaAssigned = true;
 
 #if defined(PLATFORM_ESP32)
-      if (mode == somSerial1RX)
-        serial1rxAssigned = true;
+        if (mode == somSerial1RX)
+            serial1rxAssigned = true;
 
-      if (mode == somSerial1TX)
-        serial1txAssigned = true;
+        if (mode == somSerial1TX)
+            serial1txAssigned = true;
 #endif
     }
 
@@ -1111,7 +1121,7 @@ void RXEndpoint::luaparamMappingChannelOut(propertiesCommon *item, uint8_t arg)
 #if defined(PLATFORM_ESP32)
     // DShot output (2 options)
     // ;DShot;DShot3D
-    if (GPIO_PIN_PWM_OUTPUTS[arg-1] != 0)   // DShot doesn't work with GPIO0, exclude it
+    if (GPIO_PIN_PWM_OUTPUTS[arg - 1] != 0) // DShot doesn't work with GPIO0, exclude it
     {
         pModeString = dshot;
     }
@@ -1124,11 +1134,11 @@ void RXEndpoint::luaparamMappingChannelOut(propertiesCommon *item, uint8_t arg)
 
     // SerialIO outputs (1 option)
     // ;[Serial RX] | [Serial TX]
-    if (!OPT_PWM_OUT_ONLY && GPIO_PIN_PWM_OUTPUTS[arg-1] == U0RXD_GPIO_NUM)
+    if (!OPT_PWM_OUT_ONLY && GPIO_PIN_PWM_OUTPUTS[arg - 1] == U0RXD_GPIO_NUM)
     {
         pModeString = serial_RX;
     }
-    else if (!OPT_PWM_OUT_ONLY && GPIO_PIN_PWM_OUTPUTS[arg-1] == U0TXD_GPIO_NUM)
+    else if (!OPT_PWM_OUT_ONLY && GPIO_PIN_PWM_OUTPUTS[arg - 1] == U0TXD_GPIO_NUM)
     {
         pModeString = serial_TX;
     }
@@ -1143,11 +1153,11 @@ void RXEndpoint::luaparamMappingChannelOut(propertiesCommon *item, uint8_t arg)
     if (!OPT_PWM_OUT_ONLY && (GPIO_PIN_SCL != UNDEF_PIN || GPIO_PIN_SDA != UNDEF_PIN))
     {
         // If the target defines SCL/SDA then those pins MUST be used
-        if (GPIO_PIN_PWM_OUTPUTS[arg-1] == GPIO_PIN_SCL)
+        if (GPIO_PIN_PWM_OUTPUTS[arg - 1] == GPIO_PIN_SCL)
         {
             pModeString = i2c_SCL;
         }
-        else if (GPIO_PIN_PWM_OUTPUTS[arg-1] == GPIO_PIN_SDA)
+        else if (GPIO_PIN_PWM_OUTPUTS[arg - 1] == GPIO_PIN_SDA)
         {
             pModeString = i2c_SDA;
         }
@@ -1191,11 +1201,11 @@ void RXEndpoint::luaparamMappingChannelOut(propertiesCommon *item, uint8_t arg)
     if (!OPT_PWM_OUT_ONLY && (GPIO_PIN_SERIAL1_RX != UNDEF_PIN || GPIO_PIN_SERIAL1_TX != UNDEF_PIN))
     {
         // If the target defines Serial2 RX/TX then those pins MUST be used
-        if (GPIO_PIN_PWM_OUTPUTS[arg-1] == GPIO_PIN_SERIAL1_RX)
+        if (GPIO_PIN_PWM_OUTPUTS[arg - 1] == GPIO_PIN_SERIAL1_RX)
         {
             pModeString = serial1_RX;
         }
-        else if (GPIO_PIN_PWM_OUTPUTS[arg-1] == GPIO_PIN_SERIAL1_TX)
+        else if (GPIO_PIN_PWM_OUTPUTS[arg - 1] == GPIO_PIN_SERIAL1_TX)
         {
             pModeString = serial1_TX;
         }
@@ -1205,7 +1215,7 @@ void RXEndpoint::luaparamMappingChannelOut(propertiesCommon *item, uint8_t arg)
         }
     }
     else if (!OPT_PWM_OUT_ONLY)
-    {   // otherwise allow any pin to be either RX or TX but only once
+    { // otherwise allow any pin to be either RX or TX but only once
         if (serial1txAssigned && !serial1rxAssigned)
         {
             pModeString = serial1_RX;
@@ -1232,7 +1242,7 @@ void RXEndpoint::luaparamMappingChannelOut(propertiesCommon *item, uint8_t arg)
 #endif
 
     // trim off trailing semicolons (assumes pwmModes has at least 1 non-semicolon)
-    for (auto lastPos = strlen(pwmModes)-1; pwmModes[lastPos] == ';'; lastPos--)
+    for (auto lastPos = strlen(pwmModes) - 1; pwmModes[lastPos] == ';'; lastPos--)
     {
         pwmModes[lastPos] = '\0';
     }
@@ -1246,605 +1256,614 @@ void RXEndpoint::luaparamMappingChannelOut(propertiesCommon *item, uint8_t arg)
 
 static void luaparamMappingChannelIn(propertiesCommon *item, uint8_t arg)
 {
-  const uint8_t ch = luaMappingChannelOut.properties.u.value - 1;
-  rx_config_pwm_t newPwmCh;
-  newPwmCh.raw = config.GetPwmChannel(ch)->raw;
-  newPwmCh.val.inputChannel = arg - 1; // convert 1-16 -> 0-15
+    const uint8_t ch = luaMappingChannelOut.properties.u.value - 1;
+    rx_config_pwm_t newPwmCh;
+    newPwmCh.raw = config.GetPwmChannel(ch)->raw;
+    newPwmCh.val.inputChannel = arg - 1; // convert 1-16 -> 0-15
 
-  config.SetPwmChannelRaw(ch, newPwmCh.raw);
+    config.SetPwmChannelRaw(ch, newPwmCh.raw);
 }
 
 static void configureSerialPin(uint8_t sibling, uint8_t oldMode, uint8_t newMode)
 {
-  for (int ch=0 ; ch<GPIO_PIN_PWM_OUTPUTS_COUNT ; ch++)
-  {
-    if (GPIO_PIN_PWM_OUTPUTS[ch] == sibling)
+    for (int ch = 0; ch < GPIO_PIN_PWM_OUTPUTS_COUNT; ch++)
     {
-      // Retain as much of the sibling's current config as possible
-      rx_config_pwm_t siblingPinConfig;
-      siblingPinConfig.raw = config.GetPwmChannel(ch)->raw;
+        if (GPIO_PIN_PWM_OUTPUTS[ch] == sibling)
+        {
+            // Retain as much of the sibling's current config as possible
+            rx_config_pwm_t siblingPinConfig;
+            siblingPinConfig.raw = config.GetPwmChannel(ch)->raw;
 
-      // If the new mode is serial, the sibling is also forced to serial
-      if (newMode == somSerial)
-      {
-        siblingPinConfig.val.mode = somSerial;
-      }
-      // If the new mode is not serial, and the sibling is serial, set the sibling to PWM (50Hz)
-      else if (siblingPinConfig.val.mode == somSerial)
-      {
-        siblingPinConfig.val.mode = som50Hz;
-      }
+            // If the new mode is serial, the sibling is also forced to serial
+            if (newMode == somSerial)
+            {
+                siblingPinConfig.val.mode = somSerial;
+            }
+            // If the new mode is not serial, and the sibling is serial, set the sibling to PWM (50Hz)
+            else if (siblingPinConfig.val.mode == somSerial)
+            {
+                siblingPinConfig.val.mode = som50Hz;
+            }
 
-      config.SetPwmChannelRaw(ch, siblingPinConfig.raw);
-      break;
+            config.SetPwmChannelRaw(ch, siblingPinConfig.raw);
+            break;
+        }
     }
-  }
 
-  if (oldMode != newMode)
-  {
-    deferExecutionMillis(100, [](){
-      reconfigureSerial();
-    });
-  }
+    if (oldMode != newMode)
+    {
+        deferExecutionMillis(100, []() {
+            reconfigureSerial();
+        });
+    }
 }
 
 static void luaparamMappingOutputMode(propertiesCommon *item, uint8_t arg)
 {
-  UNUSED(item);
-  const uint8_t ch = luaMappingChannelOut.properties.u.value - 1;
-  rx_config_pwm_t newPwmCh;
-  newPwmCh.raw = config.GetPwmChannel(ch)->raw;
-  uint8_t oldMode = newPwmCh.val.mode;
-  newPwmCh.val.mode = sanitizePwmMode(arg);
+    UNUSED(item);
+    const uint8_t ch = luaMappingChannelOut.properties.u.value - 1;
+    rx_config_pwm_t newPwmCh;
+    newPwmCh.raw = config.GetPwmChannel(ch)->raw;
+    uint8_t oldMode = newPwmCh.val.mode;
+    newPwmCh.val.mode = sanitizePwmMode(arg);
 
-  // Check if pin == 1/3 and do other pin adjustment accordingly
-  if (GPIO_PIN_PWM_OUTPUTS[ch] == 1)
-  {
-    configureSerialPin(3, oldMode, newPwmCh.val.mode);
-  }
-  else if (GPIO_PIN_PWM_OUTPUTS[ch] == 3)
-  {
-    configureSerialPin(1, oldMode, newPwmCh.val.mode);
-  }
-  config.SetPwmChannelRaw(ch, newPwmCh.raw);
+    // Check if pin == 1/3 and do other pin adjustment accordingly
+    if (GPIO_PIN_PWM_OUTPUTS[ch] == 1)
+    {
+        configureSerialPin(3, oldMode, newPwmCh.val.mode);
+    }
+    else if (GPIO_PIN_PWM_OUTPUTS[ch] == 3)
+    {
+        configureSerialPin(1, oldMode, newPwmCh.val.mode);
+    }
+    config.SetPwmChannelRaw(ch, newPwmCh.raw);
 }
 
 static void luaparamMappingInverted(propertiesCommon *item, uint8_t arg)
 {
-  UNUSED(item);
-  const uint8_t ch = luaMappingChannelOut.properties.u.value - 1;
-  rx_config_pwm_t newPwmCh;
-  newPwmCh.raw = config.GetPwmChannel(ch)->raw;
-  newPwmCh.val.inverted = arg;
+    UNUSED(item);
+    const uint8_t ch = luaMappingChannelOut.properties.u.value - 1;
+    rx_config_pwm_t newPwmCh;
+    newPwmCh.raw = config.GetPwmChannel(ch)->raw;
+    newPwmCh.val.inverted = arg;
 
-  config.SetPwmChannelRaw(ch, newPwmCh.raw);
+    config.SetPwmChannelRaw(ch, newPwmCh.raw);
 }
 
 void RXEndpoint::luaparamSetFailsafe(propertiesCommon *item, uint8_t arg)
 {
-  commandStep_e newStep;
-  const char *msg;
-  if (arg == lcsClick)
-  {
-    newStep = lcsAskConfirm;
-    msg = "Set failsafe to curr?";
-  }
-  else if (arg == lcsConfirmed)
-  {
-    // This is generally not seen by the user, since we'll disconnect to commit config
-    // and the handset will send another lcdQuery that will overwrite it with idle
-    newStep = lcsExecuting;
-    msg = "Setting failsafe";
-    servoCurrentToFailsafeConfig();
-  }
-  else
-  {
-    newStep = lcsIdle;
-    msg = STR_EMPTYSPACE;
-  }
+    commandStep_e newStep;
+    const char *msg;
+    if (arg == lcsClick)
+    {
+        newStep = lcsAskConfirm;
+        msg = "Set failsafe to curr?";
+    }
+    else if (arg == lcsConfirmed)
+    {
+        // This is generally not seen by the user, since we'll disconnect to commit config
+        // and the handset will send another lcdQuery that will overwrite it with idle
+        newStep = lcsExecuting;
+        msg = "Setting failsafe";
+        servoCurrentToFailsafeConfig();
+    }
+    else
+    {
+        newStep = lcsIdle;
+        msg = STR_EMPTYSPACE;
+    }
 
-  sendCommandResponse((commandParameter *)item, newStep, msg);
+    sendCommandResponse((commandParameter *)item, newStep, msg);
 }
 
 #if defined(GYRO_SUPPORT) && defined(PLATFORM_ESP32)
 static void luaparamMappingChannelLimitMin(propertiesCommon *item, uint8_t arg)
 {
-  const uint8_t ch = luaMappingChannelOut.properties.u.value - 1;
-  rx_config_pwm_limits_t limits;
-  limits.raw = gyroConfig->GetPwmChannelLimits(ch)->raw;
-  limits.val.min = (uint16_t) luaMappingChannelLimitMin.properties.u.value;
-  gyroConfig->SetPwmChannelLimitsRaw(ch, limits.raw);
+    const uint8_t ch = luaMappingChannelOut.properties.u.value - 1;
+    rx_config_pwm_limits_t limits;
+    limits.raw = gyroConfig->GetPwmChannelLimits(ch)->raw;
+    limits.val.min = (uint16_t)luaMappingChannelLimitMin.properties.u.value;
+    gyroConfig->SetPwmChannelLimitsRaw(ch, limits.raw);
 }
 
 static void luaparamMappingChannelLimitMax(propertiesCommon *item, uint8_t arg)
 {
-  const uint8_t ch = luaMappingChannelOut.properties.u.value - 1;
-  rx_config_pwm_limits_t limits;
-  limits.raw = gyroConfig->GetPwmChannelLimits(ch)->raw;
-  limits.val.max = luaMappingChannelLimitMax.properties.u.value;
-  gyroConfig->SetPwmChannelLimitsRaw(ch, limits.raw);
+    const uint8_t ch = luaMappingChannelOut.properties.u.value - 1;
+    rx_config_pwm_limits_t limits;
+    limits.raw = gyroConfig->GetPwmChannelLimits(ch)->raw;
+    limits.val.max = luaMappingChannelLimitMax.properties.u.value;
+    gyroConfig->SetPwmChannelLimitsRaw(ch, limits.raw);
 }
 
 static void luaparamMappingChannelCenter(propertiesCommon *item, uint8_t arg)
 {
-  const uint8_t ch = luaMappingChannelOut.properties.u.value - 1;
-  rx_config_pwm_limits_t limits;
-  limits.raw = gyroConfig->GetPwmChannelLimits(ch)->raw;
-  limits.val.mid = luaMappingChannelCenter.properties.u.value;
-  gyroConfig->SetPwmChannelLimitsRaw(ch, limits.raw);
+    const uint8_t ch = luaMappingChannelOut.properties.u.value - 1;
+    rx_config_pwm_limits_t limits;
+    limits.raw = gyroConfig->GetPwmChannelLimits(ch)->raw;
+    limits.val.mid = luaMappingChannelCenter.properties.u.value;
+    gyroConfig->SetPwmChannelLimitsRaw(ch, limits.raw);
 }
 #endif
 
-
-static void luaparamSetPower(propertiesCommon* item, uint8_t arg)
+static void luaparamSetPower(propertiesCommon *item, uint8_t arg)
 {
-  UNUSED(item);
-  uint8_t newPower = arg + POWERMGNT::getMinPower();
-  if (newPower > POWERMGNT::getMaxPower())
-  {
-    newPower = PWR_MATCH_TX;
-  }
+    UNUSED(item);
+    uint8_t newPower = arg + POWERMGNT::getMinPower();
+    if (newPower > POWERMGNT::getMaxPower())
+    {
+        newPower = PWR_MATCH_TX;
+    }
 
-  config.SetPower(newPower);
-  // POWERMGNT::setPower() will be called in updatePower() in the main loop
+    config.SetPower(newPower);
+    // POWERMGNT::setPower() will be called in updatePower() in the main loop
 }
 
 void RXEndpoint::registerParameters()
 {
-  registerParameter(&luaSerialProtocol, [](propertiesCommon* item, uint8_t arg){
-    config.SetSerialProtocol((eSerialProtocol)arg);
-    if (config.IsModified()) {
-      deferExecutionMillis(100, [](){
-        reconfigureSerial();
-      });
-    }
-  });
+    registerParameter(&luaSerialProtocol, [](propertiesCommon *item, uint8_t arg) {
+        config.SetSerialProtocol((eSerialProtocol)arg);
+        if (config.IsModified())
+        {
+            deferExecutionMillis(100, []() {
+                reconfigureSerial();
+            });
+        }
+    });
 
 #if defined(PLATFORM_ESP32)
-  if (RX_HAS_SERIAL1)
-  {
-    registerParameter(&luaSerial1Protocol, [](propertiesCommon* item, uint8_t arg){
-      config.SetSerial1Protocol((eSerial1Protocol)arg);
-      if (config.IsModified()) {
-        deferExecutionMillis(100, [](){
-          reconfigureSerial1();
+    if (RX_HAS_SERIAL1)
+    {
+        registerParameter(&luaSerial1Protocol, [](propertiesCommon *item, uint8_t arg) {
+            config.SetSerial1Protocol((eSerial1Protocol)arg);
+            if (config.IsModified())
+            {
+                deferExecutionMillis(100, []() {
+                    reconfigureSerial1();
+                });
+            }
         });
-      }
-    });
-  }
+    }
 #endif
 
-  registerParameter(&luaSBUSFailsafeMode, [](propertiesCommon* item, uint8_t arg){
-    config.SetFailsafeMode((eFailsafeMode)arg);
-  });
-
-  registerParameter(&luaTargetSysId, [](propertiesCommon* item, uint8_t arg){
-    config.SetTargetSysId((uint8_t)arg);
-  });
-  registerParameter(&luaSourceSysId, [](propertiesCommon* item, uint8_t arg){
-    config.SetSourceSysId((uint8_t)arg);
-  });
-
-  if (GPIO_PIN_ANT_CTRL != UNDEF_PIN)
-  {
-    registerParameter(&luaAntennaMode, [](propertiesCommon* item, uint8_t arg){
-      config.SetAntennaMode(arg);
+    registerParameter(&luaSBUSFailsafeMode, [](propertiesCommon *item, uint8_t arg) {
+        config.SetFailsafeMode((eFailsafeMode)arg);
     });
-  }
 
-  if (GPIO_PIN_ANT_GROUP != UNDEF_PIN)
-  {
-    registerParameter(&luaAntennaGroup, [](propertiesCommon* item, uint8_t arg){
-      config.SetAntennaGroup(arg);
+    registerParameter(&luaTargetSysId, [](propertiesCommon *item, uint8_t arg) {
+        config.SetTargetSysId((uint8_t)arg);
     });
-  }
-
-  if (POWERMGNT::getMinPower() != POWERMGNT::getMaxPower())
-  {
-    filterOptions(&luaTlmPower, POWERMGNT::getMinPower(), POWERMGNT::getMaxPower(), strPowerLevels);
-    strcat(strPowerLevels, ";MatchTX ");
-    registerParameter(&luaTlmPower, &luaparamSetPower);
-  }
-
-  // Teamrace
-  registerParameter(&luaTeamraceFolder);
-  registerParameter(&luaTeamraceChannel, [](propertiesCommon* item, uint8_t arg) {
-    config.SetTeamraceChannel(arg + AUX2);
-  }, luaTeamraceFolder.common.id);
-  registerParameter(&luaTeamracePosition, [](propertiesCommon* item, uint8_t arg) {
-    config.SetTeamracePosition(arg);
-  }, luaTeamraceFolder.common.id);
-
-  if (OPT_HAS_SERVO_OUTPUT)
-  {
-    luaparamMappingChannelOut(&luaMappingOutputMode.common, luaMappingChannelOut.properties.u.value);
-    registerParameter(&luaMappingFolder);
-    registerParameter(&luaMappingChannelOut, [&](propertiesCommon* item, uint8_t arg) {
-        luaparamMappingChannelOut(item, arg);
-        #if defined(GYRO_SUPPORT) && defined(PLATFORM_ESP32)
-        // Update Gyro limits when Output channel changes
-        const rx_config_pwm_limits_t *limits = gyroConfig->GetPwmChannelLimits(luaMappingChannelOut.properties.u.value - 1);
-        setUint16Value(&luaMappingChannelLimitMin, (uint16_t) limits->val.min);
-        setUint16Value(&luaMappingChannelLimitMax, (uint16_t) limits->val.max);
-        setUint16Value(&luaMappingChannelCenter, (uint16_t) limits->val.mid);
-        #endif
-    }, luaMappingFolder.common.id);
-    registerParameter(&luaMappingChannelIn, &luaparamMappingChannelIn, luaMappingFolder.common.id);
-    registerParameter(&luaMappingOutputMode, &luaparamMappingOutputMode, luaMappingFolder.common.id);
-    registerParameter(&luaMappingInverted, &luaparamMappingInverted, luaMappingFolder.common.id);
-    registerParameter(&luaSetFailsafe, [&](propertiesCommon* item, uint8_t arg) {
-        luaparamSetFailsafe(item, arg);
+    registerParameter(&luaSourceSysId, [](propertiesCommon *item, uint8_t arg) {
+        config.SetSourceSysId((uint8_t)arg);
     });
+
+    if (GPIO_PIN_ANT_CTRL != UNDEF_PIN)
+    {
+        registerParameter(&luaAntennaMode, [](propertiesCommon *item, uint8_t arg) {
+            config.SetAntennaMode(arg);
+        });
+    }
+
+    if (GPIO_PIN_ANT_GROUP != UNDEF_PIN)
+    {
+        registerParameter(&luaAntennaGroup, [](propertiesCommon *item, uint8_t arg) {
+            config.SetAntennaGroup(arg);
+        });
+    }
+
+    if (POWERMGNT::getMinPower() != POWERMGNT::getMaxPower())
+    {
+        filterOptions(&luaTlmPower, POWERMGNT::getMinPower(), POWERMGNT::getMaxPower(), strPowerLevels);
+        strcat(strPowerLevels, ";MatchTX ");
+        registerParameter(&luaTlmPower, &luaparamSetPower);
+    }
+
+    // Teamrace
+    registerParameter(&luaTeamraceFolder);
+    registerParameter(&luaTeamraceChannel, [](propertiesCommon *item, uint8_t arg) { config.SetTeamraceChannel(arg + AUX2); }, luaTeamraceFolder.common.id);
+    registerParameter(&luaTeamracePosition, [](propertiesCommon *item, uint8_t arg) { config.SetTeamracePosition(arg); }, luaTeamraceFolder.common.id);
+
+    if (OPT_HAS_SERVO_OUTPUT)
+    {
+        luaparamMappingChannelOut(&luaMappingOutputMode.common, luaMappingChannelOut.properties.u.value);
+        registerParameter(&luaMappingFolder);
+        registerParameter(&luaMappingChannelOut, [&](propertiesCommon *item, uint8_t arg) {
+            luaparamMappingChannelOut(item, arg);
+#if defined(GYRO_SUPPORT) && defined(PLATFORM_ESP32)
+            // Update Gyro limits when Output channel changes
+            const rx_config_pwm_limits_t *limits = gyroConfig->GetPwmChannelLimits(luaMappingChannelOut.properties.u.value - 1);
+            setUint16Value(&luaMappingChannelLimitMin, (uint16_t)limits->val.min);
+            setUint16Value(&luaMappingChannelLimitMax, (uint16_t)limits->val.max);
+            setUint16Value(&luaMappingChannelCenter, (uint16_t)limits->val.mid);
+#endif
+        },
+                          luaMappingFolder.common.id);
+        registerParameter(&luaMappingChannelIn, &luaparamMappingChannelIn, luaMappingFolder.common.id);
+        registerParameter(&luaMappingOutputMode, &luaparamMappingOutputMode, luaMappingFolder.common.id);
+        registerParameter(&luaMappingInverted, &luaparamMappingInverted, luaMappingFolder.common.id);
+        registerParameter(&luaSetFailsafe, [&](propertiesCommon *item, uint8_t arg) {
+            luaparamSetFailsafe(item, arg);
+        });
 
 #if defined(GYRO_SUPPORT) && defined(PLATFORM_ESP32)
-    if (OPT_HAS_GYRO)
-    {
-      DBGLN("RxPratameters.registerParameters(): Setting up GYRO LUA");
-      // -- Servo Output Limits
-      registerParameter(&luaMappingChannelLimitMin, &luaparamMappingChannelLimitMin, luaMappingFolder.common.id);
-      registerParameter(&luaMappingChannelLimitMax, &luaparamMappingChannelLimitMax, luaMappingFolder.common.id);
-      registerParameter(&luaMappingChannelCenter, &luaparamMappingChannelCenter, luaMappingFolder.common.id);
+        if (OPT_HAS_GYRO)
+        {
+            DBGLN("RxPratameters.registerParameters(): Setting up GYRO LUA");
+            // -- Servo Output Limits
+            registerParameter(&luaMappingChannelLimitMin, &luaparamMappingChannelLimitMin, luaMappingFolder.common.id);
+            registerParameter(&luaMappingChannelLimitMax, &luaparamMappingChannelLimitMax, luaMappingFolder.common.id);
+            registerParameter(&luaMappingChannelCenter, &luaparamMappingChannelCenter, luaMappingFolder.common.id);
 
-      registerParameter(&luaGyroMainFolder);
-      // ----- Gyro Main
-      registerParameter(&luaGyroEnabled, [&] (propertiesCommon* item, uint8_t arg) {
-        gyroConfig->SetGyroEnabled((bool) arg);
-        gyro.reload();
-        updateParameters(); // Update Everything
-      }, luaGyroMainFolder.common.id);
+            registerParameter(&luaGyroMainFolder);
+            // ----- Gyro Main
+            registerParameter(&luaGyroEnabled,
+                [&](propertiesCommon *item, uint8_t arg) {
+                    gyroConfig->SetGyroEnabled((bool)arg);
+                    gyro.reload();
+                    updateParameters(); // Update Everything
+                },
+                luaGyroMainFolder.common.id
+            );
 
-      registerParameter(&luaGyroStatus, nullptr, luaGyroMainFolder.common.id);
-      registerParameter(&luaGyroIMUStatus, nullptr, luaGyroMainFolder.common.id);
+            registerParameter(&luaGyroStatus, nullptr, luaGyroMainFolder.common.id);
+            registerParameter(&luaGyroIMUStatus, nullptr, luaGyroMainFolder.common.id);
 
-      registerParameter(&luaGyroGainFactor, [&] (propertiesCommon* item, uint8_t arg) {
-        gyroConfig->SetGyroGainFactor((gyro_gain_factor_t) arg);
-        gyro.reload();
-      }, luaGyroMainFolder.common.id);
+            registerParameter(&luaGyroGainFactor,
+                [&](propertiesCommon *item, uint8_t arg) {
+                    gyroConfig->SetGyroGainFactor((gyro_gain_factor_t) arg);
+                    gyro.reload();
+                },
+                luaGyroMainFolder.common.id
+            );
 
-      registerParameter(&luaGyroMainRefresh,[this](propertiesCommon* item, uint8_t arg) {
-          // Main Refresh Page
-          updateParameters();
-          sendCommandResponse((commandParameter *)item, lcsIdle, "Refresh");
-      },luaGyroMainFolder.common.id);
+            registerParameter(&luaGyroMainRefresh,
+                [this](propertiesCommon *item, uint8_t arg) {
+                    // Main Refresh Page
+                    updateParameters();
+                    sendCommandResponse((commandParameter *)item, lcsIdle, "Refresh");
+                },
+                luaGyroMainFolder.common.id
+            );
 
-      registerParameter(&luaGyroModelFolder,nullptr,luaGyroMainFolder.common.id);
-      registerParameter(&luaGyroModesFolder,nullptr,luaGyroModelFolder.common.id);
-      registerParameter(&luaGyroOutputFolder,nullptr,luaGyroModelFolder.common.id);
-      registerParameter(&luaGyroQuickSetupFolder,nullptr,luaGyroModelFolder.common.id);
-      registerParameter(&luaGyroSettingsFolder,nullptr,luaGyroMainFolder.common.id);
-      registerParameter(&luaGyroFModeFolder,nullptr,luaGyroSettingsFolder.common.id);;
-      registerParameter(&luaGyroCalibrationFolder,nullptr,luaGyroSettingsFolder.common.id);
-      registerParameter(&luaGyroRxOrientationFolder,nullptr,luaGyroCalibrationFolder.common.id);
-      registerParameter(&luaGyroPIDFolder,nullptr,luaGyroSettingsFolder.common.id);
+            registerParameter(&luaGyroModelFolder, nullptr, luaGyroMainFolder.common.id);
+            registerParameter(&luaGyroModesFolder, nullptr, luaGyroModelFolder.common.id);
+            registerParameter(&luaGyroOutputFolder, nullptr, luaGyroModelFolder.common.id);
+            registerParameter(&luaGyroQuickSetupFolder, nullptr, luaGyroModelFolder.common.id);
+            registerParameter(&luaGyroSettingsFolder, nullptr, luaGyroMainFolder.common.id);
+            registerParameter(&luaGyroFModeFolder, nullptr, luaGyroSettingsFolder.common.id);
+            registerParameter(&luaGyroCalibrationFolder, nullptr, luaGyroSettingsFolder.common.id);
+            registerParameter(&luaGyroRxOrientationFolder, nullptr, luaGyroCalibrationFolder.common.id);
+            registerParameter(&luaGyroPIDFolder, nullptr, luaGyroSettingsFolder.common.id);
 
-      // ----- Gyro Model->Modes
-      registerParameter(&luaGyroModePos1, [&] (propertiesCommon* item, uint8_t arg) {
-        gyroConfig->SetGyroModePos(0, (gyro_mode_t) arg);
-      }, luaGyroModesFolder.common.id);
-      registerParameter(&luaGyroModePos2, [&] (propertiesCommon* item, uint8_t arg) {
-        gyroConfig->SetGyroModePos(1, (gyro_mode_t) arg);
-      }, luaGyroModesFolder.common.id);
-      registerParameter(&luaGyroModePos3, [&] (propertiesCommon* item, uint8_t arg) {
-        gyroConfig->SetGyroModePos(2, (gyro_mode_t) arg);
-      }, luaGyroModesFolder.common.id);
-      registerParameter(&luaGyroModePos4, [&] (propertiesCommon* item, uint8_t arg) {
-        gyroConfig->SetGyroModePos(3, (gyro_mode_t) arg);
-      }, luaGyroModesFolder.common.id);
-      registerParameter(&luaGyroModePos5, [&] (propertiesCommon* item, uint8_t arg) {
-        gyroConfig->SetGyroModePos(4, (gyro_mode_t) arg);
-      }, luaGyroModesFolder.common.id);
+            // ----- Gyro Model->Modes
+            registerParameter(&luaGyroModePos1, [&](propertiesCommon *item, uint8_t arg) { gyroConfig->SetGyroModePos(0, (gyro_mode_t)arg); }, luaGyroModesFolder.common.id);
+            registerParameter(&luaGyroModePos2, [&](propertiesCommon *item, uint8_t arg) { gyroConfig->SetGyroModePos(1, (gyro_mode_t)arg); }, luaGyroModesFolder.common.id);
+            registerParameter(&luaGyroModePos3, [&](propertiesCommon *item, uint8_t arg) { gyroConfig->SetGyroModePos(2, (gyro_mode_t)arg); }, luaGyroModesFolder.common.id);
+            registerParameter(&luaGyroModePos4, [&](propertiesCommon *item, uint8_t arg) { gyroConfig->SetGyroModePos(3, (gyro_mode_t)arg); }, luaGyroModesFolder.common.id);
+            registerParameter(&luaGyroModePos5, [&](propertiesCommon *item, uint8_t arg) { gyroConfig->SetGyroModePos(4, (gyro_mode_t)arg); }, luaGyroModesFolder.common.id);
 
-      // ----- Gyro Model->Output
-      registerParameter(&luaGyroOutputCh_Select,  [&] (propertiesCommon* item, uint8_t arg) {
-         luaparamGyroOutputCh_Select(item,arg);
-      }, luaGyroOutputFolder.common.id);
-      registerParameter(&luaGyroOutputCh_Mode, [&] (propertiesCommon* item, uint8_t arg) {
-        luaparamGyroOutputCh_Mode(item,arg);
-      }, luaGyroOutputFolder.common.id);
-      registerParameter(&luaGyroOutputCh_Master, [&] (propertiesCommon* item, uint8_t arg) {
-        luaparamGyroOutputCh_Master(item,arg);
-      }, luaGyroOutputFolder.common.id);
-      registerParameter(&luaGyroOutputCh_Inverted, [&] (propertiesCommon* item, uint8_t arg) {
-        luaparamGyroOutputCh_Inverted(item,arg);
-      }, luaGyroOutputFolder.common.id);
+            // ----- Gyro Model->Output
+            registerParameter(&luaGyroOutputCh_Select, [&](propertiesCommon *item, uint8_t arg) { luaparamGyroOutputCh_Select(item, arg); }, luaGyroOutputFolder.common.id);
+            registerParameter(&luaGyroOutputCh_Mode, [&](propertiesCommon *item, uint8_t arg) { luaparamGyroOutputCh_Mode(item, arg); }, luaGyroOutputFolder.common.id);
+            registerParameter(&luaGyroOutputCh_Master, [&](propertiesCommon *item, uint8_t arg) { luaparamGyroOutputCh_Master(item, arg); }, luaGyroOutputFolder.common.id);
+            registerParameter(&luaGyroOutputCh_Inverted, [&](propertiesCommon *item, uint8_t arg) { luaparamGyroOutputCh_Inverted(item, arg); }, luaGyroOutputFolder.common.id);
 
-      // ----- Gyro Settings->PID
-      registerParameter(&luaGyroPID_Select_Group, [&] (propertiesCommon* item, uint8_t arg) {
-        setTextSelectionValue(&luaGyroPID_Select_Group, arg);
-        setTextSelectionValue(&luaGyroPID_Select_Axis, 0); // Reset to X axis
-        // Reload Values
-        updateParameters();
-      }, luaGyroPIDFolder.common.id);
+            // ----- Gyro Settings->PID
+            registerParameter(&luaGyroPID_Select_Group,
+                [&](propertiesCommon *item, uint8_t arg) {
+                    setTextSelectionValue(&luaGyroPID_Select_Group, arg);
+                    setTextSelectionValue(&luaGyroPID_Select_Axis, 0); // Reset to X axis
+                    // Reload Values
+                    updateParameters();
+                },
+                luaGyroPIDFolder.common.id
+            );
 
-      registerParameter(&luaGyroPID_Select_Axis, [&] (propertiesCommon* item, uint8_t arg) {
-          setTextSelectionValue(&luaGyroPID_Select_Axis, arg);
-          // Reload Values
-          updateParameters();
-      }, luaGyroPIDFolder.common.id);
+            registerParameter(&luaGyroPID_Select_Axis,
+                [&](propertiesCommon *item, uint8_t arg) {
+                    setTextSelectionValue(&luaGyroPID_Select_Axis, arg);
+                    // Reload Values
+                    updateParameters();
+                },
+                luaGyroPIDFolder.common.id
+                );
 
-      registerParameter(&luaGyroPID_RateP, &luaparamGyroPID_RateP, luaGyroPIDFolder.common.id);
-      registerParameter(&luaGyroPID_RateI, &luaparamGyroPID_RateI, luaGyroPIDFolder.common.id);
-      registerParameter(&luaGyroPID_RateD, &luaparamGyroPID_RateD, luaGyroPIDFolder.common.id);
+            registerParameter(&luaGyroPID_RateP, &luaparamGyroPID_RateP, luaGyroPIDFolder.common.id);
+            registerParameter(&luaGyroPID_RateI, &luaparamGyroPID_RateI, luaGyroPIDFolder.common.id);
+            registerParameter(&luaGyroPID_RateD, &luaparamGyroPID_RateD, luaGyroPIDFolder.common.id);
 
+            // ----- Gyro -> Settings -> Calibration -> RxOrientation
+            registerParameter(&luaGyroAutoOrientation,
+                [this](propertiesCommon *item, uint8_t arg) {
+                    luaparamGyroOrientationCal(item, arg);
+                    // Reload Values
+                    setTextSelectionValue(&luaGyroOrientationH, gyroConfig->GetGyroOrientationH());
+                    setTextSelectionValue(&luaGyroOrientationV, gyroConfig->GetGyroOrientationV());
+                },
+                luaGyroRxOrientationFolder.common.id
+            );
 
-      // ----- Gyro -> Settings -> Calibration -> RxOrientation
-      registerParameter(&luaGyroAutoOrientation, [this](propertiesCommon* item, uint8_t arg) {
-        luaparamGyroOrientationCal(item, arg);
-        // Reload Values
-        setTextSelectionValue(&luaGyroOrientationH, gyroConfig->GetGyroOrientationH());
-        setTextSelectionValue(&luaGyroOrientationV, gyroConfig->GetGyroOrientationV());
-      }, luaGyroRxOrientationFolder.common.id);
+            registerParameter(&luaGyroOrientationH,
+                [this](propertiesCommon *item, uint8_t arg) {
+                    setTextSelectionValue(&luaGyroOrientationH, arg);
+                    gyroConfig->SetGyroOrientation(luaGyroOrientationH.value,luaGyroOrientationV.value);
+                    gyro.reload();
+                },
+                luaGyroRxOrientationFolder.common.id
+            );
 
-      registerParameter(&luaGyroOrientationH,  [this](propertiesCommon* item, uint8_t arg) {
-        setTextSelectionValue(&luaGyroOrientationH, arg);
-        gyroConfig->SetGyroOrientation(luaGyroOrientationH.value,luaGyroOrientationV.value);
-        gyro.reload();
-      }, luaGyroRxOrientationFolder.common.id);
+            registerParameter(&luaGyroOrientationV,
+                [this](propertiesCommon *item, uint8_t arg) {
+                    setTextSelectionValue(&luaGyroOrientationV, arg);
+                    gyroConfig->SetGyroOrientation(luaGyroOrientationH.value,luaGyroOrientationV.value);
+                    gyro.reload();
+                },
+                luaGyroRxOrientationFolder.common.id
+            );
 
-      registerParameter(&luaGyroOrientationV,  [this](propertiesCommon* item, uint8_t arg) {
-        setTextSelectionValue(&luaGyroOrientationV, arg);
-        gyroConfig->SetGyroOrientation(luaGyroOrientationH.value,luaGyroOrientationV.value);
-        gyro.reload();
-      }, luaGyroRxOrientationFolder.common.id);
+            // Update orientation Options now that we know what Gyro type do we have
+            setTextSelectionOptions(&luaGyroOrientationH, (char *)(OPT_HAS_GYRO_MPU6050 ? gyroRxOrientationsHR : gyroRxOrientationsRM));
+            setTextSelectionOptions(&luaGyroOrientationV, (char *)(OPT_HAS_GYRO_MPU6050 ? gyroRxOrientationsHR : gyroRxOrientationsRM));
 
-      // Update orientation Options now that we know what Gyro type do we have
-      setTextSelectionOptions(&luaGyroOrientationH, (char *)(OPT_HAS_GYRO_MPU6050?gyroRxOrientationsHR:gyroRxOrientationsRM));
-      setTextSelectionOptions(&luaGyroOrientationV, (char *)(OPT_HAS_GYRO_MPU6050?gyroRxOrientationsHR:gyroRxOrientationsRM));
+            // ----- Gyro -> Settings - > Calibration -> Gyro Calibration
+            registerParameter(&luaGyroCalibration, [this](propertiesCommon *item, uint8_t arg) { luaparamGyroCalibration(item, arg); }, luaGyroCalibrationFolder.common.id);
 
-      // ----- Gyro -> Settings - > Calibration -> Gyro Calibration
-      registerParameter(&luaGyroCalibration, [this](propertiesCommon* item, uint8_t arg) {
-        luaparamGyroCalibration(item, arg);
-      }, luaGyroCalibrationFolder.common.id);
+            // ----- Gyro -> Model -> Stick Calibration
+            registerParameter(&luaGyroStickCal, [this](propertiesCommon *item, uint8_t arg) { luaparamGyroStickCal(item, arg); }, luaGyroCalibrationFolder.common.id);
 
-      // ----- Gyro -> Model -> Stick Calibration
-      registerParameter(&luaGyroStickCal, [this](propertiesCommon* item, uint8_t arg) {
-        luaparamGyroStickCal(item, arg);
-      }, luaGyroCalibrationFolder.common.id);
+            // ----- Gyro -> Model -> Quick Setup
+            // Wing Type
+            registerParameter(&luaGyroQuickSetup_wingType_Select, [this](propertiesCommon *item, uint8_t arg) { setTextSelectionValue(&luaGyroQuickSetup_wingType_Select, arg); }, luaGyroQuickSetupFolder.common.id);
+            // Tail Type
+            registerParameter(&luaGyroQuickSetup_tailType_Select, [this](propertiesCommon *item, uint8_t arg) { setTextSelectionValue(&luaGyroQuickSetup_tailType_Select, arg); }, luaGyroQuickSetupFolder.common.id);
 
-      // ----- Gyro -> Model -> Quick Setup
-      // Wing Type
-      registerParameter(&luaGyroQuickSetup_wingType_Select, [this](propertiesCommon* item, uint8_t arg) {
-          setTextSelectionValue(&luaGyroQuickSetup_wingType_Select, arg);
-      }, luaGyroQuickSetupFolder.common.id);
-      // Tail Type
-      registerParameter(&luaGyroQuickSetup_tailType_Select, [this](propertiesCommon* item, uint8_t arg) {
-          setTextSelectionValue(&luaGyroQuickSetup_tailType_Select, arg);
-      }, luaGyroQuickSetupFolder.common.id);
+            // Execute
+            registerParameter(&luaGyroQuickPreset,
+                [this](propertiesCommon *item, uint8_t arg) {
+                    luaparamGyroQuickPreset(item, arg);
+                    updateParameters();
+                },
+                luaGyroQuickSetupFolder.common.id
+            );
 
-       // Execute
-      registerParameter(&luaGyroQuickPreset, [this](propertiesCommon* item, uint8_t arg) {
-        luaparamGyroQuickPreset(item, arg);
-        updateParameters();
-      }, luaGyroQuickSetupFolder.common.id);
+            // Gyro Settings-> FMode Folder
+            registerParameter(&luaGyroFMode_Select,
+                [&](propertiesCommon *item, uint8_t arg) {
+                    setTextSelectionValue(&luaGyroFMode_Select, arg);
+                    // Reload Values
+                    updateParameters();
+                },
+                luaGyroFModeFolder.common.id
+            );
 
-      // Gyro Settings-> FMode Folder
-      registerParameter(&luaGyroFMode_Select, [&] (propertiesCommon* item, uint8_t arg) {
-          setTextSelectionValue(&luaGyroFMode_Select, arg);
-          // Reload Values
-          updateParameters();
-      }, luaGyroFModeFolder.common.id);
+            registerParameter(&luaGyroFMode_UseRate, &luaparamGyroFMode_UseRate, luaGyroFModeFolder.common.id);
+            registerParameter(&luaGyroFMode_StickPri, &luaparamGyroFMode_StickPri, luaGyroFModeFolder.common.id);
 
-      registerParameter(&luaGyroFMode_UseRate,  &luaparamGyroFMode_UseRate, luaGyroFModeFolder.common.id);
-      registerParameter(&luaGyroFMode_StickPri,  &luaparamGyroFMode_StickPri, luaGyroFModeFolder.common.id);
+            registerParameter(&luaGyroFMode_AngLimitSubHeader, nullptr, luaGyroFModeFolder.common.id);
+            registerParameter(&luaGyroFMode_AngLimitPitch, &luaparamGyroFMode_AngLimitPitch, luaGyroFModeFolder.common.id);
+            registerParameter(&luaGyroFMode_AngLimitRoll, &luaparamGyroFMode_AngLimitRoll, luaGyroFModeFolder.common.id);
 
-      registerParameter(&luaGyroFMode_AngLimitSubHeader, nullptr, luaGyroFModeFolder.common.id);
-      registerParameter(&luaGyroFMode_AngLimitPitch,  &luaparamGyroFMode_AngLimitPitch, luaGyroFModeFolder.common.id);
-      registerParameter(&luaGyroFMode_AngLimitRoll,   &luaparamGyroFMode_AngLimitRoll, luaGyroFModeFolder.common.id);
+            registerParameter(&luaGyroFMode_TrimSubHeader, nullptr, luaGyroFModeFolder.common.id);
+            registerParameter(&luaGyroFMode_TrimPitch, &luaparamGyroFMode_TrimPitch, luaGyroFModeFolder.common.id);
+            registerParameter(&luaGyroFMode_TrimRoll, &luaparamGyroFMode_TrimRoll, luaGyroFModeFolder.common.id);
 
-      registerParameter(&luaGyroFMode_TrimSubHeader, nullptr, luaGyroFModeFolder.common.id);
-      registerParameter(&luaGyroFMode_TrimPitch,   &luaparamGyroFMode_TrimPitch, luaGyroFModeFolder.common.id);
-      registerParameter(&luaGyroFMode_TrimRoll,    &luaparamGyroFMode_TrimRoll, luaGyroFModeFolder.common.id);
+            registerParameter(&luaGyroFMode_Gain_SubHeader, nullptr, luaGyroFModeFolder.common.id);
+            registerParameter(&luaGyroFMode_GainRoll, &luaparamGyroFMode_GainRoll, luaGyroFModeFolder.common.id);
+            registerParameter(&luaGyroFMode_GainPitch, &luaparamGyroFMode_GainPitch, luaGyroFModeFolder.common.id);
+            registerParameter(&luaGyroFMode_GainYaw, &luaparamGyroFMode_GainYaw, luaGyroFModeFolder.common.id);
 
-      registerParameter(&luaGyroFMode_Gain_SubHeader, nullptr, luaGyroFModeFolder.common.id);
-      registerParameter(&luaGyroFMode_GainRoll,    &luaparamGyroFMode_GainRoll, luaGyroFModeFolder.common.id);
-      registerParameter(&luaGyroFMode_GainPitch,   &luaparamGyroFMode_GainPitch, luaGyroFModeFolder.common.id);
-      registerParameter(&luaGyroFMode_GainYaw,     &luaparamGyroFMode_GainYaw, luaGyroFModeFolder.common.id);
-
-      DBGLN("RxPratameters.registerParameters(): GYRO LUA Done");
-    } // OPT_HAS_GYRO
+            DBGLN("RxPratameters.registerParameters(): GYRO LUA Done");
+        } // OPT_HAS_GYRO
 #endif
-  }
-
-  registerParameter(&luaBindStorage, [](propertiesCommon* item, uint8_t arg) {
-    config.SetBindStorage((rx_config_bindstorage_t)arg);
-  });
-  registerParameter(&luaBindMode, [this](propertiesCommon* item, uint8_t arg){
-    // Complete when TX polls for status i.e. going back to idle, because we're going to lose connection
-    if (arg == lcsQuery) {
-      deferExecutionMillis(200, EnterBindingModeSafely);
     }
-    sendCommandResponse(&luaBindMode, arg < 5 ? lcsExecuting : lcsIdle, arg < 5 ? "Entering..." : "");
-  });
 
-  registerParameter(&luaModelNumber);
-  registerParameter(&luaELRSversion);
+    registerParameter(&luaBindStorage, [](propertiesCommon *item, uint8_t arg) {
+        config.SetBindStorage((rx_config_bindstorage_t)arg);
+    });
+    registerParameter(&luaBindMode, [this](propertiesCommon *item, uint8_t arg) {
+        // Complete when TX polls for status i.e. going back to idle, because we're going to lose connection
+        if (arg == lcsQuery)
+        {
+            deferExecutionMillis(200, EnterBindingModeSafely);
+        }
+        sendCommandResponse(&luaBindMode, arg < 5 ? lcsExecuting : lcsIdle, arg < 5 ? "Entering..." : "");
+    });
+
+    registerParameter(&luaModelNumber);
+    registerParameter(&luaELRSversion);
 }
 
 static void updateBindModeLabel()
 {
-  if (config.IsOnLoan())
-    luaBindMode.common.name = "Return Model";
-  else
-    luaBindMode.common.name = "Enter Bind Mode";
+    if (config.IsOnLoan())
+        luaBindMode.common.name = "Return Model";
+    else
+        luaBindMode.common.name = "Enter Bind Mode";
 }
 
 #if defined(GYRO_SUPPORT) && defined(PLATFORM_ESP32)
-static void getFormatedGyroStatus(char *buffer) {
-    sprintf(buffer, "v%2.2f / %d",GYRO_CODE_VERSION, gyroConfig->GetGyroConfigVersion());
+static void getFormatedGyroStatus(char *buffer)
+{
+    sprintf(buffer, "v%2.2f / %d", GYRO_CODE_VERSION, gyroConfig->GetGyroConfigVersion());
 }
 
-static void getFormatedGyroIMUStatus(char *buffer) {
-    if (gyro.ahrs->getImuDriver()) {
-      sprintf(buffer, "IMU %s", gyro.ahrs->getImuDriver()->GetMPUName());
-    } else {
-      sprintf(buffer, "IMU --");
+static void getFormatedGyroIMUStatus(char *buffer)
+{
+    if (gyro.ahrs->getImuDriver())
+    {
+        sprintf(buffer, "IMU %s", gyro.ahrs->getImuDriver()->GetMPUName());
     }
-    
+    else
+    {
+        sprintf(buffer, "IMU --");
+    }
 }
 #endif
 
 void RXEndpoint::updateParameters()
 {
-  // TODO FArzu:  Should we update LUA values if the RX is disconnected??
-  // Or even better, do the check at the caller "devRXLua.cpp" method "event"
-  // i.e:  if (connectionState != connected) return;
+    // TODO FArzu:  Should we update LUA values if the RX is disconnected??
+    // Or even better, do the check at the caller "devRXLua.cpp" method "event"
+    // i.e:  if (connectionState != connected) return;
 
-  setTextSelectionValue(&luaSerialProtocol, config.GetSerialProtocol());
+    setTextSelectionValue(&luaSerialProtocol, config.GetSerialProtocol());
 #if defined(PLATFORM_ESP32)
-  if (RX_HAS_SERIAL1)
-  {
-    setTextSelectionValue(&luaSerial1Protocol, config.GetSerial1Protocol());
-  }
+    if (RX_HAS_SERIAL1)
+    {
+        setTextSelectionValue(&luaSerial1Protocol, config.GetSerial1Protocol());
+    }
 #endif
 
-  setTextSelectionValue(&luaSBUSFailsafeMode, config.GetFailsafeMode());
+    setTextSelectionValue(&luaSBUSFailsafeMode, config.GetFailsafeMode());
 
-  if (GPIO_PIN_ANT_CTRL != UNDEF_PIN)
-  {
-    setTextSelectionValue(&luaAntennaMode, config.GetAntennaMode());
-  }
+    if (GPIO_PIN_ANT_CTRL != UNDEF_PIN)
+    {
+        setTextSelectionValue(&luaAntennaMode, config.GetAntennaMode());
+    }
 
-  if (GPIO_PIN_ANT_GROUP != UNDEF_PIN)
-  {
-    setTextSelectionValue(&luaAntennaGroup, config.GetAntennaGroup());
-  }
+    if (GPIO_PIN_ANT_GROUP != UNDEF_PIN)
+    {
+        setTextSelectionValue(&luaAntennaGroup, config.GetAntennaGroup());
+    }
 
-  if (MinPower != MaxPower)
-  {
-    // The last item (for MatchTX) will be MaxPower - MinPower + 1
-    uint8_t luaPwrVal = (config.GetPower() == PWR_MATCH_TX) ? POWERMGNT::getMaxPower() + 1 : config.GetPower();
-    setTextSelectionValue(&luaTlmPower, luaPwrVal - POWERMGNT::getMinPower());
-  }
+    if (MinPower != MaxPower)
+    {
+        // The last item (for MatchTX) will be MaxPower - MinPower + 1
+        uint8_t luaPwrVal = (config.GetPower() == PWR_MATCH_TX) ? POWERMGNT::getMaxPower() + 1 : config.GetPower();
+        setTextSelectionValue(&luaTlmPower, luaPwrVal - POWERMGNT::getMinPower());
+    }
 
-  // Teamrace
-  setTextSelectionValue(&luaTeamraceChannel, config.GetTeamraceChannel() - AUX2);
-  setTextSelectionValue(&luaTeamracePosition, config.GetTeamracePosition());
+    // Teamrace
+    setTextSelectionValue(&luaTeamraceChannel, config.GetTeamraceChannel() - AUX2);
+    setTextSelectionValue(&luaTeamracePosition, config.GetTeamracePosition());
 
-  if (OPT_HAS_SERVO_OUTPUT)
-  {
-    const rx_config_pwm_t *pwmCh = config.GetPwmChannel(luaMappingChannelOut.properties.u.value - 1);
-    setUint8Value(&luaMappingChannelIn, pwmCh->val.inputChannel + 1);
-    setTextSelectionValue(&luaMappingOutputMode, sanitizePwmMode(pwmCh->val.mode));
-    setTextSelectionValue(&luaMappingInverted, pwmCh->val.inverted);
-  }
+    if (OPT_HAS_SERVO_OUTPUT)
+    {
+        const rx_config_pwm_t *pwmCh = config.GetPwmChannel(luaMappingChannelOut.properties.u.value - 1);
+        setUint8Value(&luaMappingChannelIn, pwmCh->val.inputChannel + 1);
+        setTextSelectionValue(&luaMappingOutputMode, sanitizePwmMode(pwmCh->val.mode));
+        setTextSelectionValue(&luaMappingInverted, pwmCh->val.inverted);
+    }
 
 #if defined(GYRO_SUPPORT) && defined(PLATFORM_ESP32)
-  if (OPT_HAS_GYRO  && connectionState == connected)
-  {
-    DBGLN("updateParameters(): Updating Gyro LUA values");
+    if (OPT_HAS_GYRO && connectionState == connected)
+    {
+        DBGLN("updateParameters(): Updating Gyro LUA values");
 
-    auto gyroEnabled = gyroConfig->GetGyroEnabled();
-    setTextSelectionValue(&luaGyroEnabled, gyroEnabled);
-    
-    getFormatedGyroStatus(gyroStatusStr);
-    luaGyroStatus.common.name = gyroStatusStr; // Change Title
-    setStringValue(&luaGyroStatus,gyroStatus[gyro.getStatus()]);
+        auto gyroEnabled = gyroConfig->GetGyroEnabled();
+        setTextSelectionValue(&luaGyroEnabled, gyroEnabled);
 
-    getFormatedGyroIMUStatus(gyroIMUStatusStr);
-    if (gyro.getStatus()==GYRO_STATUS_NEED_STICK_CAL) {
-      sprintf(gyroIMUErrorStr, "%s",gyro.lastErrorText);
-    } else {
-      sprintf(gyroIMUErrorStr, "re=%ld,ie=%ld", gyro.ahrs->read_errors, gyro.ahrs->int_errors);
+        getFormatedGyroStatus(gyroStatusStr);
+        luaGyroStatus.common.name = gyroStatusStr; // Change Title
+        setStringValue(&luaGyroStatus, gyroStatus[gyro.getStatus()]);
+
+        getFormatedGyroIMUStatus(gyroIMUStatusStr);
+        if (gyro.getStatus() == GYRO_STATUS_NEED_STICK_CAL)
+        {
+            sprintf(gyroIMUErrorStr, "%s", gyro.lastErrorText);
+        }
+        else
+        {
+            sprintf(gyroIMUErrorStr, "re=%ld,ie=%ld", gyro.ahrs->read_errors, gyro.ahrs->int_errors);
+        }
+        luaGyroIMUStatus.common.name = gyroIMUStatusStr; // Change Title
+        setStringValue(&luaGyroIMUStatus, gyroIMUErrorStr);
+
+        setTextSelectionValue(&luaGyroGainFactor, gyroConfig->GetGyroGainFactor());
+
+        const rx_config_pwm_limits_t *limits = gyroConfig->GetPwmChannelLimits(luaMappingChannelOut.properties.u.value - 1);
+        setUint16Value(&luaMappingChannelLimitMin, (uint16_t)limits->val.min);
+        setUint16Value(&luaMappingChannelLimitMax, (uint16_t)limits->val.max);
+        setUint16Value(&luaMappingChannelCenter, (uint16_t)limits->val.mid);
+
+        const rx_config_gyro_channel_t *gyroChOut = gyroConfig->GetGyroChannel(luaGyroOutputCh_Select.properties.u.value - 1);
+        setTextSelectionValue(&luaGyroOutputCh_Mode, gyroChOut->val.output_mode);
+        setTextSelectionValue(&luaGyroOutputCh_Master, gyroChOut->val.master);
+        setTextSelectionValue(&luaGyroOutputCh_Inverted, gyroChOut->val.inverted);
+
+        const rx_config_gyro_mode_pos_t *gyroModeSwitch = gyroConfig->GetGyroModePos();
+        setTextSelectionValue(&luaGyroModePos1, gyroModeSwitch->val.pos1);
+        setTextSelectionValue(&luaGyroModePos2, gyroModeSwitch->val.pos2);
+        setTextSelectionValue(&luaGyroModePos3, gyroModeSwitch->val.pos3);
+        setTextSelectionValue(&luaGyroModePos4, gyroModeSwitch->val.pos4);
+        setTextSelectionValue(&luaGyroModePos5, gyroModeSwitch->val.pos5);
+
+        const auto group = (gyro_pidgroup_t)luaGyroPID_Select_Group.value;
+        auto axis = (gyro_axis_t)luaGyroPID_Select_Axis.value;
+
+        // No Axis with Group MADWICK
+        if (group == GYRO_PID_GROUP_MADWICK)
+        {
+            axis = GYRO_AXIS_ROLL; // 0
+        }
+        LUA_FIELD_VISIBLE(luaGyroPID_Select_Axis, group != GYRO_PID_GROUP_MADWICK);
+        const rx_config_gyro_PID_t *gyroPIDs = gyroConfig->GetGyroPID(group, axis);
+        setUint8Value(&luaGyroPID_RateP, gyroPIDs->val.p);
+        setUint8Value(&luaGyroPID_RateI, gyroPIDs->val.i);
+        setUint8Value(&luaGyroPID_RateD, gyroPIDs->val.d);
+
+        setTextSelectionValue(&luaGyroOrientationH, gyroConfig->GetGyroOrientationH());
+        setTextSelectionValue(&luaGyroOrientationV, gyroConfig->GetGyroOrientationV());
+
+        const gyro_mode_t fm = (gyro_mode_t)(luaGyroFMode_Select.value + GYRO_MODE_RATE); // Start at 1
+        const rx_config_gyro_fmode_t *fMode = gyroConfig->GetGyroFMode(fm);
+
+        setTextSelectionValue(&luaGyroFMode_UseRate, fMode->val.useRate);
+        LUA_FIELD_VISIBLE(luaGyroFMode_UseRate, gyroIsVisible(fm, GYRO_UI_USE_RATE)); // All Except Rate
+
+        setTextSelectionValue(&luaGyroFMode_StickPri, fMode->val.stickPri);
+        LUA_FIELD_VISIBLE(luaGyroFMode_StickPri, gyroIsVisible(fm, GYRO_UI_STICK_PRIORITY));
+
+        setUint8Value(&luaGyroFMode_AngLimitPitch, fMode->val.maxAnglePitch);
+        setUint8Value(&luaGyroFMode_AngLimitRoll, fMode->val.maxAngleRoll);
+
+        bool limitsVisible = gyroIsVisible(fm, GYRO_UI_MAX_ANGLE);
+        LUA_FIELD_VISIBLE(luaGyroFMode_AngLimitSubHeader, limitsVisible);
+        LUA_FIELD_VISIBLE(luaGyroFMode_AngLimitPitch, limitsVisible);
+        LUA_FIELD_VISIBLE(luaGyroFMode_AngLimitRoll, limitsVisible);
+
+        setUint8Value(&luaGyroFMode_TrimPitch, gyro_trim_decode(fMode->val.trimPitch));
+        setUint8Value(&luaGyroFMode_TrimRoll, gyro_trim_decode(fMode->val.trimRoll));
+
+        bool trimVisible = gyroIsVisible(fm, GYRO_UI_TRIMS);
+        LUA_FIELD_VISIBLE(luaGyroFMode_TrimSubHeader, trimVisible);
+        LUA_FIELD_VISIBLE(luaGyroFMode_TrimPitch, trimVisible);
+        LUA_FIELD_VISIBLE(luaGyroFMode_TrimRoll, trimVisible);
+
+        setUint8Value(&luaGyroFMode_GainPitch, fMode->val.gainPitch);
+        setUint8Value(&luaGyroFMode_GainRoll, fMode->val.gainRoll);
+        setUint8Value(&luaGyroFMode_GainYaw, fMode->val.gainYaw);
+
+        bool gainsVisible = gyroIsVisible(fm, GYRO_UI_GAINS);
+        LUA_FIELD_VISIBLE(luaGyroFMode_Gain_SubHeader, gainsVisible);
+        LUA_FIELD_VISIBLE(luaGyroFMode_GainPitch, gainsVisible);
+        LUA_FIELD_VISIBLE(luaGyroFMode_GainRoll, gainsVisible);
+        LUA_FIELD_VISIBLE(luaGyroFMode_GainYaw, gainsVisible);
     }
-    luaGyroIMUStatus.common.name = gyroIMUStatusStr; // Change Title
-    setStringValue(&luaGyroIMUStatus,gyroIMUErrorStr);
+#endif // GYRO_SUPPORT
 
-    setTextSelectionValue(&luaGyroGainFactor,gyroConfig->GetGyroGainFactor());
-
-    const rx_config_pwm_limits_t *limits = gyroConfig->GetPwmChannelLimits(luaMappingChannelOut.properties.u.value - 1);
-    setUint16Value(&luaMappingChannelLimitMin, (uint16_t) limits->val.min);
-    setUint16Value(&luaMappingChannelLimitMax, (uint16_t) limits->val.max);
-    setUint16Value(&luaMappingChannelCenter, (uint16_t) limits->val.mid);
-
-    const rx_config_gyro_channel_t *gyroChOut = gyroConfig->GetGyroChannel(luaGyroOutputCh_Select.properties.u.value - 1);
-    setTextSelectionValue(&luaGyroOutputCh_Mode, gyroChOut->val.output_mode);
-    setTextSelectionValue(&luaGyroOutputCh_Master, gyroChOut->val.master);
-    setTextSelectionValue(&luaGyroOutputCh_Inverted, gyroChOut->val.inverted);
-
-    const rx_config_gyro_mode_pos_t *gyroModeSwitch = gyroConfig->GetGyroModePos();
-    setTextSelectionValue(&luaGyroModePos1, gyroModeSwitch->val.pos1);
-    setTextSelectionValue(&luaGyroModePos2, gyroModeSwitch->val.pos2);
-    setTextSelectionValue(&luaGyroModePos3, gyroModeSwitch->val.pos3);
-    setTextSelectionValue(&luaGyroModePos4, gyroModeSwitch->val.pos4);
-    setTextSelectionValue(&luaGyroModePos5, gyroModeSwitch->val.pos5);
-
-    const auto group = (gyro_pidgroup_t) luaGyroPID_Select_Group.value;
-    auto axis  = (gyro_axis_t) luaGyroPID_Select_Axis.value;
-
-    // No Axis with Group MADWICK
-    if (group==GYRO_PID_GROUP_MADWICK) {
-      axis = GYRO_AXIS_ROLL; // 0
+    if (config.GetModelId() == 255)
+    {
+        setStringValue(&luaModelNumber, "Off");
     }
-    LUA_FIELD_VISIBLE(luaGyroPID_Select_Axis,group!=GYRO_PID_GROUP_MADWICK);
-    const rx_config_gyro_PID_t *gyroPIDs = gyroConfig->GetGyroPID(group, axis);
-    setUint8Value(&luaGyroPID_RateP, gyroPIDs->val.p);
-    setUint8Value(&luaGyroPID_RateI, gyroPIDs->val.i);
-    setUint8Value(&luaGyroPID_RateD, gyroPIDs->val.d);
+    else
+    {
+        itoa(config.GetModelId(), modelString, 10);
+        setStringValue(&luaModelNumber, modelString);
+    }
+    setTextSelectionValue(&luaBindStorage, config.GetBindStorage());
+    updateBindModeLabel();
 
-    setTextSelectionValue(&luaGyroOrientationH, gyroConfig->GetGyroOrientationH());
-    setTextSelectionValue(&luaGyroOrientationV, gyroConfig->GetGyroOrientationV());
-    
-
-    const gyro_mode_t fm = (gyro_mode_t) (luaGyroFMode_Select.value + GYRO_MODE_RATE); // Start at 1
-    const rx_config_gyro_fmode_t *fMode = gyroConfig->GetGyroFMode(fm);
-    
-    setTextSelectionValue(&luaGyroFMode_UseRate, fMode->val.useRate);
-    LUA_FIELD_VISIBLE(luaGyroFMode_UseRate, gyroIsVisible(fm, GYRO_UI_USE_RATE)); // All Except Rate
-
-    setTextSelectionValue(&luaGyroFMode_StickPri, fMode->val.stickPri);
-    LUA_FIELD_VISIBLE(luaGyroFMode_StickPri,gyroIsVisible(fm, GYRO_UI_STICK_PRIORITY));
-
-    setUint8Value(&luaGyroFMode_AngLimitPitch, fMode->val.maxAnglePitch);
-    setUint8Value(&luaGyroFMode_AngLimitRoll, fMode->val.maxAngleRoll);
-
-    bool limitsVisible = gyroIsVisible(fm,GYRO_UI_MAX_ANGLE);
-    LUA_FIELD_VISIBLE(luaGyroFMode_AngLimitSubHeader, limitsVisible);
-    LUA_FIELD_VISIBLE(luaGyroFMode_AngLimitPitch,limitsVisible);
-    LUA_FIELD_VISIBLE(luaGyroFMode_AngLimitRoll, limitsVisible);
-
-    setUint8Value(&luaGyroFMode_TrimPitch, gyro_trim_decode(fMode->val.trimPitch));
-    setUint8Value(&luaGyroFMode_TrimRoll, gyro_trim_decode(fMode->val.trimRoll));
-
-    bool trimVisible = gyroIsVisible(fm,GYRO_UI_TRIMS);
-     LUA_FIELD_VISIBLE(luaGyroFMode_TrimSubHeader, trimVisible);
-    LUA_FIELD_VISIBLE(luaGyroFMode_TrimPitch,trimVisible);
-    LUA_FIELD_VISIBLE(luaGyroFMode_TrimRoll,trimVisible);
-
-    setUint8Value(&luaGyroFMode_GainPitch, fMode->val.gainPitch);
-    setUint8Value(&luaGyroFMode_GainRoll, fMode->val.gainRoll);
-    setUint8Value(&luaGyroFMode_GainYaw, fMode->val.gainYaw);
-
-    bool gainsVisible = gyroIsVisible(fm,GYRO_UI_GAINS);
-    LUA_FIELD_VISIBLE(luaGyroFMode_Gain_SubHeader, gainsVisible); 
-    LUA_FIELD_VISIBLE(luaGyroFMode_GainPitch,gainsVisible);
-    LUA_FIELD_VISIBLE(luaGyroFMode_GainRoll,gainsVisible);
-    LUA_FIELD_VISIBLE(luaGyroFMode_GainYaw, gainsVisible);
-  }
-  #endif // GYRO_SUPPORT
-  
-  if (config.GetModelId() == 255)
-  {
-    setStringValue(&luaModelNumber, "Off");
-  }
-  else
-  {
-    itoa(config.GetModelId(), modelString, 10);
-    setStringValue(&luaModelNumber, modelString);
-  }
-  setTextSelectionValue(&luaBindStorage, config.GetBindStorage());
-  updateBindModeLabel();
-
-  if (config.GetSerialProtocol() == PROTOCOL_MAVLINK)
-  {
-    setUint8Value(&luaSourceSysId, config.GetSourceSysId() == 0 ? 255 : config.GetSourceSysId());  //display Source sysID if 0 display 255 to mimic logic in SerialMavlink.cpp
-    setUint8Value(&luaTargetSysId, config.GetTargetSysId() == 0 ? 1 : config.GetTargetSysId());  //display Target sysID if 0 display 1 to mimic logic in SerialMavlink.cpp
-    LUA_FIELD_SHOW(luaSourceSysId)
-    LUA_FIELD_SHOW(luaTargetSysId)
-  }
-  else
-  {
-    LUA_FIELD_HIDE(luaSourceSysId)
-    LUA_FIELD_HIDE(luaTargetSysId)
-  }
+    if (config.GetSerialProtocol() == PROTOCOL_MAVLINK)
+    {
+        setUint8Value(&luaSourceSysId, config.GetSourceSysId() == 0 ? 255 : config.GetSourceSysId()); // display Source sysID if 0 display 255 to mimic logic in SerialMavlink.cpp
+        setUint8Value(&luaTargetSysId, config.GetTargetSysId() == 0 ? 1 : config.GetTargetSysId());   // display Target sysID if 0 display 1 to mimic logic in SerialMavlink.cpp
+        LUA_FIELD_SHOW(luaSourceSysId)
+        LUA_FIELD_SHOW(luaTargetSysId)
+    }
+    else
+    {
+        LUA_FIELD_HIDE(luaSourceSysId)
+        LUA_FIELD_HIDE(luaTargetSysId)
+    }
 }
 #endif
