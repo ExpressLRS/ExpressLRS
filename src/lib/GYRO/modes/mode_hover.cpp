@@ -19,42 +19,43 @@
  * directly up attitude.
  */
 
-void HoverController::initialize(gyro_mode_t mode) {
+void HoverController::initialize(gyro_mode_t mode)
+{
     RateController::initialize(mode);
 
-    fm_angle_settings.raw =  gyroConfig->GetGyroFMode(mode)->raw; // Default settings for ALL
+    fm_angle_settings.raw = gyroConfig->GetGyroFMode(mode)->raw; // Default settings for ALL
 
-    hoverStrengthPitch = (float) fm_angle_settings.val.gainPitch / 100;
-    hoverStrengthYaw   = (float) fm_angle_settings.val.gainYaw / 100;
+    hoverStrengthPitch = (float)fm_angle_settings.val.gainPitch / 100;
+    hoverStrengthYaw = (float)fm_angle_settings.val.gainYaw / 100;
 }
 
 void HoverController::calculate_pid(float input_rpy[], float gyro_rpy[], float ang_rpy[])
 {
     RateController::calculate_pid(input_rpy, gyro_rpy, ang_rpy);
-    
+
     float pitchRad = ang_rpy[GYRO_AXIS_PITCH];
-    float rollRad =  ang_rpy[GYRO_AXIS_ROLL];
+    float rollRad = ang_rpy[GYRO_AXIS_ROLL];
 
     float error = pitchRad - M_PI_2; // Pi/2 = 90degrees
 
-    //NOTE: ORIGINAL A.Wigen CODE DID NOT HAVE THIS NORMALIZATION
-    // Normalize Error to +/- 1.0;  
+    // NOTE: ORIGINAL A.Wigen CODE DID NOT HAVE THIS NORMALIZATION
+    //  Normalize Error to +/- 1.0;
     error = error / M_PI;
 
-    errorPitch =  error * hoverStrengthPitch;
-    errorYaw   = -error * hoverStrengthYaw;
-    
+    errorPitch = error * hoverStrengthPitch;
+    errorYaw = -error * hoverStrengthYaw;
+
     corr[GYRO_AXIS_PITCH] += (errorPitch * cos(rollRad));
-    corr[GYRO_AXIS_YAW]   += (errorYaw * sin(rollRad));
+    corr[GYRO_AXIS_YAW] += (errorYaw * sin(rollRad));
 }
 
 #if defined(DEBUG_LOG)
-void HoverController::printState() {
+void HoverController::printState()
+{
     RateController::printState();
     DBGLN("error:  Pitch:%f", errorPitch);
     DBGLN("hoverStrength:  Pitch:%f Yaw:%f", hoverStrengthPitch, hoverStrengthYaw);
     DBGLN("angCorr:  Pitch:%f  Yaw:%f", corr[GYRO_AXIS_PITCH], corr[GYRO_AXIS_YAW]);
-
 }
 #endif // DEBUG_LOG
 

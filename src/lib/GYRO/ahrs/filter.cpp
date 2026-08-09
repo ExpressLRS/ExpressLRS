@@ -19,15 +19,25 @@
 
 #include "filter.h"
 
-namespace {
+namespace
+{
 
-constexpr float M_PIf    = 3.14159265358979323846f;
-constexpr float M_2PIf   = 6.28318530717958647693f;
+constexpr float M_PIf = 3.14159265358979323846f;
+constexpr float M_2PIf = 6.28318530717958647693f;
 constexpr float M_1_2PIf = 0.15915494309189533577f;
 
-inline float tan_approx(float x) { return tanf(x); }
-inline float sin_approx(float x) { return sinf(x); }
-inline float cos_approx(float x) { return cosf(x); }
+inline float tan_approx(float x)
+{
+    return tanf(x);
+}
+inline float sin_approx(float x)
+{
+    return sinf(x);
+}
+inline float cos_approx(float x)
+{
+    return cosf(x);
+}
 
 inline float limitCutoff(float cutoff, float sampleRate)
 {
@@ -36,7 +46,6 @@ inline float limitCutoff(float cutoff, float sampleRate)
 }
 
 } // namespace
-
 
 // NIL filter
 
@@ -51,7 +60,6 @@ void NilFilter::update(float cutoff, float sampleRate)
     (void)cutoff;
     (void)sampleRate;
 }
-
 
 /*
  * PT1 Low Pass filter
@@ -127,7 +135,6 @@ float PT1Filter::gain(float cutoff, float sampleRate)
     return fminf(alpha, 1.0f);
 }
 
-
 // PT2 Low Pass filter
 
 float PT2Filter::gain(float cutoff, float sampleRate)
@@ -139,10 +146,9 @@ float PT2Filter::gain(float cutoff, float sampleRate)
 float PT2Filter::apply(float input)
 {
     y2 += (input - y2) * filterGain;
-    y1 += (y2   - y1) * filterGain;
+    y1 += (y2 - y1) * filterGain;
     return y1;
 }
-
 
 // PT3 Low Pass filter
 
@@ -155,11 +161,10 @@ float PT3Filter::gain(float cutoff, float sampleRate)
 float PT3Filter::apply(float input)
 {
     y3 += (input - y3) * filterGain;
-    y2 += (y3   - y2) * filterGain;
-    y1 += (y2   - y1) * filterGain;
+    y2 += (y3 - y2) * filterGain;
+    y1 += (y2 - y1) * filterGain;
     return y1;
 }
-
 
 // EWMA1 Low Pass filter
 
@@ -200,7 +205,6 @@ float Ewma1Filter::apply(float input)
     return y1;
 }
 
-
 // EWMA2 Low Pass filter
 
 float Ewma2Filter::weight(float cutoff, float sampleRate)
@@ -232,11 +236,10 @@ float Ewma2Filter::apply(float input)
         weightNow = N = count;
 
     y2 += (input - y2) / weightNow;
-    y1 += (y2   - y1) / weightNow;
+    y1 += (y2 - y1) / weightNow;
 
     return y1;
 }
-
 
 // EWMA3 Low Pass filter
 
@@ -269,12 +272,11 @@ float Ewma3Filter::apply(float input)
         weightNow = N = count;
 
     y3 += (input - y3) / weightNow;
-    y2 += (y3   - y2) / weightNow;
-    y1 += (y2   - y1) / weightNow;
+    y2 += (y3 - y2) / weightNow;
+    y1 += (y2 - y1) / weightNow;
 
     return y1;
 }
-
 
 /*
  * Differentiator with bandwidth limit
@@ -326,7 +328,6 @@ float DiffFilter::apply(float input)
     return out;
 }
 
-
 /*
  * Bilinear (trapezoidal) Integrator
  *
@@ -368,7 +369,6 @@ float IntegratorFilter::apply(float input)
     return out;
 }
 
-
 // First order filters
 
 void FirstOrderFilter::init(Mode filterMode, float cutoff, float sampleRate, bool dynamic)
@@ -388,7 +388,8 @@ void FirstOrderFilter::update(float cutoff, float sampleRate)
 
 void FirstOrderFilter::recompute(float cutoff, float sampleRate)
 {
-    if (mode == Mode::Lowpass) {
+    if (mode == Mode::Lowpass)
+    {
         cutoff = limitCutoff(cutoff, sampleRate);
 
         const float W = tan_approx(M_PIf * cutoff / sampleRate);
@@ -396,7 +397,9 @@ void FirstOrderFilter::recompute(float cutoff, float sampleRate)
         a1 = (W - 1) / (W + 1);
         b0 = W / (W + 1);
         b1 = b0;
-    } else {
+    }
+    else
+    {
         cutoff = limitCutoff(cutoff, sampleRate / 2);
 
         const float W = tan_approx(M_PIf * cutoff / sampleRate);
@@ -417,7 +420,6 @@ float FirstOrderFilter::apply(float input)
     return out;
 }
 
-
 // BiQuad filter a.k.a. Second-Order-Section
 
 void BiquadFilter::init(float cutoff, float sampleRate, float Q, uint8_t filterType)
@@ -437,38 +439,39 @@ void BiquadFilter::update(float cutoff, float sampleRate, float Q, uint8_t filte
     const float cosom = cos_approx(omega);
     const float alpha = sinom / (2 * Q);
 
-    switch (filterType) {
-        case BIQUAD_LPF:
-            b1 = 1 - cosom;
-            b0 = b1 / 2;
-            b2 = b0;
-            a1 = -2 * cosom;
-            a2 = 1 - alpha;
-            break;
+    switch (filterType)
+    {
+    case BIQUAD_LPF:
+        b1 = 1 - cosom;
+        b0 = b1 / 2;
+        b2 = b0;
+        a1 = -2 * cosom;
+        a2 = 1 - alpha;
+        break;
 
-        case BIQUAD_HPF:
-            b0 = (1 + cosom) / 2;
-            b1 = -1 - cosom;
-            b2 = b0;
-            a1 = -2 * cosom;
-            a2 = 1 - alpha;
-            break;
+    case BIQUAD_HPF:
+        b0 = (1 + cosom) / 2;
+        b1 = -1 - cosom;
+        b2 = b0;
+        a1 = -2 * cosom;
+        a2 = 1 - alpha;
+        break;
 
-        case BIQUAD_BPF:
-            b0 = alpha;
-            b1 = 0;
-            b2 = -alpha;
-            a1 = -2 * cosom;
-            a2 = 1 - alpha;
-            break;
+    case BIQUAD_BPF:
+        b0 = alpha;
+        b1 = 0;
+        b2 = -alpha;
+        a1 = -2 * cosom;
+        a2 = 1 - alpha;
+        break;
 
-        case BIQUAD_NOTCH:
-            b0 = 1;
-            b1 = -2 * cosom;
-            b2 = 1;
-            a1 = b1;
-            a2 = 1 - alpha;
-            break;
+    case BIQUAD_NOTCH:
+        b0 = 1;
+        b1 = -2 * cosom;
+        b2 = 1;
+        a1 = b1;
+        a2 = 1 - alpha;
+        break;
     }
 
     const float a0 = 1 + alpha;
@@ -508,7 +511,6 @@ float BiquadFilter::applyTF2(float input)
 
     return out;
 }
-
 
 // Generic Low-Pass Filter (LPF) adapters
 
@@ -563,7 +565,6 @@ float DampedLPF::apply(float input)
     return dynamicUpdate ? biquad.applyDF1(input) : biquad.applyTF2(input);
 }
 
-
 // Polymorphic low-pass filter container
 
 void LowpassFilter::init(uint8_t type, float cutoff, float sampleRate, uint32_t flags)
@@ -575,52 +576,52 @@ void LowpassFilter::init(uint8_t type, float cutoff, float sampleRate, uint32_t 
 
     const bool dynamic = (flags & LPF_UPDATE) != 0;
 
-    switch (type) {
-        case LPF_PT1:
-            if (flags & LPF_EWMA)
-                impl = construct<Ewma1Filter>(cutoff, sampleRate);
-            else
-                impl = construct<PT1Filter>(cutoff, sampleRate);
-            break;
+    switch (type)
+    {
+    case LPF_PT1:
+        if (flags & LPF_EWMA)
+            impl = construct<Ewma1Filter>(cutoff, sampleRate);
+        else
+            impl = construct<PT1Filter>(cutoff, sampleRate);
+        break;
 
-        case LPF_PT2:
-            if (flags & LPF_EWMA)
-                impl = construct<Ewma2Filter>(cutoff, sampleRate);
-            else
-                impl = construct<PT2Filter>(cutoff, sampleRate);
-            break;
+    case LPF_PT2:
+        if (flags & LPF_EWMA)
+            impl = construct<Ewma2Filter>(cutoff, sampleRate);
+        else
+            impl = construct<PT2Filter>(cutoff, sampleRate);
+        break;
 
-        case LPF_PT3:
-            if (flags & LPF_EWMA)
-                impl = construct<Ewma3Filter>(cutoff, sampleRate);
-            else
-                impl = construct<PT3Filter>(cutoff, sampleRate);
-            break;
+    case LPF_PT3:
+        if (flags & LPF_EWMA)
+            impl = construct<Ewma3Filter>(cutoff, sampleRate);
+        else
+            impl = construct<PT3Filter>(cutoff, sampleRate);
+        break;
 
-        case LPF_1ST_ORDER:
-        case LPF_ORDER1:
-            impl = construct<FirstOrderFilter>(FirstOrderFilter::Mode::Lowpass, cutoff, sampleRate, dynamic);
-            break;
+    case LPF_1ST_ORDER:
+    case LPF_ORDER1:
+        impl = construct<FirstOrderFilter>(FirstOrderFilter::Mode::Lowpass, cutoff, sampleRate, dynamic);
+        break;
 
-        case LPF_BUTTER:
-            impl = construct<ButterworthLPF>(cutoff, sampleRate, dynamic);
-            break;
+    case LPF_BUTTER:
+        impl = construct<ButterworthLPF>(cutoff, sampleRate, dynamic);
+        break;
 
-        case LPF_2ND_ORDER:
-        case LPF_BESSEL:
-            impl = construct<BesselLPF>(cutoff, sampleRate, dynamic);
-            break;
+    case LPF_2ND_ORDER:
+    case LPF_BESSEL:
+        impl = construct<BesselLPF>(cutoff, sampleRate, dynamic);
+        break;
 
-        case LPF_DAMPED:
-            impl = construct<DampedLPF>(cutoff, sampleRate, dynamic);
-            break;
+    case LPF_DAMPED:
+        impl = construct<DampedLPF>(cutoff, sampleRate, dynamic);
+        break;
 
-        default:
-            impl = construct<NilFilter>();
-            break;
+    default:
+        impl = construct<NilFilter>();
+        break;
     }
 }
-
 
 // Notch filter
 
@@ -646,7 +647,6 @@ float NotchFilter::apply(float input)
 
     return dynamicUpdate ? biquad.applyDF1(input) : biquad.applyTF2(input);
 }
-
 
 // Simple fixed-point lowpass filter based on integer math
 

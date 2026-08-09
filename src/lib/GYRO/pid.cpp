@@ -1,8 +1,9 @@
-#include "targets.h"
 #include "pid.h"
+#include "targets.h"
 
-PID::PID() {
-    PID(0,0,0,0,0);
+PID::PID()
+{
+    PID(0, 0, 0, 0, 0);
 }
 
 PID::PID(float max, float min, float Kp, float Ki, float Kd)
@@ -42,7 +43,7 @@ void PID::reset()
     Dout = 0;
     Iout = 0;
     last_update = micros();
-    prevMeasurement=0;
+    prevMeasurement = 0;
 }
 
 float PID::calculate(float _setpoint, float _pv)
@@ -77,9 +78,9 @@ float PID::calculate(float _setpoint, float _pv)
 
     // Derivative term
 
-    Dout = -(2.0f * _Kd * (pv - prevMeasurement)	/* Note: derivative on measurement, therefore minus sign in front of equation! */
-           + (2.0f * tau - t_delta) * Dout)
-           / (2.0f * tau + t_delta);
+    Dout = -(2.0f * _Kd * (pv - prevMeasurement) /* Note: derivative on measurement, therefore minus sign in front of equation! */
+             + (2.0f * tau - t_delta) * Dout) /
+           (2.0f * tau + t_delta);
     prevMeasurement = pv;
     // Calculate total output
     output = Pout + Iout + Dout;

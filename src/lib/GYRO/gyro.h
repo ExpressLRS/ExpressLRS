@@ -2,16 +2,16 @@
 #include "targets.h"
 
 #if defined(GYRO_SUPPORT)
-#include "pid.h"
-#include "gyro_types.h"
 #include "ahrs/ahrs.h"
+#include "gyro_types.h"
 #include "modes/mode.h"
+#include "pid.h"
 
-#define GYRO_CODE_VERSION   1.18
+#define GYRO_CODE_VERSION 1.18
 
-#define GYRO_US_MIN 885             // was 988
+#define GYRO_US_MIN 885 // was 988
 #define GYRO_US_MID 1500
-#define GYRO_US_MAX 2135            // was 2012
+#define GYRO_US_MAX 2135 // was 2012
 
 #define radToDeg(angleInRadians) ((angleInRadians) * RAD_TO_DEG)
 #define degToRad(angleInDegrees) ((angleInDegrees) * DEG_TO_RAD)
@@ -34,7 +34,7 @@ public:
 
     gyro_status_t getStatus();
     gyro_mode_t getMode(void);
-    const char * getMPUName();
+    const char *getMPUName();
     void mixerInput();
     void mixerOutput(uint8_t ch, uint16_t *us);
     uint8_t event();
@@ -46,12 +46,12 @@ public:
     bool isStickCalibrationNeeded();
 
     unsigned long getIMUReadErrors();
-    
+
     float master_gain = 1.0;
     float gain_factor = 1.0;
     gyro_mode_t gyro_mode;
-    AHRS * ahrs;
-// protected:
+    AHRS *ahrs;
+    // protected:
 
     // orientation/motion vars
     bool initialized;
@@ -59,26 +59,24 @@ public:
     char lastErrorText[30];
 
 private:
-   
-    Mode_Base* mode_controller;
+    Mode_Base *mode_controller;
 
-    int8_t  mode_ch   = -1;
-    int8_t  gain_ch   = -1;
-    int8_t  roll_ch   = -1;
-    int8_t  pitch_ch  = -1;
-    int8_t  yaw_ch    = -1;
-    int8_t  elevon1_ch= -1;
-    int8_t  elevon2_ch= -1;
-    int8_t  vtail1_ch= -1;
-    int8_t  vtail2_ch= -1;
-
+    int8_t mode_ch = -1;
+    int8_t gain_ch = -1;
+    int8_t roll_ch = -1;
+    int8_t pitch_ch = -1;
+    int8_t yaw_ch = -1;
+    int8_t elevon1_ch = -1;
+    int8_t elevon2_ch = -1;
+    int8_t vtail1_ch = -1;
+    int8_t vtail2_ch = -1;
 
     void detect_gain(uint16_t us);
     void detect_mode(uint16_t us);
     void switch_mode(gyro_mode_t mode);
     void learn_sticks(uint8_t ch, uint16_t us);
 
-    unsigned long pid_delay=0;
+    unsigned long pid_delay = 0;
 };
 
 extern Gyro gyro;
@@ -88,8 +86,7 @@ extern Gyro gyro;
 void configure_pids(float roll_limit, float pitch_limit, float yaw_limit, const rx_config_gyro_fmode_t *fm);
 
 // Helper method to configure a PID controller instance use the rx config values
-void configure_pid_gains(PID* pid, const rx_config_gyro_PID_t* pid_params, int8_t gain, float max, float min);
-
+void configure_pid_gains(PID *pid, const rx_config_gyro_PID_t *pid_params, int8_t gain, float max, float min);
 
 void gyroSetConfigDefaults();
 void gyroUpgrade(uint8_t version);
