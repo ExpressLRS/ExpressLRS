@@ -4,7 +4,7 @@
 #include "gyro_types.h"
 #include <nvs.h>
 
-#define GYRO_CONFIG_VERSION   8U
+#define GYRO_CONFIG_VERSION 8U
 
 ///////////////////////////////////////////////////
 
@@ -23,16 +23,16 @@ public:
     const rx_config_pwm_limits_t *GetPwmChannelLimits(uint8_t ch) const { return &m_config.pwmLimits[ch]; }
 
     const rx_config_gyro_channel_t *GetGyroChannel(uint8_t ch) const { return &m_config.gyroChannels[ch]; }
-    //const rx_config_gyro_timings_t *GetGyroChannelTimings(uint8_t ch) const { return &m_config.gyroTimings[ch]; }
+    // const rx_config_gyro_timings_t *GetGyroChannelTimings(uint8_t ch) const { return &m_config.gyroTimings[ch]; }
     const rx_config_gyro_PID_t *GetGyroPID(gyro_pidgroup_t group, gyro_axis_t axis) const { return &m_config.gyroPIDs[group][axis]; }
-    const rx_config_gyro_fmode_t *GetGyroFMode(gyro_mode_t fm) const { return (fm>=GYRO_MODE_RATE)?&m_config.gyroFModes[fm-GYRO_MODE_RATE] : nullptr; }
+    const rx_config_gyro_fmode_t *GetGyroFMode(gyro_mode_t fm) const { return (fm >= GYRO_MODE_RATE) ? &m_config.gyroFModes[fm - GYRO_MODE_RATE] : nullptr; }
 
-    const rx_config_gyro_mode_pos_t *GetGyroModePos() const { return &m_config.gyroModeSwitch;}
+    const rx_config_gyro_mode_pos_t *GetGyroModePos() const { return &m_config.gyroModeSwitch; }
     const uint8_t GetGyroOrientationH() const { return m_config.global.val.orientationH; }
     const uint8_t GetGyroOrientationV() const { return m_config.global.val.orientationV; }
     const bool GetGyroEnabled() const { return m_config.global.val.gyroEnabled; }
     const uint8_t GetGyroConfigVersion() const { return m_config.configVersion; }
-    const gyro_gain_factor_t GetGyroGainFactor() const {return (gyro_gain_factor_t) m_config.global.val.gainFactor; };
+    const gyro_gain_factor_t GetGyroGainFactor() const { return (gyro_gain_factor_t)m_config.global.val.gainFactor; };
     const rx_config_gyro_calibration_t *GetAccelCalibration() const { return &m_config.accelCalibration; }
     const rx_config_gyro_calibration_t *GetGyroCalibration() const { return &m_config.gyroCalibration; }
 
@@ -55,7 +55,7 @@ public:
     void SetGyroPIDRate(gyro_pidgroup_t group, gyro_axis_t axis, gyro_rate_variable_t var, uint8_t value);
 
 private:
-	void debugGyroConfiguration();
+    void debugGyroConfiguration();
 
     nvs_handle handle;
     rx_config_gyro_t m_config{};

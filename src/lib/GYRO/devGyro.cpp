@@ -35,14 +35,14 @@ static bool initialize()
     // I2C Gyros
     if (i2c_enabled)
     {
-        if (driver == nullptr  && OPT_HAS_GYRO_MPU6050)
+        if (driver == nullptr && OPT_HAS_GYRO_MPU6050)
         {
             driver = new IMU_MPU6050();
             if (!driver->initialize())
             {
                 delete driver;
                 driver = nullptr;
-            } 
+            }
         }
     }
 
@@ -55,14 +55,14 @@ static bool initialize()
             if (!driver->initialize())
             {
                 delete driver;
-                driver=nullptr;
+                driver = nullptr;
             }
         }
     } // if SPI
 
     if (driver == nullptr)
     {
-         DBGLN("devGyro: Gyro Not Detected");
+        DBGLN("devGyro: Gyro Not Detected");
         return false;
     }
 
@@ -78,12 +78,12 @@ static int start()
     gyroConfig->Load();
 
     gyro.start();
-    // ahrs.start(); /// Not needed, called from Gyro.start()   
+    // ahrs.start(); /// Not needed, called from Gyro.start()
 
     return DURATION_IMMEDIATELY; // Call timeout() immediately;
 }
 
-extern const char* STR_gyroMode[];
+extern const char *STR_gyroMode[];
 static void send_telemetry()
 {
     // Get yaw/pitch/roll in decidegrees and convert to uint16_t
@@ -102,8 +102,8 @@ static void send_telemetry()
     CRSF_MK_FRAME_T(crsf_sensor_attitude_t)
     crsfAttitude = {0};
     crsfAttitude.p.pitch = htobe16(ahrs.angle_rpy[GYRO_AXIS_PITCH] * 10000);
-    crsfAttitude.p.roll = htobe16(ahrs.angle_rpy[GYRO_AXIS_ROLL]   * 10000);
-    crsfAttitude.p.yaw = htobe16(ahrs.angle_rpy[GYRO_AXIS_YAW]     * 10000);
+    crsfAttitude.p.roll = htobe16(ahrs.angle_rpy[GYRO_AXIS_ROLL] * 10000);
+    crsfAttitude.p.yaw = htobe16(ahrs.angle_rpy[GYRO_AXIS_YAW] * 10000);
 
     crsfRouter.SetHeaderAndCrc((crsf_header_t *)&crsfAttitude, CRSF_FRAMETYPE_ATTITUDE, CRSF_FRAME_SIZE(sizeof(crsf_sensor_attitude_t)));
     crsfRouter.deliverMessageTo(CRSF_ADDRESS_RADIO_TRANSMITTER, &crsfAttitude.h);
@@ -114,14 +114,14 @@ static void send_telemetry()
 
     crsfGyro.p.sample_time = htobe32(millis());
     crsfGyro.p.gyro_temp = 0;
-    
+
     // In Gs
     crsfGyro.p.acc_x = htobe16(ahrs.acc_rpy[GYRO_AXIS_PITCH] * 1000);
-    crsfGyro.p.acc_y = htobe16(ahrs.acc_rpy[GYRO_AXIS_ROLL]  * 1000);
+    crsfGyro.p.acc_y = htobe16(ahrs.acc_rpy[GYRO_AXIS_ROLL] * 1000);
     crsfGyro.p.acc_z = htobe16(ahrs.acc_rpy[GYRO_AXIS_YAW] * 1000);
 
     // From Radians/s to Deg/s
-    crsfGyro.p.gyro_x = htobe16(degrees(ahrs.gyro_rpy[GYRO_AXIS_PITCH])); 
+    crsfGyro.p.gyro_x = htobe16(degrees(ahrs.gyro_rpy[GYRO_AXIS_PITCH]));
     crsfGyro.p.gyro_y = htobe16(degrees(ahrs.gyro_rpy[GYRO_AXIS_ROLL]));
     crsfGyro.p.gyro_z = htobe16(degrees(ahrs.gyro_rpy[GYRO_AXIS_YAW]));
 
