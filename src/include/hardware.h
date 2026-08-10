@@ -180,6 +180,8 @@ typedef enum {
     HARDWARE_gyro_type,
     HARDWARE_gyro_nss,
     HARDWARE_gyro_int,
+    HARDWARE_gyro_scl,
+    HARDWARE_gyro_sda,
 
     HARDWARE_LAST
 } nameType;

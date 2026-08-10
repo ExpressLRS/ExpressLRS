@@ -165,6 +165,8 @@ static const struct {
     {HARDWARE_gyro_type, "gyro_type", INT},
     {HARDWARE_gyro_nss, "gyro_nss", INT},
     {HARDWARE_gyro_int, "gyro_int", INT},
+    {HARDWARE_gyro_scl, "gyro_scl", INT},
+    {HARDWARE_gyro_sda, "gyro_sda", INT},
 };
 
 typedef union {

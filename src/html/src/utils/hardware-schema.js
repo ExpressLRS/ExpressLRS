@@ -1117,6 +1117,20 @@ const HARDWARE_SCHEMA = [
                 icon: 'input',
                 desc: 'Interrupt pin for SPI Gyro'
             },
+            {
+                id: 'gyro_scl',
+                label: 'Gyro SCL pin',
+                type: 'uint',
+                icon: 'output',
+                desc: 'I2C clock pin used to communicate with I2C Gyro devices'
+            },
+            {
+                id: 'gyro_sda',
+                label: 'Gyro SDA pin',
+                type: 'uint',
+                icon: 'input-output',
+                desc: 'I2C data pin used to communicate with I2C Gyro devices'
+            },
         ]
     },
     /* /FEATURE: NOT IS_TX */

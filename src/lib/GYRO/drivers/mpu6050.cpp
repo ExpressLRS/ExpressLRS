@@ -23,14 +23,16 @@ static bool testConnection(IMU_Driver *mpu)
     id = (id >> 1) & 0x3F; // Bit 0 is reserved, starts at bit 1, 6 bits
     DBGLN("Gyro Id returned = 0x%x", id);
 
-    // 0x34 is the ID expected for this chip, the other are known alernatives
+    // 0x34 is the ID expected for this chip, the other are known alternatives
     bool known_mpu6050_id = (id == 0x34 || id == 0x38 || id == 0x39);
     return ok && known_mpu6050_id;
 }
 
 bool IMU_MPU6050::initialize()
 {
-    Wire.setTimeOut(5);
+    IMU_Driver_I2C::initialize();
+    wire->setClock(400000);
+    wire->setTimeOut(5);
     m_address = MPU6050_DEFAULT_ADDRESS; // Defaults is MPU6050_ADDRESS_AD0_LOW (0x68)
 
     DBGLN("Detecting MPU6050 (Address 0x68)");
@@ -77,7 +79,7 @@ bool IMU_MPU6050::initialize()
     gyroSampleRate = 1000;
     period_us = (1000000 / gyroSampleRate);
 
-    accScaleCode = MPU6050_ACCEL_FS_16; // Acceleation 16G
+    accScaleCode = MPU6050_ACCEL_FS_16; // Acceleration 16G
     accScaleG = 16 / 32768.0;           //   multiply adc by this to get Gs
     acc1G_adc = 32768 / 16;             //   1G in adc value
 

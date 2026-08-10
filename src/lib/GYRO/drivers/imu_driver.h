@@ -1,7 +1,8 @@
 #pragma once
 
-#include "SPI.h"
 #include "targets.h"
+#include "SPI.h"
+#include "Wire.h"
 
 class IMU_Driver
 {
@@ -37,9 +38,13 @@ public:
     virtual ~IMU_Driver_I2C() = default;
     uint8_t m_address;
 
+    bool initialize() override;
     uint8_t readRegister(uint8_t reg);
     bool readRegister(uint8_t reg, uint8_t *data, size_t size);
     void writeRegister(uint8_t reg, uint8_t value);
+
+protected:
+    TwoWire *wire = nullptr;
 };
 
 class IMU_Driver_SPI : public IMU_Driver

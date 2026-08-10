@@ -93,21 +93,13 @@ device_affinity_t ui_devices[] = {
   {&AnalogVbat_device, 0},
   {&ServoOut_device, 1},
 #if defined(PLATFORM_ESP32)
-  // Run it on Core1,  If we run it on Core0, can't get more than 125Hz refresh rate
-  {&Gyro_device, 1},
-#else
-  // Don't activate the Baro when Gyro.. both use I2C and currently
-  // does not work when "Wire" functions are called from Different Cores
-  
-  // TODO: check if we can activate the Thread safe use of Wire, or use a
-  // semaphore when reading I2C devices
-
+  {&Gyro_device, 1}, // Run it on Core1,  If we run it on Core0, can't get more than 125Hz refresh rate
   {&Baro_device, 0}, // must come after AnalogVbat_device to slow updates
-#endif
-#if defined(PLATFORM_ESP32) && !defined(PLATFORM_ESP32_C3)
+#if !defined(PLATFORM_ESP32_C3)
   {&VTxSPI_device, 0},
   {&MSPVTx_device, 0}, // dependency on VTxSPI_device
   {&Thermal_device, 0},
+#endif
 #endif
 };
 
