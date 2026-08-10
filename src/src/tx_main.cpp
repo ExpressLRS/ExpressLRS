@@ -1294,6 +1294,20 @@ static void setupSerial()
     TxUSB = new HardwareSerial(1);
     ((HardwareSerial *)TxUSB)->begin(firmwareOptions.uart_baud, SERIAL_8N1, U0RXD_GPIO_NUM, U0TXD_GPIO_NUM);
   }
+#elif defined(PLATFORM_ESP8266)
+  // ESP8266 has a single hardware UART (UART0). In AirPort mode there is no
+  // CRSF handset (devHandset skips it), so dedicate UART0 to the transparent
+  // AirPort serial. Leaving TxUSB as a NullStream here is why AirPort passes
+  // zero bytes on an ESP8266 TX target.
+  if (firmwareOptions.is_airport)
+  {
+    Serial.begin(firmwareOptions.uart_baud);
+    TxUSB = &Serial;
+  }
+  else
+  {
+    TxUSB = new NullStream();
+  }
 #else
   TxUSB = new NullStream();
 #endif
