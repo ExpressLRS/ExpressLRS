@@ -1,4 +1,4 @@
-#if defined(GYRO_SUPPORT) && defined(PLATFORM_ESP32)
+#if defined(PLATFORM_ESP32)
 #include "gyro_config.h"
 #include "common.h"
 #include "device.h"
@@ -53,6 +53,7 @@ void GyroConfig::Load()
 #define LOAD_32(key, newValue) LOAD(nvs_get_u32, key, value32, newValue)
 #define LOAD_64(key, newValue) LOAD(nvs_get_u64, key, value64, newValue)
 
+    m_config.configVersion = version;
     LOAD_32("global", m_config.global.raw);
     LOAD_64("cal_accel", m_config.accelCalibration.raw);
     LOAD_64("cal_gyro", m_config.gyroCalibration.raw);
@@ -182,6 +183,7 @@ void GyroConfig::SetDefaults(bool commit)
 {
     memset(&m_config, 0, sizeof(m_config));
 
+    m_config.configVersion = GYRO_CONFIG_VERSION;
     SetGyroEnabled(false);
     SetGyroOrientation(6, 6); // 6=No orientation Set
     SetGyroGainFactor(GYRO_GAIN_FACTOR_1X);

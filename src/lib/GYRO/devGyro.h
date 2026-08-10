@@ -1,5 +1,5 @@
 #pragma once
-#if defined(GYRO_SUPPORT) && defined(PLATFORM_ESP32)
+#if defined(PLATFORM_ESP32)
 
 #include "device.h"
 #include "gyro_config.h"

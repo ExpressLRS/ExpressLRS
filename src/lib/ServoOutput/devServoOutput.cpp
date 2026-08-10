@@ -12,7 +12,7 @@
 #include <driver/periph_ctrl.h>
 #endif
 
-#if defined(GYRO_SUPPORT) && defined(PLATFORM_ESP32)
+#if defined(PLATFORM_ESP32)
 #include "devGyro.h"
 #include "gyro.h"
 #endif
@@ -168,7 +168,7 @@ static void servosEnterFailsafe()
 
 static void servoCalcAllChannels(servoWrite_fn write, bool failSafe=false)
 {
-	#if defined(GYRO_SUPPORT) && defined(PLATFORM_ESP32)
+	#if defined(PLATFORM_ESP32)
     if (OPT_HAS_GYRO && gyroDetected())
     {
         gyro.mixerInput();
@@ -198,7 +198,7 @@ static void servoCalcAllChannels(servoWrite_fn write, bool failSafe=false)
         {
             us = CRSF_to_US(crsfVal);
         }
-#if defined(GYRO_SUPPORT) && defined(PLATFORM_ESP32)
+#if defined(PLATFORM_ESP32)
         if (!failSafe && OPT_HAS_GYRO) {
             // Mix in gyro adjustments before handling inversion
             gyro.mixerOutput(ch, &us);

@@ -1,5 +1,5 @@
 #pragma once
-#if defined(GYRO_SUPPORT)
+#if defined(PLATFORM_ESP32)
 
 #include "gyro.h"
 #include "mode_rate.h"

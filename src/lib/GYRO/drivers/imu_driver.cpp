@@ -1,6 +1,6 @@
 #include "imu_driver.h"
 
-#if defined(GYRO_SUPPORT) && defined(PLATFORM_ESP32)
+#if defined(PLATFORM_ESP32)
 
 #include "SPI.h"
 #include <Wire.h>
@@ -115,4 +115,4 @@ void IMU_Driver_SPI::writeRegister(uint8_t reg, uint8_t value)
     _spi.endTransaction();
 }
 
-#endif // GYRO_SUPPORT
+#endif 

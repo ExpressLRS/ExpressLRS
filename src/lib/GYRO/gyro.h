@@ -1,7 +1,7 @@
 #pragma once
 #include "targets.h"
 
-#if defined(GYRO_SUPPORT)
+#if defined(PLATFORM_ESP32)
 #include "ahrs/ahrs.h"
 #include "gyro_types.h"
 #include "modes/mode.h"

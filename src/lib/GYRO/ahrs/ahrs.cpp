@@ -1,6 +1,6 @@
 #include "targets.h"
 
-#if defined(GYRO_SUPPORT) && defined(PLATFORM_ESP32)
+#if defined(PLATFORM_ESP32)
 #include "ahrs.h"
 #include "biasFilter.h"
 #include "devGyro.h"
@@ -32,7 +32,12 @@ static const char *gyroRxOrientationsRM[8] =
     {"Pins Up(X+)", "Pins Dn(X-)", "V-Lbl Up(Y+)", "V-Lbl Dn(Y-)", "Lbl Up(Z+)", "Lbl Dn(Z-)", "WRONG", "WRONG"};
 
 static int8_t orientationList[36][6] = {
-    {3, 3, 3, 0, 0, 0}, {3, 3, 3, 0, 0, 0}, {1, 2, 0, 1, 1, 1}, {1, 2, 0, -1, -1, 1}, {2, 1, 0, 1, -1, 1}, {2, 1, 0, -1, 1, 1},
+    {3, 3, 3, 0, 0, 0}, 
+    {3, 3, 3, 0, 0, 0}, 
+    {1, 2, 0, 1, 1, 1}, 
+    {1, 2, 0, -1, -1, 1}, 
+    {2, 1, 0, 1, -1, 1}, 
+    {2, 1, 0, -1, 1, 1},
 
     {3, 3, 3, 0, 0, 0},
     {3, 3, 3, 0, 0, 0},
@@ -215,14 +220,14 @@ void AHRS::applyOrientation(VectorInt16 *v)
 //   - wait for a 250ms period of low gyro activity to ensure the craft is not moving
 //   - use a large dcmKpGain value for 500ms to allow the attitude estimate to quickly converge
 //   - reset the gain back to the standard setting
-static float imuCalcKpGain(bool useAcc, const VectorFloat gyro, bool *qReset)
+static float imuCalcKpGain(bool useAcc, const VectorFloat gyro, bool *quartilionReset)
 {
     static uint8_t state = 0;
     static long gyroQuietPeriodTimeEnd_us = 0;
     static long attitudeResetTimeEnd_us = 0;
 
     float ret = 1.0;
-    *qReset = false;
+    *quartilionReset = false;
 
     long currentTimeUs = micros();
     // If gyro activity exceeds the threshold then restart the quiet period.
@@ -244,7 +249,7 @@ static float imuCalcKpGain(bool useAcc, const VectorFloat gyro, bool *qReset)
             attitudeResetTimeEnd_us = currentTimeUs + ATTITUDE_RESET_ACTIVE_TIME * 1000;
             gyroQuietPeriodTimeEnd_us = 0;
             state = 2;
-            //*qReset = true;
+            //*quartilionReset = true; // Reset Quarterion, so will think that is level, but will fix itself
         }
     }
 
@@ -266,6 +271,7 @@ static float imuCalcKpGain(bool useAcc, const VectorFloat gyro, bool *qReset)
     return ret;
 }
 
+// For Debugging when log is on
 static float totalAccG = 0;
 static float kpFactor = 1.0;
 boolean AHRS::isAccelHeathty(VectorFloat acc, float *kp, float *ki)
@@ -357,11 +363,11 @@ bool AHRS::readAndUpdate()
     float kp, ki;
     bool useAcc = isAccelHeathty(accG, &kp, &ki);
 
-    bool qReset;
-    kpFactor = imuCalcKpGain(useAcc, gDeg, &qReset);
+    bool quartilionReset;
+    kpFactor = imuCalcKpGain(useAcc, gDeg, &quartilionReset);
     kp = kp * kpFactor;
 
-    if (qReset)
+    if (quartilionReset)
     {
         q.reset();
     }
@@ -393,6 +399,8 @@ bool AHRS::readAndUpdate()
 
 void AHRS::setupOrientation()
 {
+    static uint8_t REV_IDX[] = {1, 0, 3, 2, 5, 4, 6};
+
     uint8_t idx;
     orientationIsWrong = false;
     imuOrientationH = gyroConfig->GetGyroOrientationH();
@@ -404,6 +412,14 @@ void AHRS::setupOrientation()
         DBGLN("Orientation is WRONG");
         return;
     }
+
+    DBGLN("Orientation H/top: %s", mpuOrientationNames[imuOrientationH]);
+    DBGLN("Orientation V/tail: %s", mpuOrientationNames[imuOrientationV]);
+
+    // Reverse the Gravity orientation index for vertical, since is nose DOWN instead of UP
+    // but logic expect the face to the front, and not the tail
+    imuOrientationV = REV_IDX[imuOrientationV]; 
+
     idx = imuOrientationH * 6 + imuOrientationV; // into a number in range 0/35
     if (orientationList[idx][3] == 0)
     { // check that combination H and V is valid
@@ -417,8 +433,7 @@ void AHRS::setupOrientation()
     orientationSignY = orientationList[idx][4];
     orientationSignZ = orientationList[idx][5];
 
-    DBGLN("OrientationH: %s", mpuOrientationNames[imuOrientationH]);
-    DBGLN("OrientationV: %s", mpuOrientationNames[imuOrientationV]);
+   
 }
 
 void AHRS::findGravity(int32_t ax, int32_t ay, int32_t az, uint8_t &idx)
@@ -493,7 +508,7 @@ void AHRS::OrientationHorizontalExecute() //
         DBGLN("Error during horizontal orientation: direction of gravity has not been found");
         return;
     }
-    DBGLN("Upper face of MPU (when model is horizontal) is %s", mpuOrientationNames[idx]);
+    DBGLN("Upper face RX (when model is horizontal) is %s", mpuOrientationNames[idx]);
     imuOrientationH = idx; // save the orientationH
 
     // Run the calibration, but not saving the offsets
@@ -510,7 +525,7 @@ void AHRS::OrientationVerticalExecute()
     {
         DBGLN("Error during vertical orientation: direction of gravity has not been found");
     }
-    DBGLN("Upper face (with nose up) is %s", mpuOrientationNames[idx]);
+    DBGLN("Face Vert/Tail (with nose down) is %s", mpuOrientationNames[idx]);
     imuOrientationV = idx; // save the orientationV
 
     gyroConfig->SetGyroOrientation(imuOrientationH, imuOrientationV);
@@ -519,8 +534,6 @@ void AHRS::OrientationVerticalExecute()
     gyroConfig->SetAccelCalibration(calAccelOffets.val.x, calAccelOffets.val.y, calAccelOffets.val.z);
     gyroConfig->SetGyroCalibration(calGyroOffsets.val.x, calGyroOffsets.val.y, calGyroOffsets.val.z);
 
-    // Restart with the saved config Offsets
-    start();
 }
 
 //--------------------------------------------------------------------------------------------------

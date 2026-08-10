@@ -10,7 +10,7 @@
 #include "rxtx_intf.h"
 #include "logging.h"
 
-#if defined(GYRO_SUPPORT) && defined(PLATFORM_ESP32)
+#if defined(PLATFORM_ESP32)
 #include "devGyro.h"
 #include "gyro.h"
 extern void gyroQuickModelSetup(int wingType, int tailType);
@@ -38,7 +38,7 @@ char strPowerLevels[] = "10;25;50;100;250;500;1000;2000;MatchTX ";
 static char modelString[] = "000";
 static char pwmModes[] = "50Hz;60Hz;100Hz;160Hz;333Hz;400Hz;10kHzDuty;On/Off;DShot;DShot 3D;Serial RX;Serial TX;I2C SCL;I2C SDA;Serial2 RX;Serial2 TX";
 
-#if defined(GYRO_SUPPORT) && defined(PLATFORM_ESP32)
+#if defined(PLATFORM_ESP32)
 static char gyroOffOn[] = "Off;On"; // Off-ON
 //  needs to match gyro_status_t
 static const char *gyroStatus[] = {"Off","IMU Not Detected","Need RX-Orientation","Need Stick Calibration","Running"};
@@ -66,6 +66,12 @@ static const char gyroRxOrientationsHR[] =
 
 static const char gyroRxOrientationsRM[] = 
     {"Pins Up(X+);Pins Dn(X-);V-Lbl Up(Y+);V-Lbl Dn(Y-);Lbl Up(Z+);Lbl Dn(Z-);WRONG;WRONG"};
+
+static const char *getRxOrientationOptions() 
+{
+  return OPT_HAS_GYRO_MPU6050?gyroRxOrientationsHR:gyroRxOrientationsRM;
+}
+
 
 #endif
 
@@ -173,7 +179,7 @@ static stringParameter luaELRSversion = {
 
 // --------------------------- Gyro Setup ---------------------------------
 
-#if defined(GYRO_SUPPORT) && defined(PLATFORM_ESP32)
+#if defined(PLATFORM_ESP32)
 static const char *wingTypeName[] {"Empty","Normal","2-Ail","Delta"};
 static auto wingTypeStr = "Empty;Normal;2-Ail;Delta";
 
@@ -195,6 +201,11 @@ static stringParameter luaGyroStatus = {
 static stringParameter luaGyroIMUStatus = {
     {"IMUStatus", CRSF_INFO},
     "" // value
+};
+
+static stringParameter luaGyro_Warning = {
+    {"WARNING: Auto-Level as Panic is Experimental", CRSF_INFO},
+    STR_EMPTYSPACE
 };
 
 static selectionParameter luaGyroGainFactor = {
@@ -438,16 +449,16 @@ static void luaparamGyroPID_RateD(propertiesCommon *item, uint8_t arg)
 
 //------------  Gyro RX Orientation Info -------------
 static selectionParameter luaGyroOrientationH = {
-    {"Face Hor", CRSF_TEXT_SELECTION},
+    {"Hor (Level)", CRSF_TEXT_SELECTION},
     6, // WRONG orintation
-    OPT_HAS_GYRO_MPU6050?gyroRxOrientationsHR:gyroRxOrientationsRM,
+    getRxOrientationOptions(),
     STR_EMPTYSPACE
 };
 
 static selectionParameter luaGyroOrientationV = {
-    {"Face Ver", CRSF_TEXT_SELECTION},
+    {"Vert (Nose DOWN)", CRSF_TEXT_SELECTION},
     6, // WRONG orintation
-    OPT_HAS_GYRO_MPU6050?gyroRxOrientationsHR:gyroRxOrientationsRM,
+    getRxOrientationOptions(),
     STR_EMPTYSPACE};
 
 //---------  Reset Commands ---------------------
@@ -631,7 +642,7 @@ void RXEndpoint::luaparamGyroOrientationCal(propertiesCommon *item, uint8_t arg)
         {
             // Step 2: Vertical
             newStep = lcsAskConfirm;
-            msg = "Plane Nose Up?";
+            msg = "Plane Nose DOWN?";
         }
         else if (calStep == 2)
         {
@@ -713,7 +724,7 @@ void RXEndpoint::luaparamGyroStickCal(propertiesCommon *item, uint8_t arg)
         {
             // Step 2: Stick Range Cal
             newStep = lcsAskConfirm;
-            msg = "Moved to all Sides?";
+            msg = "Moved to all Sides/Corners?";
             gyro.StickLimitCalibration(false); // Start
         }
         else if (calStep == 2)
@@ -1004,7 +1015,7 @@ static commandParameter luaSetFailsafe = {
     STR_EMPTYSPACE
 };
 
-#if defined(GYRO_SUPPORT) && defined(PLATFORM_ESP32)
+#if defined(PLATFORM_ESP32)
 const char STR_US[] = " us";
 static int16Parameter luaMappingChannelLimitMin = {
     {"Limit Min us", CRSF_UINT16},
@@ -1356,7 +1367,7 @@ void RXEndpoint::luaparamSetFailsafe(propertiesCommon *item, uint8_t arg)
     sendCommandResponse((commandParameter *)item, newStep, msg);
 }
 
-#if defined(GYRO_SUPPORT) && defined(PLATFORM_ESP32)
+#if defined(PLATFORM_ESP32)
 static void luaparamMappingChannelLimitMin(propertiesCommon *item, uint8_t arg)
 {
     const uint8_t ch = luaMappingChannelOut.properties.u.value - 1;
@@ -1469,7 +1480,7 @@ void RXEndpoint::registerParameters()
         registerParameter(&luaMappingChannelOut,
             [&](propertiesCommon *item, uint8_t arg) {
                 luaparamMappingChannelOut(item, arg);
-#if defined(GYRO_SUPPORT) && defined(PLATFORM_ESP32)
+#if defined(PLATFORM_ESP32)
                 // Update Gyro limits when Output channel changes
                 const rx_config_pwm_limits_t *limits = gyroConfig->GetPwmChannelLimits(luaMappingChannelOut.properties.u.value - 1);
                 setUint16Value(&luaMappingChannelLimitMin, (uint16_t)limits->val.min);
@@ -1486,7 +1497,7 @@ void RXEndpoint::registerParameters()
             luaparamSetFailsafe(item, arg);
         });
 
-#if defined(GYRO_SUPPORT) && defined(PLATFORM_ESP32)
+#if defined(PLATFORM_ESP32)
         if (OPT_HAS_GYRO && gyroDetected())
         {
             DBGLN("RxPratameters.registerParameters(): Setting up GYRO LUA");
@@ -1508,6 +1519,8 @@ void RXEndpoint::registerParameters()
 
             registerParameter(&luaGyroStatus, nullptr, luaGyroMainFolder.common.id);
             registerParameter(&luaGyroIMUStatus, nullptr, luaGyroMainFolder.common.id);
+            registerParameter(&luaGyro_Warning, nullptr, luaGyroMainFolder.common.id);
+            
 
             registerParameter(&luaGyroGainFactor,
                 [&](propertiesCommon *item, uint8_t arg) {
@@ -1682,7 +1695,7 @@ static void updateBindModeLabel()
         luaBindMode.common.name = "Enter Bind Mode";
 }
 
-#if defined(GYRO_SUPPORT) && defined(PLATFORM_ESP32)
+#if defined(PLATFORM_ESP32)
 static void getFormatedGyroStatus(char *buffer)
 {
     sprintf(buffer, "v%2.2f / %d", GYRO_CODE_VERSION, gyroConfig->GetGyroConfigVersion());
@@ -1746,7 +1759,7 @@ void RXEndpoint::updateParameters()
         setTextSelectionValue(&luaMappingInverted, pwmCh->val.inverted);
     }
 
-#if defined(GYRO_SUPPORT) && defined(PLATFORM_ESP32)
+#if defined(PLATFORM_ESP32)
     if (OPT_HAS_GYRO && gyroDetected() && connectionState == connected)
     {
         DBGLN("updateParameters(): Updating Gyro LUA values");
@@ -1841,7 +1854,7 @@ void RXEndpoint::updateParameters()
         LUA_FIELD_VISIBLE(luaGyroFMode_GainRoll, gainsVisible);
         LUA_FIELD_VISIBLE(luaGyroFMode_GainYaw, gainsVisible);
     }
-#endif // GYRO_SUPPORT
+#endif
 
     if (config.GetModelId() == 255)
     {

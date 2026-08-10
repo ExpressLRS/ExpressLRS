@@ -87,7 +87,6 @@
 #define GPIO_PIN_SPI_MOSI hardware_pin(HARDWARE_spi_mosi)
 
 // Gyro
-//#define GYRO_SUPPORT
 #define OPT_HAS_GYRO (hardware_int(HARDWARE_gyro_type) > 0)
 #define OPT_HAS_GYRO_MPU6050 (hardware_int(HARDWARE_gyro_type) == 1)
 #define OPT_HAS_GYRO_LSM6DXX (hardware_int(HARDWARE_gyro_type) == 2)

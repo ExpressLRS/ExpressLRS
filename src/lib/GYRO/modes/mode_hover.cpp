@@ -1,4 +1,4 @@
-#if defined(GYRO_SUPPORT) && defined(PLATFORM_ESP32)
+#if defined(PLATFORM_ESP32)
 
 #include "mode_hover.h"
 #include "devGyro.h"

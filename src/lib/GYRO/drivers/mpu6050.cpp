@@ -1,6 +1,6 @@
 #include "targets.h"
 
-#if defined(GYRO_SUPPORT) && defined(PLATFORM_ESP32)
+#if defined(PLATFORM_ESP32)
 #include "logging.h"
 #include "mpu6050.h"
 #include "mpu6050_regs.h"
