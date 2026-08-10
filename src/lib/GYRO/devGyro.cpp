@@ -20,9 +20,15 @@ GyroConfig *gyroConfig;
 
 static IMU_Driver *driver = nullptr;
 
+bool gyroDetected()
+{
+    return driver != nullptr;
+}
+
 static bool initialize()
 {
-    if (!OPT_HAS_GYRO) return false;
+    if (!OPT_HAS_GYRO)
+        return false;
 
     driver = nullptr;
 
@@ -32,7 +38,8 @@ static bool initialize()
         if (driver == nullptr  && OPT_HAS_GYRO_MPU6050)
         {
             driver = new IMU_MPU6050();
-            if (!driver->initialize()) {
+            if (!driver->initialize())
+            {
                 delete driver;
                 driver = nullptr;
             } 
@@ -40,40 +47,33 @@ static bool initialize()
     }
 
     // SPI Gyros
-    if(spi_enabled) {
+    if (spi_enabled)
+    {
         if (driver == nullptr && OPT_HAS_GYRO_LSM6DXX)
         {
             driver = new IMU_LSM6DXX_SPI();
-            if (!driver->initialize()) {
+            if (!driver->initialize())
+            {
                 delete driver;
                 driver=nullptr;
             }
         }
     } // if SPI
 
-    if (driver==nullptr) {
+    if (driver == nullptr)
+    {
          DBGLN("devGyro: Gyro Not Detected");
+        return false;
     }
 
-    // Call Init even when driver is null to disable other parts looking 
-    // if gyro is OFF
     ahrs.initialize(driver);
     gyro.init(&ahrs);
 
-    return driver!=nullptr;
-}
-
-static bool gyro_detect() {
-    return driver != nullptr;
+    return true;
 }
 
 static int start()
 {
-    DBGLN("devGyro start");
-    if (!gyro_detect()) {
-        DBGLN("Gyro initialization failed");
-        return DURATION_NEVER;
-    }
     gyroConfig = new GyroConfig();
     gyroConfig->Load();
 
@@ -104,7 +104,6 @@ static void send_telemetry()
     crsfAttitude.p.pitch = htobe16(ahrs.angle_rpy[GYRO_AXIS_PITCH] * 10000);
     crsfAttitude.p.roll = htobe16(ahrs.angle_rpy[GYRO_AXIS_ROLL]   * 10000);
     crsfAttitude.p.yaw = htobe16(ahrs.angle_rpy[GYRO_AXIS_YAW]     * 10000);
-
 
     crsfRouter.SetHeaderAndCrc((crsf_header_t *)&crsfAttitude, CRSF_FRAMETYPE_ATTITUDE, CRSF_FRAME_SIZE(sizeof(crsf_sensor_attitude_t)));
     crsfRouter.deliverMessageTo(CRSF_ADDRESS_RADIO_TRANSMITTER, &crsfAttitude.h);
@@ -143,9 +142,11 @@ static int timeout()
 {
     static long lastTelSent_ms = 0; // Last time we sent telemetry (millis)
 
-    if (!ahrs.isRunning()) return 1000; // 1 seconds wait if not running
+    if (!ahrs.isRunning())
+        return 1000; // 1 seconds wait if not running
 
-    if ((millis() - lastTelSent_ms) > 500 ) { // 500 ms (1/2s) cycle
+    if ((millis() - lastTelSent_ms) > 500)
+    { // 500 ms (1/2s) cycle
         lastTelSent_ms = millis();
         send_telemetry();
     }

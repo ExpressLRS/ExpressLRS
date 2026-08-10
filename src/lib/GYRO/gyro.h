@@ -2,10 +2,10 @@
 #include "targets.h"
 
 #if defined(GYRO_SUPPORT)
-#include "pid.h"
-#include "gyro_types.h"
 #include "ahrs/ahrs.h"
+#include "gyro_types.h"
 #include "modes/mode.h"
+#include "pid.h"
 
 #define GYRO_CODE_VERSION   1.18
 
@@ -59,7 +59,6 @@ public:
     char lastErrorText[30];
 
 private:
-   
     Mode_Base* mode_controller;
 
     int8_t  mode_ch   = -1;
@@ -71,7 +70,6 @@ private:
     int8_t  elevon2_ch= -1;
     int8_t  vtail1_ch= -1;
     int8_t  vtail2_ch= -1;
-
 
     void detect_gain(uint16_t us);
     void detect_mode(uint16_t us);
@@ -89,7 +87,6 @@ void configure_pids(float roll_limit, float pitch_limit, float yaw_limit, const 
 
 // Helper method to configure a PID controller instance use the rx config values
 void configure_pid_gains(PID* pid, const rx_config_gyro_PID_t* pid_params, int8_t gain, float max, float min);
-
 
 void gyroSetConfigDefaults();
 void gyroUpgrade(uint8_t version);

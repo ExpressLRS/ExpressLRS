@@ -39,7 +39,6 @@ public:
     // Setters
     void SetDefaults(bool commit);
 
-    void SetGyroConfigVersion(uint8_t value);
     void SetGyroEnabled(bool);
     void SetGyroGainFactor(gyro_gain_factor_t factor);
     void SetAccelCalibration(uint16_t x, uint16_t y, uint16_t z);

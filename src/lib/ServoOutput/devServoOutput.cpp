@@ -13,6 +13,7 @@
 #endif
 
 #if defined(GYRO_SUPPORT) && defined(PLATFORM_ESP32)
+#include "devGyro.h"
 #include "gyro.h"
 #endif
 
@@ -167,8 +168,8 @@ static void servosEnterFailsafe()
 
 static void servoCalcAllChannels(servoWrite_fn write, bool failSafe=false)
 {
-	 #if defined(GYRO_SUPPORT) && defined(PLATFORM_ESP32)
-    if (OPT_HAS_GYRO) 
+	#if defined(GYRO_SUPPORT) && defined(PLATFORM_ESP32)
+    if (OPT_HAS_GYRO && gyroDetected())
     {
         gyro.mixerInput();
     }

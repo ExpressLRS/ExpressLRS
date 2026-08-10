@@ -176,12 +176,10 @@ typedef enum {
     HARDWARE_spi_sck,
     HARDWARE_spi_miso,
     HARDWARE_spi_mosi,
-    HARDWARE_spi_nss,
-    HARDWARE_spi_rst,
-    HARDWARE_spi_busy,
-    HARDWARE_spi_int,
 
     HARDWARE_gyro_type,
+    HARDWARE_gyro_nss,
+    HARDWARE_gyro_int,
 
     HARDWARE_LAST
 } nameType;

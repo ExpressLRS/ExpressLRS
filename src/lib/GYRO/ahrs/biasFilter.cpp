@@ -4,9 +4,9 @@
  * @brief Run-time estimation and compensation of gyroscope offset.
  */
 
-#include <Arduino.h>
 #include "biasFilter.h"
 #include "logging.h"
+#include <Arduino.h>
 
 /**
  * @brief High-pass filter cutoff frequency in Hz.
@@ -22,7 +22,6 @@ static BiasSettings gyroBiasDefaultSettings = {
     .stationaryPeriod = 3.0f, // 3 cycles of stationary
 };
 
-
 //------------------------------------------------------------------------------
 // Functions
 
@@ -30,7 +29,8 @@ static BiasSettings gyroBiasDefaultSettings = {
  * @brief Initialises the bias structure.
  * @param bias Bias structure.
  */
-void BiasFilter::Initialise(const float sampleRate) {
+void BiasFilter::Initialise(const float sampleRate)
+{
     gyroBiasDefaultSettings.sampleRate = sampleRate;
     settings = gyroBiasDefaultSettings;
     filterCoefficient = 2.0f * (float) M_PI  * CUTOFF_FREQUENCY * (1.0f / settings.sampleRate);
@@ -43,8 +43,10 @@ void BiasFilter::Initialise(const float sampleRate) {
 
     #if defined(DEBUG_LOG)
     DBGLN("Gyro Bias SampleRate=%f Bias Timeout = %d",sampleRate, timeout);
-    char a[15]; sprintf(a, "%1.6f", filterCoefficient);
-    char b[15]; sprintf(b, "%1.6f", settings.stationaryThreshold);
+    char a[15];
+    sprintf(a, "%1.6f", filterCoefficient);
+    char b[15];
+    sprintf(b, "%1.6f", settings.stationaryThreshold);
     DBGLN("Bias filterCoeficient=%s, Threshold=%s ",a,b);
     #endif
 }
@@ -56,7 +58,8 @@ void BiasFilter::Initialise(const float sampleRate) {
  * @param gyroscope Gyroscope in radians per second.
  * @return Offset-corrected gyroscope in radians per second.
  */
-void BiasFilter::Update(VectorFloat gyroscope) {
+void BiasFilter::Update(VectorFloat gyroscope)
+{
     // Apply gyroscope offset
     gyroscope.x -= offset.x;
     gyroscope.y -= offset.y;
@@ -65,13 +68,15 @@ void BiasFilter::Update(VectorFloat gyroscope) {
     // Reset timer if gyroscope not stationary
     if ((fabsf(gyroscope.x) > settings.stationaryThreshold) ||
         (fabsf(gyroscope.y) > settings.stationaryThreshold) ||
-        (fabsf(gyroscope.z) > settings.stationaryThreshold)) {
+        (fabsf(gyroscope.z) > settings.stationaryThreshold))
+    {
         timer = 0;
         return; // Not Stationary
     }
 
     // Increment timer while gyroscope stationary
-    if (timer < timeout) {
+    if (timer < timeout)
+    {
         timer++;
         return;
     }
@@ -82,6 +87,7 @@ void BiasFilter::Update(VectorFloat gyroscope) {
     offset.z += gyroscope.z * filterCoefficient;
 }
 
-VectorFloat BiasFilter::getOffsets() {
+VectorFloat BiasFilter::getOffsets()
+{
     return offset;
 }

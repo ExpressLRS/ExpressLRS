@@ -1,8 +1,8 @@
 #pragma once
 
-#include "gyro_types.h"
-#include "biasFilter.h"
 #include "../drivers/imu_driver.h"
+#include "biasFilter.h"
+#include "gyro_types.h"
 
 class AHRS
 {
@@ -78,5 +78,4 @@ class AHRS
         #ifdef DEBUG_GYRO_STATS
         void printGyroStats(long nowMicros);
         #endif
-        
 };

@@ -22,7 +22,6 @@
 //const char* mpuOrientationNames[8] = {
 //    "FRONT(X+)", "BACK(X-)", "LEFT(Y+)", "RIGHT(Y-)", "UP(Z+)", "DOWN(Z-)", "WRONG", "WRONG"};
 
-
 char **mpuOrientationNames;
 
 // HR8EG
@@ -32,19 +31,43 @@ static const char *gyroRxOrientationsHR[8] =
 static const char *gyroRxOrientationsRM[8] = 
     {"Pins Up(X+)","Pins Dn(X-)","V-Lbl Up(Y+)","V-Lbl Dn(Y-)","Lbl Up(Z+)","Lbl Dn(Z-)","WRONG","WRONG"};
 
-
 static int8_t orientationList[36][6] = {
-{3,3,3,0,0,0}, {3,3,3,0,0,0}, {1,2,0,1,1,1}, {1,2,0,-1,-1,1}, {2,1,0,1,-1,1}, {2,1,0,-1,1,1},\
+    {3, 3, 3, 0, 0, 0}, {3, 3, 3, 0, 0, 0}, {1, 2, 0, 1, 1, 1}, {1, 2, 0, -1, -1, 1}, {2, 1, 0, 1, -1, 1}, {2, 1, 0, -1, 1, 1},
 
-{3,3,3,0,0,0}, {3,3,3,0,0,0}, {1,2,0,1,-1,-1}, {1,2,0,-1,1,-1}, {2,1,0,1,1,-1}, {2,1,0,-1,-1,-1},\
+    {3, 3, 3, 0, 0, 0},
+    {3, 3, 3, 0, 0, 0},
+    {1, 2, 0, 1, -1, -1},
+    {1, 2, 0, -1, 1, -1},
+    {2, 1, 0, 1, 1, -1},
+    {2, 1, 0, -1, -1, -1},
 
-{0,2,1,1,-1,1}, {0,2,1,-1,1,1}, {3,3,3,0,0,0}, {3,3,3,0,0,0}, {2,0,1,1,1,1}, {2,0,1,-1,-1,1},\
+    {0, 2, 1, 1, -1, 1},
+    {0, 2, 1, -1, 1, 1},
+    {3, 3, 3, 0, 0, 0},
+    {3, 3, 3, 0, 0, 0},
+    {2, 0, 1, 1, 1, 1},
+    {2, 0, 1, -1, -1, 1},
 
-{0,2,1,1,1,-1}, {0,2,1,-1,-1,-1}, {3,3,3,0,0,0}, {3,3,3,0,0,0}, {2,0,1,1,-1,-1}, {2,0,1,-1,1,-1},\
+    {0, 2, 1, 1, 1, -1},
+    {0, 2, 1, -1, -1, -1},
+    {3, 3, 3, 0, 0, 0},
+    {3, 3, 3, 0, 0, 0},
+    {2, 0, 1, 1, -1, -1},
+    {2, 0, 1, -1, 1, -1},
 
-{0,1,2,1,1,1}, {0,1,2,-1,-1,1}, {1,0,2,1,-1,1}, {1,0,2,-1,1,1}, {3,3,3,0,0,0}, {3,3,3,0,0,0},\
+    {0, 1, 2, 1, 1, 1},
+    {0, 1, 2, -1, -1, 1},
+    {1, 0, 2, 1, -1, 1},
+    {1, 0, 2, -1, 1, 1},
+    {3, 3, 3, 0, 0, 0},
+    {3, 3, 3, 0, 0, 0},
 
-{0,1,2,1,-1,-1}, {0,1,2,-1,1,-1}, {1,0,2,1,1,-1}, {1,0,2,-1,-1,-1}, {3,3,3,0,0,0}, {3,3,3,0,0,0}};
+    {0, 1, 2, 1, -1, -1},
+    {0, 1, 2, -1, 1, -1},
+    {1, 0, 2, 1, 1, -1},
+    {1, 0, 2, -1, -1, -1},
+    {3, 3, 3, 0, 0, 0},
+    {3, 3, 3, 0, 0, 0}};
 
 int8_t accLpfCutHz = 0;
 int8_t gyroLpfCutHz = 0;
@@ -52,7 +75,8 @@ int8_t gyroLpfCutHz = 0;
 static  LowpassFilter accFilter[3];
 static  LowpassFilter gyroFilter[3];
 
-bool AHRS::initialize(IMU_Driver *driver) {
+bool AHRS::initialize(IMU_Driver *driver)
+{
     this->driver = driver;
 
     orientationIsWrong = true;
@@ -74,11 +98,13 @@ void AHRS::pause()
     initialized = false;
 }
 
-void AHRS::start() {
+void AHRS::start()
+{
     initialized = false;
     DBGLN("Gyro AHRS Start");
 
-    if (!gyroConfig->GetGyroEnabled() || driver == nullptr) return; //not enabled
+    if (!gyroConfig->GetGyroEnabled() || driver == nullptr)
+        return; // not enabled
 
     driver->start();
 
@@ -91,23 +117,26 @@ void AHRS::start() {
 
     read_errors = 0; // Reset Errors
 
-     // Reload Madwick Configuration
-    const rx_config_gyro_PID_t *madwickPI = gyroConfig->GetGyroPID(GYRO_PID_GROUP_MADWICK,GYRO_AXIS_ROLL);
-    AHRS_KP = (float) madwickPI->val.p / 10;
-    AHRS_KI = (float) madwickPI->val.i / 10;
+    // Reload Madgwick Configuration
+    const rx_config_gyro_PID_t *madgwickPI = gyroConfig->GetGyroPID(GYRO_PID_GROUP_MADGWICK, GYRO_AXIS_ROLL);
+    AHRS_KP = (float)madgwickPI->val.p / 10;
+    AHRS_KI = (float)madgwickPI->val.i / 10;
 
-    accLpfCutHz = gyroLpfCutHz = madwickPI->val.d;
+    accLpfCutHz = gyroLpfCutHz = madgwickPI->val.d;
 
-    DBGLN("Setting Madwick kP=%f, kI=%f",AHRS_KP, AHRS_KI);
+    DBGLN("Setting Madgwick kP=%f, kI=%f", AHRS_KP, AHRS_KI);
     DBGLN("LPF Gyro Settings %d HZ",accLpfCutHz);
     
     gyroBias.Initialise(driver->gyroSampleRate);
 
-    for (int axis=0;axis<3;axis++) {
-        if (accLpfCutHz > 0) {
+    for (int axis = 0; axis < 3; axis++)
+    {
+        if (accLpfCutHz > 0)
+        {
             accFilter[axis].init(LPF_PT1, accLpfCutHz, driver->gyroSampleRate, 0);
         }
-        if (gyroLpfCutHz > 0) {
+        if (gyroLpfCutHz > 0)
+        {
             gyroFilter[axis].init(LPF_PT1, gyroLpfCutHz, driver->gyroSampleRate, 0);
         }
     }
@@ -115,11 +144,13 @@ void AHRS::start() {
     initialized = true;
 }
 
-uint8_t AHRS::event() {
+uint8_t AHRS::event()
+{
     return DURATION_IGNORE;
 }
 
-bool AHRS::isRunning() {
+bool AHRS::isRunning()
+{
     return  initialized && !orientationIsWrong && !isCalibrating;
 }
 
@@ -138,7 +169,6 @@ static void GetRollPitchYaw(float *data_rpy, Quaternion *q, VectorFloat *gravity
     // roll: (tilt left/right, about X axis)
     data_rpy[0] = atan2(gravity -> y , gravity -> z);
     
-
     /* using Quartilion */
     /*
     // yaw: (about Z axis)
@@ -148,7 +178,6 @@ static void GetRollPitchYaw(float *data_rpy, Quaternion *q, VectorFloat *gravity
     // roll: (tilt left/right, about X axis)
     data_rpy[0] = atan2((q->w * q->x + q->y * q->z), 0.5 - (q->x * q->x + q->y * q->y));
     */
-
 
     // NOTE: This is buggy at high pitch angles when gravity flips
     // if (gravity -> z < 0) {
@@ -160,7 +189,8 @@ static void GetRollPitchYaw(float *data_rpy, Quaternion *q, VectorFloat *gravity
     // }
 }
 
-static void GetGravity(VectorFloat *v, Quaternion *q) {
+static void GetGravity(VectorFloat *v, Quaternion *q)
+{
     v -> x = 2 * (q -> x*q -> z - q -> w*q -> y);
     v -> y = 2 * (q -> w*q -> x + q -> y*q -> z);
     v -> z = q -> w*q -> w - q -> x*q -> x - q -> y*q -> y + q -> z*q -> z;
@@ -178,7 +208,6 @@ void AHRS::applyOrientation(VectorInt16 *v)
     v->y = t[orientationY] * orientationSignY;
     v->z = t[orientationZ] * orientationSignZ;
 }
-
 
 // Calculate the KpGain to use. 
 // When disarmed after initial boot, the scaling is set to 10.0 for the first 20 seconds to speed up initial convergence.
@@ -200,18 +229,17 @@ static float imuCalcKpGain(bool useAcc, const VectorFloat gyro, bool *qReset)
     // Also, if the attitude reset has been complete and there is subsequent gyro activity then
     // start the reset cycle again. 
     
-    if (   (fabsf(gyro.x) > ATTITUDE_RESET_GYRO_LIMIT)
-        || (fabsf(gyro.y) > ATTITUDE_RESET_GYRO_LIMIT)
-        || (fabsf(gyro.z) > ATTITUDE_RESET_GYRO_LIMIT)
-        || (!useAcc)) {
+    if ((fabsf(gyro.x) > ATTITUDE_RESET_GYRO_LIMIT) || (fabsf(gyro.y) > ATTITUDE_RESET_GYRO_LIMIT) || (fabsf(gyro.z) > ATTITUDE_RESET_GYRO_LIMIT) || (!useAcc))
+    {
 
         gyroQuietPeriodTimeEnd_us = currentTimeUs + ATTITUDE_RESET_QUIET_TIME * 1000;
         state=1;
     }
     
-
-    if (state==1) { // In Quiet Period
-        if (currentTimeUs >= gyroQuietPeriodTimeEnd_us) {
+    if (state == 1)
+    { // In Quiet Period
+        if (currentTimeUs >= gyroQuietPeriodTimeEnd_us)
+        {
             // Start the high gain period to bring the estimation into convergence
             attitudeResetTimeEnd_us = currentTimeUs + ATTITUDE_RESET_ACTIVE_TIME * 1000;
             gyroQuietPeriodTimeEnd_us = 0;
@@ -220,12 +248,16 @@ static float imuCalcKpGain(bool useAcc, const VectorFloat gyro, bool *qReset)
         }
     }
 
-    if (state==2) { // In Attitude Reset
-        if (currentTimeUs >= attitudeResetTimeEnd_us) {
+    if (state == 2)
+    { // In Attitude Reset
+        if (currentTimeUs >= attitudeResetTimeEnd_us)
+        {
             gyroQuietPeriodTimeEnd_us = 0;
             attitudeResetTimeEnd_us = 0;
             state = 0;
-        } else {
+        }
+        else
+        {
             // Still in Attitude Reset
             ret = 10.0; // To converge faster
         }
@@ -233,7 +265,6 @@ static float imuCalcKpGain(bool useAcc, const VectorFloat gyro, bool *qReset)
     
     return ret;
 }
-
 
 static float totalAccG = 0;
 static float kpFactor = 1.0;
@@ -247,10 +278,13 @@ boolean AHRS::isAccelHeathty(VectorFloat acc, float *kp, float *ki)
 
     totalAccG = totalAcc;
 
-    if ((totalAcc > KP1_LOW_LIMIT ) && ( totalAcc < KP1_HIGH_LIMIT )) { // When total acceleration is within some limits (close 1g)
+    if ((totalAcc > KP1_LOW_LIMIT) && (totalAcc < KP1_HIGH_LIMIT))
+    { // When total acceleration is within some limits (close 1g)
         *kp = AHRS_KP;
         *ki = AHRS_KI;
-    } else { // Aceleration out of range
+    }
+    else
+    { // Aceleration out of range
         *kp = 0;
         *ki = 0;
         return false;
@@ -259,12 +293,15 @@ boolean AHRS::isAccelHeathty(VectorFloat acc, float *kp, float *ki)
     return true;
 }
 
-bool AHRS::readAndUpdate() {
-    if (orientationIsWrong) return false;
+bool AHRS::readAndUpdate()
+{
+    if (orientationIsWrong)
+        return false;
 
     // Regular READ
     if (!driver->rawRead(&v_accel.x, &v_accel.y, &v_accel.z, 
-            &v_gyro.x,  &v_gyro.y,  &v_gyro.z)) {
+                         &v_gyro.x, &v_gyro.y, &v_gyro.z))
+    {
         read_errors++;
         return false;
     }
@@ -281,19 +318,20 @@ bool AHRS::readAndUpdate() {
     applyOrientation(&v_accel);
     applyOrientation(&v_gyro);
 
-    if (accLpfCutHz > 0) {
+    if (accLpfCutHz > 0)
+    {
         v_accel.x = accFilter[GYRO_AXIS_ROLL].apply(v_accel.x);
         v_accel.y = accFilter[GYRO_AXIS_PITCH].apply(v_accel.y);
         v_accel.z = accFilter[GYRO_AXIS_YAW].apply(v_accel.z);
     }
 
-    if (gyroLpfCutHz > 0) {
+    if (gyroLpfCutHz > 0)
+    {
         v_gyro.x = gyroFilter[GYRO_AXIS_ROLL].apply(v_gyro.x);
         v_gyro.y = gyroFilter[GYRO_AXIS_PITCH].apply(v_gyro.y);
         v_gyro.z = gyroFilter[GYRO_AXIS_YAW].apply(v_gyro.z);
     }
 
-    
     // use Mahoney filter
     static long last = micros(); // Behaves like Global
     long now = micros();
@@ -323,7 +361,8 @@ bool AHRS::readAndUpdate() {
     kpFactor = imuCalcKpGain(useAcc,gDeg, &qReset); 
     kp = kp * kpFactor;
 
-    if (qReset) {
+    if (qReset)
+    {
         q.reset();
     }
     
@@ -352,7 +391,6 @@ bool AHRS::readAndUpdate() {
     return true;
 }
 
-
 void AHRS::setupOrientation()
 {
     uint8_t idx;
@@ -367,7 +405,8 @@ void AHRS::setupOrientation()
         return;
     }
     idx = imuOrientationH *6 + imuOrientationV;  // into a number in range 0/35
-    if (orientationList[idx][3] == 0){   // check that combination H and V is valid
+    if (orientationList[idx][3] == 0)
+    { // check that combination H and V is valid
         orientationIsWrong = true;
         return;
     }
@@ -382,32 +421,57 @@ void AHRS::setupOrientation()
     DBGLN("OrientationV: %s", mpuOrientationNames[imuOrientationV]);
 }
 
-void AHRS::findGravity(int32_t ax, int32_t ay, int32_t az, uint8_t &idx ){
+void AHRS::findGravity(int32_t ax, int32_t ay, int32_t az, uint8_t &idx)
+{
     // find the index and sign of gravity 
     //      idx:  0=X, 1=Y, 2=Z; 
     //      sign: 1=gravity is the opposite (normally Z axis is up and give 1) 
     
     float oneG_70percent = driver->acc1G_adc*0.7;
 
-    if ((float) ax > oneG_70percent) { idx = 0 ;
-    } else if ((float) ax < -oneG_70percent) { idx = 1 ;
-    } else if ((float) ay >  oneG_70percent) { idx = 2 ;
-    } else if ((float) ay < -oneG_70percent) { idx = 3 ;
-    } else if ((float) az >  oneG_70percent) { idx = 4 ;
-    } else if ((float) az < -oneG_70percent) { idx = 5 ;
-    } else { idx= 6; };
+    if ((float)ax > oneG_70percent)
+    {
+        idx = 0;
+    }
+    else if ((float)ax < -oneG_70percent)
+    {
+        idx = 1;
+    }
+    else if ((float)ay > oneG_70percent)
+    {
+        idx = 2;
+    }
+    else if ((float)ay < -oneG_70percent)
+    {
+        idx = 3;
+    }
+    else if ((float)az > oneG_70percent)
+    {
+        idx = 4;
+    }
+    else if ((float)az < -oneG_70percent)
+    {
+        idx = 5;
+    }
+    else
+    {
+        idx = 6;
+    };
     
     DBGLN("findGravty(): ax=%d  ay=%d  az=%d  yawIdx=%d  scale=%f", ax , ay ,  az, idx, driver->acc1G_adc);
 }    
 
-uint8_t AHRS::readAndGetGravity(){ // return index of orientation; return 6 in case of error
+uint8_t AHRS::readAndGetGravity()
+{ // return index of orientation; return 6 in case of error
     int16_t ax,ay,az ;
     int16_t gx,gy,gz ;
     uint8_t idx = 6; 
     
     uint8_t i = 3;
-    do {
-        if (driver->rawRead(&ax, &ay, &az, &gx, &gy, &gz)) {
+    do
+    {
+        if (driver->rawRead(&ax, &ay, &az, &gx, &gy, &gz))
+        {
             findGravity( ax , ay , az , idx);
             break;
         }
@@ -424,7 +488,8 @@ void AHRS::OrientationHorizontalExecute()  //
 
     DBGLN("Horizontal Detection...");
     uint8_t idx = readAndGetGravity(); // // read the Acc and detect which face is on the upper side 
-    if (idx > 5){
+    if (idx > 5)
+    {
          DBGLN("Error during horizontal orientation: direction of gravity has not been found");
          return;
     }
@@ -436,11 +501,13 @@ void AHRS::OrientationHorizontalExecute()  //
     calibrateGyro(8, &calGyroOffsets);
 }
 
-void AHRS::OrientationVerticalExecute() {
+void AHRS::OrientationVerticalExecute()
+{
     imuOrientationV = 6;
     DBGLN("Vertical Detection...");
     uint8_t idx = readAndGetGravity(); // // read the Acc and detect which face is on the upper side 
-    if (idx > 5){
+    if (idx > 5)
+    {
         DBGLN("Error during vertical orientation: direction of gravity has not been found");
     }
     DBGLN("Upper face (with nose up) is %s",mpuOrientationNames[idx]);
@@ -469,7 +536,6 @@ void AHRS::OrientationVerticalExecute() {
 //--------------------------------------------------------------------------------------------------
 // IMU algorithm update
 
-
 // currently ax, ay, az are in Gs and gx,gy,gz are in rad/sec.
 void AHRS::Mahony_update(bool useAcc, 
                              float ax, float ay, float az, 
@@ -482,7 +548,8 @@ void AHRS::Mahony_update(bool useAcc,
     
     // Compute feedback only if accelerometer measurement valid (avoids NaN in accelerometer normalisation)
     float tmpAcc = sq(ax) + sq(ay) + sq(az);
-    if (useAcc && tmpAcc > 0.01f) {  // Original tmpAcc > 0.0, Rotorflight have it as > 0.01f
+    if (useAcc && tmpAcc > 0.01f)
+    { // Original tmpAcc > 0.0, Rotorflight have it as > 0.01f
         // Normalise accelerometer (assumed to measure the direction of gravity in body frame)
         float recipNorm = invSqrt(tmpAcc);
         ax *= recipNorm;
@@ -502,18 +569,24 @@ void AHRS::Mahony_update(bool useAcc,
     }
 
     // Compute and apply to gyro term the integral feedback, if enabled
-    if (ki > 0.0f) {
+    if (ki > 0.0f)
+    {
         // Calculate general spin rate (rad/s)
         const float spin_rate = sqrtf(sq(gx) + sq(gy) + sq(gz));
 
         // Stop integrating if spinning beyond the certain limit
-        if (spin_rate < radians(SPIN_RATE_LIMIT)) {
+        if (spin_rate < radians(SPIN_RATE_LIMIT))
+        {
             ix += ki * ex * deltat;  // integral error scaled by Ki
             iy += ki * ey * deltat;
             iz += ki * ez * deltat;
         }
-    } else {
-        ix=0; iy=0; iz=0;
+    }
+    else
+    {
+        ix = 0;
+        iy = 0;
+        iz = 0;
     }
     
     // Apply proportional and Integral feedback to gyro term
@@ -538,7 +611,8 @@ void AHRS::Mahony_update(bool useAcc,
 
     // renormalise quaternion
     tmpAcc = sq(q->w) + sq(q->x) + sq(q->y) + sq(q->z);
-    if ( tmpAcc == 0 ) return;  // Prevent NaN
+    if (tmpAcc == 0)
+        return; // Prevent NaN
 
     float recipNorm = invSqrt(tmpAcc);
     q->w = q->w * recipNorm;
@@ -564,11 +638,16 @@ bool AHRS::calibrateGyro(int8_t loops, rx_config_gyro_calibration_t *offsets)
     DBGLN ("Stating Gyro Calibration..");
     isCalibrating = true;
 
-	for (int inx = 0; inx < ACCEL_NUM_AVG_SAMPLES; inx++){
+    for (int inx = 0; inx < ACCEL_NUM_AVG_SAMPLES; inx++)
+    {
         DBG(".");
         int c=0;
-        while (!driver->isDataReady() && c++ < 20) { delayMicroseconds(50); }
-        if (!driver->rawRead(&ax,&ay,&az,&gx,&gy,&gz)) {
+        while (!driver->isDataReady() && c++ < 20)
+        {
+            delayMicroseconds(50);
+        }
+        if (!driver->rawRead(&ax, &ay, &az, &gx, &gy, &gz))
+        {
             errors++;
             continue;
         }
@@ -577,12 +656,18 @@ bool AHRS::calibrateGyro(int8_t loops, rx_config_gyro_calibration_t *offsets)
         gyAccum += (int32_t) gy;
         gzAccum += (int32_t) gz;
 
-        if (gx < gxMin) gxMin = gx;
-        if (gy < gyMin) gyMin = gy;
-        if (gz < gzMin) gzMin = gz;
-        if (gx > gxMax) gxMax = gx;
-        if (gy > gyMax) gyMax = gy;
-        if (gz > gzMax) gzMax = gz;
+        if (gx < gxMin)
+            gxMin = gx;
+        if (gy < gyMin)
+            gyMin = gy;
+        if (gz < gzMin)
+            gzMin = gz;
+        if (gx > gxMax)
+            gxMax = gx;
+        if (gy > gyMax)
+            gyMax = gy;
+        if (gz > gzMax)
+            gzMax = gz;
     }
 
     DBGLN ("\nGyro Calibration completed..");
@@ -592,14 +677,15 @@ bool AHRS::calibrateGyro(int8_t loops, rx_config_gyro_calibration_t *offsets)
                  gxMax - gxMin, gxMax, gxMin,
                  gzMax - gzMin, gzMax, gzMin);
 
-    
-    if (((gxMax - gxMin) > MAX_GYRO_DIFF) or ((gyMax - gyMin) > MAX_GYRO_DIFF) or ((gzMax - gzMin) > MAX_GYRO_DIFF)) {
+    if (((gxMax - gxMin) > MAX_GYRO_DIFF) or ((gyMax - gyMin) > MAX_GYRO_DIFF) or ((gzMax - gzMin) > MAX_GYRO_DIFF))
+    {
         DBGLN ("Error in IMU calibration: to much variations in the gyro values");
         isCalibrating = false;
         return false;
     }
 
-    if (errors > 50) {
+    if (errors > 50)
+    {
         DBGLN("Too many read errors during calibration  (Errors=%d)",errors);
         isCalibrating = false;
         return false;
@@ -632,37 +718,60 @@ bool AHRS::calibrateAccel(int8_t loops, rx_config_gyro_calibration_t *offsets)
     DBGLN ("Stating Accelerometer Calibration. OrientationH: %s",mpuOrientationNames[imuOrientationH]);
     isCalibrating = true;
 
-    for (int inx = 0; inx < ACCEL_NUM_AVG_SAMPLES; inx++){
+    for (int inx = 0; inx < ACCEL_NUM_AVG_SAMPLES; inx++)
+    {
         DBG(".");      
         int c=0;
-        while (!driver->isDataReady() && c++ < 20) { delayMicroseconds(50); }
-        if (!driver->rawRead(&ax,&ay,&az,&gx,&gy,&gz)) {
+        while (!driver->isDataReady() && c++ < 20)
+        {
+            delayMicroseconds(50);
+        }
+        if (!driver->rawRead(&ax, &ay, &az, &gx, &gy, &gz))
+        {
             errors++;
             continue;
         }
         
-
         // Remove Gravity
         float acc1G = driver->acc1G_adc;
-        switch (imuOrientationH) {
-            case 0:  ax -= acc1G; break;
-            case 1:  ax += acc1G; break;
-            case 2:  ay -= acc1G; break;
-            case 3:  ay += acc1G; break;
-            case 4:  az -= acc1G; break;
-            case 5:  az += acc1G; break;
+        switch (imuOrientationH)
+        {
+        case 0:
+            ax -= acc1G;
+            break;
+        case 1:
+            ax += acc1G;
+            break;
+        case 2:
+            ay -= acc1G;
+            break;
+        case 3:
+            ay += acc1G;
+            break;
+        case 4:
+            az -= acc1G;
+            break;
+        case 5:
+            az += acc1G;
+            break;
         }
        
         axAccum += (int32_t) ax;
         ayAccum += (int32_t) ay;
         azAccum += (int32_t) az;
 
-        if (ax < axMin) axMin = ax;
-        if (ay < ayMin) ayMin = ay;
-        if (az < azMin) azMin = az;
-        if (ax > axMax) axMax = ax;
-        if (ay > ayMax) ayMax = ay;
-        if (az > azMax) azMax = az;        
+        if (ax < axMin)
+            axMin = ax;
+        if (ay < ayMin)
+            ayMin = ay;
+        if (az < azMin)
+            azMin = az;
+        if (ax > axMax)
+            axMax = ax;
+        if (ay > ayMax)
+            ayMax = ay;
+        if (az > azMax)
+            azMax = az;
     }
 
     DBGLN ("\nAccelerometer Calibration completed..");
@@ -672,16 +781,17 @@ bool AHRS::calibrateAccel(int8_t loops, rx_config_gyro_calibration_t *offsets)
                  axMax - axMin, axMax, axMin,
                  azMax - azMin, azMax, azMin);
 
-
     // here we know the Acc but still will reject the measurement if noise is to big
     
-    if (((axMax - axMin) > MAX_ACC_DIFF) or ((ayMax - ayMin) > MAX_ACC_DIFF) or ((azMax - azMin) > MAX_ACC_DIFF)) {
+    if (((axMax - axMin) > MAX_ACC_DIFF) or ((ayMax - ayMin) > MAX_ACC_DIFF) or ((azMax - azMin) > MAX_ACC_DIFF))
+    {
         DBGLN ("Error in IMU calibration: to much variations in the acceleration values: x=%d y=%d z=%d", axMax - axMin, ayMax - ayMin , azMax - azMin);
         isCalibrating = false;
         return false;
     }
 
-    if (errors > 50) {
+    if (errors > 50)
+    {
         DBGLN("Too many read errors during calibration  (Errors=%d)",errors);
         isCalibrating = false;
         return false;
@@ -707,18 +817,17 @@ void AHRS::calibrate(bool save)
     calibrateAccel(8, &calAccelOffets);
     calibrateGyro(8, &calGyroOffsets);
 
-    if (!save) return;
+    if (!save)
+        return;
 
     gyroConfig->SetAccelCalibration(
         calAccelOffets.val.x,
         calAccelOffets.val.y,
-        calAccelOffets.val.z
-    );
+        calAccelOffets.val.z);
     gyroConfig->SetGyroCalibration(
         calGyroOffsets.val.x,
         calGyroOffsets.val.y,
-        calGyroOffsets.val.z
-    );
+        calGyroOffsets.val.z);
 }
 
 int AHRS::tick()
@@ -726,19 +835,22 @@ int AHRS::tick()
     // Behaves like Global
     static unsigned long next_check_us = micros();
     
-    if (!initialized && isCalibrating) { 
+    if (!initialized && isCalibrating)
+    {
         //DBGLN("Gyro not Ready or Calibrating.. return in 1s");
         return 1000; // come back in 1000 ms if not initialized
     }
 
     // Returned earlier than the ODR Period?? 
     long now = micros();
-    if (now < next_check_us) {  
+    if (now < next_check_us)
+    {
          return DURATION_IMMEDIATELY;
     }
     
     // Do we have Gyro data Available ??
-    if (!driver->isDataReady()) {
+    if (!driver->isDataReady())
+    {
         return DURATION_IMMEDIATELY;
     }
 
@@ -768,29 +880,44 @@ void AHRS::printGyroStats(long nowMicros)
     int current_rate = 1.0 / ((nowMicros - lastGyroUpdate_us) / 1000000.0);
     update_rate = (update_rate + current_rate) / 2;  // Average
 
-    char rate_str[15]; sprintf(rate_str, "%4d", update_rate);
+    char rate_str[15];
+    sprintf(rate_str, "%4d", update_rate);
 
-    char pitch_str[15]; sprintf(pitch_str, "%6.2f", degrees(angle_rpy[1]));
-    char roll_str[15]; sprintf(roll_str, "%6.2f", degrees(angle_rpy[0]));
-    char yaw_str[15]; sprintf(yaw_str, "%6.2f", degrees(angle_rpy[2]));
+    char pitch_str[15];
+    sprintf(pitch_str, "%6.2f", degrees(angle_rpy[1]));
+    char roll_str[15];
+    sprintf(roll_str, "%6.2f", degrees(angle_rpy[0]));
+    char yaw_str[15];
+    sprintf(yaw_str, "%6.2f", degrees(angle_rpy[2]));
 
-    char gyro_x[15]; sprintf(gyro_x, "%6.3f", (double) v_gyro.x * driver->gyroScaleDeg);
-    char gyro_y[15]; sprintf(gyro_y, "%6.3f", (double) v_gyro.y * driver->gyroScaleDeg);
-    char gyro_z[15]; sprintf(gyro_z, "%6.3f", (double) v_gyro.z * driver->gyroScaleDeg);
+    char gyro_x[15];
+    sprintf(gyro_x, "%6.3f", (double)v_gyro.x * driver->gyroScaleDeg);
+    char gyro_y[15];
+    sprintf(gyro_y, "%6.3f", (double)v_gyro.y * driver->gyroScaleDeg);
+    char gyro_z[15];
+    sprintf(gyro_z, "%6.3f", (double)v_gyro.z * driver->gyroScaleDeg);
 
-    char accel_x[15]; sprintf(accel_x, "%6.3f", (double) v_accel.x * driver->accScaleG);
-    char accel_y[15]; sprintf(accel_y, "%6.3f", (double) v_accel.y * driver->accScaleG);
-    char accel_z[15]; sprintf(accel_z, "%6.3f", (double) v_accel.z * driver->accScaleG);
+    char accel_x[15];
+    sprintf(accel_x, "%6.3f", (double)v_accel.x * driver->accScaleG);
+    char accel_y[15];
+    sprintf(accel_y, "%6.3f", (double)v_accel.y * driver->accScaleG);
+    char accel_z[15];
+    sprintf(accel_z, "%6.3f", (double)v_accel.z * driver->accScaleG);
 
-    char gravity_x[15]; sprintf(gravity_x, "%4.3f", gravity.x);
-    char gravity_y[15]; sprintf(gravity_y, "%4.3f", gravity.y);
-    char gravity_z[15]; sprintf(gravity_z, "%4.3f", gravity.z);
-
+    char gravity_x[15];
+    sprintf(gravity_x, "%4.3f", gravity.x);
+    char gravity_y[15];
+    sprintf(gravity_y, "%4.3f", gravity.y);
+    char gravity_z[15];
+    sprintf(gravity_z, "%4.3f", gravity.z);
 
     VectorFloat  o = gyroBias.getOffsets();
-    char bias_x[15]; sprintf(bias_x, "%4.3f", o.x);
-    char bias_y[15]; sprintf(bias_y, "%4.3f", o.y);
-    char bias_z[15]; sprintf(bias_z, "%4.3f", o.z);
+    char bias_x[15];
+    sprintf(bias_x, "%4.3f", o.x);
+    char bias_y[15];
+    sprintf(bias_y, "%4.3f", o.y);
+    char bias_z[15];
+    sprintf(bias_z, "%4.3f", o.z);
 
     // Uncomment lines needed for debugging
     DBGLN("Refresh: %s HZ ",rate_str);
@@ -805,6 +932,5 @@ void AHRS::printGyroStats(long nowMicros)
     last_gyro_stats_time = millis();
 }
 #endif
-
 
 #endif

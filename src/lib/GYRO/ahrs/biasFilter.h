@@ -1,10 +1,11 @@
 #pragma once
 #include "gyro_types.h"
 
-typedef struct {
-    float sampleRate; // Hz
+typedef struct
+{
+    float sampleRate;          // Hz
     float stationaryThreshold; // rad per second
-    float stationaryPeriod; // seconds
+    float stationaryPeriod;    // seconds
 } BiasSettings;
 
 class BiasFilter

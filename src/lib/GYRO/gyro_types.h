@@ -1,18 +1,20 @@
 #pragma once
-#include <stdint.h>
 #include "config.h"
+#include <cstdint>
 
 typedef union {
-    struct {
-        uint64_t max:12,
-                 min:12,
-                 mid:12,
-                 unused: 28;
+    struct
+    {
+        uint64_t max : 12,
+            min : 12,
+            mid : 12,
+            unused : 28;
     } val;
     uint64_t raw;
 } rx_config_pwm_limits_t;
 
-typedef enum {
+typedef enum
+{
     GYRO_STATUS_OFF,
     GYRO_STATUS_NOT_DETECTED,
     GYRO_STATUS_NEED_RX_ORIENTATION,
@@ -20,10 +22,11 @@ typedef enum {
     GYRO_STATUS_OK
 } gyro_status_t;
 
-typedef enum { // values are important
+typedef enum
+{ // values are important
     GYRO_GAIN_FACTOR_0_5X,
     GYRO_GAIN_FACTOR_1X,
-    GYRO_GAIN_FACTOR_1_5X, 
+    GYRO_GAIN_FACTOR_1_5X,
     GYRO_GAIN_FACTOR_2X,
 } gyro_gain_factor_t;
 
@@ -44,29 +47,33 @@ typedef enum
     GYRO_MODE_MAX = GYRO_MODE_END
 } gyro_mode_t;
 
-typedef enum {
+typedef enum
+{
     GYRO_PID_GROUP_RATE,
     GYRO_PID_GROUP_ANGLE,
-    GYRO_PID_GROUP_MADWICK,
+    GYRO_PID_GROUP_MADGWICK,
     GYRO_PID_GROUP_END,
-    GYRO_PID_GROUP_LAST_ACTIVE = GYRO_PID_GROUP_MADWICK,
+    GYRO_PID_GROUP_LAST_ACTIVE = GYRO_PID_GROUP_MADGWICK,
     GYRO_PID_GROUP_MAX = GYRO_PID_GROUP_END
 } gyro_pidgroup_t;
 
 #define GYRO_N_AXES 3
-typedef enum {
+typedef enum
+{
     GYRO_AXIS_ROLL,
     GYRO_AXIS_PITCH,
     GYRO_AXIS_YAW
 } gyro_axis_t;
 
-typedef enum {
+typedef enum
+{
     GYRO_RATE_VARIABLE_P,
     GYRO_RATE_VARIABLE_I,
     GYRO_RATE_VARIABLE_D
 } gyro_rate_variable_t;
 
-typedef enum {
+typedef enum
+{
     FN_NONE,
     FN_AILERON,
     FN_ELEVATOR,
@@ -79,30 +86,34 @@ typedef enum {
     FN_GYRO_GAIN
 } gyro_output_channel_function_t;
 
-typedef enum { 
-    STICK_PRIORITY_100  =0,
-    STICK_PRIORITY_75   =1, 
-    STICK_PRIORITY_50   =2, 
-    STICK_PRIORITY_25   =3 
+typedef enum
+{
+    STICK_PRIORITY_100 = 0,
+    STICK_PRIORITY_75 = 1,
+    STICK_PRIORITY_50 = 2,
+    STICK_PRIORITY_25 = 3
 } gyro_stick_priority_t;
 
-typedef enum { 
-    GYRO_LEARN_OFF, 
-    GYRO_LEARN_SUBTRIMS, 
+typedef enum
+{
+    GYRO_LEARN_OFF,
+    GYRO_LEARN_SUBTRIMS,
     GYRO_LEARN_LIMIT_START,
-    GYRO_LEARN_LIMIT_DONE 
+    GYRO_LEARN_LIMIT_DONE
 } gyro_learn_state_t;
 
-typedef enum { 
+typedef enum
+{
     GYRO_UI_USE_RATE,
     GYRO_UI_STICK_PRIORITY,
-    GYRO_UI_TRIMS, 
-    GYRO_UI_GAINS, 
+    GYRO_UI_TRIMS,
+    GYRO_UI_GAINS,
     GYRO_UI_MAX_ANGLE
 } gyro_ui_vibility_t;
 
 typedef union __attribute__((packed)) {
-    struct {
+    struct
+    {
         uint8_t p;
         uint8_t i;
         uint8_t d;
@@ -111,43 +122,46 @@ typedef union __attribute__((packed)) {
 } rx_config_gyro_PID_t;
 
 typedef union __attribute__((packed)) {
-    struct {
-        uint16_t output_mode:5,  // Max 32 Modes
-                 master:1,       // master channel?
-                 inverted:1,     // invert gyro output?
-                 unused:9;
+    struct
+    {
+        uint16_t output_mode : 5, // Max 32 Modes
+            master : 1,           // master channel?
+            inverted : 1,         // invert gyro output?
+            unused : 9;
     } val;
     uint32_t raw;
 } rx_config_gyro_channel_t;
 
 typedef union __attribute__((packed)) {
-    struct {
-        uint64_t gainRoll:8,
-                 gainPitch:8,
-                 gainYaw:8,
+    struct
+    {
+        uint64_t gainRoll : 8,
+            gainPitch : 8,
+            gainYaw : 8,
 
-                 maxAnglePitch:7, // Max 90
-                 maxAngleRoll:7,
+            maxAnglePitch : 7, // Max 90
+            maxAngleRoll : 7,
 
-                 trimPitch:6, // Max +- 31  (Any value > 31 is negative. see the helper functions for this)
-                 trimRoll:6,
+            trimPitch : 6, // Max +- 31  (Any value > 31 is negative. see the helper functions for this)
+            trimRoll : 6,
 
-                 useRate:1,
-                 stickPri:2,  // Max 4
+            useRate : 1,
+            stickPri : 2, // Max 4
 
-                 unused:11;
+            unused : 11;
     } val;
     uint64_t raw;
 } rx_config_gyro_fmode_t;
 
 typedef union __attribute__((packed)) {
-    struct {
-        uint32_t pos1: 4,
-                 pos2: 4,
-                 pos3: 4,
-                 pos4: 4,
-                 pos5: 4,
-                 unused: 12;
+    struct
+    {
+        uint32_t pos1 : 4,
+            pos2 : 4,
+            pos3 : 4,
+            pos4 : 4,
+            pos5 : 4,
+            unused : 12;
     } val;
     uint32_t raw;
 } rx_config_gyro_mode_pos_t;
@@ -165,11 +179,11 @@ typedef union __attribute__((packed)) {
 typedef union __attribute__((packed)) {
     struct
     {
-        uint32_t orientationH:3,
-                 orientationV:3,
-                 gyroEnabled:1,
-                 gainFactor:3, // 0.5, 1, 1.5, 2
-                 unused:22;  // More global settings
+        uint32_t orientationH : 3,
+            orientationV : 3,
+            gyroEnabled : 1,
+            gainFactor : 3, // 0.5, 1, 1.5, 2
+            unused : 22;    // More global settings
     } val;
     uint32_t raw;
 } rx_config_gyro_global_t;
@@ -177,80 +191,90 @@ typedef union __attribute__((packed)) {
 constexpr uint8_t GYRO_MAX_CHANNELS = 16;
 constexpr uint8_t GYRO_CONFIG_VERSION = 3;
 
-typedef struct __attribute__((packed)) {
-    uint8_t  configVersion;
+typedef struct __attribute__((packed))
+{
+    uint8_t configVersion;
     rx_config_gyro_global_t global;
     rx_config_gyro_calibration_t accelCalibration;
     rx_config_gyro_calibration_t gyroCalibration;
     rx_config_pwm_limits_t pwmLimits[PWM_MAX_CHANNELS];
     rx_config_gyro_channel_t gyroChannels[GYRO_MAX_CHANNELS];
 
-    rx_config_gyro_mode_pos_t gyroModeSwitch; // Gyro functions for switch positions
-    rx_config_gyro_PID_t   gyroPIDs[GYRO_PID_GROUP_MAX][GYRO_N_AXES]; // PID gains for each axis
-    rx_config_gyro_fmode_t gyroFModes[GYRO_MODE_MAX]; //Mode Description
+    rx_config_gyro_mode_pos_t gyroModeSwitch;                       // Gyro functions for switch positions
+    rx_config_gyro_PID_t gyroPIDs[GYRO_PID_GROUP_MAX][GYRO_N_AXES]; // PID gains for each axis
+    rx_config_gyro_fmode_t gyroFModes[GYRO_MODE_MAX];               // Mode Description
 } rx_config_gyro_t;
 
+class Quaternion
+{
+public:
+    float w;
+    float x;
+    float y;
+    float z;
 
-class Quaternion {
-    public:
-        float w;
-        float x;
-        float y;
-        float z;
-        
-        Quaternion() {
-            reset();
-        }
-        
-        Quaternion(float nw, float nx, float ny, float nz) {
-            w = nw;
-            x = nx;
-            y = ny;
-            z = nz;
-        }
+    Quaternion()
+    {
+        reset();
+    }
 
-        void reset() {
-            w = 1.0f;
-            x = 0.0f;
-            y = 0.0f;
-            z = 0.0f;
-        }
+    Quaternion(float nw, float nx, float ny, float nz)
+    {
+        w = nw;
+        x = nx;
+        y = ny;
+        z = nz;
+    }
+
+    void reset()
+    {
+        w = 1.0f;
+        x = 0.0f;
+        y = 0.0f;
+        z = 0.0f;
+    }
 };
 
-class VectorInt16 {
-    public:
-        int16_t x;
-        int16_t y;
-        int16_t z;
+class VectorInt16
+{
+public:
+    int16_t x;
+    int16_t y;
+    int16_t z;
 
-        VectorInt16() {
-            x = 0;
-            y = 0;
-            z = 0;
-        }
-        
-        VectorInt16(int16_t nx, int16_t ny, int16_t nz) {
-            x = nx;
-            y = ny;
-            z = nz;
-        }
+    VectorInt16()
+    {
+        x = 0;
+        y = 0;
+        z = 0;
+    }
+
+    VectorInt16(int16_t nx, int16_t ny, int16_t nz)
+    {
+        x = nx;
+        y = ny;
+        z = nz;
+    }
 };
 
-class VectorFloat {
-    public:
-        float x;
-        float y;
-        float z;
+class VectorFloat
+{
+public:
+    float x;
+    float y;
+    float z;
 
-        VectorFloat() {
-            x = 0;
-            y = 0;
-            z = 0;
-        }
-        
-        VectorFloat(float nx, float ny, float nz) {
-            x = nx;
-            y = ny;
-            z = nz;
-        }
+    VectorFloat()
+    {
+        x = 0;
+        y = 0;
+        z = 0;
+    }
+
+    VectorFloat(float nx, float ny, float nz)
+    {
+        x = nx;
+        y = ny;
+        z = nz;
+    }
 };
