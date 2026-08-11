@@ -292,6 +292,7 @@ public:
     uint8_t GetAntennaGroup() const { return m_config.antennaGroup; }
     bool     IsModified() const { return m_modified != 0; }
     const rx_config_pwm_t *GetPwmChannel(uint8_t ch) const { return &m_config.pwmChannels[ch]; }
+
     bool GetForceTlmOff() const { return m_config.forceTlmOff; }
     uint8_t GetRateInitialIdx() const { return m_config.rateInitialIdx; }
     eSerialProtocol GetSerialProtocol() const { return (eSerialProtocol)m_config.serialProtocol; }
@@ -317,6 +318,7 @@ public:
     void SetStorageProvider(ELRS_EEPROM *eeprom);
     void SetPwmChannel(uint8_t ch, uint16_t failsafe, uint8_t inputCh, bool inverted, uint8_t mode, uint8_t stretched);
     void SetPwmChannelRaw(uint8_t ch, uint32_t raw);
+
     void SetForceTlmOff(bool forceTlmOff);
     void SetRateInitialIdx(uint8_t rateInitialIdx);
     void SetSerialProtocol(eSerialProtocol serialProtocol);

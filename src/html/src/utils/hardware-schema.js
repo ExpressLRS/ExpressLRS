@@ -1068,6 +1068,71 @@ const HARDWARE_SCHEMA = [
         ]
     },
     /* /FEATURE: NOT IS_8285 */
+    {
+        title: 'SPI', rows: [
+            {
+                id: 'spi_sck',
+                label: 'SCK pin',
+                type: 'uint',
+                icon: 'output',
+                desc: 'SPI Clock pin used to communicate with SPI devices'
+            },
+            {
+                id: 'spi_miso',
+                label: 'MISO pin',
+                type: 'uint',
+                icon: 'input',
+                desc: 'SPI MISO pin used to communicate with SPI devices'
+            },
+            {
+                id: 'spi_mosi',
+                label: 'MOSI pin',
+                type: 'uint',
+                icon: 'output',
+                desc: 'SPI MOSI pin used to communicate with SPI devices'
+            },
+        ]
+    },
+    {
+        title: 'Gyro', rows: [
+            {
+                id: 'gyro_type',
+                label: 'Gyro type',
+                type: 'select',
+                options: [
+                    {value: 0, label: 'None'}, {value: 1, label: 'MP6050 (I2C)'}, {value: 2, label: 'LSM6DXX (SPI)'}
+                ], desc: 'Type of Gyro connected'
+            },
+            {
+                id: 'gyro_nss',
+                label: 'Gyro NSS pin',
+                type: 'uint',
+                icon: 'output',
+                desc: 'Chip select pin for SPI Gyro'
+            },
+            {
+                id: 'gyro_int',
+                label: 'Gyro INT pin',
+                type: 'uint',
+                icon: 'input',
+                desc: 'Interrupt pin for SPI Gyro'
+            },
+            {
+                id: 'gyro_scl',
+                label: 'Gyro SCL pin',
+                type: 'uint',
+                icon: 'output',
+                desc: 'I2C clock pin used to communicate with I2C Gyro devices'
+            },
+            {
+                id: 'gyro_sda',
+                label: 'Gyro SDA pin',
+                type: 'uint',
+                icon: 'input-output',
+                desc: 'I2C data pin used to communicate with I2C Gyro devices'
+            },
+        ]
+    },
     /* /FEATURE: NOT IS_TX */
 ]
 

@@ -4,7 +4,6 @@
 #include "targets.h"
 #include "device.h"
 
-
 #if defined(RADIO_SX127X)
 #include "SX127xDriver.h"
 #elif defined(RADIO_LR1121)
@@ -205,6 +204,13 @@ enum eServoOutputMode : uint8_t
     somPwm,         // 13: true PWM mode (NOT SUPPORTED)
     somSerial1RX,   // 14: secondary Serial RX
     somSerial1TX,   // 15: secondary Serial TX
+
+    //SPI DEVICES
+    somSCK,         // 16: SPI clock signal
+    somMISO,        // 17: SPI MISO
+    somMOSI,        // 18: SPI MOSI
+    somNSS,         // 20: SPI
+    somINT,         // 21: SPI
 };
 
 enum eServoOutputFailsafeMode : uint8_t

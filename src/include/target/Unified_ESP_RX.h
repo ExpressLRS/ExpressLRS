@@ -80,6 +80,19 @@
 #define OPT_PWM_OUT_ONLY hardware_flag(HARDWARE_pwm_out_only)
 
 #if defined(PLATFORM_ESP32)
+
+// SPI DEVICES
+#define GPIO_PIN_SPI_SCK hardware_pin(HARDWARE_spi_sck)
+#define GPIO_PIN_SPI_MISO hardware_pin(HARDWARE_spi_miso)
+#define GPIO_PIN_SPI_MOSI hardware_pin(HARDWARE_spi_mosi)
+
+// Gyro
+#define OPT_HAS_GYRO (hardware_int(HARDWARE_gyro_type) > 0)
+#define OPT_HAS_GYRO_MPU6050 (hardware_int(HARDWARE_gyro_type) == 1)
+#define OPT_HAS_GYRO_LSM6DXX (hardware_int(HARDWARE_gyro_type) == 2)
+#define GPIO_PIN_GYRO_NSS hardware_pin(HARDWARE_gyro_nss)
+#define GPIO_PIN_GYRO_INT hardware_pin(HARDWARE_gyro_int)
+
 // VTX
 #define OPT_HAS_VTX_SPI (hardware_pin(HARDWARE_vtx_nss) != UNDEF_PIN)
 #define GPIO_PIN_RF_AMP_PWM hardware_pin(HARDWARE_vtx_amp_pwm)

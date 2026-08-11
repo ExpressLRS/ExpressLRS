@@ -5,6 +5,7 @@
 
 #include <functional>
 #include <Wire.h>
+#include "SPI.h"
 
 static const int maxDeferredFunctions = 3;
 
@@ -22,6 +23,9 @@ static deferred_t deferred[maxDeferredFunctions] = {
 
 boolean i2c_enabled = false;
 static unsigned long rebootTime_Ms = 0;
+// NEW SPI DEVICES Support
+boolean spi_enabled = false;
+SPIClass _spi;
 
 static void setupWire()
 {
@@ -62,9 +66,29 @@ static void setupWire()
     }
 }
 
+void setupSPI() 
+{
+#if defined(PLATFORM_ESP32) && defined(TARGET_RX)
+    //spi dev
+    int8_t gpio_sck = GPIO_PIN_SPI_SCK;
+    int8_t gpio_miso = GPIO_PIN_SPI_MISO;
+    int8_t gpio_mosi = GPIO_PIN_SPI_MOSI;
+    int8_t gpio_nss = GPIO_PIN_GYRO_NSS;
+    int8_t gpio_int = GPIO_PIN_GYRO_INT;
+    DBGLN("SPI: gpio_sck :%d, gpio_miso: %d, gpio_mosi: %d, gpio_nss: %d, gpio_int %d", gpio_sck, gpio_miso, gpio_mosi, gpio_nss, gpio_int);
+
+    if(gpio_sck != UNDEF_PIN && gpio_miso != UNDEF_PIN && gpio_mosi != UNDEF_PIN && gpio_nss != UNDEF_PIN)
+    {
+        DBGLN("Starting SPI on SCK %d, MISO %d, MOSI %d", gpio_sck, gpio_miso, gpio_mosi);
+        _spi.begin(gpio_sck, gpio_miso, gpio_mosi, gpio_nss);
+        spi_enabled = true;
+    }
+#endif    
+}
 void setupTargetCommon()
 {
     setupWire();
+	setupSPI();
 }
 
 void deferExecutionMicros(unsigned long us, std::function<void()> f)

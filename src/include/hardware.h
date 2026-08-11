@@ -172,6 +172,17 @@ typedef enum {
     HARDWARE_vtx_amp_pwm_25mW,
     HARDWARE_vtx_amp_pwm_100mW,
 
+    // SPI for Misc devices
+    HARDWARE_spi_sck,
+    HARDWARE_spi_miso,
+    HARDWARE_spi_mosi,
+
+    HARDWARE_gyro_type,
+    HARDWARE_gyro_nss,
+    HARDWARE_gyro_int,
+    HARDWARE_gyro_scl,
+    HARDWARE_gyro_sda,
+
     HARDWARE_LAST
 } nameType;
 

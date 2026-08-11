@@ -40,6 +40,12 @@
 #include "rx-serial/devSerialIO.h"
 
 #include <LittleFS.h>
+
+#if defined(PLATFORM_ESP32)
+#include "devGyro.h"
+#include "gyro.h"
+#endif
+
 #if defined(PLATFORM_ESP8266)
 #include <user_interface.h>
 #elif defined(PLATFORM_ESP32)
@@ -86,11 +92,14 @@ device_affinity_t ui_devices[] = {
   {&Button_device, 0},
   {&AnalogVbat_device, 0},
   {&ServoOut_device, 1},
+#if defined(PLATFORM_ESP32)
+  {&Gyro_device, 1}, // Run it on Core1,  If we run it on Core0, can't get more than 125Hz refresh rate
   {&Baro_device, 0}, // must come after AnalogVbat_device to slow updates
-#if defined(PLATFORM_ESP32) && !defined(PLATFORM_ESP32_C3)
+#if !defined(PLATFORM_ESP32_C3)
   {&VTxSPI_device, 0},
   {&MSPVTx_device, 0}, // dependency on VTxSPI_device
   {&Thermal_device, 0},
+#endif
 #endif
 };
 
@@ -1929,10 +1938,17 @@ static void updateSwitchMode()
 
 static void CheckConfigChangePending()
 {
-    if (config.IsModified() && !InBindingMode && connectionState < NO_CONFIG_SAVE_STATES)
+    bool modified = config.IsModified();
+#if defined(PLATFORM_ESP32)
+    if (gyroDetected()) modified |= gyroConfig->IsModified();
+#endif
+    if (modified && !InBindingMode && connectionState < NO_CONFIG_SAVE_STATES)
     {
         LostConnection(false);
         uint32_t changes = config.Commit();
+#if defined(PLATFORM_ESP32)
+        if (gyroDetected()) changes |= gyroConfig->Commit();
+#endif
         devicesTriggerEvent(changes);
         LbtEnableIfRequired();
         Radio.RXnb();

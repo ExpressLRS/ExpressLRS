@@ -12,6 +12,11 @@
 #include <driver/periph_ctrl.h>
 #endif
 
+#if defined(PLATFORM_ESP32)
+#include "devGyro.h"
+#include "gyro.h"
+#endif
+
 static int8_t servoPins[PWM_MAX_CHANNELS];
 static pwm_channel_t pwmChannels[PWM_MAX_CHANNELS];
 static uint16_t pwmChannelValues[PWM_MAX_CHANNELS];
@@ -161,8 +166,15 @@ static void servosEnterFailsafe()
     }
 }
 
-static void servoCalcAllChannels(servoWrite_fn write)
+static void servoCalcAllChannels(servoWrite_fn write, bool failSafe=false)
 {
+	#if defined(PLATFORM_ESP32)
+    if (OPT_HAS_GYRO && gyroDetected())
+    {
+        gyro.mixerInput();
+    }
+    #endif
+    
     for (int ch = 0 ; ch < GPIO_PIN_PWM_OUTPUTS_COUNT ; ++ch)
     {
         const rx_config_pwm_t *chConfig = config.GetPwmChannel(ch);
@@ -186,6 +198,12 @@ static void servoCalcAllChannels(servoWrite_fn write)
         {
             us = CRSF_to_US(crsfVal);
         }
+#if defined(PLATFORM_ESP32)
+        if (!failSafe && OPT_HAS_GYRO) {
+            // Mix in gyro adjustments before handling inversion
+            gyro.mixerOutput(ch, &us);
+        }
+#endif
         // Flip the output around the mid-value if inverted
         // (1500 - usOutput) + 1500
         if (chConfig->val.inverted)
@@ -207,7 +225,7 @@ static void servoUsToFailsafeConfig(uint8_t ch, uint16_t us)
 
 void servoCurrentToFailsafeConfig()
 {
-    servoCalcAllChannels(&servoUsToFailsafeConfig);
+    servoCalcAllChannels(&servoUsToFailsafeConfig, true);
 }
 
 static void servosUpdate(unsigned long now)
@@ -223,7 +241,7 @@ static void servosUpdate(unsigned long now)
     {
         newChannelsAvailable = false;
         lastUpdate = now;
-        servoCalcAllChannels(&servoWrite);
+        servoCalcAllChannels(&servoWrite, false);
     }     /* if newChannelsAvailable */
 
     // LQ goes to 0 (100 packets missed in a row)
