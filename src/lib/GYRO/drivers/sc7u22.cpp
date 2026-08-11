@@ -85,13 +85,13 @@ bool IMU_SC7U22::initialize()
         return false;
     }
 
-    // The sensor runs at 1600 Hz, but polling at 250 Hz leaves enough time for
+    // The sensor runs at 1600 Hz, but polling at 800 Hz leaves enough time for
     // WiFi, PWM and the rest of the receiver processing.
-    gyroSampleRate = 250;
+    gyroSampleRate = 800;
     period_us = 1000000 / gyroSampleRate;
 
-    accScaleG = 16.0f / 32768.0f;
-    acc1G_adc = 32768.0f / 16.0f;
+    accScaleG = 4.0f / 32768.0f;
+    acc1G_adc = 32768.0f / 4.0f;
     gyroScaleDeg = 2000.0f / 32768.0f;
     gyroScaleRad = radians(gyroScaleDeg);
 
@@ -105,7 +105,7 @@ bool IMU_SC7U22::initialize()
     writeRegisterDelay(REG_SEG_SEL, 0x00, 1);
     writeRegisterDelay(REG_COM_CONF, COM_CONF_BDU | COM_CONF_ADDR_AUTO, 1);
     writeRegisterDelay(REG_PWR_CTRL, 0x00, 1);
-    writeRegisterDelay(REG_ACC_RANGE, ACC_RANGE_16G, 1);
+    writeRegisterDelay(REG_ACC_RANGE, ACC_RANGE_4G, 1);
     writeRegisterDelay(REG_GYR_RANGE, GYR_RANGE_2000DPS, 1);
     writeRegisterDelay(REG_ACC_CONF,
                        ACC_FILTER_PERF | ACC_BWP_OSR4_AVG1 | ACC_ODR_1600, 1);
@@ -115,7 +115,7 @@ bool IMU_SC7U22::initialize()
                        PWR_CTRL_TEMP_EN | PWR_CTRL_ACC_EN | PWR_CTRL_GYR_EN,
                        SENSOR_START_DELAY_MS);
 
-    DBGLN("SC7U22 initialized (1600Hz ODR, 250Hz polling)");
+    DBGLN("SC7U22 initialized (1600Hz ODR, 800Hz polling)");
     return true;
 }
 
@@ -126,7 +126,7 @@ void IMU_SC7U22::start()
 
 bool IMU_SC7U22::isDataReady()
 {
-    // The device produces data faster than the configured 250 Hz polling rate.
+    // The device produces data faster than the configured 800 Hz polling rate.
     // AHRS::tick() enforces period_us before calling this method.
     return true;
 }

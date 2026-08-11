@@ -43,6 +43,7 @@ private:
     static const uint8_t ACC_BWP_OSR4_AVG1 = 0x00;
     static const uint8_t ACC_ODR_1600 = 0x0C;
     static const uint8_t ACC_RANGE_16G = 0x03;
+    static const uint8_t ACC_RANGE_4G = 0x01;
 
     static const uint8_t GYR_FILTER_PERF = 0x80;
     static const uint8_t GYR_BWP_OSR4_AVG1 = 0x00;
