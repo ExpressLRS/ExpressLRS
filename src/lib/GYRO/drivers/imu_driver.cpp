@@ -3,6 +3,8 @@
 #if defined(PLATFORM_ESP32)
 
 #include "SPI.h"
+#include "logging.h"
+
 #include <Wire.h>
 extern SPIClass _spi;
 
@@ -44,6 +46,24 @@ void IMU_Driver::writeRegisterBits(uint8_t registerID, uint8_t mask, uint8_t val
     }
 }
 
+bool IMU_Driver_I2C::initialize()
+{
+    const int gyro_scl = hardware_pin(HARDWARE_gyro_scl);
+    const int gyro_sda = hardware_pin(HARDWARE_gyro_sda);
+    if (gyro_scl != UNDEF_PIN && gyro_sda != UNDEF_PIN)
+    {
+        DBGLN("Starting I2C Gyro on SCL %d, SDA %d", gyro_scl, gyro_sda);
+        Wire1.begin(gyro_sda, gyro_scl);
+        wire = &Wire1;
+    }
+    else
+    {
+        DBGLN("Starting I2C Gyro on default I2C pins SCL %d, SDA %d", GPIO_PIN_SCL, GPIO_PIN_SDA);
+        wire = &Wire;
+    }
+    return true;
+}
+
 uint8_t IMU_Driver_I2C::readRegister(uint8_t reg)
 {
     uint8_t data = 0;
@@ -54,12 +74,12 @@ uint8_t IMU_Driver_I2C::readRegister(uint8_t reg)
 bool IMU_Driver_I2C::readRegister(uint8_t reg, uint8_t *data, size_t size)
 {
     size_t r = 0;
-    Wire.beginTransmission(m_address);
-    Wire.write(reg);
-    if (Wire.endTransmission() == 0)
+    wire->beginTransmission(m_address);
+    wire->write(reg);
+    if (wire->endTransmission() == 0)
     {
-        Wire.requestFrom(m_address, size);
-        r = Wire.readBytes(data, size);
+        wire->requestFrom(m_address, size);
+        r = wire->readBytes(data, size);
     }
     return r == size;
 }
@@ -67,11 +87,11 @@ bool IMU_Driver_I2C::readRegister(uint8_t reg, uint8_t *data, size_t size)
 void IMU_Driver_I2C::writeRegister(uint8_t reg, uint8_t value)
 {
     uint8_t data = value;
-    Wire.beginTransmission(m_address);
-    Wire.write(reg);
-    Wire.write(&data, 1);
-    Wire.endTransmission();
-    // return (Wire.endTransmission() == 0);
+    wire->beginTransmission(m_address);
+    wire->write(reg);
+    wire->write(&data, 1);
+    wire->endTransmission();
+    // return (wire->endTransmission() == 0);
 }
 
 uint8_t IMU_Driver_SPI::readRegister(uint8_t reg)

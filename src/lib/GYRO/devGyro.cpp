@@ -33,7 +33,7 @@ static bool initialize()
     driver = nullptr;
 
     // I2C Gyros
-    if (i2c_enabled)
+    if (i2c_enabled || (hardware_pin(HARDWARE_gyro_scl) != UNDEF_PIN && hardware_pin(HARDWARE_gyro_sda) != UNDEF_PIN))
     {
         if (driver == nullptr && OPT_HAS_GYRO_MPU6050)
         {
