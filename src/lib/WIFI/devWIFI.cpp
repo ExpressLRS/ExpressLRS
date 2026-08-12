@@ -35,8 +35,8 @@
 #include "options.h"
 #include "helpers.h"
 #include "devButton.h"
-#include "devAnalogVbat.h"
 #if defined(TARGET_RX)
+#include "devAnalogVbat.h"
 #include "VbatCalibration.h"
 #endif
 #if defined(TARGET_RX) && defined(PLATFORM_ESP32)
