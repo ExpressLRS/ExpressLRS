@@ -20,7 +20,7 @@ public:
     void forwardMessage(const crsf_header_t *message) override;
     AsyncWebSocket *getWSserver() const { return WSserver; }
 
-    private:
+private:
     AsyncServer *TCPserver = nullptr;
     AsyncClient *TCPclient = nullptr;
     AsyncWebSocket *WSserver = nullptr;
