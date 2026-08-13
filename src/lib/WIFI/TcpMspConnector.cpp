@@ -7,8 +7,8 @@
 #include "crsf2msp.h"
 #include "msp2crsf.h"
 
-#define TCP_PORT_BETAFLIGHT 5761 //port 5761 as used by BF configurator
-#define WS_ENDPOINT_BETAFLIGHT "/serial"
+#define TCP_PORT_BETAFLIGHT     5761    // port 5761 as used by BF configurator for tcp://xxx connections
+#define WS_ENDPOINT_BETAFLIGHT  "/msp"  // URI path for BF configurator ws://xxx HTTP upgrade connections
 
 TcpMspConnector::TcpMspConnector() : CRSFConnector()
 {
