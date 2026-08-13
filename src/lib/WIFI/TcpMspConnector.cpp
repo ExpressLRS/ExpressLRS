@@ -8,7 +8,7 @@
 #include "msp2crsf.h"
 
 #define TCP_PORT_BETAFLIGHT     5761    // port 5761 as used by BF configurator for tcp://xxx connections
-#define WS_ENDPOINT_BETAFLIGHT  "/msp"  // URI path for BF configurator ws://xxx HTTP upgrade connections
+#define WS_ENDPOINT_MSP_URI     "/msp"  // URI path for BF configurator ws://xxx HTTP upgrade connections
 
 TcpMspConnector::TcpMspConnector() : CRSFConnector()
 {
@@ -23,7 +23,7 @@ void TcpMspConnector::begin()
     TCPserver->onClient(handleNewClient, this);
     TCPserver->begin();
 
-    WSserver = new AsyncWebSocket(WS_ENDPOINT_BETAFLIGHT,
+    WSserver = new AsyncWebSocket(WS_ENDPOINT_MSP_URI,
         [this](AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len) {
             this->wsEvent(server, client, type, arg, data, len);
         });
