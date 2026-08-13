@@ -372,6 +372,10 @@ void TXModuleEndpoint::sendELRSstatus(const crsf_addr_e origin)
     "Baud rate too low",  //critical warning2, changing packet rate and baud rate too low
     ""   //critical warning1, reserved for future use
   };
+  setWarningFlag(LUA_FLAG_MODEL_MATCH, connectionState == connected && connectionHasModelMatch == false);
+  setWarningFlag(LUA_FLAG_CONNECTED, connectionState == connected);
+  setWarningFlag(LUA_FLAG_ISARMED, handset->IsArmed());
+
   auto warningInfo = "";
 
   for (int i = 7; i >= 0; i--)
@@ -385,10 +389,6 @@ void TXModuleEndpoint::sendELRSstatus(const crsf_addr_e origin)
   const uint8_t payloadSize = sizeof(elrsStatusParameter) + strlen(warningInfo) + 1;
   uint8_t buffer[sizeof(crsf_ext_header_t) + payloadSize + 1];
   const auto params = (elrsStatusParameter *)&buffer[sizeof(crsf_ext_header_t)];
-
-  setWarningFlag(LUA_FLAG_MODEL_MATCH, connectionState == connected && connectionHasModelMatch == false);
-  setWarningFlag(LUA_FLAG_CONNECTED, connectionState == connected);
-  setWarningFlag(LUA_FLAG_ISARMED, handset->IsArmed());
 
   params->pktsBad = CRSFHandset::BadPktsCountResult;
   params->pktsGood = htobe16(CRSFHandset::GoodPktsCountResult);
