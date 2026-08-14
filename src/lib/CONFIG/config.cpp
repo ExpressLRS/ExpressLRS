@@ -172,9 +172,6 @@ TxConfig::TxConfig() :
 #if defined(PLATFORM_ESP32)
 void TxConfig::Load()
 {
-#if defined(PLATFORM_ESP8266)
-    m_eeprom.Begin();
-#endif
     m_modified = 0;
 
     // Initialize NVS
