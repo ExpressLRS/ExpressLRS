@@ -139,7 +139,12 @@ def ask_for_firmware(args):
                 products.append(k)
                 print(f"{i}) {k['product_name']}")
             print('Choose a configuration to flash')
-            choice = input()
+            try:
+                choice = input()
+            except EOFError:
+                print('No interactive terminal available. Specify the target on the '
+                      'command line, e.g. --target radiomaster.tx_dual.nomad')
+                exit(1)
             if choice != "":
                 config = products[int(choice)-1]
                 for v in targets:
