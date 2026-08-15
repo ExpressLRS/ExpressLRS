@@ -18,7 +18,7 @@
 
 #define CRSF_CHANNEL_VALUE_EXT_MIN      0       // 880us  -121.1% (with E.Limits on)
 #define CRSF_CHANNEL_VALUE_STD_MIN      172     // 988us  -100% (actual CRSF min is 0 with E.Limits on)
-#define CRSF_CHANNEL_VALUE_1000         191     // 1000us
+#define CRSF_CHANNEL_VALUE_1000         192     // 1000us (192=1000.5, 191=999.87)
 #define CRSF_CHANNEL_VALUE_MID          992     // 1500us center
 #define CRSF_CHANNEL_VALUE_2000         1792    // 2000us
 #define CRSF_CHANNEL_VALUE_STD_MAX      1811    // 2012us +100% (actual CRSF max is 1984 with E.Limits on)
@@ -445,12 +445,15 @@ static inline uint16_t ICACHE_RAM_ATTR N_to_CRSF(uint16_t val, uint16_t max)
 // Convert CRSF to 0-(cnt-1), constrained between 1000us and 2000us
 static inline uint16_t ICACHE_RAM_ATTR CRSF_to_N(uint16_t val, uint16_t cnt)
 {
-    // The span is increased by one to prevent the max val from returning cnt
+    // Both endpoints are returned explicitly, so the span does not need to be
+    // biased to keep the max val from returning cnt. Using the true span also
+    // keeps CRSF_CHANNEL_VALUE_MID exactly on the cnt/2 boundary, since it sits
+    // exactly halfway between CRSF_CHANNEL_VALUE_1000 and CRSF_CHANNEL_VALUE_2000
     if (val <= CRSF_CHANNEL_VALUE_1000)
         return 0;
     if (val >= CRSF_CHANNEL_VALUE_2000)
         return cnt - 1;
-    return (val - CRSF_CHANNEL_VALUE_1000) * cnt / (CRSF_CHANNEL_VALUE_2000 - CRSF_CHANNEL_VALUE_1000 + 1);
+    return (val - CRSF_CHANNEL_VALUE_1000) * cnt / (CRSF_CHANNEL_VALUE_2000 - CRSF_CHANNEL_VALUE_1000);
 }
 
 static inline uint8_t ICACHE_RAM_ATTR CRSF_to_SWITCH3b(uint16_t ch)
