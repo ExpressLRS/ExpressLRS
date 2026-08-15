@@ -60,19 +60,6 @@ uint32_t toBigEndian24(uint32_t value)
 
 }
 
-SerialScorpion_TLM::SerialScorpion_TLM(Stream &outputPort, Stream &inputPort)
-        : SerialIO(&outputPort, &inputPort)
-{
-}
-
-uint32_t SerialScorpion_TLM::sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t *channelData)
-{
-    (void)frameAvailable;
-    (void)frameMissed;
-    (void)channelData;
-    return DURATION_IMMEDIATELY;
-}
-
 void SerialScorpion_TLM::processBytes(uint8_t *bytes, uint16_t size)
 {
     const uint32_t now = millis();

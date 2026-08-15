@@ -14,10 +14,10 @@ class SerialScorpionTlmTestAccess;
 class SerialScorpion_TLM final : public SerialIO
 {
 public:
-    SerialScorpion_TLM(Stream &outputPort, Stream &inputPort);
+    explicit SerialScorpion_TLM(Stream &outputPort, Stream &inputPort) : SerialIO(&outputPort, &inputPort) {}
     ~SerialScorpion_TLM() override = default;
 
-    uint32_t sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t *channelData) override;
+    uint32_t sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t *channelData) override { return DURATION_IMMEDIATELY; }
 
 private:
     friend class SerialScorpionTlmTestAccess;
