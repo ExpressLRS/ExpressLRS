@@ -25,6 +25,7 @@
 #else
 // Fake functions for 8285
 void checkBackpackUpdate() {}
+void feedUSB(const uint8_t *, const uint16_t) {}
 void sendCRSFTelemetryToBackpack(uint8_t *) {}
 void sendMAVLinkTelemetryToBackpack(uint8_t *) {}
 #endif
@@ -1088,7 +1089,8 @@ static void HandleUARTin()
     if (size > 0)
     {
       uint8_t buf[size];
-      TxUSB->readBytes(buf, size);
+      size = TxUSB->readBytes(buf, size);
+      if (connectionState != connected) feedUSB(buf, size);
       apInputBuffer.lock();
       apInputBuffer.pushBytes(buf, size);
       apInputBuffer.unlock();
@@ -1103,7 +1105,8 @@ static void HandleUARTin()
   if (size > 0)
   {
     uint8_t buf[size];
-    TxUSB->readBytes(buf, size);
+    size = TxUSB->readBytes(buf, size);
+    if (connectionState > MODE_STATES) feedUSB(buf, size);
 
     // If the data is MAVLink, then auto change LinkMode and start the radio link
     // since the user might be operating the module as a standalone unit without a handset.
