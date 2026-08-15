@@ -963,36 +963,6 @@ static void CheckReadyToSend()
   }
 }
 
-void OnPowerGetCalibration(mspPacket_t *packet)
-{
-  uint8_t index = packet->readByte();
-  UNUSED(index);
-  int8_t values[PWR_COUNT] = {0};
-  POWERMGNT::GetPowerCaliValues(values, PWR_COUNT);
-  DBGLN("power get calibration value %d",  values[index]);
-}
-
-void OnPowerSetCalibration(mspPacket_t *packet)
-{
-  uint8_t index = packet->readByte();
-  int8_t value = packet->readByte();
-
-  if((index < 0) || (index >= PWR_COUNT))
-  {
-    DBGLN("calibration error index %d out of range", index);
-    return;
-  }
-  hwTimer::stop();
-  delay(20);
-
-  int8_t values[PWR_COUNT] = {0};
-  POWERMGNT::GetPowerCaliValues(values, PWR_COUNT);
-  values[index] = value;
-  POWERMGNT::SetPowerCaliValues(values, PWR_COUNT);
-  DBGLN("power calibration done %d, %d", index, value);
-  hwTimer::resume();
-}
-
 void SendUIDOverMSP()
 {
   MSPDataPackage[0] = MSP_ELRS_BIND;
@@ -1057,25 +1027,7 @@ void ProcessMSPPacket(uint32_t now, mspPacket_t *packet)
 {
 #if defined(PLATFORM_ESP32)
   // Inspect packet for ELRS specific opcodes
-  if (packet->function == MSP_ELRS_FUNC)
-  {
-    uint8_t opcode = packet->readByte();
-
-    CHECK_PACKET_PARSING();
-
-    switch (opcode)
-    {
-    case MSP_ELRS_POWER_CALI_GET:
-      OnPowerGetCalibration(packet);
-      break;
-    case MSP_ELRS_POWER_CALI_SET:
-      OnPowerSetCalibration(packet);
-      break;
-    default:
-      break;
-    }
-  }
-  else if (packet->function == MSP_SET_VTX_CONFIG)
+  if (packet->function == MSP_SET_VTX_CONFIG)
   {
     if (packet->payload[0] < 48) // Standard 48 channel VTx table size e.g. A, B, E, F, R, L
     {
@@ -1293,6 +1245,20 @@ static void setupSerial()
     // Set TxUSB to UART0 default pins so that we can access TxUSB and BackpackOrLogStrm independantly
     TxUSB = new HardwareSerial(1);
     ((HardwareSerial *)TxUSB)->begin(firmwareOptions.uart_baud, SERIAL_8N1, U0RXD_GPIO_NUM, U0TXD_GPIO_NUM);
+  }
+#elif defined(PLATFORM_ESP8266)
+  // ESP8266 has a single hardware UART (UART0). In AirPort mode there is no
+  // CRSF handset (devHandset skips it), so dedicate UART0 to the transparent
+  // AirPort serial. Leaving TxUSB as a NullStream here is why AirPort passes
+  // zero bytes on an ESP8266 TX target.
+  if (firmwareOptions.is_airport)
+  {
+    Serial.begin(firmwareOptions.uart_baud);
+    TxUSB = &Serial;
+  }
+  else
+  {
+    TxUSB = new NullStream();
   }
 #else
   TxUSB = new NullStream();

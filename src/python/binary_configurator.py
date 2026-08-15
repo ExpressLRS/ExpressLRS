@@ -26,6 +26,7 @@ class RegulatoryDomain(Enum):
     eu_868 = 'eu_868'
     au_915 = 'au_915'
     fcc_915 = 'fcc_915'
+    th_920 = 'th_920'
 
     def __str__(self):
         return self.value
@@ -66,6 +67,8 @@ def domain_number(domain):
         return 6
     elif domain == RegulatoryDomain.us_433_wide:
         return 7
+    elif domain == RegulatoryDomain.th_920:
+        return 8
 
 def patch_unified(args, options):
     json_flags = {}
@@ -136,7 +139,12 @@ def ask_for_firmware(args):
                 products.append(k)
                 print(f"{i}) {k['product_name']}")
             print('Choose a configuration to flash')
-            choice = input()
+            try:
+                choice = input()
+            except EOFError:
+                print('No interactive terminal available. Specify the target on the '
+                      'command line, e.g. --target radiomaster.tx_dual.nomad')
+                exit(1)
             if choice != "":
                 config = products[int(choice)-1]
                 for v in targets:
