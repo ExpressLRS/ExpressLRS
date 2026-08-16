@@ -307,7 +307,9 @@ bool AHRS::readAndUpdate()
     if (orientationIsWrong)
         return false;
 
-    auto startTime = micros();
+    static auto last = micros(); // Behaves like Global
+    const auto now = micros();
+
     // Regular READ
     if (!driver->rawRead(&v_accel.x, &v_accel.y, &v_accel.z,
                          &v_gyro.x, &v_gyro.y, &v_gyro.z))
@@ -343,9 +345,7 @@ bool AHRS::readAndUpdate()
     }
 
     // use Mahoney filter
-    static long last = micros(); // Behaves like Global
-    long now = micros();
-    float deltat = ((float)(now - last)) * 1.0e-6; // seconds since last update
+    float deltat = ((float)(now - last)) * 1.0e-6f; // seconds since last update
     last = now;
 
     // Get Gyro in Degrees/sec
@@ -393,10 +393,9 @@ bool AHRS::readAndUpdate()
     acc_rpy[1] = accG.y; // Pitch
     acc_rpy[2] = accG.z; // Yaw
 
-    processingTimeUs = micros() - startTime;
-    maxProcessingTimeUs = max(maxProcessingTimeUs, processingTimeUs);
-
 #ifdef DEBUG_GYRO_STATS
+    processingTimeUs = micros() - now;
+    maxProcessingTimeUs = max(maxProcessingTimeUs, processingTimeUs);
     printGyroStats(now);
 #endif
 
@@ -439,8 +438,6 @@ void AHRS::setupOrientation()
     orientationSignX = orientationList[idx][3];
     orientationSignY = orientationList[idx][4];
     orientationSignZ = orientationList[idx][5];
-
-   
 }
 
 void AHRS::findGravity(int32_t ax, int32_t ay, int32_t az, uint8_t &idx)
@@ -449,7 +446,7 @@ void AHRS::findGravity(int32_t ax, int32_t ay, int32_t az, uint8_t &idx)
     //      idx:  0=X, 1=Y, 2=Z;
     //      sign: 1=gravity is the opposite (normally Z axis is up and give 1)
 
-    float oneG_70percent = driver->acc1G_adc * 0.7;
+    float oneG_70percent = driver->acc1G_adc * 0.7f;
 
     if ((float)ax > oneG_70percent)
     {
@@ -753,7 +750,7 @@ bool AHRS::calibrateAccel(int8_t loops, rx_config_gyro_calibration_t *offsets)
         }
 
         // Remove Gravity
-        float acc1G = driver->acc1G_adc;
+        const float acc1G = driver->acc1G_adc;
         switch (imuOrientationH)
         {
         case 0:
@@ -862,7 +859,7 @@ int AHRS::tick()
     }
 
     // Returned earlier than the ODR Period??
-    long now = micros();
+    const auto now = micros();
     if (now < next_check_us)
     {
         return DURATION_IMMEDIATELY;
