@@ -223,16 +223,15 @@ void AHRS::applyOrientation(VectorInt16 *v)
 //   - wait for a 250ms period of low gyro activity to ensure the craft is not moving
 //   - use a large dcmKpGain value for 500ms to allow the attitude estimate to quickly converge
 //   - reset the gain back to the standard setting
-static float imuCalcKpGain(bool useAcc, const VectorFloat gyro, bool *quartilionReset)
+static float imuCalcKpGain(bool useAcc, const VectorFloat gyro, bool *quartilionReset, u_long currentTimeUs)
 {
     static uint8_t state = 0;
-    static long gyroQuietPeriodTimeEnd_us = 0;
-    static long attitudeResetTimeEnd_us = 0;
+    static u_long gyroQuietPeriodTimeEnd_us = 0;
+    static u_long attitudeResetTimeEnd_us = 0;
 
     float ret = 1.0;
     *quartilionReset = false;
 
-    long currentTimeUs = micros();
     // If gyro activity exceeds the threshold then restart the quiet period.
     // Also, if the attitude reset has been complete and there is subsequent gyro activity then
     // start the reset cycle again.
@@ -252,12 +251,13 @@ static float imuCalcKpGain(bool useAcc, const VectorFloat gyro, bool *quartilion
             attitudeResetTimeEnd_us = currentTimeUs + ATTITUDE_RESET_ACTIVE_TIME * 1000;
             gyroQuietPeriodTimeEnd_us = 0;
             state = 2;
-            //*quartilionReset = true; // Reset Quarterion, so will think that is level, but will fix itself
+            //*quartilionReset = true; // Reset Quaternion, so will think that is level, but will fix itself
         }
     }
 
     if (state == 2)
-    { // In Attitude Reset
+    {
+        // In Attitude Reset
         if (currentTimeUs >= attitudeResetTimeEnd_us)
         {
             gyroQuietPeriodTimeEnd_us = 0;
@@ -368,7 +368,7 @@ bool AHRS::readAndUpdate()
     bool useAcc = isAccelHeathty(accG, &kp, &ki);
 
     bool quartilionReset;
-    kpFactor = imuCalcKpGain(useAcc, gDeg, &quartilionReset);
+    kpFactor = imuCalcKpGain(useAcc, gDeg, &quartilionReset, now);
     kp = kp * kpFactor;
 
     if (quartilionReset)
@@ -872,8 +872,8 @@ int AHRS::tick()
     }
 
     // Update next_check_us. We use the theoretical GyroSampleRate to see how
-    // many uS do we have to wait to try to read again the gyro
-    next_check_us = now + driver->period_us;
+    // many uS do we have to wait to try to read again the gyro less a grace period (50us)
+    next_check_us = now + driver->period_us - 50;
 
     readAndUpdate();
 
