@@ -86,19 +86,7 @@ static int start()
 extern const char *STR_gyroMode[];
 static void send_telemetry()
 {
-    // Get yaw/pitch/roll in decidegrees and convert to uint16_t
-#if 0    
-    uint16_t rpy16[3] = {0};
-    rpy16[GYRO_AXIS_ROLL]   = (uint16_t)(gyro.angle_rpy[GYRO_AXIS_ROLL] * 1800 / M_PI);
-    rpy16[GYRO_AXIS_PITCH]  = (uint16_t)(gyro.angle_rpy[GYRO_AXIS_PITCH] * 1800 / M_PI);
-    rpy16[GYRO_AXIS_YAW]    = (uint16_t)(gyro.angle_rpy[GYRO_AXIS_YAW] * 1800 / M_PI);
-    
-    CRSF_MK_FRAME_T(crsf_sensor_attitude_t)
-    crsfAttitude = {0};
-    crsfAttitude.p.pitch = htobe16(decidegrees2Radians10000(rpy16[GYRO_AXIS_PITCH]));
-    crsfAttitude.p.roll = htobe16(decidegrees2Radians10000(rpy16[GYRO_AXIS_ROLL]));
-    crsfAttitude.p.yaw = htobe16(decidegrees2Radians10000(rpy16[GYRO_AXIS_YAW]));
-#endif
+    // Attitude
     CRSF_MK_FRAME_T(crsf_sensor_attitude_t)
     crsfAttitude = {0};
     crsfAttitude.p.pitch = htobe16(ahrs.angle_rpy[GYRO_AXIS_PITCH] * 10000);
@@ -108,6 +96,8 @@ static void send_telemetry()
     crsfRouter.SetHeaderAndCrc((crsf_header_t *)&crsfAttitude, CRSF_FRAMETYPE_ATTITUDE, CRSF_FRAME_SIZE(sizeof(crsf_sensor_attitude_t)));
     crsfRouter.deliverMessageTo(CRSF_ADDRESS_RADIO_TRANSMITTER, &crsfAttitude.h);
 
+// Don't send RAW Gyro raw data... faster telemetry
+#if 0
     // Gyro
     CRSF_MK_FRAME_T(crsf_sensor_gyro_t)
     crsfGyro = {0};
@@ -127,6 +117,7 @@ static void send_telemetry()
 
     crsfRouter.SetHeaderAndCrc((crsf_header_t *)&crsfGyro, CRSF_FRAMETYPE_GYRO, CRSF_FRAME_SIZE(sizeof(crsf_sensor_gyro_t)));
     crsfRouter.deliverMessageTo(CRSF_ADDRESS_RADIO_TRANSMITTER, &crsfGyro.h);
+#endif
 
     // Flight Mode
     CRSF_MK_FRAME_T(crsf_flight_mode_t)
