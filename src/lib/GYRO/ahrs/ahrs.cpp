@@ -80,6 +80,9 @@ int8_t gyroLpfCutHz = 0;
 static LowpassFilter accFilter[3];
 static LowpassFilter gyroFilter[3];
 
+static unsigned long processingTimeUs = 0;
+static unsigned long maxProcessingTimeUs = 0;
+
 bool AHRS::initialize(IMU_Driver *driver)
 {
     this->driver = driver;
@@ -304,6 +307,7 @@ bool AHRS::readAndUpdate()
     if (orientationIsWrong)
         return false;
 
+    auto startTime = micros();
     // Regular READ
     if (!driver->rawRead(&v_accel.x, &v_accel.y, &v_accel.z,
                          &v_gyro.x, &v_gyro.y, &v_gyro.z))
@@ -389,11 +393,14 @@ bool AHRS::readAndUpdate()
     acc_rpy[1] = accG.y; // Pitch
     acc_rpy[2] = accG.z; // Yaw
 
+    processingTimeUs = micros() - startTime;
+    maxProcessingTimeUs = max(maxProcessingTimeUs, processingTimeUs);
+
 #ifdef DEBUG_GYRO_STATS
     printGyroStats(now);
 #endif
 
-    lastGyroUpdate_us = last;
+    lastGyroUpdate_us = now;
     return true;
 }
 
@@ -414,7 +421,7 @@ void AHRS::setupOrientation()
     }
 
     DBGLN("Orientation H/top: %s", mpuOrientationNames[imuOrientationH]);
-    DBGLN("Orientation V/tail: %s", mpuOrientationNames[imuOrientationV]);
+    DBGLN("Orientation V/nose down: %s", mpuOrientationNames[imuOrientationV]);
 
     // Reverse the Gravity orientation index for vertical, since is nose DOWN instead of UP
     // but logic expect the face to the front, and not the tail
@@ -893,8 +900,8 @@ void AHRS::printGyroStats(long nowMicros)
     int current_rate = 1.0 / ((nowMicros - lastGyroUpdate_us) / 1000000.0);
     update_rate = (update_rate + current_rate) / 2; // Average
 
-    char rate_str[15];
-    sprintf(rate_str, "%4d", update_rate);
+    //char rate_str[15];
+    //sprintf(rate_str, "%4d", update_rate);
 
     char pitch_str[15];
     sprintf(pitch_str, "%6.2f", degrees(angle_rpy[1]));
@@ -933,7 +940,10 @@ void AHRS::printGyroStats(long nowMicros)
     sprintf(bias_z, "%4.3f", o.z);
 
     // Uncomment lines needed for debugging
-    DBGLN("Refresh: %s HZ ", rate_str);
+    DBGLN("**********************");
+    DBGLN("Refresh: %d HZ, Period=%d uS, Theory period = %d uS", update_rate, nowMicros - lastGyroUpdate_us, driver->period_us);
+    DBGLN("Execution duration: Last %d uS, Max %d uS", processingTimeUs, maxProcessingTimeUs);
+    DBGLN("interrupt non_ready_errors=%d  read_errors=%d ", driver->non_ready_errors, read_errors);
     DBGLN("Pitch:%s Roll:%s Yaw:%s", pitch_str, roll_str, yaw_str);
     DBGLN("Q       (w: %f, x: %f, y: %f, z: %f)", q.w, q.x, q.y, q.z);
     DBGLN("Gyro    (x: %s, y: %s, z: %s)", gyro_x, gyro_y, gyro_z);
