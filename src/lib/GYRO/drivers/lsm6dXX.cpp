@@ -184,7 +184,7 @@ bool IMU_LSM6DXX_SPI::initialize()
 
     _spiSettings = SPISettings(10000000, MSBFIRST, SPI_MODE3);
 
-    if (int_pin != 0)
+    if (int_pin != UNDEF_PIN)
     {
         setupInterrupt(int_pin);
     }
@@ -210,7 +210,7 @@ bool IMU_LSM6DXX_SPI::isDataReady()
 
     unsigned long now = micros();
 
-    if (int_pin != 0)
+    if (int_pin != UNDEF_PIN)
     { // Using Interrupt pin??
         bool ready = interruptReceived();
         if (!ready)

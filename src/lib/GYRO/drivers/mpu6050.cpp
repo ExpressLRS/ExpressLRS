@@ -32,7 +32,7 @@ bool IMU_MPU6050::initialize()
 {
     IMU_Driver_I2C::initialize();
     wire->setClock(400000);
-    wire->setTimeOut(5);
+    wire->setTimeOut(2);
     m_address = MPU6050_DEFAULT_ADDRESS; // Defaults is MPU6050_ADDRESS_AD0_LOW (0x68)
 
     DBGLN("Detecting MPU6050 (Address 0x68)");
