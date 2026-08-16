@@ -18,8 +18,6 @@
 
 #pragma once
 
-#include "targets.h"
-
 #define GET_BIT(value, bit) ((value >> bit) & 1)
 
 // LSM6DXX registers (not the complete list)
