@@ -93,7 +93,7 @@ device_affinity_t ui_devices[] = {
   {&AnalogVbat_device, 0},
   {&ServoOut_device, 1},
 #if defined(PLATFORM_ESP32)
-  {&Gyro_device, 1}, // Run it on Core1,  If we run it on Core0, can't get more than 125Hz refresh rate
+  {&Gyro_device, 0}, 
   {&Baro_device, 0}, // must come after AnalogVbat_device to slow updates
 #if !defined(PLATFORM_ESP32_C3)
   {&VTxSPI_device, 0},
