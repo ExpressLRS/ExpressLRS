@@ -91,7 +91,6 @@ void IMU_Driver_I2C::writeRegister(uint8_t reg, uint8_t value)
     wire->write(reg);
     wire->write(&data, 1);
     wire->endTransmission();
-    // return (wire->endTransmission() == 0);
 }
 
 uint8_t IMU_Driver_SPI::readRegister(uint8_t reg)
@@ -114,7 +113,7 @@ bool IMU_Driver_SPI::readRegister(uint8_t reg, uint8_t *data, size_t size)
 
     // IF_INC (auto-increment) needs to be setup in CTRL3_C
     _spi.transfer(reg | SPI_READ_BIT);
-    for (uint8_t i = 0; i < size; i++)
+    for (size_t i = 0; i < size; i++)
     {
         data[i] = _spi.transfer(0xFF);
     }

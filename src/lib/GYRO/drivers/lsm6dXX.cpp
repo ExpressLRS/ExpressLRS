@@ -8,8 +8,6 @@
 #define LSM6DSV16X_ADDRESS_LOW 0x6A // Default
 #define LSM6DSV16X_ADDRESS_HIGH 0x6B
 
-static uint8_t accScaleCode, gyroScaleCode;
-
 static uint8_t lsm6dID = 0;
 
 /******************************
@@ -111,13 +109,13 @@ static bool lsm6dxxAccGyroRead(IMU_Driver *driver, int16_t *ax, int16_t *ay, int
 
     driver->readRegister(LSM6DXX_REG_OUTX_L_G, data, 12);
 
-    *gx = data[0] | static_cast<uint16_t>(data[1] << 8);
-    *gy = data[2] | static_cast<uint16_t>(data[3] << 8);
-    *gz = data[4] | static_cast<uint16_t>(data[5] << 8);
+    *gx = static_cast<int16_t>(data[0] | (data[1] << 8));
+    *gy = static_cast<int16_t>(data[2] | (data[3] << 8));
+    *gz = static_cast<int16_t>(data[4] | (data[5] << 8));
 
-    *ax = data[6] | static_cast<uint16_t>(data[7] << 8);
-    *ay = data[8] | static_cast<uint16_t>(data[9] << 8);
-    *az = data[10] | static_cast<uint16_t>(data[11] << 8);
+    *ax = static_cast<int16_t>(data[6] | (data[7] << 8));
+    *ay = static_cast<int16_t>(data[8] | (data[9] << 8));
+    *az = static_cast<int16_t>(data[10] | (data[11] << 8));
     return true;
 }
 
@@ -149,11 +147,9 @@ static bool lsm6dxxInit(IMU_Driver *driver)
     driver->gyroSampleRate = 833;
     driver->period_us = (1000000 / driver->gyroSampleRate);
 
-    accScaleCode = LSM6DXX_VAL_CTRL1_XL_16G; // Acceleation 16G
     driver->accScaleG = 16 / 32768.0;        //   multiply adc by this to get Gs
-    driver->acc1G_adc = 32768 / 16;          //   1G in adc values
+    driver->acc1G_adc = 32768.0 / 16;        //   1G in adc values
 
-    gyroScaleCode = LSM6DXX_VAL_CTRL2_G_2000DPS;
     driver->gyroScaleDeg = 2000.0 / 32768.0;              //   multiply adc by this to get deg°/s
     driver->gyroScaleRad = radians(driver->gyroScaleDeg); //   multiply adc by this to get rad°/s
 
@@ -168,8 +164,9 @@ const char *IMU_LSM6DXX_SPI::GetMPUName()
         return "LSM6DSO";
     case LSM6DSL_CHIP_ID:
         return "LSM6DSL";
+    default:
+        return "LSM6Dxx";
     }
-    return "LSM6Dxx";
 }
 
 bool IMU_LSM6DXX_SPI::initialize()
@@ -206,12 +203,12 @@ void IMU_LSM6DXX_SPI::start()
 
 bool IMU_LSM6DXX_SPI::isDataReady()
 {
-    static unsigned long last_ready = micros();
-
-    unsigned long now = micros();
+    const auto now = micros();
+    static auto last_ready = micros();
 
     if (int_pin != UNDEF_PIN)
-    { // Using Interrupt pin??
+    {
+        // Using Interrupt pin??
         bool ready = interruptReceived();
         if (!ready)
         {
@@ -251,8 +248,9 @@ const char *IMU_LSM6DXX_I2C::GetMPUName()
         return "LSM6DSO";
     case LSM6DSL_CHIP_ID:
         return "LSM6DSL";
+    default:
+        return "LSM6Dxx";
     }
-    return "LSM6Dxx";
 }
 
 bool IMU_LSM6DXX_I2C::initialize()

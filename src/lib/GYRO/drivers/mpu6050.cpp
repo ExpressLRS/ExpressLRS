@@ -81,7 +81,7 @@ bool IMU_MPU6050::initialize()
 
     accScaleCode = MPU6050_ACCEL_FS_16; // Acceleration 16G
     accScaleG = 16 / 32768.0;           //   multiply adc by this to get Gs
-    acc1G_adc = 32768 / 16;             //   1G in adc value
+    acc1G_adc = 32768.0 / 16;           //   1G in adc value
 
     gyroScaleCode = MPU6050_GYRO_FS_2000;
     gyroScaleDeg = 2000.0 / 32768.0;      //   multiply adc by this to get deg°/s
@@ -135,18 +135,18 @@ bool IMU_MPU6050::rawRead(int16_t *ax, int16_t *ay, int16_t *az, int16_t *gx, in
 {
     uint8_t buffer[14];
 
-    // do the same, but retun error:  mpu->getMotion6(ax, ay, az, gx, gy, gz);
+    // do the same, but return error:  mpu->getMotion6(ax, ay, az, gx, gy, gz);
     // bool readOk = I2Cdev::readBytes(m_address, MPU6050_RA_ACCEL_XOUT_H, 14, buffer, 0) == 14;
-    bool readOk = readRegister(MPU6050_RA_ACCEL_XOUT_H, buffer, 14);
+    const bool readOk = readRegister(MPU6050_RA_ACCEL_XOUT_H, buffer, 14);
 
     if (readOk)
     {
-        *ax = (((int16_t)buffer[0]) << 8) | buffer[1];
-        *ay = (((int16_t)buffer[2]) << 8) | buffer[3];
-        *az = (((int16_t)buffer[4]) << 8) | buffer[5];
-        *gx = (((int16_t)buffer[8]) << 8) | buffer[9];
-        *gy = (((int16_t)buffer[10]) << 8) | buffer[11];
-        *gz = (((int16_t)buffer[12]) << 8) | buffer[13];
+        *ax = static_cast<int16_t>((buffer[0] << 8) | buffer[1]);
+        *ay = static_cast<int16_t>((buffer[2] << 8) | buffer[3]);
+        *az = static_cast<int16_t>((buffer[4] << 8) | buffer[5]);
+        *gx = static_cast<int16_t>((buffer[8] << 8) | buffer[9]);
+        *gy = static_cast<int16_t>((buffer[10] << 8) | buffer[11]);
+        *gz = static_cast<int16_t>((buffer[12] << 8) | buffer[13]);
     }
     else
     {
