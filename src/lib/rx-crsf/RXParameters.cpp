@@ -339,6 +339,7 @@ void RXEndpoint::luaparamGyroOutputCh_Select(propertiesCommon *item, uint8_t arg
     setTextSelectionValue(&luaGyroOutputCh_Mode, gyroChOut->val.output_mode);
     setTextSelectionValue(&luaGyroOutputCh_Master, gyroChOut->val.master);
     setTextSelectionValue(&luaGyroOutputCh_Inverted, gyroChOut->val.inverted);
+  
     // Don't display Master or Inverted options for Mode or Gain functions.
     LUA_FIELD_VISIBLE(luaGyroOutputCh_Master, gyroChOut->val.output_mode != FN_GYRO_MODE && gyroChOut->val.output_mode != FN_GYRO_GAIN);
     LUA_FIELD_VISIBLE(luaGyroOutputCh_Inverted, gyroChOut->val.output_mode != FN_GYRO_MODE && gyroChOut->val.output_mode != FN_GYRO_GAIN);
@@ -1578,7 +1579,10 @@ void RXEndpoint::registerParameters()
             registerParameter(&luaGyroModePos5, [&](propertiesCommon *item, uint8_t arg) { gyroConfig->SetGyroModePos(4, (gyro_mode_t)arg); }, luaGyroModesFolder.common.id);
 
             // ----- Gyro Model->Output
+            #if 0
+            // This was creating a problem at startup.. RX did not boot.. TODO: debug if needed
             luaparamGyroOutputCh_Select(&luaGyroOutputCh_Select.common, luaGyroOutputCh_Select.properties.u.value);
+            #endif
             registerParameter(&luaGyroOutputCh_Select, [&](propertiesCommon *item, uint8_t arg) { luaparamGyroOutputCh_Select(item, arg); }, luaGyroOutputFolder.common.id);
             registerParameter(&luaGyroOutputCh_Mode, [&](propertiesCommon *item, uint8_t arg) { luaparamGyroOutputCh_Mode(item, arg); }, luaGyroOutputFolder.common.id);
             registerParameter(&luaGyroOutputCh_Master, [&](propertiesCommon *item, uint8_t arg) { luaparamGyroOutputCh_Master(item, arg); }, luaGyroOutputFolder.common.id);
