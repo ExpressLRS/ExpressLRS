@@ -47,7 +47,7 @@ static const char *gyroStatus[] = {"Off","IMU Not Detected","Need RX-Orientation
 extern const char* mpuOrientationNames[];
 
 // Must match mixer.h: gyro_output_channel_function_t
-static const char gyroOutputChannelModes[] = "None;Aileron;Elevator;Rudder;Elevon;Elevon_Inv;VTail;VTail_Inv;Mode;Gain";
+static char gyroOutputChannelModes[] = "None;Aileron;Elevator;Rudder;Elevon;Elevon_Inv;VTail;VTail_Inv;Mode;Gain";
 // Must match gyro.h gyro_mode_t
 static const char switch_gyroModes[] = "Off;Rate;Envelope;Auto-Level;Launch;Hover";
 static const char fmodes[] = "Rate;Envelope;Auto-Level;Launch;Hover";
@@ -335,10 +335,28 @@ void RXEndpoint::luaparamGyroOutputCh_Select(propertiesCommon *item, uint8_t arg
 {
     setUint8Value(&luaGyroOutputCh_Select, arg);
     // Reload Dependent Values
-    const rx_config_gyro_channel_t *gyroChOut = gyroConfig->GetGyroChannel(luaGyroOutputCh_Select.properties.u.value - 1);
+    const rx_config_gyro_channel_t *gyroChOut = gyroConfig->GetGyroChannel(arg - 1);
     setTextSelectionValue(&luaGyroOutputCh_Mode, gyroChOut->val.output_mode);
     setTextSelectionValue(&luaGyroOutputCh_Master, gyroChOut->val.master);
     setTextSelectionValue(&luaGyroOutputCh_Inverted, gyroChOut->val.inverted);
+    // Don't display Master or Inverted options for Mode or Gain functions.
+    LUA_FIELD_VISIBLE(luaGyroOutputCh_Master, gyroChOut->val.output_mode != FN_GYRO_MODE && gyroChOut->val.output_mode != FN_GYRO_GAIN);
+    LUA_FIELD_VISIBLE(luaGyroOutputCh_Inverted, gyroChOut->val.output_mode != FN_GYRO_MODE && gyroChOut->val.output_mode != FN_GYRO_GAIN);
+    // Filter out Mode/Gain depending if they are used by another channel.
+    bool includeMode = true;
+    bool includeGain = true;
+    for (int i=0 ; i<GYRO_MAX_CHANNELS ; i++)
+    {
+        const rx_config_gyro_channel_t *gyroCh = gyroConfig->GetGyroChannel(i);
+        if (gyroCh->val.output_mode == FN_GYRO_MODE && i != arg - 1) includeMode = false;
+        if (gyroCh->val.output_mode == FN_GYRO_GAIN && i != arg - 1) includeGain = false;
+    }
+    char *pos = strstr(gyroOutputChannelModes, "VTail_Inv;");
+    pos += 10;
+    *pos = 0;
+    if (includeMode) strcat(pos, "Mode;");
+    else strcat(pos, ";");
+    if (includeGain) strcat(pos, "Gain");
 }
 
 static void luaparamGyroOutputCh_Mode(propertiesCommon *item, uint8_t arg)
@@ -353,6 +371,9 @@ static void luaparamGyroOutputCh_Mode(propertiesCommon *item, uint8_t arg)
     }
     gyroConfig->SetGyroChannelRaw(ch, newCh.raw);
     gyro.reload();
+    // Don't display Master or Inverted options for Mode or Gain functions.
+    LUA_FIELD_VISIBLE(luaGyroOutputCh_Master, arg != FN_GYRO_MODE && arg != FN_GYRO_GAIN);
+    LUA_FIELD_VISIBLE(luaGyroOutputCh_Inverted, arg != FN_GYRO_MODE && arg != FN_GYRO_GAIN);
 }
 
 static void luaparamGyroOutputCh_Master(propertiesCommon *item, uint8_t arg)
@@ -1557,6 +1578,7 @@ void RXEndpoint::registerParameters()
             registerParameter(&luaGyroModePos5, [&](propertiesCommon *item, uint8_t arg) { gyroConfig->SetGyroModePos(4, (gyro_mode_t)arg); }, luaGyroModesFolder.common.id);
 
             // ----- Gyro Model->Output
+            luaparamGyroOutputCh_Select(&luaGyroOutputCh_Select.common, luaGyroOutputCh_Select.properties.u.value);
             registerParameter(&luaGyroOutputCh_Select, [&](propertiesCommon *item, uint8_t arg) { luaparamGyroOutputCh_Select(item, arg); }, luaGyroOutputFolder.common.id);
             registerParameter(&luaGyroOutputCh_Mode, [&](propertiesCommon *item, uint8_t arg) { luaparamGyroOutputCh_Mode(item, arg); }, luaGyroOutputFolder.common.id);
             registerParameter(&luaGyroOutputCh_Master, [&](propertiesCommon *item, uint8_t arg) { luaparamGyroOutputCh_Master(item, arg); }, luaGyroOutputFolder.common.id);
