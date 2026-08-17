@@ -69,14 +69,14 @@ static bool initialize()
     ahrs.initialize(driver);
     gyro.init(&ahrs);
 
+    gyroConfig = new GyroConfig();
+    gyroConfig->Load();
+
     return true;
 }
 
 static int start()
 {
-    gyroConfig = new GyroConfig();
-    gyroConfig->Load();
-
     gyro.start();
     // ahrs.start(); /// Not needed, called from Gyro.start()
 
