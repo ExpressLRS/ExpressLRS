@@ -22,6 +22,7 @@
 #include "devThermal.h"
 #include "devPDET.h"
 #include "devBackpack.h"
+#include "VideoReceiverEndpoint.h"
 #else
 // Fake functions for 8285
 void checkBackpackUpdate() {}
@@ -1425,6 +1426,9 @@ void setup()
     crsfTransmitter.begin();
     crsfRouter.addConnector(&otaConnector);
     crsfRouter.addEndpoint(&crsfTransmitter);
+#if defined(PLATFORM_ESP32)
+    crsfRouter.addEndpoint(&videoReceiver);
+#endif
     crsfRouter.addConnector(&usbConnector);
     // When a CRSF handset is detected, it will add itself to the router
 
