@@ -135,6 +135,19 @@ void MSPV2_SERIAL_SETTINGS_TEST()
     // cout << endl;
 }
 
+// CRSF MSP_WRITE frame to the video receiver, MSPv2 encapsulated (function 0x030E, 6 byte payload)
+const uint8_t CRSF_MSP_WRITE_SET_RTC[] = {0xC8, 0x11, 0x7C, 0x14, 0xEA, 0x50, 0x00, 0x0E, 0x03, 0x06, 0x00, 0x7E, 0x07, 0x13, 0x0D, 0x2D, 0x1E, 0xD1, 0x35};
+const uint8_t MSPV2_SET_RTC[] = {0x24, 0x58, 0x3C, 0x00, 0x0E, 0x03, 0x06, 0x00, 0x7E, 0x07, 0x13, 0x0D, 0x2D, 0x1E, 0xD1};
+
+void CRSF_MSP_WRITE_TEST()
+{
+    // a write is a command to the device, so it must come out as a '$X<' frame
+    crsf2msp.reset();
+    crsf2msp.parse(CRSF_MSP_WRITE_SET_RTC, [](const uint8_t *, const uint32_t){});
+    TEST_ASSERT_EQUAL(sizeof(MSPV2_SET_RTC), crsf2msp.getFrameLen());
+    TEST_ASSERT_EQUAL_HEX8_ARRAY(MSPV2_SET_RTC, crsf2msp.getFrame(), sizeof(MSPV2_SET_RTC));
+}
+
 // Unity setup/teardown
 void setUp()
 {
@@ -155,6 +168,7 @@ int main(int argc, char **argv)
     RUN_TEST(MSPV1_JUMBO_289_TEST);
     RUN_TEST(MSP_BOARD_INFO_81_TEST);
     RUN_TEST(MSPV2_SERIAL_SETTINGS_TEST);
+    RUN_TEST(CRSF_MSP_WRITE_TEST);
 
     UNITY_END();
 
