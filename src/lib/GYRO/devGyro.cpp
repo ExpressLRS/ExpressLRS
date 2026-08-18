@@ -131,13 +131,14 @@ static void send_telemetry()
 
 static int timeout()
 {
-    static long lastTelSent_ms = 0; // Last time we sent telemetry (millis)
+    static u_long lastTelSent_ms = 0; // Last time we sent telemetry (millis)
 
     if (!ahrs.isRunning())
         return 1000; // 1 seconds wait if not running
 
-    if ((millis() - lastTelSent_ms) > 500)
-    { // 500 ms (1/2s) cycle
+    if ((millis() - lastTelSent_ms) > 200)
+    {
+        // 200 ms - 5Hz frequency
         lastTelSent_ms = millis();
         send_telemetry();
     }
