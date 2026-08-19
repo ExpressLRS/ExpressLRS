@@ -51,7 +51,7 @@ export class ContinuousWave extends LitElement {
                             <label for="radio2">Radio 2</label>
                         </div>
                     ` : html``}
-                    <!-- FEATURE:HAS_LR1121 -->
+                    <!-- FEATURE:HAS_DUAL_BAND -->
                     ${elrsState.settings.has_high_band && elrsState.settings.has_low_band && this.data ? html`
                         <div class="mui-checkbox">
                             <input type="checkbox"
@@ -62,7 +62,7 @@ export class ContinuousWave extends LitElement {
                             <label for="optionsSetSubGHz">Set continuous wave center frequency to ${(this.data.center / 1000000)} MHz</label>
                         </div>
                     ` : ''}
-                    <!-- /FEATURE:HAS_LR1121 -->
+                    <!-- /FEATURE:HAS_DUAL_BAND -->
                     <br>
                     <button class="mui-btn mui-btn--primary" ?disabled=${this.started} @click="${this._startCW}">
                         Start Continuous Wave
@@ -132,7 +132,7 @@ export class ContinuousWave extends LitElement {
 
     _updateFreq() {
         this.cwFreq = this.data.center
-        // FEATURE:HAS_LR1121
+        // FEATURE:HAS_DUAL_BAND
         if (elrsState.settings?.has_high_band && elrsState.settings?.has_low_band) {
             if (!this.optionsSetSubGHz || !this.optionsSetSubGHz.checked)
             {
@@ -142,7 +142,7 @@ export class ContinuousWave extends LitElement {
         else if (elrsState.settings?.has_high_band) {
             this.cwFreq = this.data.center2
         }
-        // /FEATURE:HAS_LR1121
+        // /FEATURE:HAS_DUAL_BAND
         this._measured()
     }
 
@@ -152,7 +152,7 @@ export class ContinuousWave extends LitElement {
         this.started = true
         const formdata = new FormData()
         formdata.append('radio', this.radio2?.checked ? 2 : 1)
-        // FEATURE:HAS_LR1121
+        // FEATURE:HAS_DUAL_BAND
         let subGHz = 0
         if (elrsState.settings.has_high_band && elrsState.settings.has_low_band) {
             subGHz = this.optionsSetSubGHz.checked ? 1 : 0
@@ -160,7 +160,7 @@ export class ContinuousWave extends LitElement {
             subGHz = 1
         }
         formdata.append('subGHz', subGHz)
-        // /FEATURE:HAS_LR1121
+        // /FEATURE:HAS_DUAL_BAND
         post('/cw', formdata)
     }
 
@@ -180,6 +180,11 @@ export class ContinuousWave extends LitElement {
         const warn_offset = 100000
         const bad_offset = 125000
         // /FEATURE:HAS_LR1121
+        // FEATURE:HAS_LR2021
+        const xtalNominal = 32000000
+        const warn_offset = 100000
+        const bad_offset = 125000
+        // /FEATURE:HAS_LR2021
 
         if (!this.measured) return
         const calc = (this.measured.value / this.cwFreq) * xtalNominal
