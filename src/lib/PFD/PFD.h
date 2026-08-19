@@ -1,7 +1,5 @@
 #pragma once
-#include <Arduino.h>
-#include <stdio.h>
-#include "../../src/include/targets.h"
+#include "targets.h"
 
 class PFD
 {

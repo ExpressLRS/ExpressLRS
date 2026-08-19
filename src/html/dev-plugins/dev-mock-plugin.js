@@ -31,6 +31,9 @@ export function devMockPlugin() {
         setTimeout(sendResponse, delayMs)
     }
 
+    const hasLowBand = FEATURES.HAS_DUAL_BAND || FEATURES.HAS_SX127X
+    const hasHighBand = FEATURES.HAS_DUAL_BAND || FEATURES.HAS_SX128X
+
     // Basic stub data used by multiple endpoints
     const stubState = {
         settings: {
@@ -41,15 +44,15 @@ export function devMockPlugin() {
             mode: 'AP',
             wifi_dbm: -60,
             custom_hardware: true,
-            has_low_band: true,
-            has_high_band: true,
+            has_low_band: hasLowBand,
+            has_high_band: hasHighBand,
             reg_domain_low: 'EU868',
             reg_domain_high: 'CE_LBT',
             target: "Unified_ESP32_LR1121",
             version: "25.0.0",
             "git-commit": "3468759",
             "module-type": FEATURES.IS_TX ? "TX" : "RX",
-            "radio-type": FEATURES.HAS_SX128X ? "SX128X" : (FEATURES.HAS_LR1121 ? "LR1121" : "SX127X"),
+            "radio-type": FEATURES.HAS_SX128X ? "SX128X" : (FEATURES.HAS_LR1121 ? "LR1121" : (FEATURES.HAS_LR2021 ? "LR2021" : "SX127X")),
         },
         options: {
             customised: true,
