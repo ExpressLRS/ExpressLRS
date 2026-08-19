@@ -245,10 +245,38 @@ export function devMockPlugin() {
                     networkQueryCount = 0
                     if (stubState.settings['module-type'] === 'RX') {
                         stubState.settings.voltage_source_count = voltageSources.length
+                        stubState.settings.has_gps = true
                     } else {
                         delete stubState.settings.voltage_source_count
+                        delete stubState.settings.has_gps
                     }
                     return sendDelayed(PAGE_LOAD_DELAY_MS, () => sendJSON(res, stubState))
+                }
+                if (method === 'GET' && url === '/gps') {
+                    // A u-blox running at 115200 with a 10Hz 3D fix
+                    return sendJSON(res, {
+                        present: true,
+                        state: 4,
+                        baud: 115200,
+                        can_configure: true,
+                        protocol: 2,
+                        ubx_configured: true,
+                        used_valset: true,
+                        nav_interval_ms: 100,
+                        update_interval_ms: 100,
+                        satellites: 18,
+                        fix_type: 3,
+                        fix_valid: true,
+                        lat: 375123456,
+                        lon: -1224567890,
+                        alt_cm: 3520,
+                        speed_kmh100: 1234,
+                        heading100: 27310,
+                        time_valid: true,
+                        year: 2026, month: 8, day: 2,
+                        hour: 14, minute: 25, second: 7,
+                        age_ms: 120,
+                    })
                 }
                 if (method === 'GET' && (url === '/networks.json' || url.startsWith('/networks.json'))) {
                     networkQueryCount++
