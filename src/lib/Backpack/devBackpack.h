@@ -19,6 +19,14 @@ void processPanTiltRollPacket(uint32_t now, const mspPacket_t *packet);
 void checkBackpackUpdate();
 
 /**
+ * @brief Feed USB bytes through to see if the device should start in passthrough update mode
+ *
+ * If a backpack update has been requested then all devices are stopped and the UARTs
+ * are configured for passthrough flashing.
+ */
+void feedUSB(const uint8_t *buf, uint16_t size);
+
+/**
  * @brief send CRSF telemetry packet to the backpack.
  *
  * The CRSF packet is wrapped in an MSP packet of type `MSP_ELRS_BACKPACK_CRSF_TLM`
