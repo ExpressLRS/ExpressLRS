@@ -43,7 +43,6 @@ void sendMAVLinkTelemetryToBackpack(uint8_t *) {}
 
 /// define some libs to use ///
 MSP msp;
-ELRS_EEPROM eeprom;
 TxConfig config;
 Stream *TxUSB;
 
@@ -1399,8 +1398,6 @@ void setup()
 
     handset->registerCallbacks(UARTconnected, firmwareOptions.is_airport ? nullptr : UARTdisconnected);
 
-    eeprom.Begin(); // Init the eeprom
-    config.SetStorageProvider(&eeprom); // Pass pointer to the Config class for access to storage
     config.Load(); // Load the stored values from eeprom
 
     Radio.currFreq = FHSSgetInitialFreq(); //set frequency first or an error will occur!!!

@@ -171,7 +171,6 @@ public:
     void SetLinkMode(uint8_t linkMode);
     void SetModelMatch(bool modelMatch);
     void SetDefaults(bool commit);
-    void SetStorageProvider(ELRS_EEPROM *eeprom);
     void SetVtxBand(uint8_t vtxBand);
     void SetVtxChannel(uint8_t vtxChannel);
     void SetVtxPower(uint8_t vtxPower);
@@ -193,19 +192,18 @@ public:
     bool SetModelId(uint8_t modelId);
 
 private:
-#if !defined(PLATFORM_ESP32)
-    void UpgradeEepromV5ToV6();
-    void UpgradeEepromV6ToV7();
-    void UpgradeEepromV7ToV8();
-#endif
 
     tx_config_t m_config;
-    ELRS_EEPROM *m_eeprom;
     uint32_t     m_modified;
     model_config_t *m_model;
     uint8_t     m_modelId;
 #if defined(PLATFORM_ESP32)
     nvs_handle  handle;
+#else
+    ELRS_EEPROM m_eeprom;
+    void UpgradeEepromV5ToV6();
+    void UpgradeEepromV6ToV7();
+    void UpgradeEepromV7ToV8();
 #endif
 };
 
