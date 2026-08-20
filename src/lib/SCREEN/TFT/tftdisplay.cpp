@@ -424,7 +424,7 @@ void TFTDisplay::displayLinkstats()
     gfx->setCursor(LINKSTATS_COL_SECOND, LINKSTATS_ROW_FOURTH);
     gfx->print(linkStats.uplink_SNR);
     gfx->setCursor(LINKSTATS_COL_SECOND, LINKSTATS_ROW_FIFTH);
-    gfx->print(linkStats.active_antenna);
+    gfx->print(linkStats.active_antenna + 1);
 
     // Downlink Linkstats
     gfx->setCursor(LINKSTATS_COL_THIRD, LINKSTATS_ROW_FIRST);
