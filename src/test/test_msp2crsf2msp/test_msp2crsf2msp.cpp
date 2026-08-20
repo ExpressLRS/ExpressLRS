@@ -135,6 +135,64 @@ void MSPV2_SERIAL_SETTINGS_TEST()
     // cout << endl;
 }
 
+// A CRSF(MSP) chunk whose V2 header declares a 600 byte MSP payload, larger than outBuffer can hold
+// [sync][frame_size][type][dest][src][status][payload...]
+// status: bit4 = new frame, bits5-6 = version (2), bits0-3 = seq
+const uint8_t CRSF_MSP_V2_OVERSIZED[] = {0xc8, 0x0a, 0x7a, 0xc8, 0xea, 0x50, 0x00, 0x64, 0x00, 0x58, 0x02};
+// Same shape for a V1 JUMBO header declaring a 600 byte payload (payload: [0xff][cmd][size lo][size hi])
+const uint8_t CRSF_MSP_JUMBO_OVERSIZED[] = {0xc8, 0x0a, 0x7a, 0xc8, 0xea, 0x30, 0xff, 0x74, 0x58, 0x02, 0x00};
+// A continuation chunk (no new-frame bit, seq 1) with 57 bytes of payload
+const uint8_t CRSF_MSP_CONTINUATION[] = {0xc8, 0x3e, 0x7a, 0xc8, 0xea, 0x41,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+
+static bool overflowFrameEmitted;
+static void overflowRejectTest(const uint8_t *newFrameChunk)
+{
+    overflowFrameEmitted = false;
+    const auto onFrame = [](uint8_t *, uint32_t) { overflowFrameEmitted = true; };
+
+    crsf2msp.parse(newFrameChunk, onFrame);
+    TEST_ASSERT_FALSE(overflowFrameEmitted);
+
+    // continuation chunks after the reject must be ignored, not assembled into a bogus frame,
+    // and must not advance the write index (getFrameLen() is idx + 1, so a reset parser reads 1)
+    crsf2msp.parse(CRSF_MSP_CONTINUATION, onFrame);
+    crsf2msp.parse(CRSF_MSP_CONTINUATION, onFrame);
+    TEST_ASSERT_FALSE(overflowFrameEmitted);
+    TEST_ASSERT_EQUAL_UINT32(1, crsf2msp.getFrameLen());
+
+    // and the parser must recover: a valid frame afterwards round-trips normally
+    runTest(MSP_IDENT, sizeof(MSP_IDENT));
+}
+
+void MSPV2_OVERSIZED_REJECT_TEST()
+{
+    overflowRejectTest(CRSF_MSP_V2_OVERSIZED);
+}
+
+void MSPV1_JUMBO_OVERSIZED_REJECT_TEST()
+{
+    overflowRejectTest(CRSF_MSP_JUMBO_OVERSIZED);
+}
+
+void CRSF_MSP_ERROR_REPLY_TEST()
+{
+    // The FC answers an unsupported command with an MSP error reply, which
+    // arrives with the error bit set in the chunk status byte. It must be
+    // reconstructed as '$M!' and delivered -- dropping it starves the client
+    // of the answer, which reads as a dead command and (via probe timeouts)
+    // disables whole configurator features. Status 0xB0 = error | newframe |
+    // v1 | seq 0; chunk = [size 0][cmd 88].
+    const uint8_t crsfErr[] = {0xC8, 7, 0x7B, 0x12, 0xC8, 0xB0, 0x00, 0x58, 0x00};
+    const uint8_t expect[] = {'$', 'M', '!', 0x00, 0x58, 0x58};
+    bool delivered = false;
+    crsf2msp.parse(crsfErr, [&delivered](const uint8_t *, const uint32_t) { delivered = true; });
+    TEST_ASSERT_TRUE(delivered);
+    TEST_ASSERT_EQUAL_UINT32(sizeof(expect), crsf2msp.getFrameLen());
+    TEST_ASSERT_EQUAL_HEX8_ARRAY(expect, crsf2msp.getFrame(), sizeof(expect));
+}
+
 // Unity setup/teardown
 void setUp()
 {
@@ -155,6 +213,9 @@ int main(int argc, char **argv)
     RUN_TEST(MSPV1_JUMBO_289_TEST);
     RUN_TEST(MSP_BOARD_INFO_81_TEST);
     RUN_TEST(MSPV2_SERIAL_SETTINGS_TEST);
+    RUN_TEST(MSPV2_OVERSIZED_REJECT_TEST);
+    RUN_TEST(MSPV1_JUMBO_OVERSIZED_REJECT_TEST);
+    RUN_TEST(CRSF_MSP_ERROR_REPLY_TEST);
 
     UNITY_END();
 
