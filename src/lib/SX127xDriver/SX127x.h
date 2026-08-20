@@ -24,7 +24,7 @@ public:
 
     ////////////////Configuration Functions/////////////
     SX127xDriver();
-    bool Begin(uint32_t minimumFrequency, uint32_t maximumFrequency);
+    bool Begin();
     void End();
     bool DetectChip(SX12XX_Radio_Number_t radioNumber);
     void Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq, uint8_t preambleLen, uint8_t syncWord, bool InvertIQ, uint8_t _PayloadLength);
