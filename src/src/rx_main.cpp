@@ -11,6 +11,7 @@
 #include "PFD.h"
 #include "dynpower.h"
 #include "freqTable.h"
+#include "data_ul_model_match.h"
 #include "msp.h"
 #include "msptypes.h"
 #include "options.h"
@@ -1237,6 +1238,12 @@ void ICACHE_RAM_ATTR TXdoneISR()
  **/
 void DataUlReceiveComplete()
 {
+    if (!shouldProcessDataUlPayload(DataUlBuffer[0], connectionHasModelMatch))
+    {
+        DataUlReceiver.Unlock();
+        return;
+    }
+
     switch (DataUlBuffer[0])
     {
     case MSP_ELRS_SET_RX_WIFI_MODE: //0x0E
