@@ -4,7 +4,7 @@
 typedef struct
 {
     float sampleRate;          // Hz
-    float stationaryThreshold; // rad per second
+    float stationaryThreshold; // degrees per second
     float stationaryPeriod;    // seconds
 } BiasSettings;
 
@@ -19,6 +19,6 @@ protected:
 
 public:
     void Initialise(const float sampleRate);
-    void Update(VectorFloat gyroscope);
+    void Update(VectorFloat &gyroscope);
     VectorFloat getOffsets();
 };
