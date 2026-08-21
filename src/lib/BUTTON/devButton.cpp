@@ -4,7 +4,6 @@
 #include "button.h"
 #include "config.h"
 #include "helpers.h"
-#include "handset.h"
 
 static Button button1;
 static Button button2;
