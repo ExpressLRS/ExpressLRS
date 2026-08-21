@@ -95,6 +95,12 @@ uint32_t format_attiandrng(float pitch_rad, float roll_rad);
 uint32_t format_param(uint8_t param_id, uint32_t param_value);
 
 /*
+ * Adapted from Ardupilot's AP_Frsky_SPort_Passthrough::calc_rpm()
+ * This is the content of the 0x500A RPM value.
+ */
+uint32_t format_rpm(float rpm1, float rpm2);
+
+/*
  * Adapted from Ardupilot's AP_Frsky_SPort_Passthrough::calc_terrain()
  * This is the content of the 0x500B terrain.
  */

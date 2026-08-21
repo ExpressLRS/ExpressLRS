@@ -1,7 +1,11 @@
 #include "MAVLink.h"
 
 #include "CRSFRouter.h"
-#include "common/mavlink.h"
+// Use the ardupilotmega dialect (superset of common) so ArduPilot-specific
+// messages such as RPM (#226) are known to the frame parser. The per-message
+// CRC_EXTRA table is dialect-specific: a common-only build rejects RPM frames
+// as bad-CRC even though the struct would decode fine.
+#include "ardupilotmega/mavlink.h"
 
 #include "ardupilot_custom_telemetry.h"
 #include "ardupilot_protocol.h"
@@ -109,7 +113,14 @@ void convert_mavlink_to_crsf_telem(crsf_addr_e destination, uint8_t *CRSFinBuffe
             case MAVLINK_MSG_ID_BATTERY_STATUS: {
                 mavlink_battery_status_t battery_status;
                 mavlink_msg_battery_status_decode(&msg, &battery_status);
-                if (battery_status.id != 0) {
+                // Yaapu supports two batteries: BATT_1 (0x5003) and BATT_2 (0x5008).
+                if (battery_status.id > 1) {
+                    break;
+                }
+                if (battery_status.id == 1) {
+                    // Second battery: passthrough only (native CRSF has a single battery
+                    // frame). Same bit-packing as BATT_1, per Ardupilot's calc_batt().
+                    ap_send_crsf_passthrough_single(destination, 0x5008, format_batt1(battery_status.voltages[0], battery_status.current_battery, battery_status.current_consumed));
                     break;
                 }
                 CRSF_MK_FRAME_T(crsf_sensor_battery_t)
@@ -310,6 +321,13 @@ void convert_mavlink_to_crsf_telem(crsf_addr_e destination, uint8_t *CRSFinBuffe
                 mavlink_msg_high_latency2_decode(&msg, &high_latency_data);
                 // send the waypoint message to Yaapu Telemetry Script
                 ap_send_crsf_passthrough_single(destination, 0x500D, format_waypoint(high_latency_data.target_heading, high_latency_data.target_distance, high_latency_data.wp_num));
+                break;
+            }
+            case MAVLINK_MSG_ID_RPM: {
+                mavlink_rpm_t rpm;
+                mavlink_msg_rpm_decode(&msg, &rpm);
+                // send the rpm message to Yaapu Telemetry Script
+                ap_send_crsf_passthrough_single(destination, 0x500A, format_rpm(rpm.rpm1, rpm.rpm2));
                 break;
             }
             }
