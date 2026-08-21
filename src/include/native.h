@@ -41,6 +41,19 @@ public:
     virtual int peek() = 0;
     virtual void flush() = 0;
 
+    size_t readBytes(uint8_t *buffer, size_t length)
+    {
+        size_t count = 0;
+        while (count < length && available() > 0)
+        {
+            const int value = read();
+            if (value < 0)
+                break;
+            buffer[count++] = static_cast<uint8_t>(value);
+        }
+        return count;
+    }
+
     // Print methods
     virtual size_t write(uint8_t c) = 0;
     virtual size_t write(const uint8_t *s, size_t l) = 0;
@@ -95,7 +108,11 @@ inline void delay(int32_t time) {
 }
 
 #define bit(x) (1 << (x))
-inline unsigned long millis() { return 0; }
+inline unsigned long millis() {
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    return static_cast<uint32_t>(tv.tv_sec * (uint64_t)1000 + tv.tv_usec / 1000);
+}
 inline void delayMicroseconds(int delay) { }
 inline char *itoa(int32_t value, char *str, int base) { sprintf(str, "%d", value); return str; }
 inline char *utoa(uint32_t value, char *str, int base) { sprintf(str, "%u", value); return str; }
