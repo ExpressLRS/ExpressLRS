@@ -799,7 +799,7 @@ static selectionParameter luaGyroFMode_UseRate = {
 static selectionParameter luaGyroFMode_StickPri = {
     {"Stick Priority", CRSF_TEXT_SELECTION},
     0, // value
-    "100%;50%;25%",
+    "100%;75%;50%;25%",
     STR_EMPTYSPACE
 };
 
@@ -1043,8 +1043,8 @@ static int16Parameter luaMappingChannelLimitMin = {
     {"Limit Min us", CRSF_UINT16},
     {
         {
-            900,  // value
-            900,  // min
+            GYRO_US_MIN, // value
+            GYRO_US_MIN, // min
             1501, // max
         }
     },
@@ -1055,9 +1055,9 @@ static int16Parameter luaMappingChannelLimitMax = {
     {"Limit Max us", CRSF_INT16},
     {
         {
-            2135, // value
+            GYRO_US_MAX, // value
             1501, // min
-            2135, // max
+            GYRO_US_MAX, // max
         }
     },
     STR_US
