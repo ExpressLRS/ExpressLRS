@@ -52,13 +52,12 @@ void BiasFilter::Initialise(const float sampleRate)
 }
 
 /**
- * @brief Updates the bias algorithm and returns the offset-corrected
- * gyroscope. This function must be called for every gyroscope sample at the
- * configured sample rate.
- * @param gyroscope Gyroscope in radians per second.
- * @return Offset-corrected gyroscope in radians per second.
+ * @brief Updates the bias estimate and applies it to the gyroscope sample.
+ * This function must be called for every gyroscope sample at the configured
+ * sample rate.
+ * @param gyroscope Gyroscope in degrees per second, corrected in place.
  */
-void BiasFilter::Update(VectorFloat gyroscope)
+void BiasFilter::Update(VectorFloat &gyroscope)
 {
     // Apply gyroscope offset
     gyroscope.x -= offset.x;
