@@ -165,11 +165,11 @@ void RateController::initialize(gyro_mode_t mode)
 void RateController::calculate_stick_pri(float input_rpt[])
 {
     // Modulate the correction depending on how much axis stick command
-    // The smaller the stick pri, the faster the gyro will stop conpensating.
+    // The smaller the stick pri, the faster the gyro will stop compensating.
     // Example:  StickPri=100%, if the stick is at 50% to the side, the gyro only contribute 50% of the movement
     // Example:  StickPri=75%, if the stick is at 50% to the side, the gyro only contribute 33% of the movement
 
-    float stickWeight = 100 / stickPriNum;
+    float stickWeight = 100.0f / (float)stickPriNum;
 
     for (int8_t axis = 0; axis < 3; axis++)
     {
