@@ -3,7 +3,7 @@
 
 #include "CRSFParameters.h"
 
-#define MAX_CRSF_PARAMETERS 75
+#define MAX_CRSF_PARAMETERS 100
 
 class CRSFEndpoint {
 public:

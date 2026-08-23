@@ -285,6 +285,14 @@ void CRSFEndpoint::registerParameter(void *definition, const parameterHandlerCal
     // Add the new parameter definition to the list
     const auto p = (propertiesCommon *)definition;
     lastParameter++;
+#if defined(DEBUG_LOG)
+    if (lastParameter >= MAX_CRSF_PARAMETERS)
+    {
+        DBGLN("Too many Lua Parameters!");
+        delay(2000);
+        ESP.restart();
+    }
+#endif
     p->id = lastParameter;
     p->parent = parent;
     paramDefinitions[lastParameter] = p;
