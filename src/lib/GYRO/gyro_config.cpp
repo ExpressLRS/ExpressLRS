@@ -32,12 +32,15 @@ void GyroConfig::Load()
     nvs_get_u32(handle, "version", &version);
     DBGLN("Gyro Config: version %u", version);
 
-    // Can't downgrade when flashing a previous version, just use defaults.
+    // A newer configuration cannot be safely downgraded; use defaults.
     if (version > GYRO_CONFIG_VERSION)
     {
         SetDefaults(true);
         return;
     }
+
+    // Missing NVS keys inherit the current defaults.
+    SetDefaults(false);
 
     uint32_t value32;
     uint64_t value64;
@@ -94,10 +97,38 @@ void GyroConfig::Load()
 
     if (version != GYRO_CONFIG_VERSION)
     {
+        if (version == 8) {
+            Upgrade8To9();
+            version = 9;
+        }
+
+
+        m_config.configVersion = GYRO_CONFIG_VERSION;
         m_modified |= EVENT_CONFIG_VERSION_CHANGED;
         Commit();
     }
 }
+
+void GyroConfig::Upgrade8To9() 
+{
+        const gyro_mode_t oldPos3 = (gyro_mode_t)m_config.gyroModeSwitch.val.pos3;
+        const gyro_mode_t oldPos4 = (gyro_mode_t)m_config.gyroModeSwitch.val.pos4;
+        const gyro_mode_t oldPos5 = (gyro_mode_t)m_config.gyroModeSwitch.val.pos5;
+        SetGyroModePos(3, oldPos3);
+        SetGyroModePos(4, oldPos4);
+        SetGyroModePos(5, oldPos5);
+        SetGyroModePositions(6);
+
+
+        // Move Global Gain factor to Flight Mode Rate
+        auto gainF = m_config.global.val.deprecated_gainFactor;
+        if (gainF > 0) {
+            rx_config_gyro_fmode_t *fm = (rx_config_gyro_fmode_t *) GetGyroFMode(GYRO_MODE_RATE);
+            fm->val.gainFactor = gainF;
+            m_config.global.val.deprecated_gainFactor = 0;
+        }
+}
+
 
 uint32_t
 GyroConfig::Commit()
@@ -110,8 +141,8 @@ GyroConfig::Commit()
 
 #define SET_IF_CHAGED(get, set, key, oldValue, newValue) \
     {                                                    \
-        get(handle, key, &oldValue);                     \
-        if (oldValue != newValue)                        \
+        if (get(handle, key, &oldValue) != ESP_OK ||         \
+            oldValue != newValue)                           \
         {                                                \
             set(handle, key, newValue);                  \
             changes++;                                   \
@@ -186,8 +217,7 @@ void GyroConfig::SetDefaults(bool commit)
     m_config.configVersion = GYRO_CONFIG_VERSION;
     SetGyroEnabled(false);
     SetGyroOrientation(6, 6); // 6=No orientation Set
-    SetGyroGainFactor(GYRO_GAIN_FACTOR_1X);
-
+    
     // Configure Limits
     for (unsigned int ch = 0; ch < PWM_MAX_CHANNELS; ch++)
     {
@@ -218,16 +248,14 @@ void GyroConfig::SetDefaults(bool commit)
         SetGyroChannel(ch, FN_NONE, false, false);
     }
 
-    // Configure Gyro Switch
-    for (int p = 0; p < 5; p++)
+    // Configure a typical three-position gyro switch.
+    for (int p = 0; p < 6; p++)
     {
         SetGyroModePos(p, GYRO_MODE_OFF);
     }
-    SetGyroModePos(0, GYRO_MODE_OFF);
-    SetGyroModePos(1, GYRO_MODE_OFF);
-    SetGyroModePos(2, GYRO_MODE_RATE);
-    SetGyroModePos(3, GYRO_MODE_OFF);
-    SetGyroModePos(4, GYRO_MODE_LEVEL);
+    SetGyroModePos(1, GYRO_MODE_RATE);
+    SetGyroModePos(2, GYRO_MODE_LEVEL);
+    SetGyroModePositions(3);
 
     for (int fm = GYRO_MODE_RATE; fm <= GYRO_MODE_LAST_ACTIVE; fm++)
     {
@@ -239,6 +267,7 @@ void GyroConfig::SetDefaults(bool commit)
 
         // Only Rate
         tmp.val.stickPri = STICK_PRIORITY_100;
+        tmp.val.gainFactor = GYRO_GAIN_FACTOR_1X;
 
         // For Auto-Level/Envelope
         tmp.val.maxAnglePitch = 40;
@@ -261,10 +290,6 @@ void GyroConfig::SetDefaults(bool commit)
         m_modified = EVENT_CONFIG_GYRO_CHANGED;
         Commit();
     }
-    else
-    {
-        m_modified = 0;
-    }
 }
 
 void GyroConfig::debugGyroConfiguration()
@@ -286,7 +311,7 @@ void GyroConfig::SetGyroChannel(uint8_t ch, uint8_t output_mode, bool master, bo
         return;
 
     rx_config_gyro_channel_t *config = &m_config.gyroChannels[ch];
-    rx_config_gyro_channel_t newConfig;
+    rx_config_gyro_channel_t newConfig = {};
     newConfig.val.output_mode = output_mode;
 
     newConfig.val.inverted = inverted;
@@ -328,15 +353,33 @@ void GyroConfig::SetGyroFModeRaw(gyro_mode_t fm, uint64_t raw)
     m_modified = EVENT_CONFIG_GYRO_CHANGED;
 }
 
+gyro_mode_t GyroConfig::GetGyroMode(uint8_t pos) const
+{
+    switch (pos)
+    {
+    case 0:
+        return (gyro_mode_t)m_config.gyroModeSwitch.val.pos1;
+    case 1:
+        return (gyro_mode_t)m_config.gyroModeSwitch.val.pos2;
+    case 2:
+        return (gyro_mode_t)m_config.gyroModeSwitch.val.pos3;
+    case 3:
+        return (gyro_mode_t)m_config.gyroModeSwitch.val.pos4;
+    case 4:
+        return (gyro_mode_t)m_config.gyroModeSwitch.val.pos5;
+    case 5:
+        return (gyro_mode_t)m_config.gyroModeSwitch.val.pos6;
+    default:
+        return GYRO_MODE_OFF;
+    }
+}
+
 void GyroConfig::SetGyroModePos(uint8_t pos, gyro_mode_t mode)
 {
-    if (pos > 4)
+    if (pos >= 6)
         return;
 
-    rx_config_gyro_mode_pos_t *modes = &m_config.gyroModeSwitch;
-    rx_config_gyro_mode_pos_t newModes;
-    newModes.raw = modes->raw;
-
+    rx_config_gyro_mode_pos_t newModes = m_config.gyroModeSwitch;
     switch (pos)
     {
     case 0:
@@ -354,11 +397,24 @@ void GyroConfig::SetGyroModePos(uint8_t pos, gyro_mode_t mode)
     case 4:
         newModes.val.pos5 = mode;
         break;
+    case 5:
+        newModes.val.pos6 = mode;
+        break;
     }
-    if (modes->raw == newModes.raw)
+    if (m_config.gyroModeSwitch.raw == newModes.raw)
         return;
 
-    modes->raw = newModes.raw;
+    m_config.gyroModeSwitch.raw = newModes.raw;
+    m_modified = EVENT_CONFIG_GYRO_CHANGED;
+}
+
+void GyroConfig::SetGyroModePositions(uint8_t positions)
+{
+    if ((positions < 2 || positions > 6) ||
+        m_config.gyroModeSwitch.val.positions == positions)
+        return;
+
+    m_config.gyroModeSwitch.val.positions = positions;
     m_modified = EVENT_CONFIG_GYRO_CHANGED;
 }
 
@@ -419,15 +475,6 @@ void GyroConfig::SetGyroEnabled(bool value)
     }
 }
 
-void GyroConfig::SetGyroGainFactor(gyro_gain_factor_t value)
-{
-    if (m_config.global.val.gainFactor != value)
-    {
-        m_config.global.val.gainFactor = value;
-        m_modified = EVENT_CONFIG_GYRO_CHANGED;
-    }
-}
-
 void GyroConfig::SetAccelCalibration(uint16_t x, uint16_t y, uint16_t z)
 {
     rx_config_gyro_calibration_t *accel = &m_config.accelCalibration;
@@ -456,7 +503,7 @@ void GyroConfig::SetPwmChannelLimits(uint8_t ch, uint16_t min, uint16_t max, uin
         return;
 
     rx_config_pwm_limits_t *pwm = &m_config.pwmLimits[ch];
-    rx_config_pwm_limits_t new_limits;
+    rx_config_pwm_limits_t new_limits = {};
     new_limits.val.min = min;
     new_limits.val.max = max;
     new_limits.val.mid = mid;
@@ -469,7 +516,6 @@ void GyroConfig::SetPwmChannelLimits(uint8_t ch, uint16_t min, uint16_t max, uin
 
     pwm->raw = new_limits.raw;
     m_modified = EVENT_CONFIG_GYRO_CHANGED;
-    Commit();
 }
 
 void GyroConfig::SetPwmChannelLimitsRaw(uint8_t ch, uint64_t raw)
@@ -485,6 +531,20 @@ void GyroConfig::SetPwmChannelLimitsRaw(uint8_t ch, uint64_t raw)
     // DBGLN("*** Stored new PWM Limits for channel %d: Min: %d Max: %d Center: %d",
     //       ch, (uint16_t) pwm->val.min, (uint16_t) pwm->val.max, (uint16_t) pwm->val.mid);
     m_modified = EVENT_CONFIG_GYRO_CHANGED;
+}
+
+void GyroConfig::ValidateMadwick() 
+{
+    // Validate invalid PI for Madgwick 
+    const rx_config_gyro_PID_t *madgwickPI = GetGyroPID(GYRO_PID_GROUP_MADGWICK, GYRO_AXIS_ROLL);
+    if (madgwickPI->val.p < 10) 
+    {
+        SetGyroPIDRate(GYRO_PID_GROUP_MADGWICK, GYRO_AXIS_ROLL, GYRO_RATE_VARIABLE_P, 10);
+    }
+    if (madgwickPI->val.p > 60) 
+    {
+        SetGyroPIDRate(GYRO_PID_GROUP_MADGWICK, GYRO_AXIS_ROLL, GYRO_RATE_VARIABLE_P, 60);
+    }
 }
 
 #endif

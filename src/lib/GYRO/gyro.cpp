@@ -102,6 +102,12 @@ static float channel_us(uint8_t ch)
     return CRSF_to_US(crsfVal);
 }
 
+static uint16_t channel_crsf(uint8_t ch)
+{
+    const rx_config_pwm_t *chConfig = config.GetPwmChannel(ch);
+    return ChannelData[chConfig->val.inputChannel];
+}
+
 static float channel_command(uint8_t ch)
 {
     const rx_config_pwm_t *chConfig = config.GetPwmChannel(ch);
@@ -135,6 +141,22 @@ void Gyro::start()
     DBGLN("Gyro Start");
     initialized = false;
     ahrs->start();
+    reloadConfig();
+
+#ifdef GYRO_BOOT_JITTER
+    if (first_start && (connectionState == connected))
+    {
+        boot_jitter_times = 0;
+        boot_jitter_time = 0;
+        first_start = false;
+    }
+#endif
+}
+
+void Gyro::reloadConfig()
+{
+    initialized = false;
+    mode_position = -1;
     if (!gyroConfig->GetGyroEnabled())
         return; // not enabled
     if (ahrs->getImuDriver() == nullptr)
@@ -143,24 +165,6 @@ void Gyro::start()
     gyro_mode = GYRO_MODE_OFF;
     learn_state = GYRO_LEARN_OFF;
     initialized = ahrs->isRunning() && !isStickCalibrationNeeded();
-
-    gain_factor = 1.0;
-    gyro_gain_factor_t gainFactorEnum = gyroConfig->GetGyroGainFactor();
-    switch (gainFactorEnum)
-    {
-    case GYRO_GAIN_FACTOR_0_5X:
-        gain_factor = 0.5;
-        break;
-    case GYRO_GAIN_FACTOR_1X:
-        gain_factor = 1.0;
-        break;
-    case GYRO_GAIN_FACTOR_1_5X:
-        gain_factor = 1.5;
-        break;
-    case GYRO_GAIN_FACTOR_2X:
-        gain_factor = 2;
-        break;
-    }
 
     mode_controller = nullptr;
     mode_ch = GetGyroFunChannelNumber(FN_GYRO_MODE);
@@ -184,17 +188,6 @@ void Gyro::start()
         pitch_ch = -1; // Ignore the individual inputs, will use VTail as Pitch/Yaw
         yaw_ch = -1;
     }
-
-#ifdef GYRO_BOOT_JITTER
-    if (first_start && (connectionState == connected))
-    {
-        boot_jitter_times = 0;
-        boot_jitter_time = 0;
-        first_start = false;
-    }
-#endif
-
-    // DBGLN("Gyro Start Completed");
 }
 
 gyro_status_t Gyro::getStatus()
@@ -203,11 +196,51 @@ gyro_status_t Gyro::getStatus()
         return GYRO_STATUS_OFF;
     if (ahrs->getImuDriver() == nullptr)
         return GYRO_STATUS_NOT_DETECTED;
-    if (!ahrs->isRunning())
+    if ((getStatusBits() & GYRO_STATUS_BIT_ORIENTATION) == 0)
         return GYRO_STATUS_NEED_RX_ORIENTATION;
-    if (isStickCalibrationNeeded())
+    if ((getStatusBits() & GYRO_STATUS_BIT_STICK_CAL) == 0)
         return GYRO_STATUS_NEED_STICK_CAL;
     return GYRO_STATUS_OK;
+}
+
+gyro_mode_t Gyro::getMode()
+{
+    return gyro_mode;
+}
+
+uint8_t Gyro::getStatusBits()
+{
+    uint8_t bits = 0;
+
+    const rx_config_gyro_calibration_t *accelCalibration = gyroConfig->GetAccelCalibration();
+    const rx_config_gyro_calibration_t *gyroCalibration = gyroConfig->GetGyroCalibration();
+    if (accelCalibration->raw != 0 && gyroCalibration->raw != 0)
+        bits |= GYRO_STATUS_BIT_LEVEL_CAL;
+
+    if (gyroConfig->GetGyroOrientationH() <= 5 && gyroConfig->GetGyroOrientationV() <= 5)
+        bits |= GYRO_STATUS_BIT_ORIENTATION;
+
+    if (!isStickCalibrationNeeded())
+        bits |= GYRO_STATUS_BIT_STICK_CAL;
+
+    return bits;
+}
+
+const char *Gyro::getNextAction()
+{
+    if (!gyroConfig->GetGyroEnabled())
+        return "Enable gyro";
+    if (ahrs->getImuDriver() == nullptr)
+        return "IMU not detected";
+
+    const uint8_t bits = getStatusBits();
+    if ((bits & GYRO_STATUS_BIT_ORIENTATION) == 0)
+        return "Run Orientation Wizard";
+    if ((bits & GYRO_STATUS_BIT_LEVEL_CAL) == 0)
+        return "Run Level Cal";
+    if ((bits & GYRO_STATUS_BIT_STICK_CAL) == 0)
+        return "Run Stick Calibration";
+    return "Ready";
 }
 
 void Gyro::calibrate()
@@ -219,34 +252,13 @@ void Gyro::calibrate()
     initialized = ahrs->isRunning();
 }
 
-void Gyro::detect_mode(uint16_t us)
+void Gyro::detect_mode(uint16_t crsf)
 {
-    const rx_config_gyro_mode_pos_t *modes = gyroConfig->GetGyroModePos();
-    const uint16_t width = (GYRO_US_MAX - GYRO_US_MIN) / 5;
-    uint8_t channel_position = (us - GYRO_US_MIN) / width;
-    channel_position = channel_position > 4 ? 4 : channel_position;
-    gyro_mode_t selected_mode;
-    switch (channel_position)
-    {
-    case 0:
-        selected_mode = (gyro_mode_t)modes->val.pos1;
-        break;
-    case 1:
-        selected_mode = (gyro_mode_t)modes->val.pos2;
-        break;
-    case 2:
-        selected_mode = (gyro_mode_t)modes->val.pos3;
-        break;
-    case 3:
-        selected_mode = (gyro_mode_t)modes->val.pos4;
-        break;
-    case 4:
-        selected_mode = (gyro_mode_t)modes->val.pos5;
-        break;
-    default:
-        selected_mode = GYRO_MODE_OFF;
-        break;
-    }
+    if (crsf == CRSF_CHANNEL_VALUE_UNSET)
+        return;
+
+    mode_position = CRSF_to_N(crsf, gyroConfig->GetGyroModePositions());
+    const gyro_mode_t selected_mode = gyroConfig->GetGyroMode(mode_position);
     if (gyro_mode != selected_mode)
         switch_mode(selected_mode);
 }
@@ -272,7 +284,6 @@ void Gyro::reload()
 void Gyro::switch_mode(gyro_mode_t mode)
 {
     DBGLN("Gyro: Switching mode=[%s]", STR_gyroMode[mode]);
-    DBGLN("Gyro: Master Gain=[%f] * Gain_Factor=[%f] = %f", master_gain, gain_factor, master_gain * gain_factor);
 
     gyro_mode = mode;
     mode_controller = mode_controllers[mode];
@@ -286,7 +297,6 @@ void Gyro::switch_mode(gyro_mode_t mode)
 void Gyro::detect_gain(uint16_t us)
 {
     master_gain = (us_command_to_float(us) + 1) / 2;
-    // master_gain = (float(us - GYRO_US_MIN) / (GYRO_US_MAX - GYRO_US_MIN)) * 500;
 }
 
 void Gyro::mixerInput()
@@ -300,7 +310,7 @@ void Gyro::mixerInput()
     pid_delay = micros();
 
     if (mode_ch >= 0)
-        detect_mode(channel_us(mode_ch));
+        detect_mode(channel_crsf(mode_ch));
     if (mode_controller == nullptr)
         return;
 
@@ -461,6 +471,11 @@ void Gyro::learn_sticks(uint8_t ch, uint16_t us)
             ch_limit->val.max = us;
         }
     }
+}
+
+const rx_config_pwm_limits_t *Gyro::getStickCalibrationLimits(uint8_t channel) const
+{
+    return channel < PWM_MAX_CHANNELS ? &temp_limits[channel] : nullptr;
 }
 
 void Gyro::StickCenterCalibration()

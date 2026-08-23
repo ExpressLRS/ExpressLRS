@@ -4,7 +4,7 @@
 #include "gyro_types.h"
 #include <nvs.h>
 
-#define GYRO_CONFIG_VERSION 8U
+#define GYRO_CONFIG_VERSION 9U
 
 ///////////////////////////////////////////////////
 
@@ -28,11 +28,12 @@ public:
     const rx_config_gyro_fmode_t *GetGyroFMode(gyro_mode_t fm) const { return (fm >= GYRO_MODE_RATE) ? &m_config.gyroFModes[fm - GYRO_MODE_RATE] : nullptr; }
 
     const rx_config_gyro_mode_pos_t *GetGyroModePos() const { return &m_config.gyroModeSwitch; }
+    gyro_mode_t GetGyroMode(uint8_t pos) const;
+    uint8_t GetGyroModePositions() const { return m_config.gyroModeSwitch.val.positions; }
     const uint8_t GetGyroOrientationH() const { return m_config.global.val.orientationH; }
     const uint8_t GetGyroOrientationV() const { return m_config.global.val.orientationV; }
     const bool GetGyroEnabled() const { return m_config.global.val.gyroEnabled; }
     const uint8_t GetGyroConfigVersion() const { return m_config.configVersion; }
-    const gyro_gain_factor_t GetGyroGainFactor() const { return (gyro_gain_factor_t)m_config.global.val.gainFactor; };
     const rx_config_gyro_calibration_t *GetAccelCalibration() const { return &m_config.accelCalibration; }
     const rx_config_gyro_calibration_t *GetGyroCalibration() const { return &m_config.gyroCalibration; }
 
@@ -40,7 +41,6 @@ public:
     void SetDefaults(bool commit);
 
     void SetGyroEnabled(bool);
-    void SetGyroGainFactor(gyro_gain_factor_t factor);
     void SetAccelCalibration(uint16_t x, uint16_t y, uint16_t z);
     void SetGyroCalibration(uint16_t x, uint16_t y, uint16_t z);
     void SetGyroOrientation(uint8_t oh, uint8_t ov);
@@ -52,10 +52,14 @@ public:
     void SetGyroChannelRaw(uint8_t ch, uint32_t raw);
     void SetGyroFModeRaw(gyro_mode_t fm, uint64_t raw);
     void SetGyroModePos(uint8_t pos, gyro_mode_t mode);
+    void SetGyroModePositions(uint8_t positions);
     void SetGyroPIDRate(gyro_pidgroup_t group, gyro_axis_t axis, gyro_rate_variable_t var, uint8_t value);
 
+    void ValidateMadwick();
 private:
     void debugGyroConfiguration();
+    void Upgrade8To9();
+    
 
     nvs_handle handle;
     rx_config_gyro_t m_config{};

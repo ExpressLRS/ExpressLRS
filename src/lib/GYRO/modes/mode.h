@@ -4,6 +4,7 @@
 class Mode_Base
 {
 public:
+    float gainFactor = 1.0;
     virtual void initialize(gyro_mode_t mode);
     virtual void calculate_pid(float input_rpt[], float gyro_rpy[], float ang_rpy[]);
 #if defined(DEBUG_LOG)
@@ -20,4 +21,6 @@ protected:
     float stick_pri[3];
     bool ignore_input[3];
     float corr[3];
+
+    uint8_t stickPriNum = 100;
 };

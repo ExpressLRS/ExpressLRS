@@ -45,12 +45,12 @@ void RateController::applyFModeSettings(gyro_mode_t fm)
 {
     fm_settings.raw = gyroConfig->GetGyroFMode(GYRO_MODE_RATE)->raw; // Default settings for ALL
 
-    auto rate_settings = gyroConfig->GetGyroFMode(fm); // Get settings for Specific flight Mode
+    auto new_fm_settings = gyroConfig->GetGyroFMode(fm); // Get settings for Specific flight Mode
 
     if (fm == GYRO_MODE_LEVEL || fm == GYRO_MODE_ENVELOPE)
     { // Override
-        fm_settings.val.maxAnglePitch = rate_settings->val.maxAnglePitch;
-        fm_settings.val.maxAngleRoll = rate_settings->val.maxAngleRoll;
+        fm_settings.val.maxAnglePitch = new_fm_settings->val.maxAnglePitch;
+        fm_settings.val.maxAngleRoll = new_fm_settings->val.maxAngleRoll;
     }
     else
     {
@@ -60,8 +60,8 @@ void RateController::applyFModeSettings(gyro_mode_t fm)
 
     if (fm == GYRO_MODE_LEVEL || fm == GYRO_MODE_LAUNCH)
     {
-        fm_settings.val.trimPitch = (int8_t)rate_settings->val.trimPitch;
-        fm_settings.val.trimRoll = (int8_t)rate_settings->val.trimRoll;
+        fm_settings.val.trimPitch = (int8_t)new_fm_settings->val.trimPitch;
+        fm_settings.val.trimRoll = (int8_t)new_fm_settings->val.trimRoll;
     }
     else
     {
@@ -71,7 +71,7 @@ void RateController::applyFModeSettings(gyro_mode_t fm)
 
     if (fm != GYRO_MODE_RATE)
     {
-        fm_settings.val.useRate = (int8_t)rate_settings->val.useRate;
+        fm_settings.val.useRate = (int8_t)new_fm_settings->val.useRate;
     }
     else
     {
@@ -87,6 +87,44 @@ void RateController::applyFModeSettings(gyro_mode_t fm)
     {
         DBGLN("Trims: Pitch=%d roll=%d", gyro_trim_decode(fm_settings.val.trimPitch), gyro_trim_decode(fm_settings.val.trimRoll));
     }
+
+    // Convert from Enum Gain Factor to a float number
+    gyro_gain_factor_t gainFactorEnum = (gyro_gain_factor_t) fm_settings.val.gainFactor;
+    switch (gainFactorEnum)
+    {
+    case GYRO_GAIN_FACTOR_0_5X:
+        gainFactor = 0.5;
+        break;
+    case GYRO_GAIN_FACTOR_1X:
+        gainFactor = 1.0;
+        break;
+    case GYRO_GAIN_FACTOR_1_5X:
+        gainFactor = 1.5;
+        break;
+    case GYRO_GAIN_FACTOR_2X:
+        gainFactor = 2;
+        break;
+    }
+
+    // Convert from Enum Stick Pri to a float number
+    gyro_stick_priority_t stickPriEnum =  (gyro_stick_priority_t) fm_settings.val.stickPri;
+    switch (stickPriEnum) {
+    case STICK_PRIORITY_100:
+        stickPriNum = 100;
+        break;
+    case STICK_PRIORITY_75:
+        stickPriNum = 75;
+        break;
+    case STICK_PRIORITY_50:
+        stickPriNum = 50;
+        break;
+    case STICK_PRIORITY_25:
+        stickPriNum = 25;
+        break;
+    } 
+
+    DBGLN("Gyro: Master Gain=[%f] * Gain_Factor=[%f] = %f   StickPr [%d]", 
+            gyro.master_gain, gainFactor, gyro.master_gain * gainFactor, stickPriNum);
 }
 
 bool RateController::isInverted(float angle_rpy[])
@@ -103,7 +141,9 @@ bool RateController::isHighPitch(float angle_rpy[])
 
 void RateController::initialize(gyro_mode_t mode)
 {
-    RateController::mode = mode;
+    this->mode = mode;
+    this->gainFactor = 1.0;
+    this->stickPriNum =  1.0;
 
     float roll_limit = 1.0;
     float pitch_limit = 1.0;
@@ -125,14 +165,20 @@ void RateController::initialize(gyro_mode_t mode)
 void RateController::calculate_stick_pri(float input_rpt[])
 {
     // Modulate the correction depending on how much axis stick command
-    // float stick_gain_div = (1 << stick_priority); // 1,2,4
-    // float percent = (1/stick_gain_div)-fabs(roll_in);
-    // if (percent < 0) percent = 0.0;
+    // The smaller the stick pri, the faster the gyro will stop conpensating.
+    // Example:  StickPri=100%, if the stick is at 50% to the side, the gyro only contribute 50% of the movement
+    // Example:  StickPri=75%, if the stick is at 50% to the side, the gyro only contribute 33% of the movement
 
-    // Modulate the correction depending on how much axis stick command
+    float stickWeight = 100 / stickPriNum;
+
     for (int8_t axis = 0; axis < 3; axis++)
     {
-        stick_pri[axis] = 1 - fabs(input_rpy[axis]);
+        float percent = (1 - fabs(input_rpy[axis] * stickWeight));
+        if (percent < 0) 
+        {
+            percent = 0;
+        }
+        stick_pri[axis] = percent;
     }
 }
 
@@ -160,7 +206,7 @@ void RateController::calculate_pid(float input_rpy[], float gyro_rpy[], float an
     calculate_stick_pri(input_rpy);
 
     // Adjustment Rate, otherwise it becomes too sensitive
-    const float ADJUSTMENT_FACTOR = 0.25 * gyro.gain_factor;
+    const float ADJUSTMENT_FACTOR = 0.25 * gainFactor;
 
     // Desired angular rate is zero
     pid_roll.calculate(0, gyro_rpy[GYRO_AXIS_ROLL] * ADJUSTMENT_FACTOR);
@@ -183,7 +229,7 @@ void _make_gyro_debug_string(PID *pid, char *str)
 void RateController::printState()
 {
     char piddebug[128];
-    DBGLN("TOTAL MASTER GAIN %f.  IMU: Read Err=%d Int_Err=%d", gyro.master_gain * gyro.gain_factor, gyro.ahrs->read_errors, gyro.ahrs->int_errors);
+    DBGLN("TOTAL MASTER GAIN %f.  IMU: Read Err=%d Int_Err=%d", gyro.master_gain * gainFactor, gyro.ahrs->read_errors, gyro.ahrs->int_errors);
     sprintf(piddebug, "Roll:%5.2f Pitch:%5.2f Yaw:%5.2f", radToDeg(gyro.ahrs->angle_rpy[0]), radToDeg(gyro.ahrs->angle_rpy[1]), radToDeg(gyro.ahrs->angle_rpy[2]));
     DBGLN("Angles:  %s", piddebug);
     sprintf(piddebug, "Roll:%5.2f Pitch:%5.2f Yaw:%5.2f", input_rpy[GYRO_AXIS_ROLL], input_rpy[GYRO_AXIS_PITCH], input_rpy[GYRO_AXIS_YAW]);

@@ -7,7 +7,7 @@
 #include "modes/mode.h"
 #include "pid.h"
 
-#define GYRO_CODE_VERSION 1.18
+#define GYRO_CODE_VERSION 1.19
 
 #define GYRO_US_MIN 885 // was 988
 #define GYRO_US_MID 1500
@@ -31,9 +31,12 @@ class Gyro
 public:
     void init(AHRS *ahrs);
     void start();
-
+    void reloadConfig();
     gyro_status_t getStatus();
+    uint8_t getStatusBits();
+    const char *getNextAction();
     gyro_mode_t getMode(void);
+    int8_t getModePosition() const { return mode_position; }
     const char *getMPUName();
     void mixerInput();
     void mixerOutput(uint8_t ch, uint16_t *us);
@@ -44,11 +47,12 @@ public:
     void StickCenterCalibration();
     void StickLimitCalibration(bool done);
     bool isStickCalibrationNeeded();
+    bool isStickCenterCalibrationComplete() const { return learn_state != GYRO_LEARN_SUBTRIMS; }
+    const rx_config_pwm_limits_t *getStickCalibrationLimits(uint8_t channel) const;
 
     unsigned long getIMUReadErrors();
 
     float master_gain = 1.0;
-    float gain_factor = 1.0;
     gyro_mode_t gyro_mode;
     AHRS *ahrs;
     // protected:
@@ -62,6 +66,7 @@ private:
     Mode_Base *mode_controller;
 
     int8_t mode_ch = -1;
+    int8_t mode_position = -1;
     int8_t gain_ch = -1;
     int8_t roll_ch = -1;
     int8_t pitch_ch = -1;

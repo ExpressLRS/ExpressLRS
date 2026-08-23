@@ -22,6 +22,13 @@ typedef enum
     GYRO_STATUS_OK
 } gyro_status_t;
 
+typedef enum : uint8_t
+{
+    GYRO_STATUS_BIT_LEVEL_CAL = 1 << 0,
+    GYRO_STATUS_BIT_ORIENTATION = 1 << 1,
+    GYRO_STATUS_BIT_STICK_CAL = 1 << 2,
+} gyro_status_bits_t;
+
 typedef enum
 { // values are important
     GYRO_GAIN_FACTOR_0_5X,
@@ -147,8 +154,9 @@ typedef union __attribute__((packed)) {
 
             useRate : 1,
             stickPri : 2, // Max 4
+            gainFactor : 3, // 0.5, 1, 1.5, 2
 
-            unused : 11;
+            unused : 8;
     } val;
     uint64_t raw;
 } rx_config_gyro_fmode_t;
@@ -161,7 +169,9 @@ typedef union __attribute__((packed)) {
             pos3 : 4,
             pos4 : 4,
             pos5 : 4,
-            unused : 12;
+            pos6 : 4,
+            positions : 3,
+            unused : 5;
     } val;
     uint32_t raw;
 } rx_config_gyro_mode_pos_t;
@@ -182,8 +192,8 @@ typedef union __attribute__((packed)) {
         uint32_t orientationH : 3,
             orientationV : 3,
             gyroEnabled : 1,
-            gainFactor : 3, // 0.5, 1, 1.5, 2
-            unused : 22;    // More global settings
+            deprecated_gainFactor : 3, // 0.5, 1, 1.5, 2
+            unused : 21;    // More global settings
     } val;
     uint32_t raw;
 } rx_config_gyro_global_t;
