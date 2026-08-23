@@ -80,9 +80,6 @@ int8_t gyroLpfCutHz = 0;
 static LowpassFilter accFilter[3];
 static LowpassFilter gyroFilter[3];
 
-static unsigned long processingTimeUs = 0;
-static unsigned long maxProcessingTimeUs = 0;
-
 bool AHRS::initialize(IMU_Driver *driver)
 {
     this->driver = driver;
