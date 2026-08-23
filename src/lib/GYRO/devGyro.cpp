@@ -10,6 +10,8 @@
 
 #include "drivers/lsm6dXX.h"
 #include "drivers/mpu6050.h"
+#include "drivers/sc7u22.h"
+
 
 extern boolean i2c_enabled;
 extern boolean spi_enabled;
@@ -41,6 +43,16 @@ static bool initialize()
             if (!driver->initialize())
             {
                 delete driver;
+                driver = nullptr;
+            }
+        }
+
+        if (driver == nullptr && OPT_HAS_GYRO_SC7U22)
+        {
+            driver = new IMU_SC7U22();
+            if (driver->initialize()) {
+                DBGLN("devGyro.init(): Detected SC7U22 Gyro");
+            } else {
                 driver = nullptr;
             }
         }
