@@ -26,23 +26,12 @@ unsigned long gyro_debug_time = 0;
 
 #endif // DEBUG_LOG
 
-// Channel Data
-extern uint32_t ChannelData[CRSF_NUM_CHANNELS];
-
 #define GYRO_SUBTRIM_INIT_SAMPLES 10
 static uint8_t stick_subtrim_cycles = 0;
 static rx_config_pwm_limits_t temp_limits[PWM_MAX_CHANNELS] = {};
 
-// Must match mixer.h: gyro_input_channel_function_t
-// static const char* STR_gyroInputChannelMode[] = {"None","Roll","Pitch","Yaw","Mode","Gain"};
-// Must match mixer.h: gyro_output_channel_function_t
-// static const char* STR_gyroOutputChannelMode[] = {"None","Aileron","Elevator","Rudder","Elevon","V Tail"};
 // Must match gyro.h gyro_mode_t
 const char *STR_gyroMode[] = {"Off", "Rate", "Envelope", "Auto-Level", "Launch", "Hover"};
-// Must match gyro_axis_t
-// static const char* STR_gyroAxis[] = {"Roll","Pitch","Yaw"};
-
-// volatile gyro_event_t gyro_event = GYRO_EVENT_NONE;
 
 static Mode_Base *mode_controllers[GYRO_MODE_LAST_ACTIVE + 1] = {};
 static bool first_start = true;
@@ -72,7 +61,7 @@ static bool boot_jitter(uint16_t *us)
 /**
  * Return the first channel matching input `mode` or -1 if not found.
  */
-static int8_t GetGyroFunChannelNumber(gyro_output_channel_function_t mode, gyro_output_channel_function_t mode2 = (gyro_output_channel_function_t)100, uint8_t start_ch = 0)
+static int8_t GetGyroFunChannelNumber(gyro_output_channel_function_t mode, gyro_output_channel_function_t mode2 = (gyro_output_channel_function_t)100, int8_t start_ch = 0)
 {
     int8_t result = -1;
     for (int8_t i = start_ch; i < GYRO_MAX_CHANNELS; i++)
@@ -83,7 +72,7 @@ static int8_t GetGyroFunChannelNumber(gyro_output_channel_function_t mode, gyro_
         {
             if (result == -1)
             {
-                result = i; // Minumun Ch that is that mode, check if it is the master
+                result = i; // Minimum Ch that is that mode, check if it is the master
             }
             if (info->val.master)
             {
@@ -95,7 +84,7 @@ static int8_t GetGyroFunChannelNumber(gyro_output_channel_function_t mode, gyro_
     return result;
 }
 
-static float channel_us(uint8_t ch)
+static uint16_t channel_us(uint8_t ch)
 {
     const rx_config_pwm_t *chConfig = config.GetPwmChannel(ch);
     const unsigned crsfVal = ChannelData[chConfig->val.inputChannel];
@@ -118,11 +107,11 @@ static float channel_command(uint8_t ch)
     return us_command_to_float(ch, us);
 }
 
-void Gyro::init(AHRS *ahrs)
+void Gyro::init(AHRS *_ahrs)
 {
     DBGLN("Gyro Init");
 
-    this->ahrs = ahrs;
+    this->ahrs = _ahrs;
     initialized = false;
     mode_controller = nullptr;
     gyro_mode = GYRO_MODE_OFF;
@@ -176,7 +165,7 @@ void Gyro::reloadConfig()
     elevon1_ch = GetGyroFunChannelNumber(FN_ELEVON, FN_ELEVON_R);
     if (elevon1_ch >= 0)
     {
-        elevon2_ch = GetGyroFunChannelNumber(FN_ELEVON, FN_ELEVON_R, elevon1_ch + 1);
+        elevon2_ch = GetGyroFunChannelNumber(FN_ELEVON, FN_ELEVON_R, (int8_t)(elevon1_ch + 1));
         pitch_ch = -1; // Ignore the individual inputs, will use Elevons as Pitch/Roll
         roll_ch = -1;
     }
@@ -184,7 +173,7 @@ void Gyro::reloadConfig()
     vtail1_ch = GetGyroFunChannelNumber(FN_VTAIL, FN_VTAIL_R);
     if (vtail1_ch >= 0)
     {
-        vtail2_ch = GetGyroFunChannelNumber(FN_VTAIL, FN_VTAIL_R, vtail1_ch + 1);
+        vtail2_ch = GetGyroFunChannelNumber(FN_VTAIL, FN_VTAIL_R, (int8_t)(vtail1_ch + 1));
         pitch_ch = -1; // Ignore the individual inputs, will use VTail as Pitch/Yaw
         yaw_ch = -1;
     }
@@ -257,7 +246,7 @@ void Gyro::detect_mode(uint16_t crsf)
     if (crsf == CRSF_CHANNEL_VALUE_UNSET)
         return;
 
-    mode_position = CRSF_to_N(crsf, gyroConfig->GetGyroModePositions());
+    mode_position = (int8_t)CRSF_to_N(crsf, gyroConfig->GetGyroModePositions());
     const gyro_mode_t selected_mode = gyroConfig->GetGyroMode(mode_position);
     if (gyro_mode != selected_mode)
         switch_mode(selected_mode);
@@ -305,9 +294,10 @@ void Gyro::mixerInput()
     if (!initialized || learn_state != GYRO_LEARN_OFF || !ahrs->isRunning())
         return;
 
-    if ((micros() - pid_delay) < 1000)
+    const uint32_t now = micros();
+    if (now - pid_delay < 1000)
         return; // ~1k PID loop
-    pid_delay = micros();
+    pid_delay = now;
 
     if (mode_ch >= 0)
         detect_mode(channel_crsf(mode_ch));
@@ -321,30 +311,30 @@ void Gyro::mixerInput()
 
     if (roll_ch >= 0)
     {
-        auto info = gyroConfig->GetGyroChannel(roll_ch);
-        input_rpy[GYRO_AXIS_ROLL] = channel_command(roll_ch) * ((info->val.inverted) ? -1 : +1);
+        const auto info = gyroConfig->GetGyroChannel(roll_ch);
+        input_rpy[GYRO_AXIS_ROLL] = channel_command(roll_ch) * (info->val.inverted ? -1.0f : +1.0f);
     }
 
     if (pitch_ch >= 0)
     {
-        auto info = gyroConfig->GetGyroChannel(pitch_ch);
-        input_rpy[GYRO_AXIS_PITCH] = channel_command(pitch_ch) * ((info->val.inverted) ? -1 : +1);
+        const auto info = gyroConfig->GetGyroChannel(pitch_ch);
+        input_rpy[GYRO_AXIS_PITCH] = channel_command(pitch_ch) * (info->val.inverted ? -1.0f : +1.0f);
     }
 
     if (yaw_ch >= 0)
     {
-        auto info = gyroConfig->GetGyroChannel(yaw_ch);
-        input_rpy[GYRO_AXIS_YAW] = channel_command(yaw_ch) * ((info->val.inverted) ? -1 : +1);
+        const auto info = gyroConfig->GetGyroChannel(yaw_ch);
+        input_rpy[GYRO_AXIS_YAW] = channel_command(yaw_ch) * (info->val.inverted ? -1.0f : +1.0f);
     }
 
     // ELEVON LOGIC if no aileron/elevator
     if (elevon1_ch >= 0 && elevon2_ch >= 0)
     {
-        auto i1 = gyroConfig->GetGyroChannel(elevon1_ch);
-        auto i2 = gyroConfig->GetGyroChannel(elevon2_ch);
+        const auto i1 = gyroConfig->GetGyroChannel(elevon1_ch);
+        const auto i2 = gyroConfig->GetGyroChannel(elevon2_ch);
 
-        auto e1 = channel_command(elevon1_ch) * ((i1->val.inverted) ? -1 : +1);
-        auto e2 = channel_command(elevon2_ch) * ((i2->val.inverted) ? -1 : +1);
+        const auto e1 = channel_command(elevon1_ch) * (i1->val.inverted ? -1.0f : +1.0f);
+        const auto e2 = channel_command(elevon2_ch) * (i2->val.inverted ? -1.0f : +1.0f);
 
         // In the Radio, the Elevons are +50% ele, and +/-50% aileron
         // Pitch: The average of the two elevons, since both moves in the same direction.
@@ -362,14 +352,13 @@ void Gyro::mixerInput()
     if (vtail1_ch >= 0 && vtail2_ch >= 0)
     {
         // Try VTail
-        auto i1 = gyroConfig->GetGyroChannel(vtail1_ch);
-        auto i2 = gyroConfig->GetGyroChannel(vtail2_ch);
+        const auto i1 = gyroConfig->GetGyroChannel(vtail1_ch);
+        const auto i2 = gyroConfig->GetGyroChannel(vtail2_ch);
 
-        auto v1 = channel_command(vtail1_ch) * ((i1->val.inverted) ? -1 : +1);
-        auto v2 = channel_command(vtail2_ch) * ((i2->val.inverted) ? -1 : +1);
-        ;
+        const auto v1 = channel_command(vtail1_ch) * (i1->val.inverted ? -1.0f : +1.0f);
+        const auto v2 = channel_command(vtail2_ch) * (i2->val.inverted ? -1.0f : +1.0f);
 
-        input_rpy[GYRO_AXIS_PITCH] = (v1 + v2);
+        input_rpy[GYRO_AXIS_PITCH] = v1 + v2;
         input_rpy[GYRO_AXIS_YAW] = -(v1 - v2);
 
         // TODO? Do we need to invert YAW??  ((i1->val.output_mode==FN_VTAIL_R)?-1:+1);
@@ -397,8 +386,8 @@ void Gyro::mixerInput()
  */
 void Gyro::mixerOutput(uint8_t ch, uint16_t *us)
 {
-    auto ch_info = gyroConfig->GetGyroChannel(ch);
-    auto output_mode = (gyro_output_channel_function_t)ch_info->val.output_mode;
+    const auto ch_info = gyroConfig->GetGyroChannel(ch);
+    const auto output_mode = (gyro_output_channel_function_t)ch_info->val.output_mode;
 
     // Learning Sticks can happen at any time
     if (learn_state != GYRO_LEARN_OFF)
@@ -423,7 +412,7 @@ void Gyro::mixerOutput(uint8_t ch, uint16_t *us)
         return; // Gyro OFF???
 
     // Normalize the µs value to a +-1.0 keeping in mind subtrim and max throws
-    float command = us_command_to_float(ch, *us);
+    const float command = us_command_to_float(ch, *us);
     *us = mode_controller->applyCorrection(ch, output_mode, command, ch_info->val.inverted);
 
     // Limit output values to configured limits when is a channel controlled by Gyro
@@ -454,22 +443,15 @@ void Gyro::learn_sticks(uint8_t ch, uint16_t us)
         // Average over 10 cycles
         if (stick_subtrim_cycles < GYRO_SUBTRIM_INIT_SAMPLES)
         {
-            auto ch_limit = &temp_limits[ch];
+            const auto ch_limit = &temp_limits[ch];
             ch_limit->val.mid = (((ch_limit->val.mid * stick_subtrim_cycles) / stick_subtrim_cycles) + us) / 2;
         }
     }
     else if (learn_state == GYRO_LEARN_LIMIT_START)
     {
-        auto ch_limit = &temp_limits[ch];
-
-        if (us < ch_limit->val.min)
-        {
-            ch_limit->val.min = us;
-        }
-        if (us > ch_limit->val.max)
-        {
-            ch_limit->val.max = us;
-        }
+        const auto ch_limit = &temp_limits[ch];
+        ch_limit->val.min = max((uint16_t)ch_limit->val.min, us);
+        ch_limit->val.max = min((uint16_t)ch_limit->val.max, us);
     }
 }
 
@@ -484,13 +466,12 @@ void Gyro::StickCenterCalibration()
     DBGLN("Gyro: Stick Center Calibration (Init)");
     stick_subtrim_cycles = 0;
 
-    // initialize min,max, mid
-    for (int ch = 0; ch < PWM_MAX_CHANNELS; ch++)
+    // initialize min, max & mid
+    for (auto & ch_limit : temp_limits)
     {
-        auto ch_limit = &temp_limits[ch];
-        ch_limit->val.mid = GYRO_US_MID;
-        ch_limit->val.min = GYRO_US_MID;
-        ch_limit->val.max = GYRO_US_MID;
+        ch_limit.val.mid = GYRO_US_MID;
+        ch_limit.val.min = GYRO_US_MID;
+        ch_limit.val.max = GYRO_US_MID;
     }
 
     learn_state = GYRO_LEARN_SUBTRIMS;
@@ -506,12 +487,12 @@ void Gyro::StickLimitCalibration(bool done)
         // save the Range
         for (int ch = 0; ch < GYRO_MAX_CHANNELS; ch++)
         {
-            auto ch_info = gyroConfig->GetGyroChannel(ch);
-            auto output_mode = (gyro_output_channel_function_t)ch_info->val.output_mode;
+            const auto ch_info = gyroConfig->GetGyroChannel(ch);
+            const auto output_mode = (gyro_output_channel_function_t)ch_info->val.output_mode;
             if (output_mode != FN_NONE && output_mode != FN_GYRO_GAIN && output_mode != FN_GYRO_MODE)
             {
                 // Only moving surfaces
-                auto pwm_limits = &temp_limits[ch];
+                const auto pwm_limits = &temp_limits[ch];
                 DBGLN("Ch%d: Min: %d Max: %d Center: %d",
                       ch, (uint16_t)pwm_limits->val.min, (uint16_t)pwm_limits->val.max, (uint16_t)pwm_limits->val.mid);
                 gyroConfig->SetPwmChannelLimitsRaw(ch, pwm_limits->raw);
@@ -532,15 +513,16 @@ bool Gyro::isStickCalibrationNeeded()
 
     for (int ch = 0; ch < PWM_MAX_CHANNELS; ch++)
     {
-        auto ch_info = gyroConfig->GetGyroChannel(ch);
-        auto output_mode = (gyro_output_channel_function_t)ch_info->val.output_mode;
-        auto limits = gyroConfig->GetPwmChannelLimits(ch);
+        const auto ch_info = gyroConfig->GetGyroChannel(ch);
+        const auto output_mode = (gyro_output_channel_function_t)ch_info->val.output_mode;
+        const auto limits = gyroConfig->GetPwmChannelLimits(ch);
         if (output_mode != FN_NONE && output_mode != FN_GYRO_GAIN && output_mode != FN_GYRO_MODE)
         {
             // Only valid surfaces are checked
             if ((limits->val.max == GYRO_US_MAX && limits->val.min == GYRO_US_MIN) || // Default
-                ((limits->val.max - limits->val.min)) < 30)
-            { // Not moved the sticks much
+                limits->val.max - limits->val.min < 30)
+            {
+                // Not moved the sticks much
                 DBGLN("isStickCalibrationNeeded: Ch [%d] Not Calibrated", ch + 1);
                 isCalibrated = false;
                 sprintf(lastErrorText, "Ch%d Not Calibrated", ch + 1);

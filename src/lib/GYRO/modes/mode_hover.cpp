@@ -33,14 +33,14 @@ void HoverController::calculate_pid(float input_rpy[], float gyro_rpy[], float a
 {
     RateController::calculate_pid(input_rpy, gyro_rpy, ang_rpy);
 
-    float pitchRad = ang_rpy[GYRO_AXIS_PITCH];
-    float rollRad = ang_rpy[GYRO_AXIS_ROLL];
+    const float pitchRad = ang_rpy[GYRO_AXIS_PITCH];
+    const float rollRad = ang_rpy[GYRO_AXIS_ROLL];
 
-    float error = pitchRad - M_PI_2; // Pi/2 = 90degrees
+    float error = pitchRad - (float)M_PI_2; // Pi/2 = 90degrees
 
     // NOTE: ORIGINAL A.Wigen CODE DID NOT HAVE THIS NORMALIZATION
     //  Normalize Error to +/- 1.0;
-    error = error / M_PI;
+    error = error / (float)M_PI;
 
     errorPitch = error * hoverStrengthPitch;
     errorYaw = -error * hoverStrengthYaw;

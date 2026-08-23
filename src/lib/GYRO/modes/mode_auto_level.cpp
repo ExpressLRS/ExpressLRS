@@ -10,12 +10,7 @@
  *
  * This mode tries to keep the plane flying level (pitch/roll) when there is no
  * stick input.
- *
  */
-
-LevelController::LevelController() : RateController()
-{
-}
 
 void LevelController::initialize(gyro_mode_t mode)
 {
@@ -26,11 +21,11 @@ void LevelController::initialize(gyro_mode_t mode)
     const rx_config_gyro_PID_t *roll_pid_params = gyroConfig->GetGyroPID(GYRO_PID_GROUP_ANGLE, GYRO_AXIS_ROLL);
     const rx_config_gyro_PID_t *pitch_pid_params = gyroConfig->GetGyroPID(GYRO_PID_GROUP_ANGLE, GYRO_AXIS_PITCH);
 
-    float roll_limit = 1.0;
-    float pitch_limit = 1.0;
+    constexpr float roll_limit = 1.0f;
+    constexpr float pitch_limit = 1.0f;
 
-    configure_pid_gains(&pid_angle_roll, roll_pid_params, fm_angle_settings.val.gainRoll, roll_limit, -1.0 * roll_limit);
-    configure_pid_gains(&pid_angle_pitch, pitch_pid_params, fm_angle_settings.val.gainPitch, pitch_limit, -1.0 * pitch_limit);
+    configure_pid_gains(&pid_angle_roll, roll_pid_params, (int8_t)fm_angle_settings.val.gainRoll, roll_limit, -roll_limit);
+    configure_pid_gains(&pid_angle_pitch, pitch_pid_params, (int8_t)fm_angle_settings.val.gainPitch, pitch_limit, -pitch_limit);
 
     ignore_input[0] = ignore_input[1] = ignore_input[2] = false;
 }
@@ -42,20 +37,20 @@ void LevelController::calculate_pid(float input_rpy[], float gyro_rpy[], float a
     // In Level mode, the Gyro has full control of [Pitch, Roll], not the command
     ignore_input[GYRO_AXIS_ROLL] = ignore_input[GYRO_AXIS_PITCH] = true;
 
-    // Get Pitch/Roll angles adjusted to the Level trims  (global + current senttings)
+    // Get Pitch/Roll angles adjusted to the Level trims  (global + current settings)
     float pitch_angle = -ang_rpy[GYRO_AXIS_PITCH] + degToRad(gyro_trim_decode(fm_settings.val.trimPitch));
-    float roll_angle = ang_rpy[GYRO_AXIS_ROLL] + degToRad(gyro_trim_decode(fm_settings.val.trimRoll));
+    const float roll_angle = ang_rpy[GYRO_AXIS_ROLL] + degToRad(gyro_trim_decode(fm_settings.val.trimRoll));
 
     if (isInverted(ang_rpy))
     {
         // The pitch seems to be reported the same even when it is inverted in the roll axis
-        pitch_angle *= -1; // reverse pitch
+        pitch_angle = -pitch_angle; // reverse pitch
     }
 
     // Angle Demand
     // The stick tell the percentage of the max angle where we want the plane to be
-    float setpoint_pitch = input_rpy[GYRO_AXIS_PITCH] * degToRad(fm_angle_settings.val.maxAnglePitch);
-    float setpoint_roll = input_rpy[GYRO_AXIS_ROLL] * degToRad(fm_angle_settings.val.maxAngleRoll);
+    const float setpoint_pitch = input_rpy[GYRO_AXIS_PITCH] * degToRad(fm_angle_settings.val.maxAnglePitch);
+    const float setpoint_roll = input_rpy[GYRO_AXIS_ROLL] * degToRad(fm_angle_settings.val.maxAngleRoll);
 
     pid_angle_pitch.calculate(setpoint_pitch, pitch_angle);
     pid_angle_roll.calculate(setpoint_roll, roll_angle);
@@ -63,7 +58,7 @@ void LevelController::calculate_pid(float input_rpy[], float gyro_rpy[], float a
     if (isInverted(ang_rpy))
     {
         pid_angle_pitch.reset();               // don't apply elevator corrections if inverted
-        ignore_input[GYRO_AXIS_PITCH] = false; // But let the stick controll it.
+        ignore_input[GYRO_AXIS_PITCH] = false; // But let the stick control it.
     }
 
     if (isHighPitch(ang_rpy))
@@ -72,7 +67,7 @@ void LevelController::calculate_pid(float input_rpy[], float gyro_rpy[], float a
         ignore_input[GYRO_AXIS_ROLL] = false; // Allow the stick to command roll
     }
 
-    // Add angle correction to rate corrections ajusted to angle Gains
+    // Add angle correction to rate corrections adjusted to angle Gains
     corr[GYRO_AXIS_ROLL] += pid_angle_roll.output;
     corr[GYRO_AXIS_PITCH] += pid_angle_pitch.output;
 }

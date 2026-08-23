@@ -6,13 +6,11 @@
 #include "gyro_types.h"
 #include "logging.h"
 
-#define CENTER_DEADBAND 0.1 // 10% of stick movement is deadband
-                            /**
-                             * Airplane SAFE Mode
-                             *
-                             * This mode will prevent the plane from exceding the MAX angles.
-                             *
-                             */
+/**
+ * Airplane SAFE Mode
+ *
+ * This mode will prevent the plane from exceeding the MAX angles.
+ */
 
 typedef enum
 {
@@ -21,6 +19,8 @@ typedef enum
     ANGLE_STATE_REVERSING
 } AngleLockState;
 
+namespace
+{
 /**
  * Manage a state machine when we reach an angle.
  * We should be able to get to the desire max angle, but after that, disable the stick
@@ -41,7 +41,7 @@ public:
         ignore_cmd = false;
     }
 
-    int8_t ignoreCommand() { return ignore_cmd; }
+    int8_t ignoreCommand() const { return ignore_cmd; }
 
     /* manage gyro at different states */
     void compute_pid(PID *pid, float angle, float max_angle, float cmd_in)
@@ -62,10 +62,11 @@ public:
             }
         }
         else if (state == ANGLE_STATE_AT_MAX)
-        { // Above angle limit
+        {
+            // Above angle limit
             ignore_cmd = false;
-            int8_t ang_dir = (angle < 0 ? -1 : +1);
-            int8_t stick_dir = (cmd_in < 0 ? -1 : +1); // Sign/direction of stick
+            const int8_t ang_dir = angle < 0 ? -1 : +1;
+            const int8_t stick_dir = cmd_in < 0 ? -1 : +1; // Sign/direction of stick
 
             if (abs(angle) < max_angle && stick_dir != ang_dir)
             { // Angle Back to normal, and stick trying to decrease bank??
@@ -94,6 +95,7 @@ public:
         }
     };
 };
+} // namespace
 
 static AngleLock AngleLockPitch;
 static AngleLock AngleLockRoll;
@@ -107,11 +109,11 @@ void AngEnvelopeController::initialize(gyro_mode_t mode)
     const rx_config_gyro_PID_t *roll_pid_params = gyroConfig->GetGyroPID(GYRO_PID_GROUP_ANGLE, GYRO_AXIS_ROLL);
     const rx_config_gyro_PID_t *pitch_pid_params = gyroConfig->GetGyroPID(GYRO_PID_GROUP_ANGLE, GYRO_AXIS_PITCH);
 
-    float roll_limit = 1.0;
-    float pitch_limit = 1.0;
+    constexpr float roll_limit = 1.0f;
+    constexpr float pitch_limit = 1.0f;
 
-    configure_pid_gains(&pid_angle_roll, roll_pid_params, fm_angle_settings.val.gainRoll, roll_limit, -1.0 * roll_limit);
-    configure_pid_gains(&pid_angle_pitch, pitch_pid_params, fm_angle_settings.val.gainPitch, pitch_limit, -1.0 * pitch_limit);
+    configure_pid_gains(&pid_angle_roll, roll_pid_params, (int8_t)fm_angle_settings.val.gainRoll, roll_limit, -roll_limit);
+    configure_pid_gains(&pid_angle_pitch, pitch_pid_params, (int8_t)fm_angle_settings.val.gainPitch, pitch_limit, -pitch_limit);
 
     // Reset angle lock state
     AngleLockPitch.reset();
@@ -124,12 +126,12 @@ void AngEnvelopeController::calculate_pid(float input_rpy[], float gyro_rpy[], f
 
     // Adjust angle with Level Trims
     float pitch_angle = -ang_rpy[GYRO_AXIS_PITCH] + degToRad(gyro_trim_decode(fm_settings.val.trimPitch));
-    float roll_angle = ang_rpy[GYRO_AXIS_ROLL] + degToRad(gyro_trim_decode(fm_settings.val.trimRoll));
+    const float roll_angle = ang_rpy[GYRO_AXIS_ROLL] + degToRad(gyro_trim_decode(fm_settings.val.trimRoll));
 
     if (isInverted(ang_rpy))
     {
         // The pitch seems to be reported the same even when it is inverted in the roll axis
-        pitch_angle *= -1; // reverse pitch
+        pitch_angle = -pitch_angle; // reverse pitch
     }
 
     AngleLockPitch.compute_pid(&pid_angle_pitch, pitch_angle, degToRad(fm_angle_settings.val.maxAnglePitch), input_rpy[GYRO_AXIS_PITCH]);
@@ -141,7 +143,7 @@ void AngEnvelopeController::calculate_pid(float input_rpy[], float gyro_rpy[], f
     /*
     if (isInverted(ang_rpy)) {
         pid_angle_pitch.reset(); // don't apply elevator corrections if inverted
-        ignore_input[GYRO_AXIS_PITCH] = false; // But let the stick controll it.
+        ignore_input[GYRO_AXIS_PITCH] = false; // But let the stick control it.
     }
 
     if (isHighPitch(ang_rpy)) {

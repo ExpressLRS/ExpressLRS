@@ -15,10 +15,6 @@
  * angular rates.
  */
 
-RateController::RateController()
-{
-}
-
 void RateController::configure_pid_gains(PID *pid, const rx_config_gyro_PID_t *pid_params, int8_t gain,
                                          float max, float min)
 {
@@ -30,9 +26,9 @@ void RateController::configure_pid_gains(PID *pid, const rx_config_gyro_PID_t *p
     }
     else
     {
-        float p = gain * pid_params->val.p / 1000.0;
-        float i = gain * pid_params->val.i / 1000.0;
-        float d = gain * pid_params->val.d / 1000.0;
+        const float p = (float)(gain * pid_params->val.p) / 1000.0f;
+        const float i = (float)(gain * pid_params->val.i) / 1000.0f;
+        const float d = (float)(gain * pid_params->val.d) / 1000.0f;
         DBG("PID: [P=%f I=%f D=%f]", p, i, d);
 
         pid->configure(p, i, d, max, min);
@@ -45,10 +41,11 @@ void RateController::applyFModeSettings(gyro_mode_t fm)
 {
     fm_settings.raw = gyroConfig->GetGyroFMode(GYRO_MODE_RATE)->raw; // Default settings for ALL
 
-    auto new_fm_settings = gyroConfig->GetGyroFMode(fm); // Get settings for Specific flight Mode
+    const auto new_fm_settings = gyroConfig->GetGyroFMode(fm); // Get settings for Specific flight Mode
 
     if (fm == GYRO_MODE_LEVEL || fm == GYRO_MODE_ENVELOPE)
-    { // Override
+    {
+        // Override
         fm_settings.val.maxAnglePitch = new_fm_settings->val.maxAnglePitch;
         fm_settings.val.maxAngleRoll = new_fm_settings->val.maxAngleRoll;
     }
@@ -60,8 +57,8 @@ void RateController::applyFModeSettings(gyro_mode_t fm)
 
     if (fm == GYRO_MODE_LEVEL || fm == GYRO_MODE_LAUNCH)
     {
-        fm_settings.val.trimPitch = (int8_t)new_fm_settings->val.trimPitch;
-        fm_settings.val.trimRoll = (int8_t)new_fm_settings->val.trimRoll;
+        fm_settings.val.trimPitch = new_fm_settings->val.trimPitch;
+        fm_settings.val.trimRoll = new_fm_settings->val.trimRoll;
     }
     else
     {
@@ -71,7 +68,7 @@ void RateController::applyFModeSettings(gyro_mode_t fm)
 
     if (fm != GYRO_MODE_RATE)
     {
-        fm_settings.val.useRate = (int8_t)new_fm_settings->val.useRate;
+        fm_settings.val.useRate = new_fm_settings->val.useRate;
     }
     else
     {
@@ -89,7 +86,7 @@ void RateController::applyFModeSettings(gyro_mode_t fm)
     }
 
     // Convert from Enum Gain Factor to a float number
-    gyro_gain_factor_t gainFactorEnum = (gyro_gain_factor_t) fm_settings.val.gainFactor;
+    const auto gainFactorEnum = (gyro_gain_factor_t) fm_settings.val.gainFactor;
     switch (gainFactorEnum)
     {
     case GYRO_GAIN_FACTOR_0_5X:
@@ -107,7 +104,7 @@ void RateController::applyFModeSettings(gyro_mode_t fm)
     }
 
     // Convert from Enum Stick Pri to a float number
-    gyro_stick_priority_t stickPriEnum =  (gyro_stick_priority_t) fm_settings.val.stickPri;
+    const auto stickPriEnum =  (gyro_stick_priority_t) fm_settings.val.stickPri;
     switch (stickPriEnum) {
     case STICK_PRIORITY_100:
         stickPriNum = 100;
@@ -155,9 +152,9 @@ void RateController::initialize(gyro_mode_t mode)
     const rx_config_gyro_PID_t *pitch_pid_params = gyroConfig->GetGyroPID(GYRO_PID_GROUP_RATE, GYRO_AXIS_PITCH);
     const rx_config_gyro_PID_t *yaw_pid_params = gyroConfig->GetGyroPID(GYRO_PID_GROUP_RATE, GYRO_AXIS_YAW);
 
-    configure_pid_gains(&pid_roll, roll_pid_params, fm_settings.val.gainRoll, roll_limit, -1.0 * roll_limit);
-    configure_pid_gains(&pid_pitch, pitch_pid_params, fm_settings.val.gainPitch, pitch_limit, -1.0 * pitch_limit);
-    configure_pid_gains(&pid_yaw, yaw_pid_params, fm_settings.val.gainYaw, yaw_limit, -1.0 * yaw_limit);
+    configure_pid_gains(&pid_roll, roll_pid_params, (int8_t)fm_settings.val.gainRoll, roll_limit, -1.0f * roll_limit);
+    configure_pid_gains(&pid_pitch, pitch_pid_params, (int8_t)fm_settings.val.gainPitch, pitch_limit, -1.0f * pitch_limit);
+    configure_pid_gains(&pid_yaw, yaw_pid_params, (int8_t)fm_settings.val.gainYaw, yaw_limit, -1.0f * yaw_limit);
 
     ignore_input[0] = ignore_input[1] = ignore_input[2] = false;
 }
@@ -206,26 +203,20 @@ void RateController::calculate_pid(float input_rpy[], float gyro_rpy[], float an
     calculate_stick_pri(input_rpy);
 
     // Adjustment Rate, otherwise it becomes too sensitive
-    const float ADJUSTMENT_FACTOR = 0.25 * gainFactor;
+    const float ADJUSTMENT_FACTOR = 0.25f * gainFactor;
 
     // Desired angular rate is zero
     pid_roll.calculate(0, gyro_rpy[GYRO_AXIS_ROLL] * ADJUSTMENT_FACTOR);
     pid_pitch.calculate(0, gyro_rpy[GYRO_AXIS_PITCH] * ADJUSTMENT_FACTOR);
     pid_yaw.calculate(0, -gyro_rpy[GYRO_AXIS_YAW] * ADJUSTMENT_FACTOR);
 
-    float total_gain = gyro.master_gain;
+    const float total_gain = gyro.master_gain;
     corr[GYRO_AXIS_ROLL] = pid_roll.output * stick_pri[GYRO_AXIS_ROLL] * total_gain;
     corr[GYRO_AXIS_PITCH] = pid_pitch.output * stick_pri[GYRO_AXIS_PITCH] * total_gain;
     corr[GYRO_AXIS_YAW] = pid_yaw.output * stick_pri[GYRO_AXIS_YAW] * total_gain;
 }
 
 #if defined(DEBUG_LOG)
-void _make_gyro_debug_string(PID *pid, char *str)
-{
-    sprintf(str, "Setpoint: %5.2f PV: %5.2f I:%5.2f D:%5.2f Error: %5.2f Out: %5.2f",
-            pid->setpoint, pid->pv, pid->Iout, pid->Dout, pid->error, pid->output);
-}
-
 void RateController::printState()
 {
     char piddebug[128];
@@ -240,12 +231,9 @@ void RateController::printState()
     sprintf(piddebug, "Roll:%5.2f Pitch:%5.2f Yaw:%5.2f", corr[GYRO_AXIS_ROLL], corr[GYRO_AXIS_PITCH], corr[GYRO_AXIS_YAW]);
     DBGLN("Corr    :%s", piddebug);
 
-    _make_gyro_debug_string(&pid_pitch, piddebug);
-    DBGLN("PID Pitch %s", piddebug);
-    _make_gyro_debug_string(&pid_roll, piddebug);
-    DBGLN("PID Roll  %s", piddebug);
-    _make_gyro_debug_string(&pid_yaw, piddebug);
-    DBGLN("PID Yaw   %s", piddebug);
+    pid_pitch.debug("PID Pitch");
+    pid_roll.debug("PID Roll ");
+    pid_yaw.debug("PID Yaw  ");
 }
 #endif
 
@@ -254,7 +242,7 @@ uint16_t RateController::applyCorrection(uint8_t ch, gyro_output_channel_functio
     float correction = 0.0;
     if (channel_function == FN_AILERON)
     {
-        correction = (inverted) ? -corr[GYRO_AXIS_ROLL] : corr[GYRO_AXIS_ROLL];
+        correction = inverted ? -corr[GYRO_AXIS_ROLL] : corr[GYRO_AXIS_ROLL];
         if (ignore_input[GYRO_AXIS_ROLL])
         {
             command = 0;
@@ -262,7 +250,7 @@ uint16_t RateController::applyCorrection(uint8_t ch, gyro_output_channel_functio
     }
     else if (channel_function == FN_ELEVATOR)
     {
-        correction = (inverted) ? -corr[GYRO_AXIS_PITCH] : corr[GYRO_AXIS_PITCH];
+        correction = inverted ? -corr[GYRO_AXIS_PITCH] : corr[GYRO_AXIS_PITCH];
         if (ignore_input[GYRO_AXIS_PITCH])
         {
             command = 0;
@@ -270,8 +258,8 @@ uint16_t RateController::applyCorrection(uint8_t ch, gyro_output_channel_functio
     }
     else if (channel_function == FN_ELEVON || channel_function == FN_ELEVON_R)
     {
-        correction = (inverted) ? -corr[GYRO_AXIS_PITCH] : corr[GYRO_AXIS_PITCH];                   // Invert elevator if needed
-        auto cor2 = (channel_function == FN_ELEVON) ? corr[GYRO_AXIS_ROLL] : -corr[GYRO_AXIS_ROLL]; // Invert Aileron depending of Left/Right
+        correction = inverted ? -corr[GYRO_AXIS_PITCH] : corr[GYRO_AXIS_PITCH];                   // Invert elevator if needed
+        const auto cor2 = channel_function == FN_ELEVON ? corr[GYRO_AXIS_ROLL] : -corr[GYRO_AXIS_ROLL]; // Invert Aileron depending of Left/Right
         correction = (correction + cor2) / 2;
         if (ignore_input[GYRO_AXIS_PITCH])
         {
@@ -280,8 +268,8 @@ uint16_t RateController::applyCorrection(uint8_t ch, gyro_output_channel_functio
     }
     else if (channel_function == FN_VTAIL || channel_function == FN_VTAIL_R)
     {
-        correction = (inverted) ? -corr[GYRO_AXIS_PITCH] : corr[GYRO_AXIS_PITCH];                // Invert elevator if needed
-        auto cor2 = (channel_function == FN_VTAIL) ? corr[GYRO_AXIS_YAW] : -corr[GYRO_AXIS_YAW]; // Invert Rud depending of Left/Right
+        correction = inverted ? -corr[GYRO_AXIS_PITCH] : corr[GYRO_AXIS_PITCH];                // Invert elevator if needed
+        const auto cor2 = channel_function == FN_VTAIL ? corr[GYRO_AXIS_YAW] : -corr[GYRO_AXIS_YAW]; // Invert Rud depending of Left/Right
         correction = (correction + cor2) / 2;
         if (ignore_input[GYRO_AXIS_PITCH])
         {

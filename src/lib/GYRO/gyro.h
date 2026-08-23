@@ -13,8 +13,8 @@
 #define GYRO_US_MID 1500
 #define GYRO_US_MAX 2135 // was 2012
 
-#define radToDeg(angleInRadians) ((angleInRadians) * RAD_TO_DEG)
-#define degToRad(angleInDegrees) ((angleInDegrees) * DEG_TO_RAD)
+#define radToDeg(angleInRadians) ((angleInRadians) * (float)RAD_TO_DEG)
+#define degToRad(angleInDegrees) ((angleInDegrees) * (float)DEG_TO_RAD)
 
 /**
  * Add some servo jitter feedback to the pilot after the gyro has initialized.
@@ -29,15 +29,14 @@
 class Gyro
 {
 public:
-    void init(AHRS *ahrs);
+    void init(AHRS *_ahrs);
     void start();
     void reloadConfig();
     gyro_status_t getStatus();
     uint8_t getStatusBits();
     const char *getNextAction();
-    gyro_mode_t getMode(void);
+    gyro_mode_t getMode();
     int8_t getModePosition() const { return mode_position; }
-    const char *getMPUName();
     void mixerInput();
     void mixerOutput(uint8_t ch, uint16_t *us);
     uint8_t event();
@@ -50,20 +49,18 @@ public:
     bool isStickCenterCalibrationComplete() const { return learn_state != GYRO_LEARN_SUBTRIMS; }
     const rx_config_pwm_limits_t *getStickCalibrationLimits(uint8_t channel) const;
 
-    unsigned long getIMUReadErrors();
-
     float master_gain = 1.0;
-    gyro_mode_t gyro_mode;
-    AHRS *ahrs;
+    gyro_mode_t gyro_mode = GYRO_MODE_OFF;
+    AHRS *ahrs = nullptr;
     // protected:
 
     // orientation/motion vars
-    bool initialized;
+    bool initialized = false;
     gyro_learn_state_t learn_state = GYRO_LEARN_OFF;
-    char lastErrorText[30];
+    char lastErrorText[30] {};
 
 private:
-    Mode_Base *mode_controller;
+    Mode_Base *mode_controller = nullptr;
 
     int8_t mode_ch = -1;
     int8_t mode_position = -1;
