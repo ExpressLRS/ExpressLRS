@@ -140,6 +140,36 @@ void test_secondary_uses_all_channels(void)
     }
 }
 
+void test_xband_pairs_are_gnss_safe(void)
+{
+    // At runtime both radios are driven by the same FHSSptr: radio 1 transmits
+    // FHSSsequence[FHSSptr] (primary band) while radio 2 transmits
+    // FHSSsequence_XBand[FHSSptr] (2.4GHz). The difference product of every such
+    // pair must stay outside the GNSS keep-out window (must match s_protectedBand
+    // in FHSS.cpp: 1583.5 MHz +/- 32 MHz).
+    constexpr uint32_t gnss_lo = 1583500000u - 32000000u;
+    constexpr uint32_t gnss_hi = 1583500000u + 32000000u;
+
+    const uint8_t domainsToTest[] = {1, 2}; // FCC915, EU868
+    for (uint8_t d = 0; d < sizeof(domainsToTest); d++) {
+        firmwareOptions.domain = domainsToTest[d];
+        FHSSrandomiseFHSSsequence(0x0BADB002u);
+
+        // Query the secondary-band sequence length deterministically
+        bool prevPrimary = FHSSusePrimaryFreqBand;
+        FHSSusePrimaryFreqBand = false;
+        const uint16_t seqLen = FHSSgetSequenceCount();
+        FHSSusePrimaryFreqBand = prevPrimary;
+
+        for (uint16_t i = 0; i < seqLen; i++) {
+            const uint32_t fA = FHSSconfig->freq_start + FHSSsequence[i] * freq_spread / FREQ_SPREAD_SCALE;
+            const uint32_t fB = FHSSconfigDualBand->freq_start + FHSSsequence_XBand[i] * freq_spread_DualBand / FREQ_SPREAD_SCALE;
+            const uint32_t diff = fB - fA;
+            TEST_ASSERT_TRUE_MESSAGE(diff < gnss_lo || diff > gnss_hi, "X-Band pair intermod product inside GNSS keep-out window");
+        }
+    }
+}
+
 // Unity setup/teardown
 void setUp() {}
 void tearDown() {}
@@ -154,6 +184,7 @@ int main(int argc, char **argv)
     RUN_TEST(test_fhss_reg_same_fcc915);
     RUN_TEST(test_fhss_reg_same_eu868);
     RUN_TEST(test_secondary_uses_all_channels);
+    RUN_TEST(test_xband_pairs_are_gnss_safe);
     UNITY_END();
 
     return 0;

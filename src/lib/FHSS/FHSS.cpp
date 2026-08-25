@@ -247,7 +247,6 @@ static void FHSS_buildSecondarySequence_GNSSAware(const uint32_t seed)
     const uint16_t seqLen = FHSSgetSequenceCount();
     if (seqLen == 0) return;
 
-    const uint16_t priCount = FHSSconfig->freq_count;
     const uint16_t secCount = FHSSconfigDualBand->freq_count;
 
     // Track even usage across the full sequence
@@ -262,7 +261,11 @@ static void FHSS_buildSecondarySequence_GNSSAware(const uint32_t seed)
             for (uint16_t s = 0; s < secCount; ++s) usedInBlock[s] = false;
         }
 
-        const uint8_t priIdx = FHSSsequence[i % priCount];
+        // Pair against the primary hop actually transmitted at the same FHSSptr
+        // index at runtime (FHSSgetNextFreq/FHSSgetGeminiFreq share the pointer).
+        // seqLen (= secondaryBandCount) never exceeds the filled length of
+        // FHSSsequence (= primaryBandCount) for any domain.
+        const uint8_t priIdx = FHSSsequence[i];
         const uint32_t fA = FHSS_idxToFreqPrimary(priIdx);
 
         // Build the safe bucket for this primary hop
