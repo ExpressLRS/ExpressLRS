@@ -24,10 +24,6 @@ extern void reconfigureSerial1();
 #endif
 extern bool BindingModeRequest;
 
-#if 0
-extern void setWifiConfigMode();
-#endif
-
 extern RXEndpoint crsfReceiver;
 
 #if defined(Regulatory_Domain_EU_CE_2400)
@@ -146,12 +142,6 @@ static selectionParameter luaAntennaGroup = {
     {"Ant. Group", CRSF_TEXT_SELECTION},
     0, // value
     "External;Builtin",
-    STR_EMPTYSPACE
-};
-
-static commandParameter luaWebConfig = {
-    {"Enable Web Config", CRSF_COMMAND},
-    lcsIdle, // step
     STR_EMPTYSPACE
 };
 
@@ -1554,18 +1544,6 @@ void RXEndpoint::registerParameters()
         strcat(strPowerLevels, ";MatchTX ");
         registerParameter(&luaTlmPower, &luaparamSetPower);
     }
-
-#if 0
-    registerParameter(&luaWebConfig,
-        [this](propertiesCommon *, const uint8_t arg) {
-            if (arg == lcsClick)
-            {
-                deferExecutionMillis(200, setWifiConfigMode);
-            }
-            sendCommandResponse(&luaWebConfig, arg < 5 ? lcsExecuting : lcsIdle, arg < 5 ? "Starting WiFi..." : "");
-        }
-    );
-#endif 
 
     // Teamrace
     registerParameter(&luaTeamraceFolder);
