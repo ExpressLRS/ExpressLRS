@@ -450,8 +450,8 @@ void Gyro::learn_sticks(uint8_t ch, uint16_t us)
     else if (learn_state == GYRO_LEARN_LIMIT_START)
     {
         const auto ch_limit = &temp_limits[ch];
-        ch_limit->val.min = max((uint16_t)ch_limit->val.min, us);
-        ch_limit->val.max = min((uint16_t)ch_limit->val.max, us);
+        ch_limit->val.min = min((uint16_t)ch_limit->val.min, us);
+        ch_limit->val.max = max((uint16_t)ch_limit->val.max, us);
     }
 }
 
