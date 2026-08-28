@@ -27,6 +27,7 @@ jobs:
         python -m pip install --upgrade pip
         pip install platformio
         pip install wheel
+        pio pkg install --global --tool "framework-arduinoststm32=https://github.com/stm32duino/Arduino_Core_STM32.git#2.1.0"
 
     - name: Cache PlatformIO
       uses: actions/cache@v4
