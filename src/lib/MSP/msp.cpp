@@ -79,10 +79,13 @@ MSP::processReceivedByte(uint8_t c)
 
             // If we've received the correct amount of bytes for a full header
             if (m_offset == sizeof(mspHeaderV2_t)) {
-                // MSPv2 header bytes are: flag, function LE, payload size LE.
-                const uint16_t payloadSize = m_inputBuffer[3] | (m_inputBuffer[4] << 8);
+                // Copy header values into packet
+                mspHeaderV2_t* header = (mspHeaderV2_t*)&m_inputBuffer[0];
+                m_packet.payloadSize = header->payloadSize;
+                m_packet.function = header->function;
+                m_packet.flags = header->flags;
                 // Reject before payload copy because m_packet.payload is fixed-size.
-                if (payloadSize > MSP_PORT_INBUF_SIZE)
+                if (m_packet.payloadSize > MSP_PORT_INBUF_SIZE)
                 {
                     DBGLN("MSP payload too large - Got %u max %u", payloadSize, MSP_PORT_INBUF_SIZE);
                     m_packet.reset();
@@ -90,9 +93,6 @@ MSP::processReceivedByte(uint8_t c)
                     m_inputState = MSP_IDLE;
                     break;
                 }
-                m_packet.payloadSize = payloadSize;
-                m_packet.function = m_inputBuffer[1] | (m_inputBuffer[2] << 8);
-                m_packet.flags = m_inputBuffer[0];
                 // reset the offset iterator for re-use in payload below
                 m_offset = 0;
 				if (m_packet.payloadSize == 0)

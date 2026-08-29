@@ -1,10 +1,9 @@
+#include <cstdint>
+#include <iostream>
+#include <unity.h>
 #include "common.h"
 #include "mock_serial.h"
 #include "msp.h"
-#include <cstdint>
-#include <iostream>
-#include <string>
-#include <unity.h>
 
 MSP MSPProtocol;
 MSP MSPOversizeProtocol;
