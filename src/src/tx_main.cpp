@@ -25,6 +25,7 @@
 #else
 // Fake functions for 8285
 void checkBackpackUpdate() {}
+void feedUSB(const uint8_t *, const uint16_t) {}
 void sendCRSFTelemetryToBackpack(uint8_t *) {}
 void sendMAVLinkTelemetryToBackpack(uint8_t *) {}
 #endif
@@ -42,7 +43,6 @@ void sendMAVLinkTelemetryToBackpack(uint8_t *) {}
 
 /// define some libs to use ///
 MSP msp;
-ELRS_EEPROM eeprom;
 TxConfig config;
 Stream *TxUSB;
 
@@ -438,7 +438,7 @@ void SetRFLinkRate(uint8_t index) // Set speed of RF link
   OtaSwitchMode_e newSwitchMode = (OtaSwitchMode_e)config.GetSwitchMode();
 
   bool subGHz = FHSSconfig->freq_center < 1000000000;
-#if defined(RADIO_LR1121)
+#if defined(RADIO_LR1121) || defined(RADIO_LR2021)
   if (FHSSuseDualBand && subGHz)
   {
       subGHz = FHSSconfigDualBand->freq_center < 1000000000;
@@ -459,7 +459,7 @@ void SetRFLinkRate(uint8_t index) // Set speed of RF link
 #endif
   hwTimer::updateInterval(interval);
 
-#if defined(RADIO_LR1121)
+#if defined(RADIO_LR1121) || defined(RADIO_LR2021)
   FHSSusePrimaryFreqBand = !RadioBandMod::isB2G4(ModParams->radio_type);
   FHSSuseDualBand = RadioBandMod::isBDUAL(ModParams->radio_type);
 #endif
@@ -468,18 +468,24 @@ void SetRFLinkRate(uint8_t index) // Set speed of RF link
                ModParams->PreambleLen, invertIQ, ModParams->PayloadLength
 #if defined(RADIO_SX128X)
                , OtaGetUidSeed(), OtaCrcInitializer, ModParams->radio_type
-#endif
-#if defined(RADIO_LR1121)
+#elif defined(RADIO_LR1121) || defined(RADIO_LR2021)
                , ModParams->radio_type, (uint8_t)UID[5], (uint8_t)UID[4]
+#if defined(RADIO_LR2021)
+               ,OtaGetUidSeed(), OtaCrcInitializer
+#endif
 #endif
                );
 
-#if defined(RADIO_LR1121)
+#if defined(RADIO_LR1121) || defined(RADIO_LR2021)
   if (FHSSuseDualBand)
   {
     Radio.Config(ModParams->bw2, ModParams->sf2, ModParams->cr2, FHSSgetInitialGeminiFreq(),
                 ModParams->PreambleLen2, invertIQ, ModParams->PayloadLength,
-                ModParams->radio_type, (uint8_t)UID[5], (uint8_t)UID[4], SX12XX_Radio_2);
+                ModParams->radio_type, (uint8_t)UID[5], (uint8_t)UID[4],
+#if defined(RADIO_LR2021)
+                OtaGetUidSeed(), OtaCrcInitializer,
+#endif
+                SX12XX_Radio_2);
   }
 #endif
 
@@ -963,36 +969,6 @@ static void CheckReadyToSend()
   }
 }
 
-void OnPowerGetCalibration(mspPacket_t *packet)
-{
-  uint8_t index = packet->readByte();
-  UNUSED(index);
-  int8_t values[PWR_COUNT] = {0};
-  POWERMGNT::GetPowerCaliValues(values, PWR_COUNT);
-  DBGLN("power get calibration value %d",  values[index]);
-}
-
-void OnPowerSetCalibration(mspPacket_t *packet)
-{
-  uint8_t index = packet->readByte();
-  int8_t value = packet->readByte();
-
-  if((index < 0) || (index >= PWR_COUNT))
-  {
-    DBGLN("calibration error index %d out of range", index);
-    return;
-  }
-  hwTimer::stop();
-  delay(20);
-
-  int8_t values[PWR_COUNT] = {0};
-  POWERMGNT::GetPowerCaliValues(values, PWR_COUNT);
-  values[index] = value;
-  POWERMGNT::SetPowerCaliValues(values, PWR_COUNT);
-  DBGLN("power calibration done %d, %d", index, value);
-  hwTimer::resume();
-}
-
 void SendUIDOverMSP()
 {
   MSPDataPackage[0] = MSP_ELRS_BIND;
@@ -1057,25 +1033,7 @@ void ProcessMSPPacket(uint32_t now, mspPacket_t *packet)
 {
 #if defined(PLATFORM_ESP32)
   // Inspect packet for ELRS specific opcodes
-  if (packet->function == MSP_ELRS_FUNC)
-  {
-    uint8_t opcode = packet->readByte();
-
-    CHECK_PACKET_PARSING();
-
-    switch (opcode)
-    {
-    case MSP_ELRS_POWER_CALI_GET:
-      OnPowerGetCalibration(packet);
-      break;
-    case MSP_ELRS_POWER_CALI_SET:
-      OnPowerSetCalibration(packet);
-      break;
-    default:
-      break;
-    }
-  }
-  else if (packet->function == MSP_SET_VTX_CONFIG)
+  if (packet->function == MSP_SET_VTX_CONFIG)
   {
     if (packet->payload[0] < 48) // Standard 48 channel VTx table size e.g. A, B, E, F, R, L
     {
@@ -1136,7 +1094,8 @@ static void HandleUARTin()
     if (size > 0)
     {
       uint8_t buf[size];
-      TxUSB->readBytes(buf, size);
+      size = TxUSB->readBytes(buf, size);
+      if (connectionState != connected) feedUSB(buf, size);
       apInputBuffer.lock();
       apInputBuffer.pushBytes(buf, size);
       apInputBuffer.unlock();
@@ -1151,7 +1110,8 @@ static void HandleUARTin()
   if (size > 0)
   {
     uint8_t buf[size];
-    TxUSB->readBytes(buf, size);
+    size = TxUSB->readBytes(buf, size);
+    if (connectionState > MODE_STATES) feedUSB(buf, size);
 
     // If the data is MAVLink, then auto change LinkMode and start the radio link
     // since the user might be operating the module as a standalone unit without a handset.
@@ -1248,7 +1208,7 @@ static void setupSerial()
   }
   else if (GPIO_PIN_DEBUG_RX != UNDEF_PIN && GPIO_PIN_DEBUG_TX != UNDEF_PIN)
   {
-    serialPort = new HardwareSerial(2);
+    serialPort = new HardwareSerial(1);
     ((HardwareSerial *)serialPort)->begin(BACKPACK_LOGGING_BAUD, SERIAL_8N1, GPIO_PIN_DEBUG_RX, GPIO_PIN_DEBUG_TX);
   }
   else
@@ -1293,6 +1253,20 @@ static void setupSerial()
     // Set TxUSB to UART0 default pins so that we can access TxUSB and BackpackOrLogStrm independantly
     TxUSB = new HardwareSerial(1);
     ((HardwareSerial *)TxUSB)->begin(firmwareOptions.uart_baud, SERIAL_8N1, U0RXD_GPIO_NUM, U0TXD_GPIO_NUM);
+  }
+#elif defined(PLATFORM_ESP8266)
+  // ESP8266 has a single hardware UART (UART0). In AirPort mode there is no
+  // CRSF handset (devHandset skips it), so dedicate UART0 to the transparent
+  // AirPort serial. Leaving TxUSB as a NullStream here is why AirPort passes
+  // zero bytes on an ESP8266 TX target.
+  if (firmwareOptions.is_airport)
+  {
+    Serial.begin(firmwareOptions.uart_baud);
+    TxUSB = &Serial;
+  }
+  else
+  {
+    TxUSB = new NullStream();
   }
 #else
   TxUSB = new NullStream();
@@ -1430,8 +1404,6 @@ void setup()
 
     handset->registerCallbacks(UARTconnected, firmwareOptions.is_airport ? nullptr : UARTdisconnected);
 
-    eeprom.Begin(); // Init the eeprom
-    config.SetStorageProvider(&eeprom); // Pass pointer to the Config class for access to storage
     config.Load(); // Load the stored values from eeprom
 
     Radio.currFreq = FHSSgetInitialFreq(); //set frequency first or an error will occur!!!
@@ -1444,7 +1416,16 @@ void setup()
     #else
     if (GPIO_PIN_SCK != UNDEF_PIN)
     {
-      init_success = Radio.Begin(FHSSgetMinimumFreq(), FHSSgetMaximumFreq());
+#if defined(RADIO_SX127X)
+        //Radio.currSyncWord = UID[3];
+        init_success = Radio.Begin();
+#elif defined(RADIO_SX128X)
+        init_success = Radio.Begin();
+#elif defined(RADIO_LR1121)
+        init_success = Radio.Begin(FHSSgetMinimumFreq(), FHSSgetMaximumFreq());
+#elif defined(RADIO_LR2021)
+        init_success = Radio.Begin(FHSSconfig->freq_center, FHSSconfigDualBand->freq_center);
+#endif
     }
     else
     {
@@ -1563,7 +1544,7 @@ void loop()
   // only send Uplink data when binding is not active
   if (InBindingMode)
   {
-#if defined(RADIO_LR1121)
+#if defined(RADIO_LR1121) || defined(RADIO_LR2021)
     // Send half of the bind packets on the 2.4GHz domain
     if (BindingSendCount == BindingSpamAmount / 2) {
       SetRFLinkRate(enumRatetoIndexSafe(RATE_DUALBAND_BINDING));

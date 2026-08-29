@@ -82,11 +82,12 @@ void ICACHE_RAM_ATTR hwTimer::updateInterval(uint32_t time)
 
 void ICACHE_RAM_ATTR hwTimer::phaseShift(int32_t newPhaseShift)
 {
-    int32_t minVal = -(HWtimerInterval >> 2);
-    int32_t maxVal = (HWtimerInterval >> 2);
+    int32_t minTicks = -(HWtimerInterval >> 2);
+    int32_t maxTicks = (HWtimerInterval >> 2);
 
-    // phase shift is in microseconds
-    PhaseShift = constrain(newPhaseShift, minVal, maxVal) * HWTIMER_TICKS_PER_US;
+    // Convert microseconds to ticks first, then clamp to the valid tick range
+    int32_t newPhaseShiftTicks = newPhaseShift * HWTIMER_TICKS_PER_US;
+    PhaseShift = constrain(newPhaseShiftTicks, minTicks, maxTicks);
 }
 
 void ICACHE_RAM_ATTR hwTimer::callback(void)

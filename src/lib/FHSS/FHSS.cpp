@@ -8,12 +8,14 @@
 #define POWER_OUTPUT_VALUES_DUAL_COUNT 0
 #endif
 
-#if defined(RADIO_SX127X) || defined(RADIO_LR1121)
+#if defined(RADIO_SX127X) || defined(RADIO_LR1121) || defined(RADIO_LR2021)
 
-#if defined(RADIO_LR1121)
+#if defined(RADIO_SX127X)
+#include "SX127xDriver.h"
+#elif defined(RADIO_LR1121)
 #include "LR1121Driver.h"
 #else
-#include "SX127xDriver.h"
+#include "LR2021Driver.h"
 #endif
 
 const fhss_config_t domains[] = {
@@ -25,9 +27,11 @@ const fhss_config_t domains[] = {
     {"EU433",  FREQ_HZ_TO_REG_VAL(433100000), FREQ_HZ_TO_REG_VAL(434450000), 3, 434000000},
     {"US433",  FREQ_HZ_TO_REG_VAL(433250000), FREQ_HZ_TO_REG_VAL(438000000), 8, 434000000},
     {"US433W",  FREQ_HZ_TO_REG_VAL(423500000), FREQ_HZ_TO_REG_VAL(438000000), 20, 434000000},
+    // Thailand NBTC 920-925 MHz: 8 FHSS channels, 600 kHz spacing
+    {"TH920",  FREQ_HZ_TO_REG_VAL(920500000), FREQ_HZ_TO_REG_VAL(924700000), 8, 922600000},
 };
 
-#if defined(RADIO_LR1121)
+#if defined(RADIO_LR1121) || defined(RADIO_LR2021)
 const fhss_config_t domainsDualBand[] = {
     {
     #if defined(Regulatory_Domain_EU_CE_2400)
@@ -100,7 +104,7 @@ void FHSSrandomiseFHSSsequence(const uint32_t seed)
 
     FHSSrandomiseFHSSsequenceBuild(seed, FHSSconfig->freq_count, sync_channel, FHSSsequence);
 
-#if defined(RADIO_LR1121)
+#if defined(RADIO_LR1121) || defined(RADIO_LR2021)
     FHSSconfigDualBand = &domainsDualBand[0];
     sync_channel_DualBand = FHSSconfigDualBand->freq_count / 2;
     freq_spread_DualBand = (FHSSconfigDualBand->freq_stop - FHSSconfigDualBand->freq_start) * FREQ_SPREAD_SCALE / (FHSSconfigDualBand->freq_count - 1);

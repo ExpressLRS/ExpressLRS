@@ -49,7 +49,11 @@ static int timeout()
 #if defined(GPIO_PIN_JOYSTICK)
     if (GPIO_PIN_JOYSTICK != UNDEF_PIN)
     {
+#if defined(PLATFORM_ESP32)
+        analogReadings[ADC_JOYSTICK] = analogReadMilliVolts(GPIO_PIN_JOYSTICK);
+#else
         analogReadings[ADC_JOYSTICK] = analogRead(GPIO_PIN_JOYSTICK);
+#endif
     }
 #endif
 #if defined(GPIO_PIN_PA_PDET)
