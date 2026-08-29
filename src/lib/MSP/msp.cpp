@@ -182,13 +182,12 @@ MSP::sendPacket(mspPacket_t* packet, Stream* port)
     // Subsequent bytes are contained in the crc
     uint8_t crc = 0;
 
-    // Pack header bytes in little-endian order.
+    // Pack header struct into buffer
     uint8_t headerBuffer[sizeof(mspHeaderV2_t)];
-    headerBuffer[0] = packet->flags;
-    headerBuffer[1] = static_cast<uint8_t>(packet->function);
-    headerBuffer[2] = static_cast<uint8_t>(packet->function >> 8);
-    headerBuffer[3] = static_cast<uint8_t>(packet->payloadSize);
-    headerBuffer[4] = static_cast<uint8_t>(packet->payloadSize >> 8);
+    mspHeaderV2_t* header = (mspHeaderV2_t*)&headerBuffer[0];
+    header->flags = packet->flags;
+    header->function = packet->function;
+    header->payloadSize = packet->payloadSize;
 
     // Write out the header buffer, adding each byte to the crc
     for (uint8_t i = 0; i < sizeof(mspHeaderV2_t); ++i) {
