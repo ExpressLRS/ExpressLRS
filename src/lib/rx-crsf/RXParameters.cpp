@@ -86,9 +86,9 @@ static selectionParameter luaTlmPower = {
 };
 
 static selectionParameter luaAntennaMode = {
-    {"Ant. Mode", CRSF_TEXT_SELECTION},
+    {"Antenna Mode", CRSF_TEXT_SELECTION},
     0, // value
-    "Antenna A;Antenna B;Diversity",
+    "Antenna 1;Antenna 2;Diversity",
     STR_EMPTYSPACE
 };
 
