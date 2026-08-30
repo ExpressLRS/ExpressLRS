@@ -140,7 +140,7 @@ uint32_t CROSSFIRE2MSP::getFrameLen(const uint8_t *data, const MSPframeType_e ms
 uint8_t CROSSFIRE2MSP::getHeaderDir(const uint8_t *data)
 {
     const uint8_t statusByte = data[CRSF_MSP_TYPE_IDX];
-    if (statusByte == CRSF_FRAMETYPE_MSP_REQ)
+    if (statusByte == CRSF_FRAMETYPE_MSP_REQ || statusByte == CRSF_FRAMETYPE_MSP_WRITE)
     {
         return '<';
     }
