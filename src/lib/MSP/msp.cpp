@@ -84,6 +84,15 @@ MSP::processReceivedByte(uint8_t c)
                 m_packet.payloadSize = header->payloadSize;
                 m_packet.function = header->function;
                 m_packet.flags = header->flags;
+                // Reject before payload copy because m_packet.payload is fixed-size.
+                if (m_packet.payloadSize > MSP_PORT_INBUF_SIZE)
+                {
+                    DBGLN("MSP payload too large - Got %u max %u", payloadSize, MSP_PORT_INBUF_SIZE);
+                    m_packet.reset();
+                    m_offset = 0;
+                    m_inputState = MSP_IDLE;
+                    break;
+                }
                 // reset the offset iterator for re-use in payload below
                 m_offset = 0;
 				if (m_packet.payloadSize == 0)
@@ -174,7 +183,7 @@ MSP::sendPacket(mspPacket_t* packet, Stream* port)
     uint8_t crc = 0;
 
     // Pack header struct into buffer
-    uint8_t headerBuffer[5];
+    uint8_t headerBuffer[sizeof(mspHeaderV2_t)];
     mspHeaderV2_t* header = (mspHeaderV2_t*)&headerBuffer[0];
     header->flags = packet->flags;
     header->function = packet->function;
