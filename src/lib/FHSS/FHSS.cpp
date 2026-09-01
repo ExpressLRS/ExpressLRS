@@ -163,6 +163,15 @@ uint16_t FHSSrandomiseFHSSsequenceBuild(const uint32_t seed, uint32_t freqCount,
         }
     }
 
+    // output FHSS sequence
+    // for (uint16_t i=0; i < sequenceCount; i++)
+    // {
+    //     DBG("%u ",inSequence[i]);
+    //     if (i % 10 == 9)
+    //         DBGCR;
+    // }
+    // DBGCR;
+
     return sequenceCount;
 }
 
