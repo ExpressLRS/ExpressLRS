@@ -20,9 +20,19 @@ void CROSSFIRE2MSP::parse(const uint8_t *data, const std::function<void(uint8_t 
     const bool seqError = SeqNumberNext != seqNumber;
     seqNumberPrev = seqNumber;
 
-    if ((!newFrame && seqError) || error)
+    // An error status on a NEW frame is the FC's MSP error reply (unsupported
+    // command etc.) and must be delivered as '$M!'/'$X!' -- dropping it starves
+    // the client of the answer and reads as a dead command. Mid-frame errors
+    // still abort: the stream state is unknown.
+    if (!newFrame && (seqError || error))
     {
         reset();
+        return;
+    }
+
+    if (!newFrame && MSPvers == MSP_FRAME_UNKNOWN)
+    {
+        // continuation chunk but no frame in progress (e.g. after an error reset)
         return;
     }
 
@@ -35,7 +45,16 @@ void CROSSFIRE2MSP::parse(const uint8_t *data, const std::function<void(uint8_t 
         outBuffer[0] = '$';
         outBuffer[1] = (MSPvers == MSP_FRAME_V1 || MSPvers == MSP_FRAME_V1_JUMBO) ? 'M' : 'X';
         outBuffer[2] = getHeaderDir(data);
+        if (error && outBuffer[2] == '>')
+        {
+            outBuffer[2] = '!';
+        }
         pktLen = getFrameLen(data, MSPvers);
+        if (pktLen > sizeof(outBuffer) - 4) // 3 header bytes + 1 checksum byte must also fit
+        {
+            reset();
+            return;
+        }
     }
 
     // process the chunk of MSP frame
@@ -44,6 +63,12 @@ void CROSSFIRE2MSP::parse(const uint8_t *data, const std::function<void(uint8_t 
     // the solution is to use the minimum of the two lengths
     const uint32_t frameLen = pktLen - (idx - 3);
     const uint32_t minLen = frameLen < CRSFpayloadLen ? frameLen : CRSFpayloadLen;
+    // unreachable while the pktLen bound above holds; kept as a memcpy backstop
+    if (idx >= sizeof(outBuffer) || minLen > sizeof(outBuffer) - idx - 1)
+    {
+        reset();
+        return;
+    }
     memcpy(&outBuffer[idx], &data[CRSF_MSP_FRAME_OFFSET], minLen); // chunk of MSP data
     idx += minLen;
 
