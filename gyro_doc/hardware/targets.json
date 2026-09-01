@@ -3266,7 +3266,7 @@
                 "firmware": "Unified_ESP32_2400_RX"
             },
             "er8gS": {
-                "product_name": "RadioMaster ER8-GRS (Gyro) 2.4GHz Diversity+8xPWM RX",
+                "product_name": "RadioMaster ER8-GSR (Gyro) 2.4GHz Diversity+8xPWM RX",
                 "lua_name": "RM ER8-Gyro",
                 "layout_file": "Radiomaster 2400 ER8-Gyro.json",
                 "upload_methods": ["uart", "wifi"],
