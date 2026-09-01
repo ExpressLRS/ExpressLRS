@@ -10,6 +10,8 @@
 // The driver is not part of a library, pull it (and its base class) into the test translation unit
 #include "../../src/rx-serial/SerialIO.cpp"
 #include "../../src/rx-serial/SerialGPS.cpp"
+#include "../../src/rx-serial/SerialGPS-nmea.cpp"
+#include "../../src/rx-serial/SerialGPS-ublox.cpp"
 
 CRSFRouter crsfRouter;
 

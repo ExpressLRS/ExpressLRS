@@ -31,6 +31,10 @@ typedef struct
  * wired up at its factory settings without the user configuring anything. If the module can be
  * talked to (a TX pin is wired) and turns out to be a u-blox, it is asked to emit UBX-NAV-PVT
  * instead of NMEA, which is both cheaper on the wire and carries the fix quality.
+ *
+ * The implementation is split three ways: SerialGPS.cpp holds the baud detection, the configure
+ * state machine and the CRSF telemetry, while SerialGPS-nmea.cpp and SerialGPS-ublox.cpp hold
+ * everything that knows about the respective wire protocol.
  */
 class SerialGPS final : public SerialIO {
 public:
@@ -83,11 +87,15 @@ private:
         grUbxCkB,
     };
 
+    // SerialGPS.cpp: demultiplexes the byte stream onto the two parsers below and emits the
+    // CRSF telemetry
     void processBytes(uint8_t *bytes, uint16_t size) override;
     void sendTelemetryFrame();
     void sendGpsTimeTelemetryFrame();
 
-    // NMEA
+    // NMEA, in SerialGPS-nmea.cpp
+    bool nmeaStart(uint8_t c);
+    void nmeaByte(uint8_t c);
     bool isValidChecksum(char *sentence, uint8_t size);
     void processSentence(char *sentence, uint8_t size);
     void splitSentenceFields(char *sentence, uint8_t size, gpsFieldParser_t callback);
@@ -95,17 +103,21 @@ private:
     static void fieldParseVTG(SerialGPS *ctx, uint8_t fieldIdx, char *field);
     static void fieldParseRMC(SerialGPS *ctx, uint8_t fieldIdx, char *field);
 
-    // UBX
+    // UBX, in SerialGPS-ublox.cpp
+    bool ubxStart(uint8_t c);
+    void ubxByte(uint8_t c);
     void processUbxMessage();
     void processNavPvt();
     void queueUbx(uint8_t msgClass, uint8_t msgId, const uint8_t *payload, uint8_t len);
     void queueCfgMsg(uint8_t msgClass, uint8_t msgId, uint8_t rate);
+    void queueCfgValset();
+    void queueCfgLegacy();
     void queueNavRate(uint16_t measRateMs);
     void queueBaudChange(uint32_t baud);
     void expectAck(uint8_t msgClass, uint8_t msgId);
     void ubxAccumulate(uint8_t c) { ubxCkA += c; ubxCkB += ubxCkA; }
 
-    // Detect/configure
+    // Detect/configure, in SerialGPS.cpp
     uint32_t currentBaud() const;
     void setBaud(uint32_t baud);
     void frameReceived();
