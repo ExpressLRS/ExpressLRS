@@ -139,29 +139,33 @@ void checkBackpackUpdate()
         {
             startPassthrough(false);
         }
-#if defined(PLATFORM_ESP32_S3)
-        // Start passthrough mode if an Espressif resync packet is detected on the USB port
-        static const uint8_t resync[] = {
-            0xc0,0x00,0x08,0x24,0x00,0x00,0x00,0x00,0x00,0x07,0x07,0x12,0x20,0x55,0x55,0x55,0x55,
-            0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55, 0x55,0x55,
-            0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0xc0
-        };
-        static int resync_pos = 0;
-        while(USBSerial.available())
-        {
-            const int byte = USBSerial.read();
-            if (byte == resync[resync_pos])
-            {
-                resync_pos++;
-                if (resync_pos == sizeof(resync)) startPassthrough(true);
-            }
-            else
-            {
-                resync_pos = 0;
-            }
-        }
-#endif
     }
+}
+
+void feedUSB(const uint8_t *buf, const uint16_t size)
+{
+#if defined(PLATFORM_ESP32_S3)
+    // Start passthrough mode if an Espressif resync packet is detected on the USB port
+    static const uint8_t resync[] = {
+        0xc0,0x00,0x08,0x24,0x00,0x00,0x00,0x00,0x00,0x07,0x07,0x12,0x20,0x55,0x55,0x55,0x55,
+        0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55, 0x55,0x55,
+        0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0xc0
+    };
+    static int resync_pos = 0;
+    for (int pos = 0 ; pos < size ; pos++)
+    {
+        const u_int8_t byte = buf[pos];
+        if (byte == resync[resync_pos])
+        {
+            resync_pos++;
+            if (resync_pos == sizeof(resync)) startPassthrough(true);
+        }
+        else
+        {
+            resync_pos = 0;
+        }
+    }
+#endif
 }
 
 static void BackpackWiFiToMSPOut(const uint16_t command)

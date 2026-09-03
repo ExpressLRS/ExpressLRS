@@ -86,13 +86,13 @@
 #define OPT_HAS_SCREEN false
 #define OPT_HAS_GSENSOR false
 #define OPT_HAS_THERMAL false
-// No backpack
+// No backpack, but allow debugging
 #define OPT_USE_TX_BACKPACK false
-#define GPIO_PIN_DEBUG_RX UNDEF_PIN
-#define GPIO_PIN_DEBUG_TX UNDEF_PIN
+#define BACKPACK_LOGGING_BAUD hardware_int(HARDWARE_debug_backpack_baud)
+#define GPIO_PIN_DEBUG_RX hardware_pin(HARDWARE_debug_backpack_rx)
+#define GPIO_PIN_DEBUG_TX hardware_pin(HARDWARE_debug_backpack_tx)
 #define GPIO_PIN_BACKPACK_EN UNDEF_PIN
 #define GPIO_PIN_BACKPACK_BOOT UNDEF_PIN
-#define BACKPACK_LOGGING_BAUD 0
 #define PASSTHROUGH_BAUD 0
 // No fan
 #define GPIO_PIN_FAN_EN UNDEF_PIN
