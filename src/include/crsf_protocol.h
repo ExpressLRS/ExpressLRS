@@ -63,6 +63,7 @@ typedef enum : uint8_t
     CRSF_FRAMETYPE_RPM = 0x0C,
     CRSF_FRAMETYPE_TEMP = 0x0D,
     CRSF_FRAMETYPE_CELLS = 0x0E,
+    CRSF_FRAMETYPE_GYRO = 0x13,
     CRSF_FRAMETYPE_LINK_STATISTICS = 0x14,
     CRSF_FRAMETYPE_RC_CHANNELS_PACKED = 0x16,
     CRSF_FRAMETYPE_ATTITUDE = 0x1E,
@@ -373,6 +374,19 @@ typedef struct crsf_sensor_flight_mode_s
 {
     char flight_mode[16];
 } PACKED crsf_flight_mode_t;
+
+//CRSF_FRAMETYPE_GYRO = 0x13
+typedef struct crsf_sensor_gyro_s
+{
+    uint32_t sample_time;  // Timestamp of the sample in us
+    int16_t gyro_x;        // LSB = INT16_MAX/2000 DPS
+    int16_t gyro_y;        // LSB = INT16_MAX/2000 DPS
+    int16_t gyro_z;        // LSB = INT16_MAX/2000 DPS
+    int16_t acc_x;         // LSB = INT16_MAX/16 G
+    int16_t acc_y;         // LSB = INT16_MAX/16 G
+    int16_t acc_z;         // LSB = INT16_MAX/16 G
+    int16_t gyro_temp;     // centidegrees
+} PACKED crsf_sensor_gyro_t;
 
 /*
  * 0x14 Link statistics

@@ -67,7 +67,7 @@ void devicesRegister(device_affinity_t *devices, uint8_t count)
         semCore0Begin = xSemaphoreCreateBinary();
         semCore0Complete = xSemaphoreCreateBinary();
         disableCore0WDT();
-        xTaskCreatePinnedToCore(deviceTask, "deviceTask", 32768, NULL, 0, &xDeviceTask, 0);
+        xTaskCreatePinnedToCore(deviceTask, "deviceTask", 32768, nullptr, 1, &xDeviceTask, 0);
     #endif
 }
 
