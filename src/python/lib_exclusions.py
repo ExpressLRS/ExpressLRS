@@ -19,7 +19,7 @@ built; its target must not include headers or symbols it provides.
 LIBRARY_EXCLUSIONS = {
     # target type -> "*" (all target MCUs) or MCU -> library names
     "TX": {
-        "*": ("AnalogVbat","Baro","GYRO","MSPVTX","rx-crsf","ServoOutput","VTXSPI"),
+        "*": ("AnalogVbat","Baro","GYRO","MSPVTX","PWM","rx-crsf","ServoOutput","VTXSPI"),
         "esp32c3": ("GFX Library for Arduino","U8g2","GSENSOR","SCREEN","THERMAL"),
         "esp8285": ("GSENSOR","SCREEN","THERMAL"),
     },
