@@ -63,6 +63,34 @@ void debugPrintf(const char* fmt, ...)
   if (v) LOGGING_UART.write((uint8_t*)v, fmt - v);
 }
 
+void hexdump(const void *p, size_t len)
+{
+    __attribute__((aligned(4))) char linebuf[68];
+    linebuf[sizeof(linebuf) - 4] = '\r';
+    linebuf[sizeof(linebuf) - 3] = '\n';
+    linebuf[sizeof(linebuf) - 2] = '\0';
+    linebuf[sizeof(linebuf) - 1] = '\0';
+
+    const char *data = (const char *)p;
+    while (len > 0)
+    {
+        // Chear the line buffer except the \n\0
+        memset(linebuf, ' ', sizeof(linebuf) - 3);
+
+        for (uint8_t linepos=0; len>0 && linepos<16; ++linepos)
+        {
+            constexpr char HEX_CHARS[] = "0123456789abcdef";
+            const unsigned char c = *data;
+            linebuf[linepos*3 + 0] = HEX_CHARS[c >> 4];
+            linebuf[linepos*3 + 1] = HEX_CHARS[c & 0x0f];
+            linebuf[(16*3) + linepos] = (c < ' ' || c > '~') ? '.' : c;
+            ++data;
+            --len;
+        }
+        LOGGING_UART.print(linebuf);
+     }
+}
+
 #if defined(DEBUG_INIT)
 // Create a UART to send DBGLN to during preinit
 void debugCreateInitLogger()
