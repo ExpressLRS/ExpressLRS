@@ -207,6 +207,8 @@ enum eServoOutputMode : uint8_t
     somPwm,         // 13: true PWM mode (NOT SUPPORTED)
     somSerial1RX,   // 14: secondary Serial RX
     somSerial1TX,   // 15: secondary Serial TX
+    somSerial2RX,   // 16: ternary Serial RX
+    somSerial2TX,   // 17: ternary Serial TX
 };
 
 enum eServoOutputFailsafeMode : uint8_t
@@ -247,6 +249,22 @@ enum eSerial1Protocol : uint8_t
     PROTOCOL_SERIAL1_GPS
 };
 #endif
+
+enum eSerial2Protocol : uint8_t
+{
+    PROTOCOL_SERIAL2_OFF,
+    PROTOCOL_SERIAL2_CRSF,
+    PROTOCOL_SERIAL2_INVERTED_CRSF,
+    PROTOCOL_SERIAL2_SBUS,
+    PROTOCOL_SERIAL2_INVERTED_SBUS,
+	PROTOCOL_SERIAL2_SUMD,
+    PROTOCOL_SERIAL2_DJI_RS_PRO,
+    PROTOCOL_SERIAL2_HOTT_TLM,
+    PROTOCOL_SERIAL2_TRAMP,
+    PROTOCOL_SERIAL2_SMARTAUDIO,
+    PROTOCOL_SERIAL2_MSP_DISPLAYPORT,
+    PROTOCOL_SERIAL2_GPS,
+};
 
 enum eFailsafeMode : uint8_t
 {
