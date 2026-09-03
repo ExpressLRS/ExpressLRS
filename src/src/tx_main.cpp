@@ -16,12 +16,14 @@
 #include "devButton.h"
 #include "devVTX.h"
 #if defined(PLATFORM_ESP32)
-#include "devScreen.h"
 #include "devBLE.h"
+#include "devBackpack.h"
+#if !defined(PLATFORM_ESP32_C3)
+#include "devScreen.h"
 #include "devGsensor.h"
 #include "devThermal.h"
 #include "devPDET.h"
-#include "devBackpack.h"
+#endif
 #else
 // Fake functions for 8285
 void checkBackpackUpdate() {}
@@ -106,8 +108,8 @@ device_affinity_t ui_devices[] = {
   {&WIFI_device, 0},
   {&Button_device, 0},
 #if defined(PLATFORM_ESP32)
-  {&Backpack_device, 0},
   {&BLE_device, 0},
+  {&Backpack_device, 0},
 #if !defined(PLATFORM_ESP32_C3)
   {&Screen_device, 0},
   {&Gsensor_device, 0},
