@@ -109,14 +109,14 @@ Approach:
   Iterate through the array, and for each block, swap each entry in it with
   another random entry, excluding the sync channel.
 */
-void FHSSrandomiseFHSSsequenceBuild(const uint32_t seed, uint32_t freqCount, uint_fast8_t syncChannel, uint8_t *inSequence)
+uint16_t FHSSrandomiseFHSSsequenceBuild(const uint32_t seed, uint32_t freqCount, uint_fast8_t syncChannel, uint8_t *inSequence)
 {
-    // reset the pointer (otherwise the tests fail)
-    FHSSptr = 0;
+    const uint16_t sequenceCount = (FHSS_SEQUENCE_LEN / freqCount) * freqCount;
+
     rngSeed(seed);
 
     // initialize the sequence array
-    for (uint16_t i = 0; i < FHSSgetSequenceCount(); i++)
+    for (uint16_t i = 0; i < sequenceCount; i++)
     {
         if (i % freqCount == 0) {
             inSequence[i] = syncChannel;
@@ -127,7 +127,7 @@ void FHSSrandomiseFHSSsequenceBuild(const uint32_t seed, uint32_t freqCount, uin
         }
     }
 
-    for (uint16_t i = 0; i < FHSSgetSequenceCount(); i++)
+    for (uint16_t i = 0; i < sequenceCount; i++)
     {
         // if it's not the sync channel
         if (i % freqCount != 0)
@@ -143,13 +143,15 @@ void FHSSrandomiseFHSSsequenceBuild(const uint32_t seed, uint32_t freqCount, uin
     }
 
     // output FHSS sequence
-    // for (uint16_t i=0; i < FHSSgetSequenceCount(); i++)
+    // for (uint16_t i=0; i < sequenceCount; i++)
     // {
     //     DBG("%u ",inSequence[i]);
     //     if (i % 10 == 9)
     //         DBGCR;
     // }
     // DBGCR;
+
+    return sequenceCount;
 }
 
 /**
@@ -330,27 +332,28 @@ static void FHSS_buildSecondarySequence_GNSSAware(const uint32_t seed)
 
 void FHSSrandomiseFHSSsequence(const uint32_t seed)
 {
+    // the hop pointer indexes sequences that are about to be replaced
+    FHSSptr = 0;
+
     FHSSconfig = &domains[firmwareOptions.domain];
     sync_channel = FHSSconfig->freq_count / 2;
     freq_spread = (FHSSconfig->freq_stop - FHSSconfig->freq_start) * FREQ_SPREAD_SCALE / (FHSSconfig->freq_count - 1);
-    primaryBandCount = (FHSS_SEQUENCE_LEN / FHSSconfig->freq_count) * FHSSconfig->freq_count;
 
     DBGLN("Primary Domain %s, %u channels, sync=%u",
         FHSSconfig->domain, FHSSconfig->freq_count, sync_channel);
 
-    FHSSrandomiseFHSSsequenceBuild(seed, FHSSconfig->freq_count, sync_channel, FHSSsequence);
+    primaryBandCount = FHSSrandomiseFHSSsequenceBuild(seed, FHSSconfig->freq_count, sync_channel, FHSSsequence);
 #if defined(RADIO_LR1121) || defined(RADIO_LR2021) || defined(UNIT_TEST)
     FHSSconfigDualBand = &domainsDualBand[0];
     sync_channel_DualBand = FHSSconfigDualBand->freq_count / 2;
     freq_spread_DualBand = (FHSSconfigDualBand->freq_stop - FHSSconfigDualBand->freq_start) * FREQ_SPREAD_SCALE / (FHSSconfigDualBand->freq_count - 1);
-    secondaryBandCount = (FHSS_SEQUENCE_LEN / FHSSconfigDualBand->freq_count) * FHSSconfigDualBand->freq_count;
     FHSSusePrimaryFreqBand = false;
 
     DBGLN("Dual Domain %s, %u channels, sync=%u",
         FHSSconfigDualBand->domain, FHSSconfigDualBand->freq_count, sync_channel_DualBand);
 
     // Build High Band hopping sequence
-    FHSSrandomiseFHSSsequenceBuild(seed, FHSSconfigDualBand->freq_count, sync_channel_DualBand, FHSSsequence_DualBand);
+    secondaryBandCount = FHSSrandomiseFHSSsequenceBuild(seed, FHSSconfigDualBand->freq_count, sync_channel_DualBand, FHSSsequence_DualBand);
 
     // Build High Band hopping sequence with GNSS avoidance integrated
     FHSS_buildSecondarySequence_GNSSAware(seed ^ 0xfbce3cce);

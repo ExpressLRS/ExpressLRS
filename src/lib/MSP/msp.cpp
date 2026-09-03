@@ -87,7 +87,7 @@ MSP::processReceivedByte(uint8_t c)
                 // Reject before payload copy because m_packet.payload is fixed-size.
                 if (m_packet.payloadSize > MSP_PORT_INBUF_SIZE)
                 {
-                    DBGLN("MSP payload too large - Got %u max %u", payloadSize, MSP_PORT_INBUF_SIZE);
+                    DBGLN("MSP payload too large - Got %u max %u", m_packet.payloadSize, MSP_PORT_INBUF_SIZE);
                     m_packet.reset();
                     m_offset = 0;
                     m_inputState = MSP_IDLE;
