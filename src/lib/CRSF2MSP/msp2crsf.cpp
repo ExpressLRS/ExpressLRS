@@ -114,21 +114,23 @@ void MSP2CROSSFIRE::parse(CRSFConnector *connector, const uint8_t *data, uint32_
 {
     const MSPframeType_e mspVersion = getVersion(data);
     const uint32_t mspPayloadLen = getPayloadLen(data, mspVersion);
-    const uint32_t MSPframeLen = getFrameLen(mspPayloadLen, mspVersion);
-    const uint8_t numChunks = (MSPframeLen / CRSF_MSP_MAX_BYTES_PER_CHUNK) + 1; // count the first chunk!
-    const uint8_t chunkRemainder = MSPframeLen % CRSF_MSP_MAX_BYTES_PER_CHUNK;
+    uint32_t MSPframeLen = getFrameLen(mspPayloadLen, mspVersion);
+    uint32_t startIdx = 3; // we don't transmit the MSP header
+    bool isNewFrame = true;
 
-    for (uint8_t i = 0; i < numChunks; i++)
+    while (MSPframeLen > 0)
     {
         uint8_t packet[CRSF_MAX_PACKET_LEN] {};
-        packet[5] = getVersionBits(mspVersion) | getSeqNumberBits(seqNum++) | getNewFrameBits(i == 0);
+        packet[5] = getVersionBits(mspVersion) | getSeqNumberBits(seqNum++) | getNewFrameBits(isNewFrame);
 
-        const uint32_t startIdx = (i * CRSF_MSP_MAX_BYTES_PER_CHUNK) + 3; // we don't transmit the MSP header
-        const uint8_t CRSFpktLen = (i == (numChunks - 1)) ? chunkRemainder : (CRSF_MSP_MAX_BYTES_PER_CHUNK);
-
+        const uint8_t CRSFpktLen = (MSPframeLen > CRSF_MSP_MAX_BYTES_PER_CHUNK) ? CRSF_MSP_MAX_BYTES_PER_CHUNK : MSPframeLen;
         memcpy(&packet[6], &data[startIdx], CRSFpktLen);
         crsfRouter.SetExtendedHeaderAndCrc((crsf_ext_header_t *)packet, getHeaderDir(data[CRSF_MSP_TYPE_IDX]), CRSFpktLen + CRSF_EXT_FRAME_PAYLOAD_LEN_SIZE_OFFSET, dest, src);
         crsfRouter.processMessage(connector, (crsf_header_t *)packet);
+
+        MSPframeLen -= CRSFpktLen;
+        startIdx += CRSFpktLen;
+        isNewFrame = false;
     }
 }
 
