@@ -24,11 +24,6 @@ void PPMHandset::Begin()
     rmt_get_ringbuf_handle(PPM_RMT_CHANNEL, &rb);
     rmt_rx_start(PPM_RMT_CHANNEL, true);
     lastPPM = 0;
-
-    if (connected)
-    {
-        connected();
-    }
 }
 
 void PPMHandset::End()
@@ -62,8 +57,12 @@ void PPMHandset::handleInput()
                                        CRSF_CHANNEL_VALUE_STD_MIN, CRSF_CHANNEL_VALUE_STD_MAX);
         }
         numChannels = channelCount;
-        vRingbufferReturnItem(rb, static_cast<void *>(items));
+        vRingbufferReturnItem(rb, items);
         lastPPM = now;
+        if (connected && connectionState == noCrossfire)
+        {
+            connected();
+        }
 
         PerformChannelOverrides(localChannelData, numChannels);
 
@@ -75,7 +74,7 @@ void PPMHandset::handleInput()
     {
         DBGLN("PPM signal lost, disarming");
         isArmed = false;
-        if (disconnected)
+        if (disconnected && connectionState != noCrossfire)
         {
             disconnected();
         }
