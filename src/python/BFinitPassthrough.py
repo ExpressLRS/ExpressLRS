@@ -13,8 +13,10 @@ SCRIPT_DEBUG = False
 class PassthroughEnabled(Exception):
     pass
 
+
 class PassthroughFailed(Exception):
     pass
+
 
 def dbg_print(line=''):
     sys.stdout.write(line + '\n')
@@ -22,7 +24,6 @@ def dbg_print(line=''):
 
 
 def _validate_serialrx(rl, config, expected):
-    found = False
     if type(expected) == str:
         expected = [expected]
     rl.set_delimiters(["# "])
@@ -30,11 +31,9 @@ def _validate_serialrx(rl, config, expected):
     rl.write_str("get %s" % config)
     line = rl.read_line(1.).strip()
     for key in expected:
-        key = " = %s" % key
-        if key in line:
-            found = True
-            break
-    return found
+        if " = %s" % key in line:
+            return key
+    return None
 
 
 def bf_passthrough_init(port, requestedBaudrate):
@@ -58,8 +57,9 @@ def bf_passthrough_init(port, requestedBaudrate):
         raise PassthroughEnabled("No CLI available. Already in passthrough mode?, If this fails reboot FC and try again!")
 
     serial_check = []
-    if not _validate_serialrx(rl, "serialrx_provider", ["CRSF", "ELRS"]):
-        serial_check.append("Serial Receiver Protocol is not set to CRSF! Hint: set serialrx_provider = CRSF")
+    serial_provider = _validate_serialrx(rl, "serialrx_provider", ["CRSF", "ELRS", "MAVLINK"])
+    if not serial_provider:
+        serial_check.append("Serial Receiver Protocol is not set to CRSF, ELRS or MAVLINK! Hint: set serialrx_provider = CRSF or MAVLINK")
     if not _validate_serialrx(rl, "serialrx_inverted", "OFF"):
         serial_check.append("Serial Receiver UART is inverted! Hint: set serialrx_inverted = OFF")
     if not _validate_serialrx(rl, "serialrx_halfduplex", ["OFF", "AUTO"]):
@@ -73,6 +73,9 @@ def bf_passthrough_init(port, requestedBaudrate):
             error += "    !!! %s !!!\n" % err
         error += "\n    Please change the configuration and try again!\n"
         raise PassthroughFailed(error)
+
+    if serial_provider == "MAVLINK":
+        requestedBaudrate = 460800
 
     SerialRXindex = ""
 
@@ -109,6 +112,7 @@ def bf_passthrough_init(port, requestedBaudrate):
     time.sleep(.2)
     s.close()
     dbg_print("======== PASSTHROUGH DONE ========")
+    return requestedBaudrate
 
 
 def reset_to_bootloader(port, baud, target, action, accept=None, chip_type='ESP82') -> int:
@@ -118,9 +122,12 @@ def reset_to_bootloader(port, baud, target, action, accept=None, chip_type='ESP8
         timeout=1, xonxoff=0, rtscts=0)
     rl = SerialHelper.SerialHelper(s, 3.)
     rl.clear()
-    BootloaderInitSeq = bootloader.get_init_seq(chip_type)
-    dbg_print("  * Using full duplex (CRSF)")
-    #this is the training sequ for the ROM bootloader, we send it here so it doesn't auto-neg to the wrong baudrate by the BootloaderInitSeq that we send to reset ELRS
+    BootloaderInitSeq = bootloader.get_init_seq()
+    dbg_print("  * Using full duplex serial receiver passthrough")
+    # The user may have pressed the button on the receiver to manually enter bootloader mode i.e.
+    # a recovery flash. So we will send the ESP bootloader ROM training sequence so it doesn't
+    # auto-negotiate to the wrong baud-rate when it sees the BootloaderInitSeq that we send to
+    # reboot a running receiver into the ROM bootloader for flashing.
     rl.write(b'\x07\x07\x12\x20' + 32 * b'\x55')
     time.sleep(0.2)
     rl.write(BootloaderInitSeq)
@@ -146,17 +153,22 @@ def reset_to_bootloader(port, baud, target, action, accept=None, chip_type='ESP8
 
     return ElrsUploadResult.Success
 
+
 def init_passthrough(source, target, env) -> int:
     env.AutodetectUploadPort([env])
+    baud = env['UPLOAD_SPEED']
     try:
-        bf_passthrough_init(env['UPLOAD_PORT'], env['UPLOAD_SPEED'])
+        baud = bf_passthrough_init(env['UPLOAD_PORT'], baud)
     except PassthroughEnabled as err:
         dbg_print(str(err))
-    return reset_to_bootloader(env['UPLOAD_PORT'], env['UPLOAD_SPEED'], env['PIOENV'], source[0])
+        return ElrsUploadResult.ErrorGeneral
+    env.Replace(UPLOAD_SPEED=baud)
+    return reset_to_bootloader(env['UPLOAD_PORT'], baud, env['PIOENV'], source[0])
+
 
 def main(custom_args = None):
     parser = argparse.ArgumentParser(
-        description="Initialize BetaFlight passthrough and optionally send a reboot comamnd sequence")
+        description="Initialize BetaFlight passthrough and optionally send a reboot command sequence")
     parser.add_argument("-b", "--baud", type=int, default=420000,
         help="Baud rate for passthrough communication")
     parser.add_argument("-p", "--port", type=str,
@@ -174,19 +186,21 @@ def main(custom_args = None):
 
     args = parser.parse_args(custom_args)
 
-    if (args.port == None):
+    if args.port is None:
         args.port = serials_find.get_serial_port()
 
-    returncode = ElrsUploadResult.Success
+    baud = args.baud
     try:
-        bf_passthrough_init(args.port, args.baud)
+        baud = bf_passthrough_init(args.port, baud)
     except PassthroughEnabled as err:
         dbg_print(str(err))
+        return ElrsUploadResult.ErrorGeneral
 
     if args.reset_to_bl:
-        returncode = reset_to_bootloader(args.port, args.baud, args.target, args.action, args.accept, args.type)
+        return reset_to_bootloader(args.port, baud, args.target, args.action, args.accept, args.type)
 
-    return returncode
+    return ElrsUploadResult.Success
+
 
 if __name__ == '__main__':
     returncode = main()
