@@ -104,6 +104,10 @@ static void VtxConfigToMSPOut()
 
 static bool initialize()
 {
+    if (firmwareOptions.is_airport)
+    {
+        return false;
+    }
     registerButtonFunction(ACTION_SEND_VTX, VtxTriggerSend);
     return true;
 }

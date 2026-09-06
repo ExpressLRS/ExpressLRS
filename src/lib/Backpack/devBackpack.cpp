@@ -402,23 +402,25 @@ static void sendConfigToBackpack()
 
 static bool initialize()
 {
-    if (OPT_USE_TX_BACKPACK)
+    if (!OPT_USE_TX_BACKPACK || firmwareOptions.is_airport)
     {
-        if (GPIO_PIN_BACKPACK_EN != UNDEF_PIN)
-        {
-            pinMode(GPIO_PIN_BOOT0, INPUT); // setup so we can detect pin-change for passthrough mode
-            pinMode(GPIO_PIN_BACKPACK_BOOT, OUTPUT);
-            pinMode(GPIO_PIN_BACKPACK_EN, OUTPUT);
-            // Shut down the backpack via EN pin and hold it there until the first event()
-            digitalWrite(GPIO_PIN_BACKPACK_EN, LOW);   // enable low
-            digitalWrite(GPIO_PIN_BACKPACK_BOOT, LOW); // bootloader pin high
-            delay(20);
-            // Rely on event() to boot
-        }
-        // Set all channels of PTR data to "do not override" (0xffff)
-        memset(ptrChannelData, 0xff, sizeof(ptrChannelData));
+        return false;
     }
-    return OPT_USE_TX_BACKPACK;
+
+    if (GPIO_PIN_BACKPACK_EN != UNDEF_PIN)
+    {
+        pinMode(GPIO_PIN_BOOT0, INPUT); // setup so we can detect pin-change for passthrough mode
+        pinMode(GPIO_PIN_BACKPACK_BOOT, OUTPUT);
+        pinMode(GPIO_PIN_BACKPACK_EN, OUTPUT);
+        // Shut down the backpack via EN pin and hold it there until the first event()
+        digitalWrite(GPIO_PIN_BACKPACK_EN, LOW);   // enable low
+        digitalWrite(GPIO_PIN_BACKPACK_BOOT, LOW); // bootloader pin high
+        delay(20);
+        // Rely on event() to boot
+    }
+    // Set all channels of PTR data to "do not override" (0xffff)
+    memset(ptrChannelData, 0xff, sizeof(ptrChannelData));
+    return true;
 }
 
 static int start()
