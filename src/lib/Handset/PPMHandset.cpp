@@ -42,7 +42,7 @@ void PPMHandset::handleInput()
     {
         length /= 4; // one RMT = 4 Bytes
         int channelCount = 0;
-        for (int i = 0; i < length; i++)
+        for (int i = 0; i < length && i < CRSF_NUM_CHANNELS; i++)
         {
             const auto item = items[i];
             // Stop if there is a 0 duration
