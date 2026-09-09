@@ -299,7 +299,7 @@ void TxConfig::Load()
 void TxConfig::Load()
 {
     m_modified = 0;
-    m_eeprom->Get(0, m_config);
+    m_eeprom.Get(0, m_config);
 
     uint32_t version = 0;
     if ((m_config.version & CONFIG_MAGIC_MASK) == TX_CONFIG_MAGIC)
@@ -344,15 +344,15 @@ void TxConfig::UpgradeEepromV5ToV6()
     v6_tx_config_t v6Config = { 0 }; // default the new fields to 0
 
     // Populate the prev version struct from eeprom
-    m_eeprom->Get(0, v5Config);
+    m_eeprom.Get(0, v5Config);
 
     // Copy prev values to current config struct
     // This only workse because v5 and v6 are the same up to the new fields
     // which have already been set to 0
     memcpy(&v6Config, &v5Config, sizeof(v5Config));
     v6Config.version = 6U | TX_CONFIG_MAGIC;
-    m_eeprom->Put(0, v6Config);
-    m_eeprom->Commit();
+    m_eeprom.Put(0, v6Config);
+    m_eeprom.Commit();
 }
 
 void TxConfig::UpgradeEepromV6ToV7()
@@ -361,7 +361,7 @@ void TxConfig::UpgradeEepromV6ToV7()
     v7_tx_config_t v7Config = { 0 }; // default the new fields to 0
 
     // Populate the prev version struct from eeprom
-    m_eeprom->Get(0, v6Config);
+    m_eeprom.Get(0, v6Config);
 
     // Manual field copying as some fields have moved
     #define LAZY(member) v7Config.member = v6Config.member
@@ -386,14 +386,14 @@ void TxConfig::UpgradeEepromV6ToV7()
 
     // Full Commit now
     m_config.version = 7U | TX_CONFIG_MAGIC;
-    m_eeprom->Put(0, v7Config);
-    m_eeprom->Commit();
+    m_eeprom.Put(0, v7Config);
+    m_eeprom.Commit();
 }
 
 void TxConfig::UpgradeEepromV7ToV8()
 {
     v7_tx_config_t v7Config;
-    m_eeprom->Get(0, v7Config);
+    m_eeprom.Get(0, v7Config);
 
     // Manual field copying as some fields were removed
     #define LAZY(member) m_config.member = v7Config.member
@@ -480,8 +480,8 @@ TxConfig::Commit()
     nvs_commit(handle);
 #else
     // Write the struct to eeprom
-    m_eeprom->Put(0, m_config);
-    m_eeprom->Commit();
+    m_eeprom.Put(0, m_config);
+    m_eeprom.Commit();
 #endif
     uint32_t changes = m_modified;
     m_modified = 0;
@@ -636,15 +636,6 @@ TxConfig::SetPowerFanThreshold(uint8_t powerFanThreshold)
 }
 
 void
-TxConfig::SetStorageProvider(ELRS_EEPROM *eeprom)
-{
-    if (eeprom)
-    {
-        m_eeprom = eeprom;
-    }
-}
-
-void
 TxConfig::SetFanMode(uint8_t fanMode)
 {
     if (m_config.fanMode != fanMode)
@@ -780,7 +771,7 @@ TxConfig::SetDefaults(bool commit)
         SetModelId(i);
         #if defined(RADIO_SX127X)
             SetRate(enumRatetoIndexSafe(RATE_LORA_900_200HZ));
-        #elif defined(RADIO_LR1121)
+        #elif defined(RADIO_LR1121) || defined(RADIO_LR2021)
             SetRate(enumRatetoIndexSafe(POWER_OUTPUT_VALUES_COUNT == 0 ? RATE_LORA_2G4_250HZ : RATE_LORA_900_200HZ));
         #elif defined(RADIO_SX128X)
             SetRate(enumRatetoIndexSafe(RATE_LORA_2G4_250HZ));
@@ -1246,7 +1237,7 @@ RxConfig::SetPower(uint8_t power)
 void
 RxConfig::SetAntennaMode(uint8_t antennaMode)
 {
-    //0 and 1 is use for gpio_antenna_select
+    // 0=Antenna 1, 1=Antenna 2 are used for gpio_antenna_select
     // 2 is diversity
     if (m_config.antennaMode != antennaMode)
     {

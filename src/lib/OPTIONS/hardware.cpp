@@ -40,6 +40,8 @@ static const struct {
     {HARDWARE_radio_rfo_hf, "radio_rfo_hf", BOOL},
     {HARDWARE_radio_rfsw_ctrl, "radio_rfsw_ctrl", ARRAY},
     {HARDWARE_radio_rfsw_ctrl_count, "radio_rfsw_ctrl", COUNT},
+    {HARDWARE_radio_tcxo, "radio_tcxo", INT},
+    {HARDWARE_radio_tcxo_delay, "radio_tcxo_delay", INT},
     {HARDWARE_ant_ctrl, "ant_ctrl", INT},
     {HARDWARE_ant_group, "ant_group", INT},
     {HARDWARE_power_enable, "power_enable", INT},

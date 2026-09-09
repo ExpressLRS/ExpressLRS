@@ -10,6 +10,11 @@ uint16_t FiveWayButton::joyAdcValues[] = {0};
  * The goal is to avoid collisions between joystick positions while still maintaining
  * the widest tolerance for the analog value.
  *
+ * On ESP32, JOY_ADC_VALUES (raw counts) are converted to millivolt values
+ * (Vref=3300mV, 12-bit ADC) to match the calibrated mV readings from
+ * analogReadMilliVolts() used in devADC. This corrects for chip-to-chip
+ * reference voltage variation.
+ *
  * Example: {10,50,800,1000,300,1600}
  * If we just choose the minimum difference for this array the value would
  * be 40/2 = 20.
@@ -23,6 +28,17 @@ uint16_t FiveWayButton::joyAdcValues[] = {0};
 void FiveWayButton::calcFuzzValues()
 {
     memcpy(FiveWayButton::joyAdcValues, JOY_ADC_VALUES, sizeof(FiveWayButton::joyAdcValues));
+
+#if defined(PLATFORM_ESP32)
+    // Convert JOY_ADC_VALUES from raw counts to millivolt values to match
+    // the calibrated mV readings from analogReadMilliVolts() used in devADC.
+    // This corrects for chip-to-chip reference voltage variation.
+    for (unsigned int i = 0; i < N_JOY_ADC_VALUES; i++)
+    {
+        joyAdcValues[i] = (uint32_t)joyAdcValues[i] * 3300 / 4096;
+    }
+#endif
+
     for (unsigned int i = 0; i < N_JOY_ADC_VALUES; i++)
     {
         uint16_t closestDist = 0xffff;
