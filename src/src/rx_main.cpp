@@ -1387,10 +1387,9 @@ static void setupSerial()
     }
     else if (config.GetSerialProtocol() == PROTOCOL_GPS)
     {
-        // The GPS is only configurable if we can talk to it, which needs a TX pin that isn't
-        // shared with the line the GPS is talking to us on
-        const int8_t gpsTxPin = (GPIO_PIN_RCSIGNAL_TX == GPIO_PIN_RCSIGNAL_RX) ? UNDEF_PIN : GPIO_PIN_RCSIGNAL_TX;
-        serialIO = new SerialGPS(SERIAL_PROTOCOL_TX, gpsTxPin);
+        // Serial(0) is always assigned in a way that it uses two pins, only Serial1 is allowed to not have both RX/TX
+        const int8_t gpsTxPin = (GPIO_PIN_RCSIGNAL_TX == UNDEF_PIN) ? U0TXD_GPIO_NUM : GPIO_PIN_RCSIGNAL_TX;
+        serialIO = new SerialGPS(SERIAL_PROTOCOL_RX, gpsTxPin);
     }
     else if (hottTlmSerial)
     {
