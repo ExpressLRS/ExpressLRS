@@ -123,12 +123,23 @@ bool LR1121Driver::Begin(uint32_t minimumFrequency, uint32_t maximumFrequency)
     //Clear Errors
     hal.WriteCommand(LR11XX_SYSTEM_CLEAR_ERRORS_OC, SX12XX_Radio_All); // Remove later?  Might not be required???
 
-/*
-Do not enable for dual radio TX.
-When AUTOFS is set and tlm received by only 1 of the 2 radios,  that radio will go into FS mode and the other
-into Standby mode.  After the following SPI command for tx mode, busy will go high for differing periods of time because 1 is
-transitioning from FS mode and the other from Standby mode. This causes the tx done dio of the 2 radios to occur at very different times.
-*/
+    SetMode(LR1121_MODE_STDBY_RC, SX12XX_Radio_All);
+    if (hardware_int(HARDWARE_radio_tcxo) != -1)
+    {
+        const uint8_t tcxo_volts = hardware_int(HARDWARE_radio_tcxo);
+        const uint32_t tcxo_delay = hardware_int(HARDWARE_radio_tcxo_delay);
+
+        uint8_t tcxoMode[] {tcxo_volts, (uint8_t)(tcxo_delay >> 16), (uint8_t)(tcxo_delay >> 8), (uint8_t)tcxo_delay};
+        hal.WriteCommand(LR11XX_SYSTEM_SET_TCXO_MODE_OC, tcxoMode, sizeof(tcxoMode), SX12XX_Radio_All);
+    }
+
+    /*
+     * Do not enable AUTOFS for dual radio TX.
+     * When AUTOFS is set and tlm received by only 1 of the 2 radios,  that radio will go into FS mode and the other
+     * into Standby mode.  After the following SPI command for tx mode, busy will go high for differing periods of time because 1 is
+     * transitioning from FS mode and the other from Standby mode. This causes the tx done dio of the 2 radios to occur at very different times.
+     */
+
     // 7.2.5 SetRxTxFallbackMode
     uint8_t FBbuf[1] = {LR11XX_RADIO_FALLBACK_FS};
     fallBackMode = LR1121_MODE_FS;
