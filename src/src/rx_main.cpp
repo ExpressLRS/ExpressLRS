@@ -29,7 +29,9 @@
 #include "rx-serial/SerialGPS.h"
 
 #include "devAnalogVbat.h"
+#if !defined(PLATFORM_ESP8266)
 #include "devBaro.h"
+#endif
 #include "devButton.h"
 #include "devLED.h"
 #include "devRXLUA.h"
@@ -86,7 +88,9 @@ device_affinity_t ui_devices[] = {
   {&Button_device, 0},
   {&AnalogVbat_device, 0},
   {&ServoOut_device, 1},
+#if !defined(PLATFORM_ESP8266)
   {&Baro_device, 0}, // must come after AnalogVbat_device to slow updates
+#endif
 #if defined(PLATFORM_ESP32) && !defined(PLATFORM_ESP32_C3)
   {&VTxSPI_device, 0},
   {&MSPVTx_device, 0}, // dependency on VTxSPI_device

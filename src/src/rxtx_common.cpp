@@ -4,7 +4,9 @@
 #include "logging.h"
 
 #include <functional>
+#if !defined(PLATFORM_ESP8266)
 #include <Wire.h>
+#endif
 
 static const int maxDeferredFunctions = 3;
 
@@ -23,6 +25,7 @@ static deferred_t deferred[maxDeferredFunctions] = {
 boolean i2c_enabled = false;
 static unsigned long rebootTime_Ms = 0;
 
+#if !defined(PLATFORM_ESP8266)
 static void setupWire()
 {
     int gpio_scl = GPIO_PIN_SCL;
@@ -61,10 +64,13 @@ static void setupWire()
         i2c_enabled = true;
     }
 }
+#endif
 
 void setupTargetCommon()
 {
+#if !defined(PLATFORM_ESP8266)
     setupWire();
+#endif
 }
 
 void deferExecutionMicros(unsigned long us, std::function<void()> f)
