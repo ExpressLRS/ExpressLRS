@@ -21,7 +21,9 @@
 #include "rx-serial/SerialSBUS.h"
 #include "rx-serial/SerialSUMD.h"
 #include "rx-serial/SerialAirPort.h"
+#if !defined(PLATFORM_ESP8266)
 #include "rx-serial/SerialHoTT_TLM.h"
+#endif
 #include "rx-serial/SerialMavlink.h"
 #include "rx-serial/SerialTramp.h"
 #include "rx-serial/SerialSmartAudio.h"
@@ -1311,11 +1313,13 @@ static void setupSerial()
     {
         serialBaud = 115200;
     }
+#if !defined(PLATFORM_ESP8266)
     else if (config.GetSerialProtocol() == PROTOCOL_HOTT_TLM)
     {
         hottTlmSerial = true;
         serialBaud = 19200;
     }
+#endif
     else if (config.GetSerialProtocol() == PROTOCOL_GPS)
     {
         serialBaud = 115200;
@@ -1384,10 +1388,12 @@ static void setupSerial()
     {
         serialIO = new SerialGPS(SERIAL_PROTOCOL_TX, SERIAL_PROTOCOL_RX);
     }
+#if !defined(PLATFORM_ESP8266)
     else if (hottTlmSerial)
     {
         serialIO = new SerialHoTT_TLM(SERIAL_PROTOCOL_TX, SERIAL_PROTOCOL_RX);
     }
+#endif
     else
     {
         serialIO = new SerialCRSF(SERIAL_PROTOCOL_TX, SERIAL_PROTOCOL_RX);

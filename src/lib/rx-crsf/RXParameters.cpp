@@ -35,9 +35,41 @@ static char pwmModes[] = "50Hz;60Hz;100Hz;160Hz;333Hz;400Hz;10kHzDuty;On/Off;DSh
 static selectionParameter luaSerialProtocol = {
     {"Protocol", CRSF_TEXT_SELECTION},
     0, // value
+#if defined(PLATFORM_ESP8266)
+    // HoTT telemetry is not built for ESP8266. The entry is hidden and the
+    // index is remapped around it so the stored eSerialProtocol stays the same.
+    "CRSF;Inverted CRSF;SBUS;Inverted SBUS;SUMD;DJI RS Pro;MAVLink;DisplayPort;GPS",
+#else
     "CRSF;Inverted CRSF;SBUS;Inverted SBUS;SUMD;DJI RS Pro;HoTT Telemetry;MAVLink;DisplayPort;GPS",
+#endif
     STR_EMPTYSPACE
 };
+
+static eSerialProtocol serialProtocolFromIndex(uint8_t index)
+{
+#if defined(PLATFORM_ESP8266)
+    if (index >= PROTOCOL_HOTT_TLM)
+    {
+        index++;
+    }
+#endif
+    return (eSerialProtocol)index;
+}
+
+static uint8_t serialProtocolToIndex(eSerialProtocol protocol)
+{
+#if defined(PLATFORM_ESP8266)
+    if (protocol == PROTOCOL_HOTT_TLM)
+    {
+        return PROTOCOL_CRSF; // what setupSerial() falls back to
+    }
+    if (protocol > PROTOCOL_HOTT_TLM)
+    {
+        return protocol - 1;
+    }
+#endif
+    return protocol;
+}
 
 #if defined(PLATFORM_ESP32)
 static selectionParameter luaSerial1Protocol = {
@@ -515,7 +547,7 @@ static void luaparamSetPower(propertiesCommon* item, uint8_t arg)
 void RXEndpoint::registerParameters()
 {
   registerParameter(&luaSerialProtocol, [](propertiesCommon* item, uint8_t arg){
-    config.SetSerialProtocol((eSerialProtocol)arg);
+    config.SetSerialProtocol(serialProtocolFromIndex(arg));
     if (config.IsModified()) {
       deferExecutionMillis(100, [](){
         reconfigureSerial();
@@ -618,7 +650,7 @@ static void updateBindModeLabel()
 
 void RXEndpoint::updateParameters()
 {
-  setTextSelectionValue(&luaSerialProtocol, config.GetSerialProtocol());
+  setTextSelectionValue(&luaSerialProtocol, serialProtocolToIndex(config.GetSerialProtocol()));
 #if defined(PLATFORM_ESP32)
   if (RX_HAS_SERIAL1)
   {
