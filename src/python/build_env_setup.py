@@ -30,7 +30,25 @@ print("PLATFORM : '%s'" % platform)
 print("BUILD ENV: '%s'" % target_name)
 print("build version: %s\n\n" % get_version(env))
 
+def strip_float_stdio_link_flags():
+    # The espressif8266 builder forces newlib's float printf/scanf into every
+    # image with "-u _printf_float -u _scanf_float". Nothing in the firmware
+    # formats or parses floats, and the two pull in ~16KB of flash.
+    flags = env['LINKFLAGS']
+    stripped = []
+    skip = False
+    for i, flag in enumerate(flags):
+        if skip:
+            skip = False
+            continue
+        if flag == '-u' and i + 1 < len(flags) and flags[i + 1] in ('_printf_float', '_scanf_float'):
+            skip = True
+            continue
+        stripped.append(flag)
+    env.Replace(LINKFLAGS=stripped)
+
 if platform in ['espressif8266']:
+    strip_float_stdio_link_flags()
     if "_WIFI" in target_name:
         env.Replace(UPLOAD_PROTOCOL="custom")
         env.Replace(UPLOADCMD=upload_via_esp8266_backpack.on_upload)
