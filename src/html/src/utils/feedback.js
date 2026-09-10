@@ -155,8 +155,8 @@ export function cuteAlert({
     if (type === 'question') {
       btnTemplate = `
 <div class="question-buttons">
-  <button class="confirm-button error-bg error-btn mui-btn mui-btn--danger">${confirmText}</button>
-  <button class="cancel-button question-bg question-btn mui-btn">${cancelText}</button>
+  <button class="confirm-button mui-btn mui-btn--danger">${confirmText}</button>
+  <button class="cancel-button question-btn mui-btn">${cancelText}</button>
 </div>
 `
     }
