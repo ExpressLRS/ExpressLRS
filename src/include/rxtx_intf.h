@@ -23,5 +23,8 @@ void SetSyncSpam();
  * RX interface
  ***/
 #if defined(TARGET_RX)
+#include "gpsTelemetry.h"
 uint8_t getLq();
+// Fills out with a snapshot of the GPS driver state, or returns false if no GPS is running
+bool getGpsTelemetry(gps_telemetry_t &out);
 #endif

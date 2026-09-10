@@ -377,6 +377,52 @@ static void SampleVoltageSources(AsyncWebServerRequest *request, JsonVariant &js
 }
 #endif
 
+#if defined(TARGET_RX)
+static void GetGpsStatus(AsyncWebServerRequest *request)
+{
+  auto *response = new AsyncJsonResponse();
+  const auto json = response->getRoot();
+
+  gps_telemetry_t gps;
+  if (!getGpsTelemetry(gps))
+  {
+    // No GPS driver is running (the serial protocol was changed without a reboot, say)
+    json["present"] = false;
+  }
+  else
+  {
+    json["present"] = true;
+    json["state"] = gps.state;
+    json["baud"] = gps.baud;
+    json["can_configure"] = gps.canConfigure;
+    json["protocol"] = gps.protocol;
+    json["ubx_configured"] = gps.ubxConfigured;
+    json["used_valset"] = gps.usedValset;
+    json["nav_interval_ms"] = gps.navIntervalMs;
+    json["update_interval_ms"] = gps.updateIntervalMs;
+    json["satellites"] = gps.satellites;
+    json["fix_type"] = gps.fixType;
+    json["fix_valid"] = gps.fixValid;
+    json["lat"] = gps.lat;
+    json["lon"] = gps.lon;
+    json["alt_cm"] = gps.altCm;
+    json["speed_kmh100"] = gps.speedKmh100;
+    json["heading100"] = gps.heading100;
+    json["time_valid"] = gps.timeValid;
+    json["year"] = gps.year;
+    json["month"] = gps.month;
+    json["day"] = gps.day;
+    json["hour"] = gps.hour;
+    json["minute"] = gps.minute;
+    json["second"] = gps.second;
+    json["age_ms"] = gps.ageMs;
+  }
+
+  response->setLength();
+  request->send(response);
+}
+#endif
+
 static void GetConfiguration(AsyncWebServerRequest *request)
 {
   const bool exportMode = request->hasArg("export");
@@ -501,6 +547,11 @@ static void GetConfiguration(AsyncWebServerRequest *request)
     {
         settings[F("has_serial_pins")] = true;
     }
+    settings["has_gps"] = config.GetSerialProtocol() == PROTOCOL_GPS
+    #if defined(PLATFORM_ESP32)
+        || config.GetSerial1Protocol() == PROTOCOL_SERIAL1_GPS
+    #endif
+        ;
     #endif
     settings[F("product_name")] = product_name;
     settings[F("lua_name")] = device_name;
@@ -1240,6 +1291,9 @@ static void startServices()
   server.on(FLASH_CSTR("/options.json"), HTTP_GET, getFile);
   server.on(FLASH_CSTR("/reboot"), HandleReboot);
   server.on(FLASH_CSTR("/reset"), HandleReset);
+  #if defined(TARGET_RX)
+    server.on(FLASH_CSTR("/gps"), HTTP_GET, GetGpsStatus);
+  #endif
   #if defined(TARGET_TX) && defined(PLATFORM_ESP32)
     server.on(FLASH_CSTR("/udpcontrol"), HTTP_POST, WebUdpControl);
   #endif
