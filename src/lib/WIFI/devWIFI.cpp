@@ -27,9 +27,14 @@
 #include <ESPAsyncWebServer.h>
 
 // String literal kept in flash, for APIs that take a const char* and copy it
-// (server routes, default headers, mDNS TXT records). The String temporary
-// lives until the end of the full expression, which is all the callee needs.
+// (server routes, default headers, mDNS TXT records). On ESP8266 the String
+// temporary lives until the end of the full expression, which is all the
+// callee needs. On ESP32 literals are already in flash, so pass them through.
+#if defined(PLATFORM_ESP8266)
 #define FLASH_CSTR(s) String(F(s)).c_str()
+#else
+#define FLASH_CSTR(s) (s)
+#endif
 
 #include "common.h"
 #include "rxtx_intf.h"
