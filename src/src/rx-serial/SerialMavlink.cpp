@@ -9,6 +9,7 @@
 #define MAVLINK_RC_PACKET_INTERVAL 10
 
 #define MAVLINK_COMM_NUM_BUFFERS 1
+#include "mavlink_msg_entry.h"
 #include "common/mavlink.h"
 
 #define MAV_FTP_OPCODE_OPENFILERO 4
