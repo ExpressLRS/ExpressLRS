@@ -1892,16 +1892,15 @@ static void debugRcvrSignalStats(uint32_t now)
     static uint32_t lastReport = 0;
 
     // log column header:  cnt1, rssi1, snr1, snr1_max, telem1, fail1, cnt2, rssi2, snr2, snr2_max, telem2, fail2, or, both
-    // snr columns are in RADIO_SNR_SCALE units, integer math keeps float printf out of the image
     if(now - lastReport >= 1000 && connectionState == connected)
     {
         for (int i = 0 ; i < (isDualRadio()?2:1) ; i++)
         {
-            DBG("%u\t%d\t%d\t%d\t%u\t%u\t",
+            DBG("%d\t%f\t%f\t%f\t%d\t%d\t",
                 Radio.rxSignalStats[i].irq_count,
-                (Radio.rxSignalStats[i].irq_count==0) ? 0 : (int)(Radio.rxSignalStats[i].rssi_sum / Radio.rxSignalStats[i].irq_count),
-                (Radio.rxSignalStats[i].irq_count==0) ? 0 : (int)(Radio.rxSignalStats[i].snr_sum / Radio.rxSignalStats[i].irq_count),
-                (int)Radio.rxSignalStats[i].snr_max,
+                (Radio.rxSignalStats[i].irq_count==0) ? 0 : double(Radio.rxSignalStats[i].rssi_sum)/Radio.rxSignalStats[i].irq_count,
+                (Radio.rxSignalStats[i].irq_count==0) ? 0 : double(Radio.rxSignalStats[i].snr_sum)/Radio.rxSignalStats[i].irq_count/RADIO_SNR_SCALE,
+                float(Radio.rxSignalStats[i].snr_max)/RADIO_SNR_SCALE,
                 Radio.rxSignalStats[i].telem_count,
                 Radio.rxSignalStats[i].fail_count);
 
