@@ -1,6 +1,7 @@
 #include "MAVLink.h"
 
 #include "CRSFRouter.h"
+#include "mavlink_msg_entry.h"
 #include "common/mavlink.h"
 
 #include "ardupilot_custom_telemetry.h"

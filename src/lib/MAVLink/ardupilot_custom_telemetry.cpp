@@ -18,6 +18,7 @@
  */
 
 #include "ardupilot_custom_telemetry.h"
+#include "mavlink_msg_entry.h"
 #include "common/mavlink.h"
 
 /*
