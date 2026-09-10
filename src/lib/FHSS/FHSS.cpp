@@ -78,7 +78,7 @@ uint32_t freq_spread;
 
 uint16_t primaryBandCount;
 
-#if defined(RADIO_LR1121) || defined(RADIO_LR2021)
+#if defined(RADIO_LR1121) || defined(RADIO_LR2021) || defined(UNIT_TEST)
 // Variables for Dual Band radios
 const fhss_config_t *FHSSconfigDualBand;
 uint8_t FHSSsequence_DualBand[FHSS_SEQUENCE_LEN];

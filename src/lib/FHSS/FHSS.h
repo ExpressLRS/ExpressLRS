@@ -14,7 +14,7 @@
 #endif
 #define FreqCorrectionMin (-FreqCorrectionMax)
 
-#if defined(RADIO_LR1121) || defined(RADIO_LR2021)
+#if defined(RADIO_LR1121) || defined(RADIO_LR2021) || defined(UNIT_TEST)
 #define FREQ_HZ_TO_REG_VAL(freq) (freq)
 #define FREQ_SPREAD_SCALE 1
 #else
@@ -44,7 +44,7 @@ extern uint_fast8_t sync_channel;
 extern const fhss_config_t *FHSSconfig;
 
 // DualBand Variables
-#if defined(RADIO_LR1121) || defined(RADIO_LR2021)
+#if defined(RADIO_LR1121) || defined(RADIO_LR2021) || defined(UNIT_TEST)
 extern bool FHSSusePrimaryFreqBand;
 extern bool FHSSuseDualBand;
 extern uint16_t secondaryBandCount;
