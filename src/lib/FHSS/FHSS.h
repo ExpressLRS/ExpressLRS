@@ -44,6 +44,7 @@ extern uint_fast8_t sync_channel;
 extern const fhss_config_t *FHSSconfig;
 
 // DualBand Variables
+#if defined(RADIO_LR1121) || defined(RADIO_LR2021)
 extern bool FHSSusePrimaryFreqBand;
 extern bool FHSSuseDualBand;
 extern uint16_t secondaryBandCount;
@@ -51,6 +52,18 @@ extern uint32_t freq_spread_DualBand;
 extern uint8_t FHSSsequence_DualBand[];
 extern uint_fast8_t sync_channel_DualBand;
 extern const fhss_config_t *FHSSconfigDualBand;
+#else
+// Single band radios never leave the primary band. The constants let the
+// compiler drop the dual band branches below, and the aliases keep those
+// branches compiling without a second sequence table in RAM.
+constexpr bool FHSSusePrimaryFreqBand = true;
+constexpr bool FHSSuseDualBand = false;
+constexpr uint16_t secondaryBandCount = 0;
+[[maybe_unused]] static uint32_t &freq_spread_DualBand = freq_spread;
+[[maybe_unused]] static uint8_t *const FHSSsequence_DualBand = FHSSsequence;
+[[maybe_unused]] static uint_fast8_t &sync_channel_DualBand = sync_channel;
+[[maybe_unused]] static const fhss_config_t *&FHSSconfigDualBand = FHSSconfig;
+#endif
 
 // version/domain string
 extern char version_domain[];
