@@ -8,7 +8,7 @@ import FEATURES from "../features.js";
 export function devMockPlugin() {
     const PAGE_LOAD_DELAY_MS = 450
     const MODULE_LOAD_DELAY_MS = 800
-    let cwGetRequestCount = 0
+    let cwGetRequestCount = 00000000000000000000000000000000000000000000000000000000000000000000000000000000000
 
     function sendJSON(res, obj, status = 200) {
         res.statusCode = status
