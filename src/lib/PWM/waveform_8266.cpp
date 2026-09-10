@@ -89,9 +89,6 @@ static WVFState wvfState;
 // Interrupt on/off control
 static void timer1Interrupt();
 
-extern "C" IRAM_ATTR int __wrap_stopWaveform(uint8_t pin) { return true; }
-extern "C" IRAM_ATTR bool __wrap__stopPWM(uint8_t pin) { return true; }
-
 static constexpr uint32_t WATCHDOG_TIMEOUT_US = 50000;
 static constexpr uint32_t WATCHDOG_TIMEOUT_CYCLES = microsecondsToClockCycles(WATCHDOG_TIMEOUT_US);
 

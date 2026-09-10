@@ -1237,7 +1237,7 @@ RxConfig::SetPower(uint8_t power)
 void
 RxConfig::SetAntennaMode(uint8_t antennaMode)
 {
-    //0 and 1 is use for gpio_antenna_select
+    // 0=Antenna 1, 1=Antenna 2 are used for gpio_antenna_select
     // 2 is diversity
     if (m_config.antennaMode != antennaMode)
     {

@@ -41,7 +41,7 @@ public:
     virtual int peek() = 0;
     virtual void flush() = 0;
 
-    size_t readBytes(uint8_t *buffer, size_t length)
+    virtual size_t readBytes(uint8_t *buffer, size_t length)
     {
         size_t count = 0;
         while (count < length && available() > 0)
@@ -76,6 +76,7 @@ public:
     void flush() {}
     void end() {}
     void begin(int baud) {}
+    virtual void updateBaudRate(unsigned long baud) {}
     void enableHalfDuplexRx() {}
     int availableForWrite() {return 256;}
 
@@ -108,11 +109,12 @@ inline void delay(int32_t time) {
 }
 
 #define bit(x) (1 << (x))
-inline unsigned long millis() {
-    struct timeval tv;
-    gettimeofday(&tv, NULL);
-    return static_cast<uint32_t>(tv.tv_sec * (uint64_t)1000 + tv.tv_usec / 1000);
-}
+// Not a macro, so it does not break the qualified std::min calls in the codebase
+inline int min(int a, int b) { return (a < b) ? a : b; }
+// Starts at 0 as it always has. Tests that need to exercise timeouts can advance it, e.g.
+// `nativeClockMs() += 1000;`
+inline unsigned long &nativeClockMs() { static unsigned long ms = 0; return ms; }
+inline unsigned long millis() { return nativeClockMs(); }
 inline void delayMicroseconds(int delay) { }
 inline char *itoa(int32_t value, char *str, int base) { sprintf(str, "%d", value); return str; }
 inline char *utoa(uint32_t value, char *str, int base) { sprintf(str, "%u", value); return str; }
