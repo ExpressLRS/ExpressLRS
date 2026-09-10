@@ -23,10 +23,12 @@ public:
 
     bool GetNextPayload(uint8_t* nextPayloadSize, uint8_t *payloadData);
     uint8_t GetFifoFullPct() const { return (TELEMETRY_FIFO_SIZE - messagePayloads.free()) * 100 / TELEMETRY_FIFO_SIZE; }
+    uint32_t GetGpsTimeEnqueuedMs() const { return gpsTimeEnqueuedMs; }
 
 protected:
     TelemetryFifo messagePayloads;
     uint8_t prioritizedCount = 0;
+    uint32_t gpsTimeEnqueuedMs = 0; // millis() when last GPS Time frame was enqueued
 
 private:
 #if defined(PLATFORM_ESP32) && SOC_CPU_CORES_NUM > 1
