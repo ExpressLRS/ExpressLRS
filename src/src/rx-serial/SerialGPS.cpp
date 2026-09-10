@@ -15,7 +15,7 @@ SerialGPS *SerialGPS::_active = nullptr;
 // Baud rates to probe, most likely first. 115200 leads so a receiver that already works today
 // (the driver was hard-coded to 115200) locks on to the first candidate and nothing regresses.
 // 9600 is the u-blox M8 factory default and 38400 is the M9/M10 factory default.
-static const uint32_t GPS_BAUD_CANDIDATES[] = { 115200, 9600, 38400, 57600, 230400, 19200 };
+static constexpr uint32_t GPS_BAUD_CANDIDATES[] = { 115200, 9600, 38400, 57600, 230400, 19200 };
 static constexpr uint8_t GPS_BAUD_COUNT = sizeof(GPS_BAUD_CANDIDATES) / sizeof(GPS_BAUD_CANDIDATES[0]);
 
 // The baud rate a module gets moved to when its own is too slow for the target navigation rate.
