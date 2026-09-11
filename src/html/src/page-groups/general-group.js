@@ -14,4 +14,5 @@ import '../pages/buttons-panel.js'
 import '../pages/rx-options-panel.js'
 import '../pages/connections-panel.js'
 import '../pages/serial-panel.js'
+import '../pages/gps-panel.js'
 // /FEATURE:NOT IS_TX
