@@ -440,10 +440,12 @@ img.icon-pwm {
 
   .error-bg {
 	background: #d85261;
+	color: #FFF;
   }
 
   .success-bg {
 	background: #2dd284;
+	color: #FFF;
   }
 
   .warning-bg {

@@ -5,14 +5,16 @@
 
 #if defined(RADIO_SX127X)
 #define FreqCorrectionMax ((int32_t)(100000/FREQ_STEP))
-#elif defined(RADIO_LR1121)
-#define FreqCorrectionMax ((int32_t)(100000/FREQ_STEP)) // TODO - This needs checking !!!
 #elif defined(RADIO_SX128X)
 #define FreqCorrectionMax ((int32_t)(200000/FREQ_STEP))
+#elif defined(RADIO_LR1121)
+#define FreqCorrectionMax ((int32_t)(100000/FREQ_STEP)) // TODO - This needs checking !!!
+#elif defined(RADIO_LR2021)
+#define FreqCorrectionMax ((int32_t)(100000/FREQ_STEP)) // TODO - This needs checking !!!
 #endif
 #define FreqCorrectionMin (-FreqCorrectionMax)
 
-#if defined(RADIO_LR1121)
+#if defined(RADIO_LR1121) || defined(RADIO_LR2021)
 #define FREQ_HZ_TO_REG_VAL(freq) (freq)
 #define FREQ_SPREAD_SCALE 1
 #else
@@ -55,7 +57,9 @@ extern char version_domain[];
 
 // create and randomise an FHSS sequence
 void FHSSrandomiseFHSSsequence(uint32_t seed);
-void FHSSrandomiseFHSSsequenceBuild(uint32_t seed, uint32_t freqCount, uint_fast8_t sync_channel, uint8_t *sequence);
+// build one band's sequence from freqCount alone and return the number of
+// entries written, always a whole multiple of freqCount
+uint16_t FHSSrandomiseFHSSsequenceBuild(uint32_t seed, uint32_t freqCount, uint_fast8_t sync_channel, uint8_t *sequence);
 
 // add domain info for Lua
 void addDomainInfo(char *version_domain, uint8_t maxlen);
@@ -83,7 +87,8 @@ static inline uint32_t FHSSgetChannelCount(void)
     }
 }
 
-// get the number of entries in the FHSS sequence
+// how far the shared hop index may advance in the current mode. This is not any
+// one band's table length, so never size a sequence build from it
 static inline uint16_t FHSSgetSequenceCount()
 {
     if (FHSSuseDualBand) // Use the smaller of the 2 bands as not to go beyond the max index for each sequence.

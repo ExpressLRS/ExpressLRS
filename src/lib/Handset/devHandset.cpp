@@ -7,6 +7,7 @@
 #include "devHandset.h"
 
 #include "CRSFEndpoint.h"
+#include "options.h"
 
 #if defined(PLATFORM_ESP32)
 #include "AutoDetect.h"
@@ -29,6 +30,13 @@ static bool initialize()
 
 static int start()
 {
+#if defined(PLATFORM_ESP8266)
+    // AirPort dedicates UART0 to the transparent serial (see setupSerial in
+    // tx_main.cpp). The CRSF handset would reconfigure/steal UART0, so it must
+    // not start in AirPort mode.
+    if (firmwareOptions.is_airport)
+        return DURATION_NEVER;
+#endif
     handset->Begin();
 #if defined(DEBUG_TX_FREERUN)
     handset->forceConnection();

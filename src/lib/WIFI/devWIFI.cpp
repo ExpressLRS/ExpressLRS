@@ -35,8 +35,8 @@
 #include "options.h"
 #include "helpers.h"
 #include "devButton.h"
-#include "devAnalogVbat.h"
 #if defined(TARGET_RX)
+#include "devAnalogVbat.h"
 #include "VbatCalibration.h"
 #endif
 #if defined(TARGET_RX) && defined(PLATFORM_ESP32)
@@ -367,6 +367,52 @@ static void SampleVoltageSources(AsyncWebServerRequest *request, JsonVariant &js
 }
 #endif
 
+#if defined(TARGET_RX)
+static void GetGpsStatus(AsyncWebServerRequest *request)
+{
+  auto *response = new AsyncJsonResponse();
+  const auto json = response->getRoot();
+
+  gps_telemetry_t gps;
+  if (!getGpsTelemetry(gps))
+  {
+    // No GPS driver is running (the serial protocol was changed without a reboot, say)
+    json["present"] = false;
+  }
+  else
+  {
+    json["present"] = true;
+    json["state"] = gps.state;
+    json["baud"] = gps.baud;
+    json["can_configure"] = gps.canConfigure;
+    json["protocol"] = gps.protocol;
+    json["ubx_configured"] = gps.ubxConfigured;
+    json["used_valset"] = gps.usedValset;
+    json["nav_interval_ms"] = gps.navIntervalMs;
+    json["update_interval_ms"] = gps.updateIntervalMs;
+    json["satellites"] = gps.satellites;
+    json["fix_type"] = gps.fixType;
+    json["fix_valid"] = gps.fixValid;
+    json["lat"] = gps.lat;
+    json["lon"] = gps.lon;
+    json["alt_cm"] = gps.altCm;
+    json["speed_kmh100"] = gps.speedKmh100;
+    json["heading100"] = gps.heading100;
+    json["time_valid"] = gps.timeValid;
+    json["year"] = gps.year;
+    json["month"] = gps.month;
+    json["day"] = gps.day;
+    json["hour"] = gps.hour;
+    json["minute"] = gps.minute;
+    json["second"] = gps.second;
+    json["age_ms"] = gps.ageMs;
+  }
+
+  response->setLength();
+  request->send(response);
+}
+#endif
+
 static void GetConfiguration(AsyncWebServerRequest *request)
 {
   const bool exportMode = request->hasArg("export");
@@ -491,6 +537,11 @@ static void GetConfiguration(AsyncWebServerRequest *request)
     {
         settings["has_serial_pins"] = true;
     }
+    settings["has_gps"] = config.GetSerialProtocol() == PROTOCOL_GPS
+    #if defined(PLATFORM_ESP32)
+        || config.GetSerial1Protocol() == PROTOCOL_SERIAL1_GPS
+    #endif
+        ;
     #endif
     settings["product_name"] = product_name;
     settings["lua_name"] = device_name;
@@ -509,18 +560,24 @@ static void GetConfiguration(AsyncWebServerRequest *request)
     settings["module-type"] = "RX";
     settings["voltage_source_count"] = getDefinedVoltageSourceCount();
 #endif
-#if defined(RADIO_SX128X)
-    settings["radio-type"] = "SX128X";
-    settings["has_low_band"] = false;
-    settings["has_high_band"] = true;
-    settings["reg_domain_high"] = FHSSconfig->domain;
-#elif defined(RADIO_SX127X)
+#if defined(RADIO_SX127X)
     settings["radio-type"] = "SX127X";
     settings["has_low_band"] = true;
     settings["has_high_band"] = false;
     settings["reg_domain_low"] = FHSSconfig->domain;
+#elif defined(RADIO_SX128X)
+    settings["radio-type"] = "SX128X";
+    settings["has_low_band"] = false;
+    settings["has_high_band"] = true;
+    settings["reg_domain_high"] = FHSSconfig->domain;
 #elif defined(RADIO_LR1121)
     settings["radio-type"] = "LR1121";
+    settings["has_low_band"] = POWER_OUTPUT_VALUES_COUNT != 0;
+    settings["has_high_band"] = POWER_OUTPUT_VALUES_DUAL_COUNT != 0;
+    settings["reg_domain_low"] = FHSSconfig->domain;
+    settings["reg_domain_high"] = FHSSconfigDualBand->domain;
+#elif defined(RADIO_LR2021)
+    settings["radio-type"] = "LR2021";
     settings["has_low_band"] = POWER_OUTPUT_VALUES_COUNT != 0;
     settings["has_high_band"] = POWER_OUTPUT_VALUES_DUAL_COUNT != 0;
     settings["reg_domain_low"] = FHSSconfig->domain;
@@ -983,7 +1040,7 @@ static void HandleContinuousWave(AsyncWebServerRequest *request) {
   if (request->hasArg("radio")) {
     SX12XX_Radio_Number_t radio = request->arg("radio").toInt() == 1 ? SX12XX_Radio_1 : SX12XX_Radio_2;
 
-#if defined(RADIO_LR1121)
+#if defined(RADIO_LR1121) || defined(RADIO_LR2021)
     bool setSubGHz = false;
     setSubGHz = request->arg("subGHz").toInt() == 1;
 #endif
@@ -993,12 +1050,20 @@ static void HandleContinuousWave(AsyncWebServerRequest *request) {
     request->send(response);
 
     Radio.TXdoneCallback = [](){};
+#if defined(RADIO_SX127X)
+    Radio.Begin();
+#elif defined(RADIO_SX128X)
+    Radio.Begin();
+#elif defined(RADIO_LR1121)
     Radio.Begin(FHSSgetMinimumFreq(), FHSSgetMaximumFreq());
+#elif defined(RADIO_LR2021)
+    Radio.Begin(FHSSconfig->freq_center, FHSSconfigDualBand->freq_center);
+#endif
 
     POWERMGNT::init();
     POWERMGNT::setPower(POWERMGNT::getMinPower());
 
-#if defined(RADIO_LR1121)
+#if defined(RADIO_LR1121) || defined(RADIO_LR2021)
     Radio.startCWTest(setSubGHz ? FHSSconfig->freq_center : FHSSconfigDualBand->freq_center, radio);
 #else
     Radio.startCWTest(FHSSconfig->freq_center, radio);
@@ -1009,7 +1074,7 @@ static void HandleContinuousWave(AsyncWebServerRequest *request) {
   } else {
     int radios = (GPIO_PIN_NSS_2 == UNDEF_PIN) ? 1 : 2;
     request->send(200, "application/json", String("{\"radios\": ") + radios + ", \"center\": "+ FHSSconfig->freq_center +
-#if defined(RADIO_LR1121)
+#if defined(RADIO_LR1121) || defined(RADIO_LR2021)
             ", \"center2\": "+ FHSSconfigDualBand->freq_center +
 #endif
             "}");
@@ -1215,6 +1280,9 @@ static void startServices()
   server.on("/options.json", HTTP_GET, getFile);
   server.on("/reboot", HandleReboot);
   server.on("/reset", HandleReset);
+  #if defined(TARGET_RX)
+    server.on("/gps", HTTP_GET, GetGpsStatus);
+  #endif
   #if defined(TARGET_TX) && defined(PLATFORM_ESP32)
     server.on("/udpcontrol", HTTP_POST, WebUdpControl);
   #endif

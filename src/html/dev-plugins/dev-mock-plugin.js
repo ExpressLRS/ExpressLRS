@@ -31,6 +31,9 @@ export function devMockPlugin() {
         setTimeout(sendResponse, delayMs)
     }
 
+    const hasLowBand = FEATURES.HAS_DUAL_BAND || FEATURES.HAS_SX127X
+    const hasHighBand = FEATURES.HAS_DUAL_BAND || FEATURES.HAS_SX128X
+
     // Basic stub data used by multiple endpoints
     const stubState = {
         settings: {
@@ -41,15 +44,15 @@ export function devMockPlugin() {
             mode: 'AP',
             wifi_dbm: -60,
             custom_hardware: true,
-            has_low_band: true,
-            has_high_band: true,
+            has_low_band: hasLowBand,
+            has_high_band: hasHighBand,
             reg_domain_low: 'EU868',
             reg_domain_high: 'CE_LBT',
             target: "Unified_ESP32_LR1121",
             version: "25.0.0",
             "git-commit": "3468759",
             "module-type": FEATURES.IS_TX ? "TX" : "RX",
-            "radio-type": FEATURES.HAS_SX128X ? "SX128X" : (FEATURES.HAS_LR1121 ? "LR1121" : "SX127X"),
+            "radio-type": FEATURES.HAS_SX128X ? "SX128X" : (FEATURES.HAS_LR1121 ? "LR1121" : (FEATURES.HAS_LR2021 ? "LR2021" : "SX127X")),
         },
         options: {
             customised: true,
@@ -245,10 +248,38 @@ export function devMockPlugin() {
                     networkQueryCount = 0
                     if (stubState.settings['module-type'] === 'RX') {
                         stubState.settings.voltage_source_count = voltageSources.length
+                        stubState.settings.has_gps = true
                     } else {
                         delete stubState.settings.voltage_source_count
+                        delete stubState.settings.has_gps
                     }
                     return sendDelayed(PAGE_LOAD_DELAY_MS, () => sendJSON(res, stubState))
+                }
+                if (method === 'GET' && url === '/gps') {
+                    // A u-blox running at 115200 with a 10Hz 3D fix
+                    return sendJSON(res, {
+                        present: true,
+                        state: 4,
+                        baud: 115200,
+                        can_configure: true,
+                        protocol: 2,
+                        ubx_configured: true,
+                        used_valset: true,
+                        nav_interval_ms: 100,
+                        update_interval_ms: 100,
+                        satellites: 18,
+                        fix_type: 3,
+                        fix_valid: true,
+                        lat: 375123456,
+                        lon: -1224567890,
+                        alt_cm: 3520,
+                        speed_kmh100: 1234,
+                        heading100: 27310,
+                        time_valid: true,
+                        year: 2026, month: 8, day: 2,
+                        hour: 14, minute: 25, second: 7,
+                        age_ms: 120,
+                    })
                 }
                 if (method === 'GET' && (url === '/networks.json' || url.startsWith('/networks.json'))) {
                     networkQueryCount++

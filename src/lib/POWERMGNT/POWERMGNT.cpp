@@ -80,8 +80,6 @@ int8_t POWERMGNT::CurrentSX1280Power = 0;
 
 extern bool isUsingPrimaryFreqBand();
 
-static int8_t powerCaliValues[PWR_COUNT] = {0};
-
 #if defined(PLATFORM_ESP32)
 nvs_handle POWERMGNT::handle = 0;
 #endif
@@ -151,73 +149,9 @@ uint8_t POWERMGNT::getPowerIndBm()
     }
 }
 
-void POWERMGNT::SetPowerCaliValues(int8_t *values, size_t size)
-{
-    bool isUpdate = false;
-    for(size_t i=0 ; i<size ; i++)
-    {
-        if(powerCaliValues[i] != values[i])
-        {
-            powerCaliValues[i] = values[i];
-            isUpdate = true;
-        }
-    }
-#if defined(PLATFORM_ESP32)
-    if (isUpdate)
-    {
-        nvs_set_blob(handle, "powercali", &powerCaliValues, sizeof(powerCaliValues));
-    }
-    nvs_commit(handle);
-#else
-    UNUSED(isUpdate);
-#endif
-}
-
-void POWERMGNT::GetPowerCaliValues(int8_t *values, size_t size)
-{
-    for(size_t i=0 ; i<size ; i++)
-    {
-        *(values + i) = powerCaliValues[i];
-    }
-}
-
-void POWERMGNT::LoadCalibration()
-{
-#if defined(PLATFORM_ESP32)
-    // Initialize NVS
-    esp_err_t err = nvs_flash_init();
-    if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND)
-    {
-        ESP_ERROR_CHECK(nvs_flash_erase());
-        err = nvs_flash_init();
-    }
-    ESP_ERROR_CHECK( err );
-    ESP_ERROR_CHECK(nvs_open("PWRCALI", NVS_READWRITE, &handle));
-
-    uint32_t version;
-    if(nvs_get_u32(handle, "calversion", &version) != ESP_ERR_NVS_NOT_FOUND
-        && version == (uint32_t)(CALIBRATION_VERSION | CALIBRATION_MAGIC))
-    {
-        size_t size = sizeof(powerCaliValues);
-        nvs_get_blob(handle, "powercali", &powerCaliValues, &size);
-    }
-    else
-    {
-        nvs_set_blob(handle, "powercali", &powerCaliValues, sizeof(powerCaliValues));
-        nvs_set_u32(handle, "calversion", CALIBRATION_VERSION | CALIBRATION_MAGIC);
-        nvs_commit(handle);
-    }
-#else
-    memset(powerCaliValues, 0, sizeof(powerCaliValues));
-#endif
-}
-
-
 void POWERMGNT::init()
 {
     PowerLevelContainer::CurrentPower = PWR_COUNT;
-
-    LoadCalibration();
     setDefaultPower();
 }
 
@@ -247,7 +181,7 @@ void POWERMGNT::setPower(PowerLevels_e Power)
     CurrentPower = Power;
 
     // When using SubHGz with CE, limit to a max of 25mW.
-    #if defined(Regulatory_Domain_EU_CE_2400) && defined(RADIO_LR1121)
+    #if defined(Regulatory_Domain_EU_CE_2400) && (defined(RADIO_LR1121) || defined(RADIO_LR2021))
     if (Power > PWR_25mW && isUsingPrimaryFreqBand())
     {
         Power = (MinPower > PWR_25mW) ? getMinPower() : PWR_25mW;
@@ -269,11 +203,11 @@ void POWERMGNT::setPower(PowerLevels_e Power)
     }
     else if (POWER_OUTPUT_VALUES != nullptr)
     {
-        CurrentSX1280Power = SAFE_GET_POWER_VALUE(POWER_OUTPUT_VALUES, powerIdx) + powerCaliValues[Power];
+        CurrentSX1280Power = SAFE_GET_POWER_VALUE(POWER_OUTPUT_VALUES, powerIdx);
         Radio.SetOutputPower(CurrentSX1280Power);
     }
 
-#if defined(RADIO_LR1121)
+#if defined(RADIO_LR1121) || defined(RADIO_LR2021)
     if (POWER_OUTPUT_VALUES_DUAL != nullptr)
     {
         Radio.SetOutputPower(SAFE_GET_POWER_VALUE(POWER_OUTPUT_VALUES_DUAL, powerIdx), false); // Set the high frequency power setting.
