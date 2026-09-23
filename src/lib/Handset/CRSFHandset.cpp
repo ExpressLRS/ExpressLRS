@@ -94,7 +94,6 @@ void CRSFHandset::Begin()
     // No log message because this is our only UART
 #elif defined(PLATFORM_STM32)
     DBGLN("Start STM32 R9M TX CRSF UART");
-    halfDuplex = true;
 
     CRSFHandset::Port.setTx(GPIO_PIN_RCSIGNAL_TX);
     CRSFHandset::Port.setRx(GPIO_PIN_RCSIGNAL_RX);
