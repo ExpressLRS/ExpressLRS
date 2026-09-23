@@ -11,9 +11,9 @@
 extern FIFO<MAV_INPUT_BUF_LEN> mavlinkInputBuffer;
 extern FIFO<MAV_OUTPUT_BUF_LEN> mavlinkOutputBuffer;
 
-class SerialMavlink final : public SerialIO {
+class SerialMavlink : public SerialIO {
 public:
-    explicit SerialMavlink(Stream &out, Stream &in);
+    explicit SerialMavlink(Stream &out, Stream &in, uint32_t radioStatusIntervalMs = 10);
     ~SerialMavlink() override = default;
 
     uint32_t sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t *channelData) override;
@@ -26,6 +26,10 @@ public:
 
     void event() override;
 
+protected:
+    // Bytes from the FC waiting to go over the air, reported to the FC via RADIO_STATUS.txbuf
+    uint16_t inputBufferUsed() const { return mavlinkInputBuffer.size(); }
+
 private:
     void processBytes(uint8_t *bytes, u_int16_t size) override;
 
@@ -36,6 +40,7 @@ private:
     const uint8_t target_component_id;
 
     uint32_t lastSentFlowCtrl = 0;
+    const uint32_t radioStatusIntervalMs;
 
     // Variables / constants for Mavlink //
     FIFO<MAV_INPUT_BUF_LEN> mavlinkInputBuffer;
