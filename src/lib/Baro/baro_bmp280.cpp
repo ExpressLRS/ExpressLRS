@@ -79,7 +79,8 @@ int32_t BMP280::getTemperature()
     p = ((p + var1 + var2) >> 8) + (((int64_t)m_calib.dig_P7) << 4);
     // p is pressure in Pa as unsigned 32 bit integer in Q24.8 format (24 integer bits and 8 fractional bits).
     // Output value of "24674867" represents 24674867/256 = 96386.2 Pa = 963.862 hPa
-    m_pressureLast = ((uint32_t)p) >> 8;
+    // Convert to deci-Pascals, keeping one digit of the fraction
+    m_pressureLast = (uint32_t)((p * 10) >> 8);
 
     int32_t temperature = (t_fine * 5 + 128) >> 8;
     //DBGLN("%u t=%d p=%u", millis(), temperature, m_pressureLast);
