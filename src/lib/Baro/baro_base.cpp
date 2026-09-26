@@ -1,11 +1,7 @@
 #include <math.h>
-#include <Arduino.h>
-#include <Wire.h>
 
 #include "baro_base.h"
 #include "helpers.h"
-
-uint8_t BaroI2CBase::m_address = 0;
 
 /**
  * @brief: Return altitude in cm from pressure in deci-Pascals
@@ -32,23 +28,4 @@ int32_t BaroBase::pressureToAltitude(uint32_t pressuredPa)
     const int32_t p1 = pressureTable[i + 1];
     return i * ALT_STEP_CM + (int64_t)(p0 - (int32_t)pressuredPa) * ALT_STEP_CM / (p0 - p1);
 #endif
-}
-
-void BaroI2CBase::readRegister(uint8_t reg, uint8_t *data, size_t size)
-{
-    Wire.beginTransmission(m_address);
-    Wire.write(reg);
-    if (Wire.endTransmission() == 0)
-    {
-        Wire.requestFrom(m_address, size);
-        Wire.readBytes(data, size);
-    }
-}
-
-void BaroI2CBase::writeRegister(uint8_t reg, uint8_t *data, size_t size)
-{
-    Wire.beginTransmission(m_address);
-    Wire.write(reg);
-    Wire.write(data, size);
-    Wire.endTransmission();
 }
