@@ -87,6 +87,8 @@ typedef enum : uint8_t
     CRSF_FRAMETYPE_MSP_WRITE = 0x7C, // write with 8 byte chunked binary (OpenTX outbound telemetry buffer limit)
     // Ardupilot frames
     CRSF_FRAMETYPE_ARDUPILOT_RESP = 0x80,
+    // MAVLink SYS_STATUS sensor-present/enabled/health masks (CRSF spec 0xAC)
+    CRSF_FRAMETYPE_MAVLINK_SYS_STATUS = 0xAC,
 } crsf_frame_type_e;
 
 typedef enum : uint8_t {

@@ -1,3 +1,4 @@
+#include "MavLuaTransport.h"
 #include "rxtx_common.h"
 
 #include "CRSFHandset.h"
@@ -1515,6 +1516,8 @@ void loop()
   DynamicPower_Update(now);
   VtxPitmodeSwitchUpdate();
   checkSendLinkStatsToHandset(now);
+
+  mavLuaPoll();
 
   if (DataDlReceiver.HasFinishedData())
   {

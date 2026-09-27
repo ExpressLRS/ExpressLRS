@@ -4,6 +4,7 @@
 #include "CRSFRouter.h"
 #include "CRSFHandset.h"
 #include "logging.h"
+#include "MavLuaTransport.h"
 
 #include "FHSS.h"
 #include "device.h"
@@ -36,7 +37,10 @@ bool TXModuleEndpoint::handleRaw(const crsf_header_t *message)
         RcPacketToChannelsData(message);
         return true;    // do NOT forward channel data via CRSF, as we have 'magic' OTA encoding
     }
-    return false;
+    // Consume the legacy 0xAA handset MAVLink envelope here, so its chunk marker and
+    // length bytes are never interpreted as extended-frame destination addresses by the
+    // router. mavLuaEnqueue claims the frame by type and reports false for anything else.
+    return mavLuaEnqueue(reinterpret_cast<const uint8_t *>(message));
 }
 
 void TXModuleEndpoint::handleMessage(const crsf_header_t *message)

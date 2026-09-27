@@ -1,3 +1,4 @@
+#include "MavLuaTransport.h"
 #include "MAVLink.h"
 
 #include "CRSFRouter.h"
@@ -24,7 +25,7 @@ static void ap_send_crsf_passthrough_single(crsf_addr_e destination, uint16_t ap
     crsfpassthrough.p.appid = appid;
     crsfpassthrough.p.data = data;
 
-    crsfRouter.SetHeaderAndCrc((crsf_header_t *)&crsfpassthrough, CRSF_FRAMETYPE_ARDUPILOT_RESP, CRSF_FRAME_SIZE(sizeof(crsfpassthrough)));
+    crsfRouter.SetHeaderAndCrc((crsf_header_t *)&crsfpassthrough, CRSF_FRAMETYPE_ARDUPILOT_RESP, CRSF_FRAME_SIZE(sizeof(crsfpassthrough.p)));
     crsfRouter.deliverMessageTo(destination, &crsfpassthrough.h);
 }
 
@@ -46,7 +47,7 @@ static void ap_send_crsf_passthrough_text(crsf_addr_e destination, const char *t
     crsftext.p.severity = severity;
     memcpy(crsftext.p.text, text, sizeof(crsftext.p.text));
 
-    crsfRouter.SetHeaderAndCrc((crsf_header_t *)&crsftext, CRSF_FRAMETYPE_ARDUPILOT_RESP, CRSF_FRAME_SIZE(sizeof(crsftext)));
+    crsfRouter.SetHeaderAndCrc((crsf_header_t *)&crsftext, CRSF_FRAMETYPE_ARDUPILOT_RESP, CRSF_FRAME_SIZE(sizeof(crsftext.p)));
     crsfRouter.deliverMessageTo(destination, &crsftext.h);
 }
 
@@ -75,7 +76,7 @@ static void ap_send_crsf_passthrough_multi(crsf_addr_e destination, uint16_t app
     crsfpassthrough.p.items[1].appid = appid2;
     crsfpassthrough.p.items[1].data = data2;
 
-    crsfRouter.SetHeaderAndCrc((crsf_header_t *)&crsfpassthrough, CRSF_FRAMETYPE_ARDUPILOT_RESP, CRSF_FRAME_SIZE(sizeof(crsfpassthrough)));
+    crsfRouter.SetHeaderAndCrc((crsf_header_t *)&crsfpassthrough, CRSF_FRAMETYPE_ARDUPILOT_RESP, CRSF_FRAME_SIZE(sizeof(crsfpassthrough.p)));
     crsfRouter.deliverMessageTo(destination, &crsfpassthrough.h);
 }
 
@@ -104,8 +105,41 @@ void convert_mavlink_to_crsf_telem(crsf_addr_e destination, uint8_t *CRSFinBuffe
             {
                 continue;
             }
+#if defined(TARGET_TX)
+            if (msg.msgid == MAVLINK_MSG_ID_HEARTBEAT || msg.msgid == MAVLINK_MSG_ID_SYS_STATUS) {
+                mavLuaObserve(msg.msgid, msg.sysid, msg.compid,
+                    reinterpret_cast<const uint8_t *>(_MAV_PAYLOAD(&msg)));
+            }
+            if ((msg.msgid == MAVLINK_MSG_ID_HEARTBEAT || msg.msgid == MAVLINK_MSG_ID_PARAM_VALUE
+                    || msg.msgid == MAVLINK_MSG_ID_AUTOPILOT_VERSION)
+                && !(msg.incompat_flags & MAVLINK_IFLAG_SIGNED)) {
+                uint8_t packet[MAVLINK_MAX_PACKET_LEN];
+                const uint16_t length = mavlink_msg_to_send_buffer(packet, &msg);
+                mavLuaDownlink(msg.msgid, msg.sysid, msg.compid,
+                    reinterpret_cast<const uint8_t *>(_MAV_PAYLOAD(&msg)), packet, length);
+            }
+#endif
             switch (msg.msgid)
             {
+            case MAVLINK_MSG_ID_SYS_STATUS: {
+                mavlink_sys_status_t system_status;
+                mavlink_msg_sys_status_decode(&msg, &system_status);
+                struct PACKED crsf_mavlink_system_status_t {
+                    uint32_t sensor_present;
+                    uint32_t sensor_enabled;
+                    uint32_t sensor_health;
+                };
+                CRSF_MK_FRAME_T(crsf_mavlink_system_status_t)
+                crsfsystem = {0};
+                crsfsystem.p.sensor_present = htobe32(system_status.onboard_control_sensors_present);
+                crsfsystem.p.sensor_enabled = htobe32(system_status.onboard_control_sensors_enabled);
+                crsfsystem.p.sensor_health = htobe32(system_status.onboard_control_sensors_health);
+                crsfRouter.SetHeaderAndCrc((crsf_header_t *)&crsfsystem,
+                    CRSF_FRAMETYPE_MAVLINK_SYS_STATUS,
+                    CRSF_FRAME_SIZE(sizeof(crsfsystem.p)));
+                crsfRouter.deliverMessageTo(destination, &crsfsystem.h);
+                break;
+            }
             case MAVLINK_MSG_ID_BATTERY_STATUS: {
                 mavlink_battery_status_t battery_status;
                 mavlink_msg_battery_status_decode(&msg, &battery_status);
@@ -215,7 +249,7 @@ void convert_mavlink_to_crsf_telem(crsf_addr_e destination, uint8_t *CRSFinBuffe
                     crsffm.p.flight_mode[len] = '*';
                     crsffm.p.flight_mode[len + 1] = '\0';
                 }
-                crsfRouter.SetHeaderAndCrc((crsf_header_t *)&crsffm, CRSF_FRAMETYPE_FLIGHT_MODE, CRSF_FRAME_SIZE(sizeof(crsffm)));
+                crsfRouter.SetHeaderAndCrc((crsf_header_t *)&crsffm, CRSF_FRAMETYPE_FLIGHT_MODE, CRSF_FRAME_SIZE(sizeof(crsffm.p)));
                 crsfRouter.deliverMessageTo(destination, &crsffm.h);
 
                 /**
