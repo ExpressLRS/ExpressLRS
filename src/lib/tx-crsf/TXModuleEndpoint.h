@@ -6,7 +6,7 @@ enum warningFlags
 {
     // bit 0 and 1 are status flags, show up as the little icon in the lua top right corner
     LUA_FLAG_CONNECTED = 0,
-    LUA_FLAG_STATUS1,
+    LUA_FLAG_TRAINER_STATUS,
     // bit 2,3,4 are warning flags, change the tittle bar every 0.5s
     LUA_FLAG_MODEL_MATCH,
     LUA_FLAG_ISARMED,
