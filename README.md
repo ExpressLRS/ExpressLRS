@@ -64,3 +64,5 @@ See [Hardware Selection](https://www.expresslrs.org/hardware/hardware-selection/
 If you are a developer and would like to contribute to the project, feel free to join the [discord](https://discord.gg/expresslrs) and chat about bugs and issues. You can also look for issues at the [GitHub Issue Tracker](https://github.com/ExpressLRS/ExpressLRS/issues). The best thing to do is to submit a Pull Request to the GitHub Repository.
 
 ![](https://github.com/ExpressLRS/ExpressLRS-Hardware/blob/master/img/community.png?raw=true)
+<br>
+I am DD.
