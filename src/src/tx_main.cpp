@@ -1422,13 +1422,16 @@ void setup()
     Radio.RXdoneCallback = &RXdoneISR;
     Radio.TXdoneCallback = &TXdoneISR;
 
-    crsfTransmitter.begin();
-    crsfRouter.addConnector(&otaConnector);
-    crsfRouter.addEndpoint(&crsfTransmitter);
-    crsfRouter.addConnector(&usbConnector);
-    // When a CRSF handset is detected, it will add itself to the router
+    if (!firmwareOptions.is_airport)
+    {
+      crsfTransmitter.begin();
+      crsfRouter.addConnector(&otaConnector);
+      crsfRouter.addEndpoint(&crsfTransmitter);
+      crsfRouter.addConnector(&usbConnector);
 
-    handset->registerCallbacks(UARTconnected, firmwareOptions.is_airport ? nullptr : UARTdisconnected);
+      // When a CRSF handset is detected, it will add itself to the router
+      handset->registerCallbacks(UARTconnected, firmwareOptions.is_airport ? nullptr : UARTdisconnected);
+    }
 
     eeprom.Begin(); // Init the eeprom
     config.SetStorageProvider(&eeprom); // Pass pointer to the Config class for access to storage
@@ -1531,10 +1534,12 @@ void loop()
   CheckConfigChangePending();
   DynamicPower_Update(now);
   VtxPitmodeSwitchUpdate();
-  checkSendLinkStatsToHandset(now);
 
-  if (DataDlReceiver.HasFinishedData())
+  if (!firmwareOptions.is_airport)
   {
+    checkSendLinkStatsToHandset(now);
+    if (DataDlReceiver.HasFinishedData())
+    {
       if (CRSFinBuffer[0] == CRSF_ADDRESS_USB)
       {
         if (config.GetLinkMode() == TX_MAVLINK_MODE)
@@ -1558,6 +1563,7 @@ void loop()
         sendCRSFTelemetryToBackpack(CRSFinBuffer);
       }
       DataDlReceiver.Unlock();
+    }
   }
 
   // only send Uplink data when binding is not active
