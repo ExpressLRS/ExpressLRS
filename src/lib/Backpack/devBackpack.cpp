@@ -343,7 +343,7 @@ static void BackpackPollAuxStates()
         const uint8_t auxNumber = (config.GetDvrAux() - 1) / 2 + AUX1;
         const uint8_t auxInverted = (config.GetDvrAux() + 1) % 2;
 
-        const bool recordingState = CRSF_to_BIT(ChannelData[auxNumber]) ^ auxInverted;
+        const bool recordingState = (auxNumber == CRSF_NUM_CHANNELS ? isArmed : CRSF_to_BIT(ChannelData[auxNumber])) ^ auxInverted;
         if (recordingState != lastRecordingState)
         {
             // Channel state has changed since we last checked, so schedule a MSP send
