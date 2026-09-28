@@ -12,7 +12,28 @@ void CROSSFIRE2MSP::reset()
 
 void CROSSFIRE2MSP::parse(const uint8_t *data, const std::function<void(uint8_t *, uint32_t)> &processMSP)
 {
-    const uint8_t CRSFpayloadLen = data[CRSF_FRAME_PAYLOAD_LEN_IDX] - CRSF_EXT_FRAME_PAYLOAD_LEN_SIZE_OFFSET;
+    if (data == nullptr)
+    {
+        reset();
+        return;
+    }
+
+    if (data[CRSF_MSP_TYPE_IDX] != CRSF_FRAMETYPE_MSP_REQ
+        && data[CRSF_MSP_TYPE_IDX] != CRSF_FRAMETYPE_MSP_RESP
+        && data[CRSF_MSP_TYPE_IDX] != CRSF_FRAMETYPE_MSP_WRITE)
+    {
+        reset();
+        return;
+    }
+
+    const uint8_t crsfFrameSize = data[CRSF_FRAME_PAYLOAD_LEN_IDX];
+    if (crsfFrameSize <= CRSF_EXT_FRAME_PAYLOAD_LEN_SIZE_OFFSET || crsfFrameSize > CRSF_PAYLOAD_SIZE_MAX)
+    {
+        reset();
+        return;
+    }
+
+    const uint8_t CRSFpayloadLen = crsfFrameSize - CRSF_EXT_FRAME_PAYLOAD_LEN_SIZE_OFFSET;
     const bool error = isError(data);
     const bool newFrame = isNewFrame(data);
     const uint8_t seqNumber = getSeqNumber(data);
@@ -30,23 +51,39 @@ void CROSSFIRE2MSP::parse(const uint8_t *data, const std::function<void(uint8_t 
         return;
     }
 
-    if (!newFrame && MSPvers == MSP_FRAME_UNKNOWN)
+    if (!newFrame && (MSPvers == MSP_FRAME_UNKNOWN || frameComplete))
     {
-        // continuation chunk but no frame in progress (e.g. after an error reset)
+        // continuation chunk but no frame in progress
+        reset();
         return;
     }
 
     if (newFrame) // If it's a new frame then out a header on first
     {
         idx = 3; // skip the header start wiring at offset 3.
+        frameComplete = false;
         MSPvers = getVersion(data);
+        const uint8_t minimumFrameSize = MSPvers == MSP_FRAME_V2 ? 10
+            : MSPvers == MSP_FRAME_V1_JUMBO ? 9
+            : MSPvers == MSP_FRAME_V1 ? 7
+            : 0;
+        if (minimumFrameSize == 0 || crsfFrameSize < minimumFrameSize)
+        {
+            reset();
+            return;
+        }
         src = data[CRSF_MSP_SRC_OFFSET];
         dest = data[CRSF_MSP_DEST_OFFSET];
         outBuffer[0] = '$';
         outBuffer[1] = (MSPvers == MSP_FRAME_V1 || MSPvers == MSP_FRAME_V1_JUMBO) ? 'M' : 'X';
         outBuffer[2] = getHeaderDir(data);
-        if (error && outBuffer[2] == '>')
+        if (error)
         {
+            if (outBuffer[2] != '>')
+            {
+                reset();
+                return;
+            }
             outBuffer[2] = '!';
         }
         pktLen = getFrameLen(data, MSPvers);
@@ -165,7 +202,7 @@ uint32_t CROSSFIRE2MSP::getFrameLen(const uint8_t *data, const MSPframeType_e ms
 uint8_t CROSSFIRE2MSP::getHeaderDir(const uint8_t *data)
 {
     const uint8_t statusByte = data[CRSF_MSP_TYPE_IDX];
-    if (statusByte == CRSF_FRAMETYPE_MSP_REQ)
+    if (statusByte == CRSF_FRAMETYPE_MSP_REQ || statusByte == CRSF_FRAMETYPE_MSP_WRITE)
     {
         return '<';
     }

@@ -1,5 +1,6 @@
 #include "targets.h"
 
+#include "BackpackConnector.h"
 #include "CRSFHandset.h"
 #include "CRSFRouter.h"
 #include "config.h"
@@ -404,6 +405,8 @@ static void sendConfigToBackpack()
     MSP::sendPacket(&packet, BackpackOrLogStrm); // send to tx-backpack as MSP
 }
 
+static BackpackConnector backpackConnector;
+
 static bool initialize()
 {
     if (OPT_USE_TX_BACKPACK)
@@ -421,6 +424,8 @@ static bool initialize()
         }
         // Set all channels of PTR data to "do not override" (0xffff)
         memset(ptrChannelData, 0xff, sizeof(ptrChannelData));
+        // the backpack is how messages get to the video receiver
+        crsfRouter.addConnector(&backpackConnector);
     }
     return OPT_USE_TX_BACKPACK;
 }

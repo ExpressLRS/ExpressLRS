@@ -2,6 +2,7 @@
 #include "common.h"
 #include "crsf2msp.h"
 #include "msp2crsf.h"
+#include <cstring>
 #include <iostream>
 #include <unity.h>
 
@@ -193,6 +194,62 @@ void CRSF_MSP_ERROR_REPLY_TEST()
     TEST_ASSERT_EQUAL_HEX8_ARRAY(expect, crsf2msp.getFrame(), sizeof(expect));
 }
 
+// CRSF MSP_WRITE frame to the video receiver, MSPv2 encapsulated (function 0x030E, 6 byte payload)
+const uint8_t CRSF_MSP_WRITE_SET_RTC[] = {0xC8, 0x11, 0x7C, 0x14, 0xEA, 0x50, 0x00, 0x0E, 0x03, 0x06, 0x00, 0x7E, 0x07, 0x13, 0x0D, 0x2D, 0x1E, 0xD1, 0x35};
+const uint8_t MSPV2_SET_RTC[] = {0x24, 0x58, 0x3C, 0x00, 0x0E, 0x03, 0x06, 0x00, 0x7E, 0x07, 0x13, 0x0D, 0x2D, 0x1E, 0xD1};
+
+void CRSF_MSP_WRITE_TEST()
+{
+    // a write is a command to the device, so it must come out as a '$X<' frame
+    crsf2msp.reset();
+    crsf2msp.parse(CRSF_MSP_WRITE_SET_RTC, [](const uint8_t *, const uint32_t){});
+    TEST_ASSERT_EQUAL(sizeof(MSPV2_SET_RTC), crsf2msp.getFrameLen());
+    TEST_ASSERT_EQUAL_HEX8_ARRAY(MSPV2_SET_RTC, crsf2msp.getFrame(), sizeof(MSPV2_SET_RTC));
+}
+
+void CRSF_MSP_V1_WRITE_TEST()
+{
+    const uint8_t frame[] = {0xC8, 0x0A, 0x7C, 0x14, 0xEA, 0x30, 0x02, 0x59, 0xAA, 0xBB, 0x00, 0x00};
+    const uint8_t expected[] = {'$', 'M', '<', 0x02, 0x59, 0xAA, 0xBB, 0x4A};
+
+    crsf2msp.reset();
+    crsf2msp.parse(frame, [](const uint8_t *, const uint32_t){});
+    TEST_ASSERT_EQUAL(sizeof(expected), crsf2msp.getFrameLen());
+    TEST_ASSERT_EQUAL_HEX8_ARRAY(expected, crsf2msp.getFrame(), sizeof(expected));
+}
+
+static bool invalidFrameEmitted;
+
+static void assertInvalidFrameRejected(const uint8_t *frame)
+{
+    invalidFrameEmitted = false;
+    crsf2msp.reset();
+    crsf2msp.parse(frame, [](const uint8_t *, const uint32_t) { invalidFrameEmitted = true; });
+    TEST_ASSERT_FALSE(invalidFrameEmitted);
+    TEST_ASSERT_EQUAL_UINT32(1, crsf2msp.getFrameLen());
+}
+
+void CRSF_MSP_INVALID_INPUT_TEST()
+{
+    uint8_t frame[sizeof(CRSF_MSP_WRITE_SET_RTC)];
+
+    memcpy(frame, CRSF_MSP_WRITE_SET_RTC, sizeof(frame));
+    frame[2] = CRSF_FRAMETYPE_PARAMETER_WRITE;
+    assertInvalidFrameRejected(frame);
+
+    memcpy(frame, CRSF_MSP_WRITE_SET_RTC, sizeof(frame));
+    frame[5] |= 0x80;
+    assertInvalidFrameRejected(frame);
+
+    memcpy(frame, CRSF_MSP_WRITE_SET_RTC, sizeof(frame));
+    frame[1] = 9; // too short to contain the complete MSPv2 header
+    assertInvalidFrameRejected(frame);
+
+    memcpy(frame, CRSF_MSP_WRITE_SET_RTC, sizeof(frame));
+    frame[5] = 0x10; // new frame with an unsupported MSP version
+    assertInvalidFrameRejected(frame);
+}
+
 // Unity setup/teardown
 void setUp()
 {
@@ -216,6 +273,9 @@ int main(int argc, char **argv)
     RUN_TEST(MSPV2_OVERSIZED_REJECT_TEST);
     RUN_TEST(MSPV1_JUMBO_OVERSIZED_REJECT_TEST);
     RUN_TEST(CRSF_MSP_ERROR_REPLY_TEST);
+    RUN_TEST(CRSF_MSP_WRITE_TEST);
+    RUN_TEST(CRSF_MSP_V1_WRITE_TEST);
+    RUN_TEST(CRSF_MSP_INVALID_INPUT_TEST);
 
     UNITY_END();
 
