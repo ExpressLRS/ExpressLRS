@@ -174,7 +174,6 @@ uint32_t LastValidPacket = 0;           //Time the last valid packet was recv
 uint32_t LastSyncPacket = 0;            //Time the last valid packet was recv
 
 static uint32_t SendLinkStatstoFCintervalLastSent;
-static uint8_t SendLinkStatstoFCForcedSends;
 
 int16_t RFnoiseFloor; //measurement of the current RF noise floor
 #if defined(DEBUG_RX_SCOREBOARD)
@@ -1654,7 +1653,6 @@ static void cycleRfMode(unsigned long now)
         RFmodeLastCycled = now;
         LastSyncPacket = now;           // reset this variable
         // Display the current air rate to the user as an indicator something is happening
-        SendLinkStatstoFCForcedSends = 2;
         SetRFLinkRate(scanIndex % RATE_MAX, false); // switch between rates
         LQCalc.reset100();
         LQCalcDVDA.reset100();
@@ -1857,16 +1855,14 @@ static void checkSendLinkStatsToFc(uint32_t now)
         }
 
         if ((connectionState != disconnected && connectionHasModelMatch && teamraceHasModelMatch) ||
-            SendLinkStatstoFCForcedSends)
+            connectionState == disconnected)
         {
             CRSF_MK_FRAME_T(crsfLinkStatistics_t) linkStatisticsFrame;
             crsfRouter.makeLinkStatisticsPacket(&linkStatisticsFrame.h);
             // the linkStats 'originates' from the OTA connector so we don't send it back there.
             crsfRouter.deliverMessage(&otaConnector, &linkStatisticsFrame.h);
-            SendLinkStatstoFCintervalLastSent = now;
-            if (SendLinkStatstoFCForcedSends)
-                --SendLinkStatstoFCForcedSends;
         }
+        SendLinkStatstoFCintervalLastSent = now;
     }
 }
 
@@ -2119,8 +2115,6 @@ void loop()
         LostConnection(true);
         LastSyncPacket = now;           // reset this variable to stop rf mode switching and add extra time
         RFmodeLastCycled = now;         // reset this variable to stop rf mode switching and add extra time
-        SendLinkStatstoFCintervalLastSent = 0;
-        SendLinkStatstoFCForcedSends = 2;
     }
 
     if (connectionState == tentative && (now - LastSyncPacket > ExpressLRS_currAirRate_RFperfParams->RxLockTimeoutMs))
