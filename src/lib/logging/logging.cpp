@@ -8,7 +8,11 @@
   #define GETCHAR *fmt
 #endif
 
+#if defined(UNIT_TEST)
+Stream *BackpackOrLogStrm = &Serial;
+#else
 Stream *BackpackOrLogStrm;
+#endif
 
 void debugPrintf(const char* fmt, ...)
 {
