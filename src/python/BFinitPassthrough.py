@@ -88,15 +88,22 @@ def bf_passthrough_init(port, requestedBaudrate):
         if not line or "#" in line:
             break
 
-        if line.startswith("serial") or line.startswith("set rx_uart"):
+        config = None
+        if line.startswith("serial"):
+            config = re.search(r'serial (\S+) ([0-9]+) ', line)
+            if config and (int(config.group(2)) & 64 != 64):
+                config = None
+        if line.startswith("set rx_uart"):
+            config = re.search(r'set rx_uart = (\S+)', line)
+            if config and config.group(1) == "NONE":
+                config = None
+        if config:
             if SCRIPT_DEBUG:
                 dbg_print("  '%s'" % line)
-            config = re.search('(?:serial |set rx_uart = )((?:[A-Z]*UART)?[0-9]+)(?: ([0-9]+) |$)', line)
-            if config and (config.group(2) is None or int(config.group(2)) & 64 == 64):
-                dbg_print("    ** Serial RX config detected: '%s'" % line)
-                SerialRXindex = config.group(1)
-                if not SCRIPT_DEBUG:
-                    break
+            dbg_print("    ** Serial RX config detected: '%s'" % line)
+            SerialRXindex = config.group(1)
+            if not SCRIPT_DEBUG:
+                break
 
     if not SerialRXindex:
         raise PassthroughFailed("!!! RX Serial not found !!!!\n  Check configuration and try again...")
