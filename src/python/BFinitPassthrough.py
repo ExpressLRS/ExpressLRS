@@ -88,11 +88,11 @@ def bf_passthrough_init(port, requestedBaudrate):
         if not line or "#" in line:
             break
 
-        if line.startswith("serial"):
+        if line.startswith("serial") or line.startswith("set rx_uart"):
             if SCRIPT_DEBUG:
                 dbg_print("  '%s'" % line)
-            config = re.search('serial ((?:UART)?[0-9]+) ([0-9]+) ', line)
-            if config and (int(config.group(2)) & 64 == 64):
+            config = re.search('(?:serial |set rx_uart = )((?:UART)?[0-9]+)(?: ([0-9]+) |$)', line)
+            if config and (config.group(2) is None or int(config.group(2)) & 64 == 64):
                 dbg_print("    ** Serial RX config detected: '%s'" % line)
                 SerialRXindex = config.group(1)
                 if not SCRIPT_DEBUG:
