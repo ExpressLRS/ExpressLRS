@@ -71,8 +71,6 @@ void SX1280Driver::End()
 bool SX1280Driver::Begin()
 {
     hal.init();
-    hal.IsrCallback_1 = &SX1280Driver::IsrCallback_1;
-    hal.IsrCallback_2 = &SX1280Driver::IsrCallback_2;
 
     hal.reset();
     DBGLN("SX1280 Begin");
@@ -86,6 +84,8 @@ bool SX1280Driver::Begin()
     if ((firmwareRev == 0) || (firmwareRev == 65535))
     {
         // SPI communication failed, just return without configuration
+        hal.end();
+        RFAMP.TXRXdisable();
         return false;
     }
 
@@ -98,6 +98,8 @@ bool SX1280Driver::Begin()
         if ((firmwareRev == 0) || (firmwareRev == 65535))
         {
             // SPI communication failed, just return without configuration
+            hal.end();
+            RFAMP.TXRXdisable();
             return false;
         }
 
@@ -131,6 +133,9 @@ transitioning from FS mode and the other from Standby mode. This causes the tx d
         hal.WriteCommand(SX1280_RADIO_SET_REGULATORMODE, SX1280_USE_DCDC, SX12XX_Radio_All);        // Enable DCDC converter instead of LDO
     }
 
+    hal.IsrCallback_1 = &SX1280Driver::IsrCallback_1;
+    hal.IsrCallback_2 = &SX1280Driver::IsrCallback_2;
+    hal.enableInterrupts();
     return true;
 }
 

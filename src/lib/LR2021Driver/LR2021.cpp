@@ -102,12 +102,15 @@ bool LR2021Driver::Begin(const uint32_t lowBandFreq, const uint32_t highBandFreq
 
     // Validate that the LR2021(s) are working.
     if (!CheckVersion(SX12XX_Radio_1))
+    {
+        hal.end();
         return false;
+    }
     if (GPIO_PIN_NSS_2 != UNDEF_PIN && !CheckVersion(SX12XX_Radio_2))
+    {
+        hal.end();
         return false;
-
-    hal.IsrCallback_1 = &LR2021Driver::IsrCallback_1;
-    hal.IsrCallback_2 = &LR2021Driver::IsrCallback_2;
+    }
 
     CHECK("LOAD_PATCH_RAM", LoadPatchRAM(SX12XX_Radio_1));
     if (GPIO_PIN_NSS_2 != UNDEF_PIN) CHECK("LOAD_PATCH_RAM", LoadPatchRAM(SX12XX_Radio_2));
@@ -151,6 +154,9 @@ bool LR2021Driver::Begin(const uint32_t lowBandFreq, const uint32_t highBandFreq
     const uint8_t calibrateFE[]{static_cast<uint8_t>((lowBandFreq / 4000000) >> 8), static_cast<uint8_t>(lowBandFreq / 4000000), static_cast<uint8_t>(((highBandFreq / 4000000) >> 8) | 0x80), static_cast<uint8_t>(highBandFreq / 4000000)};
     CHECK("LR2021_SYSTEM_CALIBRATE_FRONTEND_OC", hal.WriteCommand(LR2021_SYSTEM_CALIBRATE_FRONTEND_OC, calibrateFE, sizeof(calibrateFE), SX12XX_Radio_All, 30000));
 
+    hal.IsrCallback_1 = &LR2021Driver::IsrCallback_1;
+    hal.IsrCallback_2 = &LR2021Driver::IsrCallback_2;
+    hal.enableInterrupts();
     return true;
 }
 

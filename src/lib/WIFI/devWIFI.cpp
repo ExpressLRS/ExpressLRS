@@ -161,14 +161,7 @@ static void WebUpdateHandleRoot(AsyncWebServerRequest *request)
     return;
   }
   force_update = request->hasArg("force");
-  if (connectionState == hardwareUndefined)
-  {
-    request->redirect("/index.html#hardware");
-  }
-  else
-  {
-    request->redirect("/index.html");
-  }
+  request->redirect("/index.html");
 }
 
 static void putFile(AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total)
@@ -419,6 +412,28 @@ static void GetConfiguration(AsyncWebServerRequest *request)
   auto *response = new AsyncJsonResponse();
   const auto json = response->getRoot();
 
+  if (!exportMode && connectionState >= FAILURE_STATES)
+  {
+    json["config"]["uid"].to<JsonArray>();
+    const auto settings = json["settings"].to<JsonObject>();
+    settings["product_name"] = product_name;
+    settings["lua_name"] = device_name;
+    settings["target"] = &target_name[4];
+    settings["version"] = VERSION;
+    settings["git-commit"] = commit;
+    settings["radio_failed"] = connectionState == radioFailed;
+    settings["hardware_undefined"] = connectionState == hardwareUndefined;
+#if defined(TARGET_TX)
+    settings["module-type"] = "TX";
+#endif
+#if defined(TARGET_RX)
+    settings["module-type"] = "RX";
+#endif
+    response->setLength();
+    request->send(response);
+    return;
+  }
+
   if (!exportMode)
   {
     JsonDocument options;
@@ -548,6 +563,7 @@ static void GetConfiguration(AsyncWebServerRequest *request)
     settings["uidtype"] = GetConfigUidType(json);
     settings["ssid"] = station_ssid;
     settings["mode"] = wifiMode == WIFI_STA ? "STA" : "AP";
+    settings["radio_failed"] = connectionState == radioFailed;
     settings["wifi_dbm"] = wifi_GetClientRssi();
     settings["custom_hardware"] = hardware_flag(HARDWARE_customised);
     settings["target"] = &target_name[4];
@@ -560,6 +576,8 @@ static void GetConfiguration(AsyncWebServerRequest *request)
     settings["module-type"] = "RX";
     settings["voltage_source_count"] = getDefinedVoltageSourceCount();
 #endif
+    if (connectionState != radioFailed)
+    {
 #if defined(RADIO_SX127X)
     settings["radio-type"] = "SX127X";
     settings["has_low_band"] = true;
@@ -583,6 +601,7 @@ static void GetConfiguration(AsyncWebServerRequest *request)
     settings["reg_domain_low"] = FHSSconfig->domain;
     settings["reg_domain_high"] = FHSSconfigDualBand->domain;
 #endif
+    }
   }
 
   response->setLength();

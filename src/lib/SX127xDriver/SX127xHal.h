@@ -12,6 +12,7 @@ public:
     SX127xHal();
 
     void init();
+    void enableInterrupts();
     void end();
     void reset();
 

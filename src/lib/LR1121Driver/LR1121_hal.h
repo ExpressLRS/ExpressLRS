@@ -11,6 +11,7 @@ public:
     LR1121Hal();
 
     void init();
+    void enableInterrupts();
     void end();
     void reset(bool bootloader = false);
 

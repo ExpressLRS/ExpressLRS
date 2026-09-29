@@ -47,8 +47,6 @@ SX127xDriver::SX127xDriver(): SX12xxDriverCommon()
 bool SX127xDriver::Begin()
 {
   hal.init();
-  hal.IsrCallback_1 = &SX127xDriver::IsrCallback_1;
-  hal.IsrCallback_2 = &SX127xDriver::IsrCallback_2;
 
   hal.reset();
   DBGLN("SX127x Begin");
@@ -66,6 +64,8 @@ bool SX127xDriver::Begin()
 
   if (!DetectChip(SX12XX_Radio_1))
   {
+    hal.end();
+    RFAMP.TXRXdisable();
     return false;
   }
 
@@ -73,6 +73,8 @@ bool SX127xDriver::Begin()
   {
     if (!DetectChip(SX12XX_Radio_2))
     {
+      hal.end();
+      RFAMP.TXRXdisable();
       return false;
     }
   }
@@ -93,6 +95,9 @@ bool SX127xDriver::Begin()
   }
   CommitOutputPower();
 
+  hal.IsrCallback_1 = &SX127xDriver::IsrCallback_1;
+  hal.IsrCallback_2 = &SX127xDriver::IsrCallback_2;
+  hal.enableInterrupts();
   return true;
 }
 

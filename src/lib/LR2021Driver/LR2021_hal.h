@@ -10,6 +10,7 @@ public:
     LR2021Hal();
 
     void init();
+    void enableInterrupts();
     void end();
     void reset(bool bootloader = false);
 

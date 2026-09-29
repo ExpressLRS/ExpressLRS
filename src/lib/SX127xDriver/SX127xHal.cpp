@@ -57,7 +57,10 @@ void SX127xHal::init()
     SPIEx.setDataMode(SPI_MODE0);
     SPIEx.setFrequency(10000000);
 #endif
+}
 
+void SX127xHal::enableInterrupts(void)
+{
     attachInterrupt(digitalPinToInterrupt(GPIO_PIN_DIO0), this->dioISR_1, RISING);
     if (GPIO_PIN_DIO0_2 != UNDEF_PIN)
     {

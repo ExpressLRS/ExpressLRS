@@ -1,6 +1,6 @@
 import {html, LitElement} from "lit"
 import {customElement} from "lit/decorators.js"
-import {elrsState, formatBand, formatWifiRssi} from "../utils/state.js"
+import {elrsState, formatBand, formatWifiRssi, hardwareIssue, hardwareUndefined} from "../utils/state.js"
 import {SERIAL_OPTIONS1} from '../utils/globals.js'
 
 @customElement('info-panel')
@@ -12,6 +12,7 @@ class InfoPanel extends LitElement {
     render() {
         return html`
             <div class="mui-panel mui--text-title">Information</div>
+            ${hardwareIssue() ? html`<div class="mui-panel error-bg">${hardwareUndefined() ? 'Hardware definition was not found.' : 'Radio chip was not detected.'} <a href="#hardware">Open Hardware Layout</a> to correct it, then reboot.</div>` : ''}
             <div class="mui-panel">
                 <table class="mui-table mui-table--bordered">
                     <tbody>
@@ -28,7 +29,7 @@ class InfoPanel extends LitElement {
                     </tbody>
                 </table>
             </div>
-            ${this._hasCustomSettings() ? html`
+            ${this._hasCustomSettings() && !hardwareIssue() ? html`
                 <div class="mui-panel">
                     <div class="mui--text-title">Custom Settings Detected</div>
                     <br>

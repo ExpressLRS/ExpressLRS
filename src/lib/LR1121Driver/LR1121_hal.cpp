@@ -68,7 +68,10 @@ void LR1121Hal::init()
     SPIEx.setDataMode(SPI_MODE0);
     SPIEx.setFrequency(16000000);
 #endif
+}
 
+void LR1121Hal::enableInterrupts()
+{
     attachInterrupt(digitalPinToInterrupt(GPIO_PIN_DIO1), this->dioISR_1, RISING);
     if (GPIO_PIN_DIO1_2 != UNDEF_PIN)
     {
