@@ -82,6 +82,9 @@ void debugFreeInitLogger();
     #define DBGV(...)
     #define DBGVLN(...)
   #endif
+
+  void hexdump(const void *p, size_t len);
+  #define DBGDUMP(p, len) hexdump(p, len);
 #else
   #define DBGCR
   #define DBGW(c)
@@ -90,6 +93,7 @@ void debugFreeInitLogger();
   #define DBGVCR
   #define DBGV(...)
   #define DBGVLN(...)
+  #define DBGDUMP(...)
 #endif
 
 #endif
