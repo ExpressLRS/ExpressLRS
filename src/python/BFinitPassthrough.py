@@ -90,7 +90,7 @@ def bf_passthrough_init(port, requestedBaudrate):
 
         config = None
         if line.startswith("serial"):
-            config = re.search(r'serial (\S+) ([0-9]+) ', line)
+            config = re.search('serial ((?:UART)?[0-9]+) ([0-9]+) ', line)
             if config and (int(config.group(2)) & 64 != 64):
                 config = None
         if line.startswith("set rx_uart"):
