@@ -35,7 +35,11 @@ static char pwmModes[] = "50Hz;60Hz;100Hz;160Hz;333Hz;400Hz;10kHzDuty;On/Off;DSh
 static selectionParameter luaSerialProtocol = {
     {"Protocol", CRSF_TEXT_SELECTION},
     0, // value
+#if defined(PLATFORM_ESP32)
+    "CRSF;Inverted CRSF;SBUS;Inverted SBUS;SUMD;DJI RS Pro;HoTT Telemetry;MAVLink;DisplayPort;GPS;MAVLink DroneCAN",
+#else
     "CRSF;Inverted CRSF;SBUS;Inverted SBUS;SUMD;DJI RS Pro;HoTT Telemetry;MAVLink;DisplayPort;GPS",
+#endif
     STR_EMPTYSPACE
 };
 
@@ -669,7 +673,7 @@ void RXEndpoint::updateParameters()
   setTextSelectionValue(&luaBindStorage, config.GetBindStorage());
   updateBindModeLabel();
 
-  if (config.GetSerialProtocol() == PROTOCOL_MAVLINK)
+  if (isMavlinkProtocol(config.GetSerialProtocol()))
   {
     setUint8Value(&luaSourceSysId, config.GetSourceSysId() == 0 ? 255 : config.GetSourceSysId());  //display Source sysID if 0 display 255 to mimic logic in SerialMavlink.cpp
     setUint8Value(&luaTargetSysId, config.GetTargetSysId() == 0 ? 1 : config.GetTargetSysId());  //display Target sysID if 0 display 1 to mimic logic in SerialMavlink.cpp

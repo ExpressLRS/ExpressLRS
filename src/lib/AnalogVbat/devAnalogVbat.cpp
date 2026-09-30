@@ -177,7 +177,7 @@ static void reportVbat()
     if (triggerPacket || (now - lastTelemSentMs >= VBAT_MIN_CRSFRATE))
     {
         // send battery packets (0x08) only if no external decive is sending 0x08 packets
-        if (!crsfBatterySensorDetected && config.GetSerialProtocol() != PROTOCOL_MAVLINK)
+        if (!crsfBatterySensorDetected && !isMavlinkProtocol(config.GetSerialProtocol()))
         {
             // CRSF_FRAMETYPE_BATTERY (0x08)
             CRSF_MK_FRAME_T(crsf_sensor_battery_t) crsfbatt = { 0 };

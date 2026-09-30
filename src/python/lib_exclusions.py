@@ -19,13 +19,14 @@ built; its target must not include headers or symbols it provides.
 LIBRARY_EXCLUSIONS = {
     # target type -> "*" (all target MCUs) or MCU -> library names
     "TX": {
-        "*": ("AnalogVbat","Baro","GYRO","MSPVTX","PWM","rx-crsf","ServoOutput","VTXSPI"),
+        "*": ("AnalogVbat","Baro","DroneCAN","GYRO","libcanard","MSPVTX","PWM","rx-crsf","ServoOutput","VTXSPI"),
         "esp32c3": ("GFX Library for Arduino","U8g2","GSENSOR","SCREEN","THERMAL"),
         "esp8285": ("GSENSOR","SCREEN","THERMAL"),
     },
     "RX": {
         "*": ("ADC","Backpack","BLE","GSENSOR","Handset","POWER_DETECT","SCREEN","tx-crsf","VTX"),
         "esp8285": ("MSPVTX","VTXSPI"),
+        "esp8266": ("DroneCAN",),   # build.mcu of the esp8285 board
     }
 }
 
@@ -52,3 +53,10 @@ if excluded_libraries:
     ignored_libraries = config.get("env:" + env["PIOENV"], "lib_ignore", [])
     config.set("env:" + env["PIOENV"], "lib_ignore", list(dict.fromkeys(ignored_libraries + list(excluded_libraries))))
     print("Ignoring libraries for %s/%s: %s" % (target_type, mcu, ", ".join(excluded_libraries)))
+
+# libcanard is fetched as a plain git repo, only canard.c is needed (skip its drivers, tests and C++ wrappers)
+def skip_libcanard_extras(node):
+    path = node.get_abspath().replace("\\", "/")
+    return None if "/libcanard/" in path and not path.endswith("/libcanard/canard.c") else node
+
+env.AddBuildMiddleware(skip_libcanard_extras)

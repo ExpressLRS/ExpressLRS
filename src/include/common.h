@@ -227,8 +227,14 @@ enum eSerialProtocol : uint8_t
     PROTOCOL_HOTT_TLM,
     PROTOCOL_MAVLINK,
     PROTOCOL_MSP_DISPLAYPORT,
-    PROTOCOL_GPS
+    PROTOCOL_GPS,
+    PROTOCOL_MAVLINK_DRONECAN
 };
+
+inline bool isMavlinkProtocol(eSerialProtocol protocol)
+{
+    return protocol == PROTOCOL_MAVLINK || protocol == PROTOCOL_MAVLINK_DRONECAN;
+}
 
 #if defined(PLATFORM_ESP32)
 enum eSerial1Protocol : uint8_t
