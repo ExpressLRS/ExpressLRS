@@ -2,10 +2,12 @@
 
 #if !defined(UNIT_TEST)
 #include "config.h"
+#include "rxtx_intf.h"
+#if defined(PLATFORM_ESP32)
 #include "devMSPVTX.h"
 #include "devVTXSPI.h"
 #include "freqTable.h"
-#include "rxtx_intf.h"
+#endif
 #include "logging.h"
 
 extern void reset_into_bootloader();

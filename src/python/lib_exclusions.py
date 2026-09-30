@@ -21,11 +21,11 @@ LIBRARY_EXCLUSIONS = {
     "TX": {
         "*": ("AnalogVbat","Baro","GYRO","MSPVTX","PWM","rx-crsf","ServoOutput","VTXSPI"),
         "esp32c3": ("GFX Library for Arduino","U8g2","GSENSOR","SCREEN","THERMAL"),
-        "esp8285": ("GSENSOR","SCREEN","THERMAL"),
+        "esp8266": ("GSENSOR","SCREEN","THERMAL"),
     },
     "RX": {
         "*": ("ADC","Backpack","BLE","GSENSOR","Handset","POWER_DETECT","SCREEN","tx-crsf","VTX"),
-        "esp8285": ("MSPVTX","VTXSPI"),
+        "esp8266": ("VTXSPI",),
     }
 }
 
