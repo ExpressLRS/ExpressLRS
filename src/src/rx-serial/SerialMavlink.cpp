@@ -5,6 +5,15 @@
 #include "common.h"
 #include "config.h"
 #include "device.h"
+#include "logging.h"
+#include "MavlinkFramer.h"
+
+#if defined(PLATFORM_ESP32)
+#include <WiFi.h>
+#else
+#include <ESP8266WiFi.h>
+#endif
+#include <WiFiUdp.h>
 
 #define MAVLINK_RC_PACKET_INTERVAL 10
 
@@ -12,6 +21,22 @@
 #include "common/mavlink.h"
 
 #define MAV_FTP_OPCODE_OPENFILERO 4
+
+// In WiFi mode the radio is off. The RX then connects the flight controller UART
+// to a GCS over UDP. The RX listens on MAVLINK_UDP_LOCAL_PORT. It broadcasts to
+// MAVLINK_UDP_GCS_PORT until a GCS sends a packet, then it sends to that GCS only.
+#define MAVLINK_UDP_LOCAL_PORT  14555
+#define MAVLINK_UDP_GCS_PORT    14550   // The default GCS port of QGroundControl and Mission Planner
+#define MAVLINK_UDP_GCS_TIMEOUT 5000    // ms without a packet from the GCS before the RX broadcasts again
+
+struct SerialMavlink::WifiLink
+{
+    WiFiUDP udp;
+    MavlinkFramer<512> framer;
+    IPAddress gcsIp;
+    uint16_t gcsPort = 0;
+    uint32_t lastGcsPacketMs = 0;
+};
 
 SerialMavlink::SerialMavlink(Stream &out, Stream &in):
     SerialIO(&out, &in),
@@ -26,6 +51,11 @@ SerialMavlink::SerialMavlink(Stream &out, Stream &in):
     // Send to all components as we may have ex. gimbal that listens to RC instead of using Autopilot driver
     target_component_id(MAV_COMPONENT::MAV_COMP_ID_ALL)
 {
+}
+
+SerialMavlink::~SerialMavlink()
+{
+    delete wifi;
 }
 
 uint32_t SerialMavlink::sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t *channelData)
@@ -75,36 +105,56 @@ void SerialMavlink::processBytes(uint8_t *bytes, u_int16_t size)
     {
         mavlinkInputBuffer.atomicPushBytes(bytes, size);
     }
+    else if (wifi != nullptr)
+    {
+        for (uint16_t i = 0; i < size; ++i)
+        {
+            wifi->framer.push(bytes[i], [this](const uint8_t *data, uint16_t len) { sendToGcs(data, len); });
+        }
+    }
+}
+
+void SerialMavlink::sendRadioStatus()
+{
+    // Software-based flow control for mavlink
+    uint8_t percentage_remaining = ((MAV_INPUT_BUF_LEN - mavlinkInputBuffer.size()) * 100) / MAV_INPUT_BUF_LEN;
+
+    // Populate radio status packet
+    mavlink_radio_status_t radio_status {
+        rxerrors: 0,
+        fixed: 0,
+        rssi: (uint8_t)((float)linkStats.uplink_Link_quality * 2.55),
+        remrssi: linkStats.uplink_RSSI_1,
+        txbuf: percentage_remaining,
+        noise: (uint8_t)linkStats.uplink_SNR,
+        remnoise: 0,
+    };
+    if (wifi != nullptr)
+    {
+        // There is no radio link in WiFi mode, UINT8_MAX is "unknown"
+        radio_status.rssi = UINT8_MAX;
+        radio_status.remrssi = UINT8_MAX;
+        radio_status.noise = UINT8_MAX;
+        radio_status.remnoise = UINT8_MAX;
+    }
+
+    uint8_t buf[MAVLINK_MSG_ID_RADIO_STATUS_LEN + MAVLINK_NUM_NON_PAYLOAD_BYTES];
+    mavlink_message_t msg;
+    mavlink_msg_radio_status_encode(this_system_id, this_component_id, &msg, &radio_status);
+    uint16_t len = mavlink_msg_to_send_buffer(buf, &msg);
+    _outputPort->write(buf, len);
 }
 
 void SerialMavlink::sendQueuedData(uint32_t maxBytesToSend)
 {
+    handleWifi();
 
     // Send radio messages at 100Hz
     const uint32_t now = millis();
     if ((now - lastSentFlowCtrl) > 10)
     {
         lastSentFlowCtrl = now;
-
-        // Software-based flow control for mavlink
-        uint8_t percentage_remaining = ((MAV_INPUT_BUF_LEN - mavlinkInputBuffer.size()) * 100) / MAV_INPUT_BUF_LEN;
-
-        // Populate radio status packet
-        const mavlink_radio_status_t radio_status {
-            rxerrors: 0,
-            fixed: 0,
-            rssi: (uint8_t)((float)linkStats.uplink_Link_quality * 2.55),
-            remrssi: linkStats.uplink_RSSI_1,
-            txbuf: percentage_remaining,
-            noise: (uint8_t)linkStats.uplink_SNR,
-            remnoise: 0,
-        };
-
-        uint8_t buf[MAVLINK_MSG_ID_RADIO_STATUS_LEN + MAVLINK_NUM_NON_PAYLOAD_BYTES];
-        mavlink_message_t msg;
-        mavlink_msg_radio_status_encode(this_system_id, this_component_id, &msg, &radio_status);
-        uint16_t len = mavlink_msg_to_send_buffer(buf, &msg);
-        _outputPort->write(buf, len);
+        sendRadioStatus();
     }
 
     auto size = mavlinkOutputBuffer.size();
@@ -137,6 +187,73 @@ void SerialMavlink::sendQueuedData(uint32_t maxBytesToSend)
             _outputPort->write(buf, len);
         }
     }
+}
+
+static IPAddress wifiBroadcastIP()
+{
+    if (WiFi.status() == WL_CONNECTED)
+    {
+        return IPAddress((uint32_t)WiFi.localIP() | ~(uint32_t)WiFi.subnetMask());
+    }
+    // The netmask of the access point is 255.255.255.0, see devWIFI
+    return IPAddress((uint32_t)WiFi.softAPIP() | ~(uint32_t)IPAddress(255, 255, 255, 0));
+}
+
+void SerialMavlink::sendToGcs(const uint8_t *data, const uint16_t len)
+{
+    if (wifi->gcsPort != 0 && millis() - wifi->lastGcsPacketMs < MAVLINK_UDP_GCS_TIMEOUT)
+    {
+        wifi->udp.beginPacket(wifi->gcsIp, wifi->gcsPort);
+    }
+    else
+    {
+        wifi->udp.beginPacket(wifiBroadcastIP(), MAVLINK_UDP_GCS_PORT);
+    }
+    wifi->udp.write(data, len);
+    wifi->udp.endPacket();
+}
+
+void SerialMavlink::handleWifi()
+{
+    if (connectionState != wifiUpdate)
+    {
+        if (wifi != nullptr)
+        {
+            delete wifi;
+            wifi = nullptr;
+        }
+        return;
+    }
+
+    if (wifi == nullptr)
+    {
+        // The UDP socket needs the network stack, which starts with the WiFi
+        if (WiFi.getMode() == WIFI_OFF)
+        {
+            return;
+        }
+        wifi = new WifiLink();
+        wifi->udp.begin(MAVLINK_UDP_LOCAL_PORT);
+        DBGLN("MAVLink UDP on port %u", MAVLINK_UDP_LOCAL_PORT);
+    }
+
+    // GCS to flight controller: write each datagram to the UART
+    while (wifi->udp.parsePacket() > 0)
+    {
+        wifi->gcsIp = wifi->udp.remoteIP();
+        wifi->gcsPort = wifi->udp.remotePort();
+        wifi->lastGcsPacketMs = millis();
+
+        uint8_t buf[128];
+        int len;
+        while ((len = wifi->udp.read(buf, sizeof(buf))) > 0)
+        {
+            _outputPort->write(buf, len);
+        }
+    }
+
+    // Flight controller to GCS: processBytes() puts the frames in the framer, send them now
+    wifi->framer.flush([this](const uint8_t *data, uint16_t len) { sendToGcs(data, len); });
 }
 
 void SerialMavlink::event()
