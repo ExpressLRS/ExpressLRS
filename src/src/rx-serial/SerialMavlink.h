@@ -28,8 +28,8 @@ public:
 
 private:
     void processBytes(uint8_t *bytes, u_int16_t size) override;
-    void sendRadioStatus();
     void handleWifi();
+    void stopWifi() __attribute__((noinline));
     void sendToGcs(const uint8_t *data, uint16_t len);
 
     uint8_t this_system_id;

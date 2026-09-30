@@ -55,7 +55,13 @@ SerialMavlink::SerialMavlink(Stream &out, Stream &in):
 
 SerialMavlink::~SerialMavlink()
 {
+    stopWifi();
+}
+
+void SerialMavlink::stopWifi()
+{
     delete wifi;
+    wifi = nullptr;
 }
 
 uint32_t SerialMavlink::sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t *channelData)
@@ -114,37 +120,6 @@ void SerialMavlink::processBytes(uint8_t *bytes, u_int16_t size)
     }
 }
 
-void SerialMavlink::sendRadioStatus()
-{
-    // Software-based flow control for mavlink
-    uint8_t percentage_remaining = ((MAV_INPUT_BUF_LEN - mavlinkInputBuffer.size()) * 100) / MAV_INPUT_BUF_LEN;
-
-    // Populate radio status packet
-    mavlink_radio_status_t radio_status {
-        rxerrors: 0,
-        fixed: 0,
-        rssi: (uint8_t)((float)linkStats.uplink_Link_quality * 2.55),
-        remrssi: linkStats.uplink_RSSI_1,
-        txbuf: percentage_remaining,
-        noise: (uint8_t)linkStats.uplink_SNR,
-        remnoise: 0,
-    };
-    if (wifi != nullptr)
-    {
-        // There is no radio link in WiFi mode, UINT8_MAX is "unknown"
-        radio_status.rssi = UINT8_MAX;
-        radio_status.remrssi = UINT8_MAX;
-        radio_status.noise = UINT8_MAX;
-        radio_status.remnoise = UINT8_MAX;
-    }
-
-    uint8_t buf[MAVLINK_MSG_ID_RADIO_STATUS_LEN + MAVLINK_NUM_NON_PAYLOAD_BYTES];
-    mavlink_message_t msg;
-    mavlink_msg_radio_status_encode(this_system_id, this_component_id, &msg, &radio_status);
-    uint16_t len = mavlink_msg_to_send_buffer(buf, &msg);
-    _outputPort->write(buf, len);
-}
-
 void SerialMavlink::sendQueuedData(uint32_t maxBytesToSend)
 {
     handleWifi();
@@ -154,7 +129,27 @@ void SerialMavlink::sendQueuedData(uint32_t maxBytesToSend)
     if ((now - lastSentFlowCtrl) > 10)
     {
         lastSentFlowCtrl = now;
-        sendRadioStatus();
+
+        // Software-based flow control for mavlink
+        uint8_t percentage_remaining = ((MAV_INPUT_BUF_LEN - mavlinkInputBuffer.size()) * 100) / MAV_INPUT_BUF_LEN;
+
+        // Populate radio status packet. There is no radio link in WiFi mode, UINT8_MAX is "unknown".
+        const bool radioLink = wifi == nullptr;
+        const mavlink_radio_status_t radio_status {
+            rxerrors: 0,
+            fixed: 0,
+            rssi: radioLink ? (uint8_t)((float)linkStats.uplink_Link_quality * 2.55) : UINT8_MAX,
+            remrssi: radioLink ? (uint8_t)linkStats.uplink_RSSI_1 : UINT8_MAX,
+            txbuf: percentage_remaining,
+            noise: radioLink ? (uint8_t)linkStats.uplink_SNR : UINT8_MAX,
+            remnoise: radioLink ? 0 : UINT8_MAX,
+        };
+
+        uint8_t buf[MAVLINK_MSG_ID_RADIO_STATUS_LEN + MAVLINK_NUM_NON_PAYLOAD_BYTES];
+        mavlink_message_t msg;
+        mavlink_msg_radio_status_encode(this_system_id, this_component_id, &msg, &radio_status);
+        uint16_t len = mavlink_msg_to_send_buffer(buf, &msg);
+        _outputPort->write(buf, len);
     }
 
     auto size = mavlinkOutputBuffer.size();
@@ -219,8 +214,7 @@ void SerialMavlink::handleWifi()
     {
         if (wifi != nullptr)
         {
-            delete wifi;
-            wifi = nullptr;
+            stopWifi();
         }
         return;
     }
