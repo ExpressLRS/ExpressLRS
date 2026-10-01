@@ -224,6 +224,17 @@ void SerialGPS::fieldParseRMC(SerialGPS *ctx, uint8_t fieldIdx, char *field)
             ctx->gpsData.hour = time_ms % 100;
             break;
         }
+        case 7: // Speed over ground: knots -> scaled km/h * 100 (matching VTG)
+        {
+            int32_t knots100 = parseDecimalToScaled(field, 100);
+            ctx->gpsData.speed = (uint32_t)((knots100 * 1852LL + 500) / 1000);
+            break;
+        }
+        case 8: // Track angle in degrees -> scaled by 100
+        {
+            ctx->gpsData.heading = parseDecimalToScaled(field, 100);
+            break;
+        }
         case 9: // Date: DDMMYY
         {
             uint32_t date = atoi(field);
