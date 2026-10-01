@@ -418,9 +418,13 @@ static void configureSerialPin(uint8_t sibling, uint8_t oldMode, uint8_t newMode
       siblingPinConfig.raw = config.GetPwmChannel(ch)->raw;
 
       // If the new mode is serial, the sibling is also forced to serial
+      // unless GPS protocol is selected and sibling is the TX pin (GPIO1)
       if (newMode == somSerial)
       {
-        siblingPinConfig.val.mode = somSerial;
+        if (config.GetSerialProtocol() != PROTOCOL_GPS || sibling != 1)
+        {
+          siblingPinConfig.val.mode = somSerial;
+        }
       }
       // If the new mode is not serial, and the sibling is serial, set the sibling to PWM (50Hz)
       else if (siblingPinConfig.val.mode == somSerial)

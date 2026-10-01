@@ -1339,6 +1339,12 @@ static void setupSerial()
     }
 
     SerialMode mode = (sbusSerialOutput || sumdSerialOutput)  ? SERIAL_TX_ONLY : SERIAL_FULL;
+    if (config.GetSerialProtocol() == PROTOCOL_GPS)
+    {
+        // GPS on ESP8285 only requires the RX line (GPIO3 / CH3).
+        // Free GPIO1 (TX / CH2) for independent PWM motor ESC output.
+        mode = SERIAL_RX_ONLY;
+    }
     Serial.begin(serialBaud, serialConfig, mode, -1, invert);
 #elif defined(PLATFORM_ESP32)
     uint32_t serialConfig = SERIAL_8N1;
