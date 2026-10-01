@@ -710,6 +710,7 @@ bool ICACHE_RAM_ATTR LR1121Driver::RXnbISR(SX12XX_Radio_Number_t radioNumber)
     codec->decode(RXdataBuffer, rx_buf + 6, PayloadLength);
     if (!RXdoneCallback(SX12XX_RX_OK))
     {
+        DecodeRssiSnr(radioNumber, rx_buf);
 #if defined(DEBUG_RCVR_SIGNAL_STATS)
         rxSignalStats[radioNumber == SX12XX_Radio_1 ? 0 : 1].fail_count++;
 #endif
