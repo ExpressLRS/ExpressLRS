@@ -30,6 +30,7 @@
 
 #include "devAnalogVbat.h"
 #include "devBaro.h"
+#include "devImu.h"
 #include "devButton.h"
 #include "devLED.h"
 #include "devRXLUA.h"
@@ -87,6 +88,7 @@ device_affinity_t ui_devices[] = {
   {&AnalogVbat_device, 0},
   {&ServoOut_device, 1},
   {&Baro_device, 0}, // must come after AnalogVbat_device to slow updates
+  {&Imu_device, 0},
 #if defined(PLATFORM_ESP32) && !defined(PLATFORM_ESP32_C3)
   {&VTxSPI_device, 0},
   {&MSPVTx_device, 0}, // dependency on VTxSPI_device
