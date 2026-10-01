@@ -19,6 +19,7 @@
 
 #include "ardupilot_custom_telemetry.h"
 #include "common/mavlink.h"
+#include <math.h>
 
 /*
  * Known Issues:
@@ -459,6 +460,20 @@ uint32_t format_param(uint8_t param_id, uint32_t param_value)
 }
 
 /*
+ * Adapted from Ardupilot's AP_Frsky_SPort_Passthrough::calc_rpm()
+ * This is the content of the 0x500A RPM value.
+ * Two signed 16-bit RPM values, each scaled by 0.1 (Yaapu multiplies back by 10).
+ * rpm1 occupies bits 0-15, rpm2 bits 16-31.
+ */
+uint32_t format_rpm(float rpm1, float rpm2)
+{
+    uint32_t value = (uint16_t)(int16_t)lroundf(rpm1 * 0.1f);
+    value |= ((uint32_t)(uint16_t)(int16_t)lroundf(rpm2 * 0.1f)) << 16;
+    return value;
+}
+
+
+/*
  * Adapted from Ardupilot's AP_Frsky_SPort_Passthrough::calc_terrain()
  * This is the content of the 0x500B terrain.
  */
@@ -471,7 +486,7 @@ uint32_t format_terrain(uint32_t altitude_terrain)
 
 /*
  * Adapted from Ardupilot's AP_Frsky_SPort_Passthrough::calc_waypoint()
- * This is the content of the 0x500B terrain.
+ * This is the content of the 0x500D waypoint.
  */
 uint32_t format_waypoint(uint8_t heading, uint16_t distance, uint16_t number)
 {
