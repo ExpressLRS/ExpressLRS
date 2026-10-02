@@ -83,7 +83,6 @@ static void slot()
                 fprintf(stderr, "%5u %7.1fms TLM  txNonce=%u %s\n", tx.slotNum, simNow() / 1000.0, tx.nonce, lost ? "lost" : "heard");
         }
         sentAtLastTelemetrySlot = simRadio.packetsSent;
-        txEndOfSlot();
         return;
     }
 
@@ -93,10 +92,7 @@ static void slot()
 
     advanceTo(tx.slotStart + tx.ratePerf->TOA + channelJitter());
     if (!rxCanHear())
-    {
-        txEndOfSlot();
         return;
-    }
 
     uint8_t a = 0, b = 0;
     const Fate fate = channelNextFate(&a, &b);
@@ -126,7 +122,6 @@ static void slot()
         fprintf(stderr, "%5u %7.1fms %s txNonce=%u rxNonce=%u %-10s %s state=%d\n", tx.slotNum, simNow() / 1000.0, wasSync ? "SYNC" : "RC  ",
             tx.nonce, OtaNonce, fateNames[fate], accepted ? "accepted" : "", connectionState);
     mainLoop();
-    txEndOfSlot();
 }
 
 // Reads FUZZ_TRACE and sets the channel values the TX sends

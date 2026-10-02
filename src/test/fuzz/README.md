@@ -26,11 +26,11 @@ the receiver is in a position to hear, the test case decides what happens to it:
 - truncated, the tail overwritten
 - corrupted but with a valid CRC, as a false accept would be
 
-A test case can also power cycle the transmitter, change its switch mode, make
-it lose the receiver's telemetry, and stall the receiver's main loop. The
-transmitter's clock runs off against the receiver's and packets arrive with
-jitter, within `MAX_CLOCK_OFFSET_PPM` and `MAX_CLOCK_DRIFT_PPM_PER_S` in
-`sim_tx.h` and `MAX_ARRIVAL_JITTER_US` in `fuzz_channel.h`.
+A test case can also power cycle the transmitter, make it lose the receiver's
+telemetry, and stall the receiver's main loop. The transmitter's clock runs off
+against the receiver's and packets arrive with jitter, within
+`MAX_CLOCK_OFFSET_PPM` and `MAX_CLOCK_DRIFT_PPM_PER_S` in `sim_tx.h` and
+`MAX_ARRIVAL_JITTER_US` in `fuzz_channel.h`.
 
 Every CRSF, SBUS and SUMD frame the receiver emits is checked:
 
@@ -39,7 +39,6 @@ Every CRSF, SBUS and SUMD frame the receiver emits is checked:
 | `leak` | a channel the transmitter sends was output before it was ever received, without failsafe flagged |
 | `wrong-value` | a received channel was output with a value other than what was sent |
 | `unset-not-min` | a channel the transmitter never sends was output as something other than minimum |
-| `mode-mismatch` | a packet unpacked in a different switch mode than it was packed in put a wrong value on the output |
 | `blackout` | valid RC packets on a healthy link produce no output |
 | `protocol-changed` | the configured serial protocol was changed by something received over the air |
 
@@ -129,7 +128,7 @@ Not covered at all:
 - the DVDA rates (D500, D250), which send every packet more than once
 - the 900 MHz, LR1121 and LR2021 radios, only the SX1280 rate table is used
 - a second radio: diversity and Gemini
-- packet rate changes on the transmitter
+- packet rate and switch mode changes on the transmitter
 - MSP and other data uplink packets, the transmitter sends only sync and RC
 - model match, team race, binding
 - a disarmed transmitter, and arming by a switch other than CH5

@@ -157,38 +157,11 @@ void txBuildPacket(OTA_Packet_s *pkt)
     leaveTxContext(rx);
 }
 
-// Restarts the TX's nonce once a switch mode change is committed
-void txEndOfSlot()
-{
-    // TXModuleEndpoint::SetSwitchMode() swaps the packer at once. The config commit that follows in the
-    // TX's main loop goes through SetRFLinkRate(), which restarts nonce and hop sequence.
-    if (tx.restartIn && --tx.restartIn == 0)
-    {
-        tx.nonce = 0;
-        tx.fhssPtr = 0;
-        if (fuzzTrace)
-            fprintf(stderr, "     TX: config committed, nonce restarted\n");
-    }
-}
-
-// The user picks another switch mode in the Lua script
-void txSelectSwitchMode(uint8_t mode)
-{
-    // The TX refuses a switch mode change while it has a telemetry link
-    if (txLinked() || tx.restartIn || txAdjustSwitchMode(mode) == tx.mode)
-        return;
-    tx.mode = txAdjustSwitchMode(mode);
-    tx.restartIn = 2;
-    if (fuzzTrace)
-        fprintf(stderr, "     TX: user selects switch mode %d\n", tx.mode);
-}
-
 // The TX is switched off and on again
 void txPowerCycle()
 {
     tx.nonce = 0;
     tx.fhssPtr = 0;
-    tx.restartIn = 0;
     tx.lastTelemetryMs = -1000000;
     if (fuzzTrace)
         fprintf(stderr, "     TX: power cycled\n");

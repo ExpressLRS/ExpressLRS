@@ -104,7 +104,7 @@ Fate channelNextFate(uint8_t *a, uint8_t *b)
             switch ((op >> 3) & 3)
             {
             case 0:
-                txSelectSwitchMode(arg % 3);
+                // Unused. A TX only takes a switch mode change while disconnected, and then restarts its link.
                 break;
             case 1:
                 dropRemaining = (8u << arg) - 1;

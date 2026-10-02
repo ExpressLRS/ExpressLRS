@@ -24,7 +24,6 @@ const char *const protoNames[] = {"CRSF", "SBUS", "SUMD"};
 static const char *skipChecks;
 static Proto proto;
 static bool forgedCrcUsed;
-static bool decodedInWrongMode;
 static unsigned packetsWithoutOutput;
 static uint32_t expected[2][3][CRSF_NUM_CHANNELS];
 
@@ -89,15 +88,6 @@ static bool enabled(const char *check)
     fail(check, what);
 }
 
-// Clears the wrong-mode mark once ChannelData has been reset
-static void updateTaint()
-{
-    for (auto v : ChannelData)
-        if (v != CRSF_CHANNEL_VALUE_UNSET)
-            return;
-    decodedInWrongMode = false;
-}
-
 // Unpacks 16 channels of 11 bits, as CRSF and SBUS pack them
 static void unpack11(const uint8_t *p, uint32_t *out)
 {
@@ -131,24 +121,6 @@ static void checkFrame(const uint32_t *emitted, bool flaggedFailsafe)
     if (flaggedFailsafe || connectionState == disconnected)
         return;
     packetsWithoutOutput = 0;
-    updateTaint();
-    if (decodedInWrongMode && !forgedCrcUsed && enabled("mode-mismatch"))
-    {
-        // Only a value that is wrong in every switch mode counts, the modes quantise switches differently
-        for (unsigned ch = 0; ch < CRSF_NUM_CHANNELS; ch++)
-        {
-            if (ChannelData[ch] == CRSF_CHANNEL_VALUE_UNSET || (proto == PROTO_CRSF && ch >= 14))
-                continue;
-            bool known = false;
-            for (unsigned mode = 0; mode < 3; mode++)
-            {
-                const uint32_t want = expected[txIsFullRes()][mode][ch];
-                known |= emitted[ch] == (proto == PROTO_SUMD ? CRSF_to_US(want) : want);
-            }
-            if (!known)
-                failChannel("mode-mismatch", ch, emitted[ch], expected[txIsFullRes()][tx.mode][ch]);
-        }
-    }
     if (!modesAgree())
         return;
 
@@ -165,7 +137,7 @@ static void checkFrame(const uint32_t *emitted, bool flaggedFailsafe)
             const uint32_t wantWire = proto == PROTO_SUMD ? CRSF_to_US(want) : want;
             if (unset && enabled("leak"))
                 failChannel("leak", ch, emitted[ch], wantWire);
-            if (!unset && !forgedCrcUsed && !decodedInWrongMode && emitted[ch] != wantWire && enabled("wrong-value"))
+            if (!unset && !forgedCrcUsed && emitted[ch] != wantWire && enabled("wrong-value"))
                 failChannel("wrong-value", ch, emitted[ch], wantWire);
         }
         else if (unset && emitted[ch] != minVal && enabled("unset-not-min"))
@@ -247,9 +219,6 @@ void checkOutput()
 // Checks made when the RX accepts an RC packet
 void checkRcPacket()
 {
-    updateTaint();
-    if (connectionState == connected && !SwitchModePending && !rxDecodesAsTxPacks())
-        decodedInWrongMode = true;
     if (connectionState == connected && connectionHasModelMatch && modesAgree())
     {
         bool allReceived = true;

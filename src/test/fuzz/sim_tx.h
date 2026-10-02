@@ -30,7 +30,6 @@ struct SimTx
     uint8_t nonce;
     uint8_t fhssPtr;
     OtaSwitchMode_e mode;
-    unsigned restartIn; // slots until a switch mode change restarts the nonce and hop sequence
     unsigned syncSlot;
     int64_t lastSyncMs;
     int64_t lastTelemetryMs;
@@ -53,7 +52,5 @@ void txStart(uint64_t now);
 void txNextSlotTime();
 void txNextNonce();
 void txBuildPacket(OTA_Packet_s *pkt);
-void txEndOfSlot();
 
-void txSelectSwitchMode(uint8_t mode);
 void txPowerCycle();
