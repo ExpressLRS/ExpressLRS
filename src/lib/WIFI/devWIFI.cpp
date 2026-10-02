@@ -1349,6 +1349,7 @@ static void HandleWebUpdate()
   if (wifi2tcp.getWSserver() != nullptr)
   {
     wifi2tcp.getWSserver()->cleanupClients();
+    wifi2tcp.flushWS();
   }
 #endif
 
