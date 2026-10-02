@@ -765,29 +765,36 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
 {
     PFDloop.intEvent(micros()); // our internal osc just fired
 
-    if (ExpressLRS_currAirRate_Modparams->numOfSends > 1 && !(OtaNonce % ExpressLRS_currAirRate_Modparams->numOfSends))
+    bool const channelDataComplete = OtaIsChannelDataComplete(ChannelData);
+    if (channelDataComplete)
     {
-        if (LQCalcDVDA.currentIsSet())
+        if (ExpressLRS_currAirRate_Modparams->numOfSends > 1 && !(OtaNonce % ExpressLRS_currAirRate_Modparams->numOfSends))
         {
-            crsfRCFrameAvailable();
-            if (teamraceHasModelMatch)
-                servoNewChannelsAvailable();
+            if (connectionHasModelMatch)
+            {
+                if (LQCalcDVDA.currentIsSet())
+                {
+                    crsfRCFrameAvailable();
+                    if (teamraceHasModelMatch)
+                        servoNewChannelsAvailable();
+                }
+                else
+                {
+                    crsfRCFrameMissed();
+                }
+            }
         }
-        else
+        else if (ExpressLRS_currAirRate_Modparams->numOfSends == 1)
         {
-            crsfRCFrameMissed();
+            if (!LQCalc.currentIsSet())
+            {
+                crsfRCFrameMissed();
+            }
         }
-    }
-    else if (ExpressLRS_currAirRate_Modparams->numOfSends == 1)
-    {
-        if (!LQCalc.currentIsSet())
-        {
-            crsfRCFrameMissed();
-        }
-    }
 
-    // For any serial drivers that need to send on a regular cadence (i.e. CRSF to betaflight)
-    sendImmediateRC();
+        // For any serial drivers that need to send on a regular cadence (i.e. CRSF to betaflight)
+        sendImmediateRC();
+    }
 
     OtaNonce++;
     HandleFHSS();
@@ -822,6 +829,10 @@ void LostConnection(bool resumeRx)
     LPF_OffsetDx.init(0);
     alreadyTLMresp = false;
     OtaResetChannelDataComplete();
+    for (uint32_t& ch : ChannelData)
+    {
+        ch = CRSF_CHANNEL_VALUE_UNSET;
+    }
 
     if (!InBindingMode)
     {
