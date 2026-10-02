@@ -24,7 +24,8 @@ the receiver is in a position to hear, the test case decides what happens to it:
 - delivered, dropped, or dropped in a burst of 8 to 1024
 - one byte bit-flipped
 - truncated, the tail overwritten
-- corrupted but with a valid CRC, as a false accept would be
+- corrupted but with a valid CRC, as a false accept would be, at most once per
+  test case
 
 A test case can also power cycle the transmitter, make it lose the receiver's
 telemetry, and stall the receiver's main loop. The transmitter's clock runs off

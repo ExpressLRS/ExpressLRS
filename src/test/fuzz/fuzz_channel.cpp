@@ -19,6 +19,7 @@ static size_t inputSize;
 static size_t inputPos;
 static unsigned dropRemaining;
 static unsigned telemetryLossRemaining;
+static bool forgeUsed;
 static int arrivalJitterUs;
 static uint32_t jitterState;
 
@@ -98,6 +99,10 @@ Fate channelNextFate(uint8_t *a, uint8_t *b)
         case 6:
             *a = nextByte();
             *b = nextByte();
+            // A corrupted packet passing the CRC is a rare event, so a test case gets one
+            if (forgeUsed)
+                return CORRUPT;
+            forgeUsed = true;
             return FORGE;
         case 7:
             channelSkipLoop = false;
