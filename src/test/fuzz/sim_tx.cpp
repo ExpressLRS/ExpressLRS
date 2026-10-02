@@ -1,0 +1,195 @@
+#include "sim_tx.h"
+
+#include <cstdint>
+#include <cstdio>
+#include <cstring>
+
+#include "common.h"
+#include "FHSS.h"
+#include "native.h"
+#include "OTA.h"
+
+#include "fuzz_harness.h"
+#include "sim_hardware.h"
+
+SimTx tx;
+
+// True when the TX sends full-res packets
+bool txIsFullRes()
+{
+    return tx.packetSize == OTA8_PACKET_SIZE;
+}
+
+// Clamps the switch mode to what the packet size supports
+OtaSwitchMode_e txAdjustSwitchMode(uint8_t mode)
+{
+    if (!txIsFullRes() && mode > smHybridOr16ch)
+        return smWideOr8ch;
+    return (OtaSwitchMode_e)mode;
+}
+
+// True while the TX is hearing the RX's telemetry
+bool txLinked()
+{
+    return (int64_t)(simNow() / 1000) - tx.lastTelemetryMs < tx.ratePerf->DisconnectTimeoutMs;
+}
+
+// True if the TX's switch mode carries this channel
+bool txSendsChannel(unsigned ch)
+{
+    if (!txIsFullRes())
+        return ch <= 11 || ch == 13;
+    switch (tx.mode)
+    {
+        case smWideOr8ch: return ch <= 7 || ch == 13;
+        case sm12ch: return ch <= 11 || ch == 13;
+        default: return true;
+    }
+}
+
+// True if the TX listens for telemetry on this slot instead of sending
+bool txIsTelemetrySlot()
+{
+    return tx.tlmDenom != 1 && tx.nonce % tx.tlmDenom == 0;
+}
+
+// True if the TX's current hop is the sync channel
+static bool txOnSyncChannel()
+{
+    return FHSSsequence[tx.fhssPtr] == sync_channel;
+}
+
+// Frequency of the TX's current hop
+uint32_t txFreq()
+{
+    return FHSSconfig->freq_start + (freq_spread * FHSSsequence[tx.fhssPtr] / FREQ_SPREAD_SCALE);
+}
+
+// The TX starts now, having sent no sync and heard no telemetry
+void txStart(uint64_t now)
+{
+    tx.lastSyncMs = -1000000;
+    tx.lastTelemetryMs = -1000000;
+    tx.slotStart = now;
+    tx.slotStartNs = tx.slotStart * 1000;
+}
+
+// Works out when the next slot starts on the TX's own clock
+void txNextSlotTime()
+{
+    // The TX's clock runs fast or slow against the RX's, and that offset wanders
+    const int maxOffset = MAX_CLOCK_OFFSET_PPM * 1000;
+    tx.clockOffsetMilliPpm += (int64_t)tx.clockDriftMilliPpmPerS * tx.rate->interval / 1000000;
+    tx.clockOffsetMilliPpm = constrain(tx.clockOffsetMilliPpm, -maxOffset, maxOffset);
+    tx.slotStartNs += (int64_t)tx.rate->interval * 1000 + (int64_t)tx.rate->interval * tx.clockOffsetMilliPpm / 1000000;
+    tx.slotStart = tx.slotStartNs / 1000;
+}
+
+// Advances nonce and hop for the new slot, as timerCallback() in tx_main.cpp
+void txNextNonce()
+{
+    tx.slotNum++;
+    tx.nonce++;
+    if (tx.nonce % tx.rate->FHSShopInterval == 0)
+        tx.fhssPtr = (tx.fhssPtr + 1) % FHSSgetSequenceCount();
+}
+
+struct OtaContext
+{
+    uint8_t nonce;
+    OtaSwitchMode_e mode;
+    bool fullRes;
+    bool armed;
+};
+
+// Borrows the OTA globals, shared with the RX, for the TX
+static OtaContext enterTxContext()
+{
+    const OtaContext rx = {OtaNonce, OtaSwitchModeCurrent, OtaIsFullRes, isArmed};
+    OtaUpdateSerializers(tx.mode, tx.packetSize);
+    OtaNonce = tx.nonce;
+    isArmed = true;
+    return rx;
+}
+
+// Hands the OTA globals back to the RX
+static void leaveTxContext(const OtaContext &rx)
+{
+    OtaUpdateSerializers(rx.mode, rx.fullRes ? OTA8_PACKET_SIZE : OTA4_PACKET_SIZE);
+    OtaNonce = rx.nonce;
+    isArmed = rx.armed;
+}
+
+// Sync or RC packet for this slot, as SendRCdataToRF() in tx_main.cpp
+void txBuildPacket(OTA_Packet_s *pkt)
+{
+    memset(pkt, 0, sizeof(*pkt));
+    const int64_t nowMs = tx.slotStart / 1000;
+    const uint32_t syncInterval = txLinked() ? tx.ratePerf->SyncPktIntervalConnected : tx.ratePerf->SyncPktIntervalDisconnected;
+    const uint8_t nonceFhss = tx.nonce % tx.rate->FHSShopInterval;
+
+    bool sync = false;
+    if ((tx.syncSlot / 2) <= nonceFhss && nowMs - tx.lastSyncMs > syncInterval && txOnSyncChannel())
+    {
+        sync = true;
+        tx.syncSlot = (tx.syncSlot + 1) % (tx.rate->FHSShopInterval * 2);
+    }
+
+    const OtaContext rx = enterTxContext();
+    if (sync)
+    {
+        OTA_Sync_s *s = txIsFullRes() ? &pkt->full.sync.sync : &pkt->std.sync;
+        pkt->std.type = PACKET_TYPE_SYNC;
+        s->fhssIndex = tx.fhssPtr;
+        s->nonce = tx.nonce;
+        s->rfRateEnum = tx.rate->enum_rate;
+        s->switchEncMode = tx.mode;
+        s->newTlmRatio = tx.tlmRatio - TLM_RATIO_NO_TLM;
+        s->UID4 = UID[4];
+        s->UID5 = UID[5];
+        tx.lastSyncMs = nowMs;
+    }
+    else
+    {
+        OtaPackChannelData(pkt, tx.channels, false);
+    }
+    OtaGeneratePacketCrc(pkt);
+    leaveTxContext(rx);
+}
+
+// Restarts the TX's nonce once a switch mode change is committed
+void txEndOfSlot()
+{
+    // TXModuleEndpoint::SetSwitchMode() swaps the packer at once. The config commit that follows in the
+    // TX's main loop goes through SetRFLinkRate(), which restarts nonce and hop sequence.
+    if (tx.restartIn && --tx.restartIn == 0)
+    {
+        tx.nonce = 0;
+        tx.fhssPtr = 0;
+        if (fuzzTrace)
+            fprintf(stderr, "     TX: config committed, nonce restarted\n");
+    }
+}
+
+// The user picks another switch mode in the Lua script
+void txSelectSwitchMode(uint8_t mode)
+{
+    // The TX refuses a switch mode change while it has a telemetry link
+    if (txLinked() || tx.restartIn || txAdjustSwitchMode(mode) == tx.mode)
+        return;
+    tx.mode = txAdjustSwitchMode(mode);
+    tx.restartIn = 2;
+    if (fuzzTrace)
+        fprintf(stderr, "     TX: user selects switch mode %d\n", tx.mode);
+}
+
+// The TX is switched off and on again
+void txPowerCycle()
+{
+    tx.nonce = 0;
+    tx.fhssPtr = 0;
+    tx.restartIn = 0;
+    tx.lastTelemetryMs = -1000000;
+    if (fuzzTrace)
+        fprintf(stderr, "     TX: power cycled\n");
+}
