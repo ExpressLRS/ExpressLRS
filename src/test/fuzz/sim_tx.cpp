@@ -11,6 +11,7 @@
 
 #include "fuzz_harness.h"
 #include "sim_hardware.h"
+#include "sim_tx_ota.h"
 
 SimTx tx;
 
@@ -65,9 +66,10 @@ uint32_t txFreq()
     return FHSSconfig->freq_start + (freq_spread * FHSSsequence[tx.fhssPtr] / FREQ_SPREAD_SCALE);
 }
 
-// The TX starts now, having sent no sync and heard no telemetry
-void txStart(uint64_t now)
+// The TX starts now, bound to uid, having sent no sync and heard no telemetry
+void txStart(uint64_t now, const uint8_t *uid)
 {
+    txOtaStart(uid);
     tx.lastSyncMs = -1000000;
     tx.lastTelemetryMs = -1000000;
     tx.slotStart = now;
@@ -94,32 +96,6 @@ void txNextNonce()
         tx.fhssPtr = (tx.fhssPtr + 1) % FHSSgetSequenceCount();
 }
 
-struct OtaContext
-{
-    uint8_t nonce;
-    OtaSwitchMode_e mode;
-    bool fullRes;
-    bool armed;
-};
-
-// Borrows the OTA globals, shared with the RX, for the TX
-static OtaContext enterTxContext()
-{
-    const OtaContext rx = {OtaNonce, OtaSwitchModeCurrent, OtaIsFullRes, isArmed};
-    OtaUpdateSerializers(tx.mode, tx.packetSize);
-    OtaNonce = tx.nonce;
-    isArmed = true;
-    return rx;
-}
-
-// Hands the OTA globals back to the RX
-static void leaveTxContext(const OtaContext &rx)
-{
-    OtaUpdateSerializers(rx.mode, rx.fullRes ? OTA8_PACKET_SIZE : OTA4_PACKET_SIZE);
-    OtaNonce = rx.nonce;
-    isArmed = rx.armed;
-}
-
 // Sync or RC packet for this slot, as SendRCdataToRF() in tx_main.cpp
 void txBuildPacket(OTA_Packet_s *pkt)
 {
@@ -135,7 +111,7 @@ void txBuildPacket(OTA_Packet_s *pkt)
         tx.syncSlot = (tx.syncSlot + 1) % (tx.rate->FHSShopInterval * 2);
     }
 
-    const OtaContext rx = enterTxContext();
+    txOtaSelect(tx.mode, tx.packetSize, tx.nonce);
     if (sync)
     {
         OTA_Sync_s *s = txIsFullRes() ? &pkt->full.sync.sync : &pkt->std.sync;
@@ -151,10 +127,9 @@ void txBuildPacket(OTA_Packet_s *pkt)
     }
     else
     {
-        OtaPackChannelData(pkt, tx.channels, false);
+        txOtaPackChannels(pkt, tx.channels);
     }
-    OtaGeneratePacketCrc(pkt);
-    leaveTxContext(rx);
+    txOtaAddCrc(pkt);
 }
 
 // The TX is switched off and on again

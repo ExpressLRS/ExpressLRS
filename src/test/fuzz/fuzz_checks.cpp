@@ -16,6 +16,7 @@
 #include "fuzz_harness.h"
 #include "sim_hardware.h"
 #include "sim_tx.h"
+#include "sim_tx_ota.h"
 
 extern int8_t SwitchModePending;
 
@@ -239,7 +240,6 @@ void checksCrcCollision()
 // Works out what each channel reads after a clean round trip
 static void computeExpected()
 {
-    isArmed = true;
     for (unsigned full = 0; full < 2; full++)
     {
         const uint8_t size = full ? OTA8_PACKET_SIZE : OTA4_PACKET_SIZE;
@@ -248,19 +248,16 @@ static void computeExpected()
             uint32_t *dst = expected[full][mode];
             for (unsigned ch = 0; ch < CRSF_NUM_CHANNELS; ch++)
                 dst[ch] = CRSF_CHANNEL_VALUE_UNSET;
-            OtaUpdateSerializers((OtaSwitchMode_e)mode, size);
             for (unsigned n = 0; n < 64; n++)
             {
                 OTA_Packet_s pkt;
                 memset(&pkt, 0, sizeof(pkt));
-                OtaNonce = n;
-                OtaPackChannelData(&pkt, tx.channels, false);
-                OtaUnpackChannelData(&pkt, dst);
+                txOtaSelect((OtaSwitchMode_e)mode, size, n);
+                txOtaPackChannels(&pkt, tx.channels);
+                txOtaUnpackChannels(&pkt, dst);
             }
         }
     }
-    isArmed = false;
-    OtaNonce = 0;
 }
 
 // Prepares the checks for one test case, whose frames are parsed as outputProtocol

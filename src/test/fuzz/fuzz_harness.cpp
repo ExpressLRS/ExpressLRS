@@ -204,7 +204,7 @@ void fuzzRunInput(const uint8_t *data, size_t size)
     setup();
     simSerialOut.clear();
 
-    txStart(simNow());
+    txStart(simNow(), uid);
     if (fuzzTrace)
         fprintf(stderr, "%s %uHz %s txMode=%d tlm=1:%u failsafe=%d clock=%+dppm drift=%+dppm/s jitter=%dus\n", protoNames[proto],
             1000000 / tx.rate->interval, txIsFullRes() ? "fullres" : "std", tx.mode, tx.tlmDenom, failsafeMode,

@@ -29,14 +29,25 @@ FIRMWARE := src/rx_main.cpp src/common.cpp src/rxtx_common.cpp src/dynpower.cpp 
 	lib/rx-crsf/devRXLUA.cpp lib/rx-crsf/RXEndpoint.cpp lib/rx-crsf/RXOTAConnector.cpp lib/rx-crsf/RXParameters.cpp
 HARNESS := fuzz_harness.cpp fuzz_channel.cpp fuzz_checks.cpp sim_tx.cpp sim_hardware.cpp fuzz_main.cpp
 
-OBJS := $(FIRMWARE:%.cpp=build/fw/%.o) $(HARNESS:%.cpp=build/%.o)
+OBJS := $(FIRMWARE:%.cpp=build/fw/%.o) $(HARNESS:%.cpp=build/%.o) build/tx_ota.o
 HDRS := Makefile $(wildcard *.h stubs/*.h $(SRC)/include/*.h $(SRC)/include/target/*.h $(SRC)/lib/*/*.h $(SRC)/src/rx-serial/*.h)
 
 build/rx_fuzzer: $(OBJS)
 	@$(CXX) $(CXXFLAGS) $(OBJS) -o $@
 
-# The simulated TX needs the packer, which OTA.cpp only builds for a TX target
-build/fw/lib/OTA/OTA.o: CXXFLAGS += -DTARGET_TX
+# The simulated TX gets its own copy of OTA.cpp, built with the packer. Everything in the copy except
+# the txOta*() functions is made local, so its globals are not the RX's.
+build/tx/%.o: CXXFLAGS += -DTARGET_TX -fvisibility=hidden
+build/tx/OTA.o: $(SRC)/lib/OTA/OTA.cpp $(HDRS)
+build/tx/sim_tx_ota.o: sim_tx_ota.cpp $(HDRS)
+build/tx/%.o:
+	@mkdir -p $(dir $@)
+	@echo "CXX $<"
+	@$(CXX) $(CXXFLAGS) -c $< -o $@
+
+build/tx_ota.o: build/tx/OTA.o build/tx/sim_tx_ota.o
+	@ld -r --force-group-allocation $^ -o $@
+	@objcopy --localize-hidden $@
 
 build/fw/%.o: $(SRC)/%.cpp $(HDRS)
 	@mkdir -p $(dir $@)

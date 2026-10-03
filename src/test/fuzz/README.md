@@ -18,7 +18,9 @@ stubs for the peripherals.
 
 In front of it is a simulated transmitter (`sim_tx.cpp`). It packs packets
 with the real OTA code and follows the real rate table, hop sequence, sync
-packets and telemetry slots. Between the two is the channel. For every packet
+packets and telemetry slots. The transmitter has its own copy of the OTA code
+(`sim_tx_ota.cpp`), so the harness only reads the receiver's state and never
+writes it once the receiver has booted. Between the two is the channel. For every packet
 the receiver is in a position to hear, the test case decides what happens to it:
 
 - delivered, dropped, or dropped in a burst of 8 to 1024

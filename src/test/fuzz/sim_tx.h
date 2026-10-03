@@ -1,4 +1,4 @@
-// Simulated transmitter. It packs with the real OTA code; its slot, sync and hop scheduling is a
+// Simulated transmitter. It packs with its own copy of the real OTA code (sim_tx_ota.h); its slot, sync and hop scheduling is a
 // simplified copy of tx_main.cpp.
 #pragma once
 
@@ -11,10 +11,6 @@
 // The defaults are meant to be mild: two ordinary crystals, one of them warming up inside a fuselage.
 constexpr int MAX_CLOCK_OFFSET_PPM = 40;        // constant offset between the two clocks
 constexpr int MAX_CLOCK_DRIFT_PPM_PER_S = 1;    // how fast that offset may change
-
-// The Makefile builds the TX packer into OTA.cpp, but OTA.h only declares it for a TX target
-typedef void (*PackChannelData_t)(OTA_Packet_s *const otaPktPtr, const uint32_t *channelData, bool stubbornAck);
-extern PackChannelData_t OtaPackChannelData;
 
 struct SimTx
 {
@@ -48,7 +44,7 @@ bool txSendsChannel(unsigned ch);
 bool txIsTelemetrySlot();
 uint32_t txFreq();
 
-void txStart(uint64_t now);
+void txStart(uint64_t now, const uint8_t *uid);
 void txNextSlotTime();
 void txNextNonce();
 void txBuildPacket(OTA_Packet_s *pkt);
