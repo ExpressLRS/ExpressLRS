@@ -73,16 +73,17 @@ bool channelTelemetryLost()
 
 // An opcode is one input byte. Bits 0-2 say what happens to the packet, or that the opcode is an event.
 // For a packet, bits 3 and 4 both set means the RX's loop() does not run this slot.
-// For an event, bits 3-4 pick the event and bits 5-7 are its argument.
+// For an event, bits 3-4 pick the event, wrapping at the number of events, and bits 5-7 are its argument.
 static const Fate opFates[] = {DELIVER, DELIVER, DELIVER, DROP, CORRUPT, TRUNCATE, FORGE};
 constexpr uint8_t OP_EVENT = 7;
 
+// A TX only takes a switch mode change while disconnected, so there is no event for one
 enum class EventOp : uint8_t
 {
-    UNUSED = 0,
-    DROP_BURST = 1,
-    TELEMETRY_LOSS = 2,
-    TX_POWER_CYCLE = 3,
+    DROP_BURST,
+    TELEMETRY_LOSS,
+    TX_POWER_CYCLE,
+    COUNT,
 };
 
 constexpr unsigned MIN_DROP_BURST = 8;         // packets, doubled per step of the argument
@@ -97,7 +98,7 @@ static uint8_t opKind(uint8_t op)
 // Which event, for OP_EVENT
 static EventOp opEvent(uint8_t op)
 {
-    return (EventOp)((op >> 3) & 3);
+    return (EventOp)(((op >> 3) & 3) % (unsigned)EventOp::COUNT);
 }
 
 // The event's argument, 0-7
@@ -126,9 +127,6 @@ static bool applyEvent(uint8_t op)
     const uint8_t arg = opArg(op);
     switch (opEvent(op))
     {
-    case EventOp::UNUSED:
-        // A TX only takes a switch mode change while disconnected, so the fuzzer does not make one
-        break;
     case EventOp::DROP_BURST:
         // 8 to 1024 packets, this one included
         dropRemaining = (MIN_DROP_BURST << arg) - 1;
@@ -152,6 +150,8 @@ static bool applyEvent(uint8_t op)
         break;
     case EventOp::TX_POWER_CYCLE:
         txPowerCycle();
+        break;
+    case EventOp::COUNT:
         break;
     }
     return false;
