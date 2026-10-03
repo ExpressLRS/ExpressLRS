@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
+#include <random>
 
 #include "OTA.h"
 
@@ -22,7 +23,7 @@ static unsigned dropRemaining;
 static unsigned telemetryLossRemaining;
 static bool forgeUsed;
 static int arrivalJitterUs;
-static uint32_t jitterState;
+static std::mt19937 jitterRng;
 
 // Takes the test case's opcodes and jitter setting
 void channelStart(const uint8_t *data, size_t size, size_t firstOpcode, int jitterUs, uint32_t jitterSeed)
@@ -31,7 +32,7 @@ void channelStart(const uint8_t *data, size_t size, size_t firstOpcode, int jitt
     inputSize = size;
     inputPos = firstOpcode;
     arrivalJitterUs = jitterUs;
-    jitterState = jitterSeed;
+    jitterRng.seed(jitterSeed);
 }
 
 // True while the test case has opcodes left
@@ -57,8 +58,7 @@ int channelJitter()
 {
     if (!arrivalJitterUs)
         return 0;
-    jitterState = jitterState * 1664525u + 1013904223u;
-    return (int)((jitterState >> 16) % (2 * arrivalJitterUs + 1)) - arrivalJitterUs;
+    return (int)(jitterRng() % (2 * arrivalJitterUs + 1)) - arrivalJitterUs;
 }
 
 // True if the TX fails to hear the telemetry packet the RX just sent
