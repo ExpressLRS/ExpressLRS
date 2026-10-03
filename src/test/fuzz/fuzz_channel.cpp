@@ -1,0 +1,216 @@
+#include "fuzz_channel.h"
+
+#include <cstddef>
+#include <cstdint>
+#include <cstring>
+#include <random>
+
+#include "OTA.h"
+
+#include "fuzz_harness.h"
+#include "sim_tx.h"
+#include "sim_tx_ota.h"
+
+const char *const fateNames[] = {"deliver", "drop", "corrupt", "truncate", "forged-crc"};
+
+bool rxLoopStalled; // RX loop() stalls for the rest of this TX slot, as if behind its interrupts
+
+static const uint8_t *input;
+static size_t inputSize;
+static size_t inputPos;
+static unsigned dropRemaining;
+static unsigned telemetryLossRemaining;
+static bool telemetryLossUntilToggled;
+static bool forgeUsed;
+static int arrivalJitterUs;
+static std::mt19937 jitterRng;
+
+// Takes the test case's opcodes and jitter setting
+void channelStart(const uint8_t *data, size_t size, size_t firstOpcode, int jitterUs)
+{
+    input = data;
+    inputSize = size;
+    inputPos = firstOpcode;
+    arrivalJitterUs = jitterUs;
+    // The jitter follows from the whole test case, so a seed replays with the same arrival times
+    std::seed_seq jitterSeed(data, data + size);
+    jitterRng.seed(jitterSeed);
+}
+
+// True while the test case has opcodes left
+static bool inputLeft()
+{
+    return inputPos < inputSize;
+}
+
+// Next input byte, zero once the input is used up
+static uint8_t nextByte()
+{
+    return inputPos < inputSize ? input[inputPos++] : 0;
+}
+
+// True while the test case still has something to play
+bool channelActive()
+{
+    return inputLeft() || dropRemaining;
+}
+
+// How much earlier or later than nominal this packet arrives, in microseconds
+int channelJitter()
+{
+    if (!arrivalJitterUs)
+        return 0;
+    return (int)(jitterRng() % (2 * arrivalJitterUs + 1)) - arrivalJitterUs;
+}
+
+// True if the TX fails to hear the telemetry packet the RX just sent
+bool channelTelemetryLost()
+{
+    const bool lost = telemetryLossUntilToggled || telemetryLossRemaining;
+    if (telemetryLossRemaining)
+        telemetryLossRemaining--;
+    return lost;
+}
+
+// An opcode is one input byte. Bits 0-2 say what happens to the packet, or that the opcode is an event.
+// For a packet, bits 3 and 4 both set means the RX's loop() does not run this slot.
+// For an event, bits 3-4 pick the event, wrapping at the number of events, and bits 5-7 are its argument.
+static const Fate opFates[] = {DELIVER, DELIVER, DELIVER, DROP, CORRUPT, TRUNCATE, FORGE};
+constexpr uint8_t OP_EVENT = 7;
+
+// A TX only takes a switch mode change while disconnected, so there is no event for one
+enum class EventOp : uint8_t
+{
+    DROP_BURST,
+    TELEMETRY_LOSS,
+    TX_POWER_CYCLE,
+    COUNT,
+};
+
+constexpr unsigned MIN_DROP_BURST = 8;         // packets, doubled per step of the argument
+constexpr uint8_t TELEMETRY_LOSS_TOGGLE = 7;   // argument that switches lasting telemetry loss on or off
+
+// Bits 0-2: an index into opFates, or OP_EVENT
+static uint8_t opKind(uint8_t op)
+{
+    return op & 7;
+}
+
+// Which event, for OP_EVENT
+static EventOp opEvent(uint8_t op)
+{
+    return (EventOp)(((op >> 3) & 3) % (unsigned)EventOp::COUNT);
+}
+
+// The event's argument, 0-7
+static uint8_t opArg(uint8_t op)
+{
+    return op >> 5;
+}
+
+// True if the RX's loop() stalls for this slot
+static bool opStallsLoop(uint8_t op)
+{
+    constexpr uint8_t STALL_BITS = (1 << 3) | (1 << 4);
+    return (op & STALL_BITS) == STALL_BITS;
+}
+
+// Reads where in the packet the damage goes and what it is
+static void readDamage(Damage *damage)
+{
+    damage->position = nextByte();
+    damage->value = nextByte();
+}
+
+// Applies an event to the TX or the link. Returns true if the packet is dropped by it.
+static bool applyEvent(uint8_t op)
+{
+    const uint8_t arg = opArg(op);
+    switch (opEvent(op))
+    {
+    case EventOp::DROP_BURST:
+        // 8 to 1024 packets, this one included
+        dropRemaining = (MIN_DROP_BURST << arg) - 1;
+        return true;
+    case EventOp::TELEMETRY_LOSS:
+        // The TX stops hearing the RX's telemetry: for a number of packets, or until told otherwise
+        if (arg == TELEMETRY_LOSS_TOGGLE)
+        {
+            telemetryLossUntilToggled = !telemetryLossUntilToggled && !telemetryLossRemaining;
+            telemetryLossRemaining = 0;
+        }
+        else
+        {
+            telemetryLossUntilToggled = false;
+            telemetryLossRemaining = 1u << arg;
+        }
+        if (telemetryLossUntilToggled)
+            trace("     telemetry: lost from here on\n");
+        else
+            trace("     telemetry: next %u packets lost\n", telemetryLossRemaining);
+        break;
+    case EventOp::TX_POWER_CYCLE:
+        txPowerCycle();
+        break;
+    case EventOp::COUNT:
+        break;
+    }
+    return false;
+}
+
+// Reads opcodes until one says what happens to this packet. Events on the way are applied.
+Fate channelNextFate(Damage *damage)
+{
+    if (dropRemaining)
+    {
+        dropRemaining--;
+        return DROP;
+    }
+    for (;;)
+    {
+        const uint8_t op = nextByte();
+        rxLoopStalled = opStallsLoop(op);
+        if (opKind(op) == OP_EVENT)
+        {
+            rxLoopStalled = false;
+            if (applyEvent(op) || !inputLeft())
+                return DROP;
+            continue;
+        }
+
+        Fate fate = opFates[opKind(op)];
+        if (fate == CORRUPT || fate == TRUNCATE || fate == FORGE)
+            readDamage(damage);
+        // A corrupted packet passing the CRC is a rare event, so a test case gets one
+        if (fate == FORGE && forgeUsed)
+            fate = CORRUPT;
+        if (fate == FORGE)
+            forgeUsed = true;
+        return fate;
+    }
+}
+
+// Applies a corrupt, truncate or forge fate to the packet
+void channelDamage(Fate fate, OTA_Packet_s *pkt, uint8_t packetSize, const Damage &damage)
+{
+    uint8_t *raw = (uint8_t *)pkt;
+    const uint8_t start = damage.position % packetSize;
+    switch (fate)
+    {
+    case CORRUPT:
+    case FORGE:
+        raw[start] ^= damage.value ? damage.value : 1;
+        break;
+    case TRUNCATE:
+        memset(raw + start, (damage.value & 1) ? 0xff : 0x00, packetSize - start);
+        break;
+    default:
+        break;
+    }
+    // A corrupted packet that happens to pass the CRC with the nonce the RX is at
+    if (fate == FORGE)
+    {
+        txOtaSelect(tx.mode, packetSize, OtaNonce);
+        txOtaAddCrc(pkt);
+    }
+}
