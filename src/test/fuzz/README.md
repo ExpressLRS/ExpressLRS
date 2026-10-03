@@ -85,7 +85,8 @@ seed.
 ## Example
 
 The binary can also be run directly, with a first seed, a count and optionally
-the number of processes to run at once:
+the number of processes to run at once. Without a first seed, or with `random`
+in its place, it takes one from `/dev/urandom` and prints it:
 
 ```
 $ build/rx_fuzzer 1 5

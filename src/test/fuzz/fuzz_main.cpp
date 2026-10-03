@@ -1,12 +1,13 @@
 // The fuzzer's main(): runs a range of seeds, each one a reproducible test case in its own process.
 // Fuzzing is a large range, reproducing is a range of one.
-// Usage: rx_fuzzer <first seed> [count] [processes]
+// Usage: rx_fuzzer [first seed | random] [count] [processes]
 
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <iterator>
 #include <map>
 #include <random>
@@ -129,12 +130,11 @@ static void finishOne()
 // Runs the seeds, several at a time, and prints the first few failing seeds of each kind and the totals
 int main(int argc, char **argv)
 {
-    if (argc < 2)
-    {
-        fprintf(stderr, "usage: %s <first seed> [count] [processes]\n", argv[0]);
-        return 2;
-    }
-    const uint64_t first = strtoull(argv[1], nullptr, 0);
+    // Without a seed to start from, take one from /dev/urandom and say which, so the run can be repeated
+    const bool randomFirst = argc < 2 || !strcmp(argv[1], "random");
+    const uint64_t first = randomFirst ? std::random_device("/dev/urandom")() : strtoull(argv[1], nullptr, 0);
+    if (randomFirst)
+        printf("first seed %llu\n", (unsigned long long)first);
     const uint64_t count = argc > 2 ? strtoull(argv[2], nullptr, 0) : 1;
     const size_t jobs = argc > 3 ? strtoull(argv[3], nullptr, 0) : 1;
     constexpr unsigned MAX_REPORTS_PER_KIND = 3;

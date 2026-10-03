@@ -4,7 +4,7 @@ CXX := clang++
 # physical cores, nproc counts hyperthreads
 JOBS ?= $(shell lscpu -p=core | sort -u | grep -c '^[0-9]')
 MAKEFLAGS += -j$(JOBS)
-SEED ?= $(shell od -An -N4 -tu4 /dev/urandom | tr -d ' ')
+SEED ?= random
 COUNT ?= 1000000
 
 LIBDIRS := $(wildcard $(SRC)/lib/*/)
