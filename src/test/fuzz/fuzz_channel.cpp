@@ -71,18 +71,11 @@ bool channelTelemetryLost()
     return lost;
 }
 
-// An opcode is one input byte. Bits 0-2 give what happens to the packet, or say that it is an event:
-//   0-2  deliver        3  drop        4  corrupt        5  truncate        6  forge        7  event
+// An opcode is one input byte. Bits 0-2 say what happens to the packet, or that the opcode is an event.
 // For a packet, bits 3 and 4 both set means the RX's loop() does not run this slot.
 // For an event, bits 3-4 pick the event and bits 5-7 are its argument.
-enum class PacketOp : uint8_t
-{
-    DROP = 3,
-    CORRUPT = 4,
-    TRUNCATE = 5,
-    FORGE = 6,
-    EVENT = 7,
-};
+static const Fate opFates[] = {DELIVER, DELIVER, DELIVER, DROP, CORRUPT, TRUNCATE, FORGE};
+constexpr uint8_t OP_EVENT = 7;
 
 enum class EventOp : uint8_t
 {
@@ -95,13 +88,13 @@ enum class EventOp : uint8_t
 constexpr unsigned MIN_DROP_BURST = 8;         // packets, doubled per step of the argument
 constexpr uint8_t TELEMETRY_LOSS_TOGGLE = 7;   // argument that switches lasting telemetry loss on or off
 
-// What happens to the packet, or PacketOp::EVENT
-static PacketOp opPacket(uint8_t op)
+// Bits 0-2: an index into opFates, or OP_EVENT
+static uint8_t opKind(uint8_t op)
 {
-    return (PacketOp)(op & 7);
+    return op & 7;
 }
 
-// Which event, for PacketOp::EVENT
+// Which event, for OP_EVENT
 static EventOp opEvent(uint8_t op)
 {
     return (EventOp)((op >> 3) & 3);
@@ -176,33 +169,23 @@ Fate channelNextFate(Damage *damage)
     {
         const uint8_t op = nextByte();
         rxLoopStalled = opStallsLoop(op);
-        switch (opPacket(op))
+        if (opKind(op) == OP_EVENT)
         {
-        case PacketOp::DROP:
-            return DROP;
-        case PacketOp::CORRUPT:
-            readDamage(damage);
-            return CORRUPT;
-        case PacketOp::TRUNCATE:
-            readDamage(damage);
-            return TRUNCATE;
-        case PacketOp::FORGE:
-            readDamage(damage);
-            // A corrupted packet passing the CRC is a rare event, so a test case gets one
-            if (forgeUsed)
-                return CORRUPT;
-            forgeUsed = true;
-            return FORGE;
-        case PacketOp::EVENT:
             rxLoopStalled = false;
-            if (applyEvent(op))
+            if (applyEvent(op) || !inputLeft())
                 return DROP;
-            if (!inputLeft())
-                return DROP;
-            break;
-        default:
-            return DELIVER;
+            continue;
         }
+
+        Fate fate = opFates[opKind(op)];
+        if (fate == CORRUPT || fate == TRUNCATE || fate == FORGE)
+            readDamage(damage);
+        // A corrupted packet passing the CRC is a rare event, so a test case gets one
+        if (fate == FORGE && forgeUsed)
+            fate = CORRUPT;
+        if (fate == FORGE)
+            forgeUsed = true;
+        return fate;
     }
 }
 
