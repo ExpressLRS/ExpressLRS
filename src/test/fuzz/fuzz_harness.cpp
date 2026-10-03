@@ -203,8 +203,7 @@ void fuzzRunInput(const uint8_t *data, size_t size)
     config.SetStorageProvider(&eeprom);
     config.Load();
     config.SetUID(uid);
-    static const eSerialProtocol protocols[] = {PROTOCOL_CRSF, PROTOCOL_SBUS, PROTOCOL_SUMD};
-    config.SetSerialProtocol(protocols[proto]);
+    config.SetSerialProtocol(protoConfigValues[proto]);
     config.SetFailsafeMode(failsafeMode);
     config.SetRateInitialIdx(rateIdx);
     config.Commit();

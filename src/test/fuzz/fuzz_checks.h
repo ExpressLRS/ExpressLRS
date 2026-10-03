@@ -7,10 +7,13 @@
 // wrong-value is off once a damaged packet has passed the CRC, as any value can arrive then.
 #pragma once
 
+#include "common.h"
+
 constexpr unsigned BLACKOUT_PACKETS = 40;  // valid packets, no output -> bug
 
 enum Proto { PROTO_CRSF, PROTO_SBUS, PROTO_SUMD, PROTO_COUNT };
 extern const char *const protoNames[];
+extern const eSerialProtocol protoConfigValues[]; // what the RX is configured with for each
 
 void checksStart(Proto outputProtocol);
 void checksCrcCollision();

@@ -21,6 +21,7 @@
 extern int8_t SwitchModePending;
 
 const char *const protoNames[] = {"CRSF", "SBUS", "SUMD"};
+const eSerialProtocol protoConfigValues[] = {PROTOCOL_CRSF, PROTOCOL_SBUS, PROTOCOL_SUMD};
 
 static const char *skipChecks;
 static Proto proto;
@@ -155,8 +156,7 @@ static void checkFrame(const uint32_t *emitted, bool flaggedFailsafe)
 // True if the RX has left the configured serial protocol
 static bool protocolChanged()
 {
-    static const eSerialProtocol protocols[] = {PROTOCOL_CRSF, PROTOCOL_SBUS, PROTOCOL_SUMD};
-    return config.GetSerialProtocol() != protocols[proto];
+    return config.GetSerialProtocol() != protoConfigValues[proto];
 }
 
 // Fails if the RX has left the configured serial protocol
