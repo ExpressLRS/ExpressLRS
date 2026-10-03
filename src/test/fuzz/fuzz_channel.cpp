@@ -74,33 +74,33 @@ bool channelTelemetryLost()
 //   0-2  deliver        3  drop        4  corrupt        5  truncate        6  forge        7  event
 // For a packet, bits 3 and 4 both set means the RX's loop() does not run this slot.
 // For an event, bits 3-4 pick the event and bits 5-7 are its argument.
-enum PacketOp : uint8_t
+enum class PacketOp : uint8_t
 {
-    OP_DROP = 3,
-    OP_CORRUPT = 4,
-    OP_TRUNCATE = 5,
-    OP_FORGE = 6,
-    OP_EVENT = 7,
+    DROP = 3,
+    CORRUPT = 4,
+    TRUNCATE = 5,
+    FORGE = 6,
+    EVENT = 7,
 };
 
-enum EventOp : uint8_t
+enum class EventOp : uint8_t
 {
-    EVENT_UNUSED = 0,
-    EVENT_DROP_BURST = 1,
-    EVENT_TELEMETRY_LOSS = 2,
-    EVENT_TX_POWER_CYCLE = 3,
+    UNUSED = 0,
+    DROP_BURST = 1,
+    TELEMETRY_LOSS = 2,
+    TX_POWER_CYCLE = 3,
 };
 
-// What happens to the packet, or OP_EVENT
-static uint8_t opPacket(uint8_t op)
+// What happens to the packet, or PacketOp::EVENT
+static PacketOp opPacket(uint8_t op)
 {
-    return op & 7;
+    return (PacketOp)(op & 7);
 }
 
-// Which event, for OP_EVENT
-static uint8_t opEvent(uint8_t op)
+// Which event, for PacketOp::EVENT
+static EventOp opEvent(uint8_t op)
 {
-    return (op >> 3) & 3;
+    return (EventOp)((op >> 3) & 3);
 }
 
 // The event's argument, 0-7
@@ -128,13 +128,13 @@ static bool applyEvent(uint8_t op)
     const uint8_t arg = opArg(op);
     switch (opEvent(op))
     {
-    case EVENT_UNUSED:
+    case EventOp::UNUSED:
         // A TX only takes a switch mode change while disconnected, so the fuzzer does not make one
         break;
-    case EVENT_DROP_BURST:
+    case EventOp::DROP_BURST:
         dropRemaining = (8u << arg) - 1;
         return true;
-    case EVENT_TELEMETRY_LOSS:
+    case EventOp::TELEMETRY_LOSS:
         // The TX stops hearing the RX's telemetry: for a number of packets, or until told otherwise
         if (arg == 7)
             telemetryLossRemaining = telemetryLossRemaining ? 0 : UINT32_MAX;
@@ -143,7 +143,7 @@ static bool applyEvent(uint8_t op)
         if (fuzzTrace)
             fprintf(stderr, "     telemetry: next %u packets lost\n", telemetryLossRemaining);
         break;
-    case EVENT_TX_POWER_CYCLE:
+    case EventOp::TX_POWER_CYCLE:
         txPowerCycle();
         break;
     }
@@ -164,22 +164,22 @@ Fate channelNextFate(uint8_t *a, uint8_t *b)
         rxLoopStalled = opStallsLoop(op);
         switch (opPacket(op))
         {
-        case OP_DROP:
+        case PacketOp::DROP:
             return DROP;
-        case OP_CORRUPT:
+        case PacketOp::CORRUPT:
             readDamage(a, b);
             return CORRUPT;
-        case OP_TRUNCATE:
+        case PacketOp::TRUNCATE:
             readDamage(a, b);
             return TRUNCATE;
-        case OP_FORGE:
+        case PacketOp::FORGE:
             readDamage(a, b);
             // A corrupted packet passing the CRC is a rare event, so a test case gets one
             if (forgeUsed)
                 return CORRUPT;
             forgeUsed = true;
             return FORGE;
-        case OP_EVENT:
+        case PacketOp::EVENT:
             rxLoopStalled = false;
             if (applyEvent(op))
                 return DROP;
