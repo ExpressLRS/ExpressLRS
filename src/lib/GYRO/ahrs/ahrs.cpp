@@ -7,6 +7,10 @@
 #include "filter.h"
 #include "logging.h"
 
+#define EXP_RESET_QUARTILION      0     // Experimental: Reset Quartilon after detecting aerobatics
+#define FAST_AUTOLEVEL_ENABLE     1     // Increase Kp x 10 after detecting aerobatics to get "level" faster
+#define SOFTWARE_LPF              0     // Enable/Disable Software LPF
+
 #define MAX_GYRO_DIFF 200
 #define MAX_ACC_DIFF 500
 
@@ -80,6 +84,15 @@ int8_t gyroLpfCutHz = 0;
 static LowpassFilter accFilter[3];
 static LowpassFilter gyroFilter[3];
 
+#ifdef DEBUG_GYRO_STATS
+static u_int32_t processingTimeUs = 0; 
+static u_int32_t maxProcessingTimeUs = 0;
+VectorFloat maxAcc;
+VectorFloat maxGyro;
+static u_int32_t accSkips = 0;
+static u_int32_t processingCount = 0;
+#endif
+
 bool AHRS::initialize(IMU_Driver *driver)
 {
     this->driver = driver;
@@ -130,9 +143,9 @@ void AHRS::start()
     accLpfCutHz = gyroLpfCutHz = madgwickPI->val.d;
 
     DBGLN("Setting Madgwick kP=%f, kI=%f", AHRS_KP, AHRS_KI);
-    DBGLN("LPF Gyro Settings %d HZ", accLpfCutHz);
 
-    gyroBias.Initialise(driver->gyroSampleRate);
+#if SOFTWARE_LPF    
+    DBGLN("LPF Gyro Settings %d HZ", accLpfCutHz);
 
     for (int axis = 0; axis < 3; axis++)
     {
@@ -145,7 +158,9 @@ void AHRS::start()
             gyroFilter[axis].init(LPF_PT1, gyroLpfCutHz, driver->gyroSampleRate, 0);
         }
     }
+#endif
 
+    gyroBias.Initialise(driver->gyroSampleRate);
     initialized = true;
 }
 
@@ -229,13 +244,13 @@ static float imuCalcKpGain(bool useAcc, const VectorFloat gyro, bool *quartilion
     float ret = 1.0;
     *quartilionReset = false;
 
+ #if FAST_AUTOLEVEL_ENABLE
     // If gyro activity exceeds the threshold then restart the quiet period.
     // Also, if the attitude reset has been complete and there is subsequent gyro activity then
     // start the reset cycle again.
 
     if ((fabsf(gyro.x) > ATTITUDE_RESET_GYRO_LIMIT) || (fabsf(gyro.y) > ATTITUDE_RESET_GYRO_LIMIT) || (fabsf(gyro.z) > ATTITUDE_RESET_GYRO_LIMIT) || (!useAcc))
     {
-
         gyroQuietPeriodTimeEnd_us = currentTimeUs + ATTITUDE_RESET_QUIET_TIME * 1000;
         state = 1;
     }
@@ -244,11 +259,15 @@ static float imuCalcKpGain(bool useAcc, const VectorFloat gyro, bool *quartilion
     { // In Quiet Period
         if (currentTimeUs >= gyroQuietPeriodTimeEnd_us)
         {
+            // Has been in Quiet peridor for the configured time, start high Kp to regain "level" faster
             // Start the high gain period to bring the estimation into convergence
             attitudeResetTimeEnd_us = currentTimeUs + ATTITUDE_RESET_ACTIVE_TIME * 1000;
             gyroQuietPeriodTimeEnd_us = 0;
             state = 2;
-            //*quartilionReset = true; // Reset Quaternion, so will think that is level, but will fix itself
+#if EXP_RESET_QUARTILION
+            // Reset Quaternion when hard aerobatics is detected, so will think that is level, but will fix itself
+            *quartilionReset = true; 
+#endif
         }
     }
 
@@ -267,6 +286,7 @@ static float imuCalcKpGain(bool useAcc, const VectorFloat gyro, bool *quartilion
             ret = 10.0; // To converge faster
         }
     }
+#endif
 
     return ret;
 }
@@ -327,6 +347,8 @@ bool AHRS::readAndUpdate()
     applyOrientation(&v_accel);
     applyOrientation(&v_gyro);
 
+#if SOFTWARE_LPF
+
     if (accLpfCutHz > 0)
     {
         v_accel.x = accFilter[GYRO_AXIS_ROLL].apply(v_accel.x);
@@ -340,6 +362,7 @@ bool AHRS::readAndUpdate()
         v_gyro.y = gyroFilter[GYRO_AXIS_PITCH].apply(v_gyro.y);
         v_gyro.z = gyroFilter[GYRO_AXIS_YAW].apply(v_gyro.z);
     }
+#endif
 
     // use Mahoney filter
     float deltat = ((float)(now - last)) * 1.0e-6f; // seconds since last update
@@ -391,6 +414,19 @@ bool AHRS::readAndUpdate()
     acc_rpy[2] = accG.z; // Yaw
 
 #ifdef DEBUG_GYRO_STATS
+    processingCount++;
+
+    if (!useAcc) {
+        accSkips++;
+    }
+    maxAcc.x = max(maxAcc.x,accG.x);
+    maxAcc.y = max(maxAcc.y,accG.y);
+    maxAcc.z = max(maxAcc.z,accG.z);
+
+    maxGyro.x = max(maxGyro.x,gDeg.x);
+    maxGyro.y = max(maxGyro.x,gDeg.y);
+    maxGyro.z = max(maxGyro.x,gDeg.z);
+
     processingTimeUs = micros() - now;
     maxProcessingTimeUs = max(maxProcessingTimeUs, processingTimeUs);
     printGyroStats(now);
@@ -897,56 +933,29 @@ void AHRS::printGyroStats(long nowMicros)
     //char rate_str[15];
     //sprintf(rate_str, "%4d", update_rate);
 
-    char pitch_str[15];
-    sprintf(pitch_str, "%6.2f", degrees(angle_rpy[1]));
-    char roll_str[15];
-    sprintf(roll_str, "%6.2f", degrees(angle_rpy[0]));
-    char yaw_str[15];
-    sprintf(yaw_str, "%6.2f", degrees(angle_rpy[2]));
-
-    char gyro_x[15];
-    sprintf(gyro_x, "%6.3f", (double)v_gyro.x * driver->gyroScaleDeg);
-    char gyro_y[15];
-    sprintf(gyro_y, "%6.3f", (double)v_gyro.y * driver->gyroScaleDeg);
-    char gyro_z[15];
-    sprintf(gyro_z, "%6.3f", (double)v_gyro.z * driver->gyroScaleDeg);
-
-    char accel_x[15];
-    sprintf(accel_x, "%6.3f", (double)v_accel.x * driver->accScaleG);
-    char accel_y[15];
-    sprintf(accel_y, "%6.3f", (double)v_accel.y * driver->accScaleG);
-    char accel_z[15];
-    sprintf(accel_z, "%6.3f", (double)v_accel.z * driver->accScaleG);
-
-    char gravity_x[15];
-    sprintf(gravity_x, "%4.3f", gravity.x);
-    char gravity_y[15];
-    sprintf(gravity_y, "%4.3f", gravity.y);
-    char gravity_z[15];
-    sprintf(gravity_z, "%4.3f", gravity.z);
 
     VectorFloat o = gyroBias.getOffsets();
-    char bias_x[15];
-    sprintf(bias_x, "%4.3f", o.x);
-    char bias_y[15];
-    sprintf(bias_y, "%4.3f", o.y);
-    char bias_z[15];
-    sprintf(bias_z, "%4.3f", o.z);
-
+    
     // Uncomment lines needed for debugging
     DBGLN("**********************");
     DBGLN("Refresh: %d HZ, Period=%d uS, Theory period = %d uS", update_rate, nowMicros - lastGyroUpdate_us, driver->period_us);
     DBGLN("Execution duration: Last %d uS, Max %d uS", processingTimeUs, maxProcessingTimeUs);
     DBGLN("interrupt non_ready_errors=%d  read_errors=%d ", driver->non_ready_errors, read_errors);
-    DBGLN("Pitch:%s Roll:%s Yaw:%s", pitch_str, roll_str, yaw_str);
+    DBGLN("Pitch:%f Roll:%f Yaw:%f", degrees(angle_rpy[1]), degrees(angle_rpy[0]), degrees(angle_rpy[2]));
     DBGLN("Q       (w: %f, x: %f, y: %f, z: %f)", q.w, q.x, q.y, q.z);
-    DBGLN("Gyro    (x: %s, y: %s, z: %s)", gyro_x, gyro_y, gyro_z);
-    DBGLN("GBias   (x: %s, y: %s, z: %s)", bias_x, bias_y, bias_z);
-    DBGLN("Accel   (x: %s, y: %s, z: %s)", accel_x, accel_y, accel_z);
-    DBGLN("Gravity (x: %s, y: %s, z: %s)", gravity_x, gravity_y, gravity_z);
-    DBGLN("TotalAccHeath (%f)   Kp=(%f) Ki=(%f) ", totalAccG, AHRS_KP * kpFactor, AHRS_KI);
+    DBGLN("Gyro    (x: %f, y: %f, z: %f)", (double)v_gyro.x * driver->gyroScaleDeg, (double)v_gyro.y * driver->gyroScaleDeg, (double)v_gyro.z * driver->gyroScaleDeg);
+    DBGLN("GBias   (x: %f, y: %f, z: %f)", o.x, o.y, o.z);
+    DBGLN("Accel   (x: %f, y: %f, z: %f)", (double)v_accel.x * driver->accScaleG, (double)v_accel.y * driver->accScaleG, (double)v_accel.z * driver->accScaleG);
+    DBGLN("Gravity (x: %f, y: %f, z: %f)", gravity.x, gravity.y, gravity.z);
+    DBGLN("TotalAccHeath (%f)   Kp=(%f) Ki=(%f) accSkips=(%d/%d)", totalAccG, AHRS_KP * kpFactor, AHRS_KI, accSkips, processingCount);
+    DBGLN("Gyro MAX(x: %f, y: %f, z: %f)", maxGyro.x, maxGyro.y, maxGyro.z);
+    DBGLN("Acc  MAX(x: %f, y: %f, z: %f)", maxAcc.x, maxAcc.y, maxAcc.z);
 
     last_gyro_stats_time = millis();
+    maxProcessingTimeUs = 0;
+    maxAcc.x = maxAcc.y = maxAcc.z = 0;
+    maxGyro.x = maxGyro.y = maxGyro.z = 0;
+    accSkips=0; processingCount=0;
 }
 #endif
 
