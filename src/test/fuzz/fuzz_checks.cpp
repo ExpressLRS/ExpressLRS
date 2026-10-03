@@ -94,22 +94,14 @@ static bool enabled(const char *check)
     fail(check, what);
 }
 
-// Unpacks 16 channels of 11 bits, as CRSF and SBUS pack them
-static void unpack11(const uint8_t *p, uint32_t *out)
+// The 16 channels of a frame's packed channel block, which CRSF and SBUS share
+static void unpackChannels(const uint8_t *packed, uint32_t *out)
 {
-    uint32_t bits = 0;
-    unsigned have = 0;
-    for (unsigned ch = 0; ch < CRSF_NUM_CHANNELS; ch++)
-    {
-        while (have < 11)
-        {
-            bits |= (uint32_t)*p++ << have;
-            have += 8;
-        }
-        out[ch] = bits & 0x7ff;
-        bits >>= 11;
-        have -= 11;
-    }
+    crsf_channels_s c;
+    memcpy(&c, packed, sizeof(c));
+    const uint32_t channels[CRSF_NUM_CHANNELS] = {c.ch0, c.ch1, c.ch2,  c.ch3,  c.ch4,  c.ch5,  c.ch6,  c.ch7,
+                                                  c.ch8, c.ch9, c.ch10, c.ch11, c.ch12, c.ch13, c.ch14, c.ch15};
+    memcpy(out, channels, sizeof(channels));
 }
 
 // Runs the checks on one RC frame the RX emitted
@@ -170,6 +162,24 @@ void checkProtocol()
     }
 }
 
+// CRSF frame: sync, length of what follows, type, payload, CRC
+constexpr size_t CRSF_TYPE_AT = 2;
+constexpr size_t CRSF_PAYLOAD_AT = 3;
+constexpr size_t CRSF_RC_FRAME_LEN = CRSF_FRAME_NOT_COUNTED_BYTES + CRSF_FRAME_SIZE(sizeof(crsf_channels_s));
+
+// SBUS frame: header, packed channels, flags, footer
+constexpr size_t SBUS_FRAME_LEN = 25;
+constexpr uint8_t SBUS_HEADER = 0x0F;
+constexpr size_t SBUS_CHANNELS_AT = 1;
+constexpr size_t SBUS_FLAGS_AT = 23;
+constexpr uint8_t SBUS_FLAG_FAILSAFE = 1 << 3;
+
+// SUMD frame: 3 header bytes, 16 big-endian channels in eighths of a microsecond, CRC16
+constexpr size_t SUMD_FRAME_LEN = 37;
+constexpr uint8_t SUMD_HEADER = 0xA8;
+constexpr size_t SUMD_CHANNELS_AT = 3;
+constexpr unsigned SUMD_EIGHTHS_SHIFT = 3;
+
 // Splits the captured serial bytes into frames and checks each
 void checkOutput()
 {
@@ -184,12 +194,12 @@ void checkOutput()
     if (proto == PROTO_CRSF)
     {
         // Link statistics and other telemetry frames share the port with the RC frames
-        while (b.size() - pos >= 2 && b.size() - pos >= 2u + b[pos + 1])
+        while (b.size() - pos >= CRSF_FRAME_NOT_COUNTED_BYTES && b.size() - pos >= CRSF_FRAME_NOT_COUNTED_BYTES + b[pos + 1])
         {
-            const size_t len = 2 + b[pos + 1];
-            if (b[pos + 2] == CRSF_FRAMETYPE_RC_CHANNELS_PACKED && len == 26)
+            const size_t len = CRSF_FRAME_NOT_COUNTED_BYTES + b[pos + 1];
+            if (b[pos + CRSF_TYPE_AT] == CRSF_FRAMETYPE_RC_CHANNELS_PACKED && len == CRSF_RC_FRAME_LEN)
             {
-                unpack11(&b[pos + 3], v);
+                unpackChannels(&b[pos + CRSF_PAYLOAD_AT], v);
                 checkFrame(v, false);
             }
             pos += len;
@@ -197,24 +207,27 @@ void checkOutput()
     }
     else if (proto == PROTO_SBUS)
     {
-        for (; b.size() - pos >= 25; pos += 25)
+        for (; b.size() - pos >= SBUS_FRAME_LEN; pos += SBUS_FRAME_LEN)
         {
-            if (b[pos] != 0x0F)
+            if (b[pos] != SBUS_HEADER)
                 fuzzViolation("harness", "unexpected bytes on the SBUS port");
-            unpack11(&b[pos + 1], v);
-            checkFrame(v, b[pos + 23] & (1 << 3));
+            unpackChannels(&b[pos + SBUS_CHANNELS_AT], v);
+            checkFrame(v, b[pos + SBUS_FLAGS_AT] & SBUS_FLAG_FAILSAFE);
         }
     }
     else
     {
         // SUMD swaps CH5 and CH8 on the wire
         static const uint8_t slotToCh[CRSF_NUM_CHANNELS] = {0, 1, 2, 3, 7, 5, 6, 4, 8, 9, 10, 11, 12, 13, 14, 15};
-        for (; b.size() - pos >= 37; pos += 37)
+        for (; b.size() - pos >= SUMD_FRAME_LEN; pos += SUMD_FRAME_LEN)
         {
-            if (b[pos] != 0xA8)
+            if (b[pos] != SUMD_HEADER)
                 fuzzViolation("harness", "unexpected bytes on the SUMD port");
             for (unsigned i = 0; i < CRSF_NUM_CHANNELS; i++)
-                v[slotToCh[i]] = ((b[pos + 3 + 2 * i] << 8) | b[pos + 4 + 2 * i]) >> 3;
+            {
+                const uint8_t *value = &b[pos + SUMD_CHANNELS_AT + 2 * i];
+                v[slotToCh[i]] = ((value[0] << 8) | value[1]) >> SUMD_EIGHTHS_SHIFT;
+            }
             checkFrame(v, false);
         }
     }
