@@ -12,8 +12,7 @@ constexpr int MAX_ARRIVAL_JITTER_US = 20; // per packet, either way
 enum Fate { DELIVER, DROP, CORRUPT, TRUNCATE, FORGE };
 extern const char *const fateNames[];
 
-// Set by an opcode: the firmware's loop() does not run for this slot
-extern bool channelSkipLoop;
+extern bool rxLoopStalled; // RX loop() stalls for the rest of this TX slot, as if behind its interrupts
 
 void channelStart(const uint8_t *data, size_t size, size_t firstOpcode, int jitterUs, uint32_t jitterSeed);
 bool channelActive();

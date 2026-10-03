@@ -35,7 +35,7 @@ bool fuzzTrace;
 // Runs the firmware's loop() once, then checks its output
 static void mainLoop()
 {
-    if (channelSkipLoop)
+    if (rxLoopStalled)
         return;
     loop();
     checkProtocol();
@@ -65,7 +65,7 @@ static void slot()
 {
     txNextSlotTime();
     advanceTo(tx.slotStart);
-    channelSkipLoop = false;
+    rxLoopStalled = false;
     txNextNonce();
 
     // The TX listens for telemetry on this slot. The RX starts sending at its tock, just before the slot.

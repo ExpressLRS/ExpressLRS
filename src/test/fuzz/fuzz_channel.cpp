@@ -12,7 +12,7 @@
 
 const char *const fateNames[] = {"deliver", "drop", "corrupt", "truncate", "forged-crc"};
 
-bool channelSkipLoop;
+bool rxLoopStalled; // RX loop() stalls for the rest of this TX slot, as if behind its interrupts
 
 static const uint8_t *input;
 static size_t inputSize;
@@ -69,11 +69,89 @@ bool channelTelemetryLost()
     return lost;
 }
 
-// Reads the next opcode: what happens to this packet
+// An opcode is one input byte. Bits 0-2 give what happens to the packet, or say that it is an event:
+//   0-2  deliver        3  drop        4  corrupt        5  truncate        6  forge        7  event
+// For a packet, bits 3 and 4 both set means the RX's loop() does not run this slot.
+// For an event, bits 3-4 pick the event and bits 5-7 are its argument.
+enum PacketOp : uint8_t
+{
+    OP_DROP = 3,
+    OP_CORRUPT = 4,
+    OP_TRUNCATE = 5,
+    OP_FORGE = 6,
+    OP_EVENT = 7,
+};
+
+enum EventOp : uint8_t
+{
+    EVENT_UNUSED = 0,
+    EVENT_DROP_BURST = 1,
+    EVENT_TELEMETRY_LOSS = 2,
+    EVENT_TX_POWER_CYCLE = 3,
+};
+
+// What happens to the packet, or OP_EVENT
+static uint8_t opPacket(uint8_t op)
+{
+    return op & 7;
+}
+
+// Which event, for OP_EVENT
+static uint8_t opEvent(uint8_t op)
+{
+    return (op >> 3) & 3;
+}
+
+// The event's argument, 0-7
+static uint8_t opArg(uint8_t op)
+{
+    return op >> 5;
+}
+
+// True if the RX's loop() stalls for this slot
+static bool opStallsLoop(uint8_t op)
+{
+    return (op & 0x18) == 0x18;
+}
+
+// Reads where in the packet the damage goes and what it is
+static void readDamage(uint8_t *position, uint8_t *value)
+{
+    *position = nextByte();
+    *value = nextByte();
+}
+
+// Applies an event to the TX or the link. Returns true if the packet is dropped by it.
+static bool applyEvent(uint8_t op)
+{
+    const uint8_t arg = opArg(op);
+    switch (opEvent(op))
+    {
+    case EVENT_UNUSED:
+        // A TX only takes a switch mode change while disconnected, so the fuzzer does not make one
+        break;
+    case EVENT_DROP_BURST:
+        dropRemaining = (8u << arg) - 1;
+        return true;
+    case EVENT_TELEMETRY_LOSS:
+        // The TX stops hearing the RX's telemetry: for a number of packets, or until told otherwise
+        if (arg == 7)
+            telemetryLossRemaining = telemetryLossRemaining ? 0 : UINT32_MAX;
+        else
+            telemetryLossRemaining = 1u << arg;
+        if (fuzzTrace)
+            fprintf(stderr, "     telemetry: next %u packets lost\n", telemetryLossRemaining);
+        break;
+    case EVENT_TX_POWER_CYCLE:
+        txPowerCycle();
+        break;
+    }
+    return false;
+}
+
+// Reads opcodes until one says what happens to this packet. Events on the way are applied.
 Fate channelNextFate(uint8_t *a, uint8_t *b)
 {
-    // One opcode per packet the RX is in a position to hear. Corrupt, truncate and forge take two more
-    // bytes for position and value. Opcodes that act on the TX are applied and the next one is read.
     if (dropRemaining)
     {
         dropRemaining--;
@@ -82,51 +160,28 @@ Fate channelNextFate(uint8_t *a, uint8_t *b)
     for (;;)
     {
         const uint8_t op = nextByte();
-        const uint8_t arg = op >> 5;
-        channelSkipLoop = (op & 0x18) == 0x18;
-        switch (op & 7)
+        rxLoopStalled = opStallsLoop(op);
+        switch (opPacket(op))
         {
-        case 3:
+        case OP_DROP:
             return DROP;
-        case 4:
-            *a = nextByte();
-            *b = nextByte();
+        case OP_CORRUPT:
+            readDamage(a, b);
             return CORRUPT;
-        case 5:
-            *a = nextByte();
-            *b = nextByte();
+        case OP_TRUNCATE:
+            readDamage(a, b);
             return TRUNCATE;
-        case 6:
-            *a = nextByte();
-            *b = nextByte();
+        case OP_FORGE:
+            readDamage(a, b);
             // A corrupted packet passing the CRC is a rare event, so a test case gets one
             if (forgeUsed)
                 return CORRUPT;
             forgeUsed = true;
             return FORGE;
-        case 7:
-            channelSkipLoop = false;
-            switch ((op >> 3) & 3)
-            {
-            case 0:
-                // Unused. A TX only takes a switch mode change while disconnected, and then restarts its link.
-                break;
-            case 1:
-                dropRemaining = (8u << arg) - 1;
+        case OP_EVENT:
+            rxLoopStalled = false;
+            if (applyEvent(op))
                 return DROP;
-            case 2:
-                // The TX stops hearing the RX's telemetry: for a number of packets, or until told otherwise
-                if (arg == 7)
-                    telemetryLossRemaining = telemetryLossRemaining ? 0 : UINT32_MAX;
-                else
-                    telemetryLossRemaining = 1u << arg;
-                if (fuzzTrace)
-                    fprintf(stderr, "     telemetry: next %u packets lost\n", telemetryLossRemaining);
-                break;
-            case 3:
-                txPowerCycle();
-                break;
-            }
             if (!inputLeft())
                 return DROP;
             break;
