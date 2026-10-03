@@ -26,7 +26,11 @@ static const char *skipChecks;
 static Proto proto;
 static bool forgedCrcUsed;
 static unsigned packetsWithoutOutput;
-static uint32_t expected[2][3][CRSF_NUM_CHANNELS];
+// What each channel reads once received, by packet format (std, full-res) and switch mode
+static uint32_t expected[2][SWITCH_MODE_COUNT][CRSF_NUM_CHANNELS];
+// Packets in a row that carry every channel at least once, in any switch mode. The slowest is
+// Hybrid, which sends one of 7 switches per packet.
+constexpr unsigned PACKETS_FOR_ALL_CHANNELS = 64;
 
 // True when the RX unpacks the way the TX packs
 static bool rxDecodesAsTxPacks()
@@ -243,12 +247,14 @@ static void computeExpected()
     for (unsigned full = 0; full < 2; full++)
     {
         const uint8_t size = full ? OTA8_PACKET_SIZE : OTA4_PACKET_SIZE;
-        for (unsigned mode = 0; mode < (full ? 3u : 2u); mode++)
+        // sm12ch is full-res only
+        const unsigned modes = full ? SWITCH_MODE_COUNT : SWITCH_MODE_COUNT - 1;
+        for (unsigned mode = 0; mode < modes; mode++)
         {
             uint32_t *dst = expected[full][mode];
             for (unsigned ch = 0; ch < CRSF_NUM_CHANNELS; ch++)
                 dst[ch] = CRSF_CHANNEL_VALUE_UNSET;
-            for (unsigned n = 0; n < 64; n++)
+            for (unsigned n = 0; n < PACKETS_FOR_ALL_CHANNELS; n++)
             {
                 OTA_Packet_s pkt;
                 memset(&pkt, 0, sizeof(pkt));

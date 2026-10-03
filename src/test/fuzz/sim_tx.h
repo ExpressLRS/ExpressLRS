@@ -12,6 +12,8 @@
 constexpr int MAX_CLOCK_OFFSET_PPM = 40;        // constant offset between the two clocks
 constexpr int MAX_CLOCK_DRIFT_PPM_PER_S = 1;    // how fast that offset may change
 
+constexpr unsigned SWITCH_MODE_COUNT = 3; // smWideOr8ch, smHybridOr16ch, sm12ch
+
 struct SimTx
 {
     // Fixed per test case
