@@ -23,7 +23,7 @@ extern int8_t SwitchModePending;
 const char *const protoNames[] = {"CRSF", "SBUS", "SUMD"};
 const eSerialProtocol protoConfigValues[] = {PROTOCOL_CRSF, PROTOCOL_SBUS, PROTOCOL_SUMD};
 
-static const char *skipChecks;
+static std::string skipList; // FUZZ_SKIP with a comma at each end
 static Proto proto;
 static bool forgedCrcUsed;
 static unsigned packetsWithoutOutput;
@@ -47,20 +47,22 @@ static bool modesAgree()
 }
 
 // False if FUZZ_SKIP lists the check, as "leak" or "leak:SBUS"
-static bool enabled(const char *check)
+static bool enabled(const std::string &check)
 {
-    if (!skipChecks)
-        return true;
-    char scoped[64];
-    snprintf(scoped, sizeof(scoped), "%s:%s", check, protoNames[proto]);
-    for (const char *tok = skipChecks; *tok;)
+    const std::string scoped = check + ":" + protoNames[proto];
+    return skipList.find("," + check + ",") == std::string::npos && skipList.find("," + scoped + ",") == std::string::npos;
+}
+
+// The 16 channel values in a row, with "-" for unset if asked
+static std::string channelList(const uint32_t *channels, bool dashForUnset)
+{
+    std::string list;
+    for (unsigned ch = 0; ch < CRSF_NUM_CHANNELS; ch++)
     {
-        const size_t len = strcspn(tok, ",");
-        if ((len == strlen(check) && !strncmp(tok, check, len)) || (len == strlen(scoped) && !strncmp(tok, scoped, len)))
-            return false;
-        tok += len + (tok[len] == ',');
+        const bool dash = dashForUnset && channels[ch] == CRSF_CHANNEL_VALUE_UNSET;
+        list += dash ? " -" : " " + std::to_string(channels[ch]);
     }
-    return true;
+    return list;
 }
 
 // Reports a violation and ends the test case
@@ -68,22 +70,16 @@ static bool enabled(const char *check)
 {
     static const char *const stateNames[] = {"connected", "tentative", "awaiting model id", "disconnected"};
     const char *state = connectionState <= disconnected ? stateNames[connectionState] : "other";
-    char buf[512];
-    int n = snprintf(buf, sizeof(buf),
-        "VIOLATION %s on %s\n"
-        "  where     slot %u, %uHz %s, txMode=%d rxMode=%d, %s\n"
-        "  what      %s\n"
-        "  channels ",
-        check, protoNames[proto], tx.slotNum, 1000000 / tx.rate->interval, txIsFullRes() ? "fullres" : "std", tx.mode,
-        OtaSwitchModeCurrent, state, what);
-    for (auto v : ChannelData)
-    {
-        if (v == CRSF_CHANNEL_VALUE_UNSET)
-            n += snprintf(buf + n, sizeof(buf) - n, " -");
-        else
-            n += snprintf(buf + n, sizeof(buf) - n, " %u", v);
-    }
-    fuzzViolation(std::string(check) + ":" + protoNames[proto], buf);
+    char where[128];
+    snprintf(where, sizeof(where), "slot %u, %uHz %s, txMode=%d rxMode=%d, %s", tx.slotNum, 1000000 / tx.rate->interval,
+        txIsFullRes() ? "fullres" : "std", tx.mode, OtaSwitchModeCurrent, state);
+
+    const std::string kind = std::string(check) + ":" + protoNames[proto];
+    const std::string report = std::string("VIOLATION ") + check + " on " + protoNames[proto] +
+        "\n  where     " + where +
+        "\n  what      " + what +
+        "\n  channels " + channelList(ChannelData, true);
+    fuzzViolation(kind, report);
 }
 
 // Reports a violation about one channel of an emitted frame
@@ -108,12 +104,7 @@ static void unpackChannels(const uint8_t *packed, uint32_t *out)
 static void checkFrame(const uint32_t *emitted, bool flaggedFailsafe)
 {
     if (fuzzTrace)
-    {
-        fprintf(stderr, "    %s frame%s:", protoNames[proto], flaggedFailsafe ? " (failsafe)" : "");
-        for (unsigned ch = 0; ch < CRSF_NUM_CHANNELS; ch++)
-            fprintf(stderr, " %u", emitted[ch]);
-        fprintf(stderr, "\n");
-    }
+        trace("    %s frame%s:%s\n", protoNames[proto], flaggedFailsafe ? " (failsafe)" : "", channelList(emitted, false).c_str());
     // The frame that goes out between the link dropping and the driver being told carries the last
     // values, which may have been decoded in a switch mode the RX has since left
     if (flaggedFailsafe || connectionState == disconnected)
@@ -282,7 +273,8 @@ static void computeExpected()
 // Prepares the checks for one test case, whose frames are parsed as outputProtocol
 void checksStart(Proto outputProtocol)
 {
-    skipChecks = getenv("FUZZ_SKIP");
+    const char *skip = getenv("FUZZ_SKIP");
+    skipList = std::string(",") + (skip ? skip : "") + ",";
     proto = outputProtocol;
     computeExpected();
 }
