@@ -21,6 +21,7 @@ static size_t inputSize;
 static size_t inputPos;
 static unsigned dropRemaining;
 static unsigned telemetryLossRemaining;
+static bool telemetryLossUntilToggled;
 static bool forgeUsed;
 static int arrivalJitterUs;
 static std::mt19937 jitterRng;
@@ -64,8 +65,8 @@ int channelJitter()
 // True if the TX fails to hear the telemetry packet the RX just sent
 bool channelTelemetryLost()
 {
-    const bool lost = telemetryLossRemaining != 0;
-    if (lost && telemetryLossRemaining != UINT32_MAX)
+    const bool lost = telemetryLossUntilToggled || telemetryLossRemaining;
+    if (telemetryLossRemaining)
         telemetryLossRemaining--;
     return lost;
 }
@@ -91,6 +92,9 @@ enum class EventOp : uint8_t
     TX_POWER_CYCLE = 3,
 };
 
+constexpr unsigned MIN_DROP_BURST = 8;         // packets, doubled per step of the argument
+constexpr uint8_t TELEMETRY_LOSS_TOGGLE = 7;   // argument that switches lasting telemetry loss on or off
+
 // What happens to the packet, or PacketOp::EVENT
 static PacketOp opPacket(uint8_t op)
 {
@@ -112,7 +116,8 @@ static uint8_t opArg(uint8_t op)
 // True if the RX's loop() stalls for this slot
 static bool opStallsLoop(uint8_t op)
 {
-    return (op & 0x18) == 0x18;
+    constexpr uint8_t STALL_BITS = (1 << 3) | (1 << 4);
+    return (op & STALL_BITS) == STALL_BITS;
 }
 
 // Reads where in the packet the damage goes and what it is
@@ -132,15 +137,24 @@ static bool applyEvent(uint8_t op)
         // A TX only takes a switch mode change while disconnected, so the fuzzer does not make one
         break;
     case EventOp::DROP_BURST:
-        dropRemaining = (8u << arg) - 1;
+        // 8 to 1024 packets, this one included
+        dropRemaining = (MIN_DROP_BURST << arg) - 1;
         return true;
     case EventOp::TELEMETRY_LOSS:
         // The TX stops hearing the RX's telemetry: for a number of packets, or until told otherwise
-        if (arg == 7)
-            telemetryLossRemaining = telemetryLossRemaining ? 0 : UINT32_MAX;
+        if (arg == TELEMETRY_LOSS_TOGGLE)
+        {
+            telemetryLossUntilToggled = !telemetryLossUntilToggled && !telemetryLossRemaining;
+            telemetryLossRemaining = 0;
+        }
         else
+        {
+            telemetryLossUntilToggled = false;
             telemetryLossRemaining = 1u << arg;
-        if (fuzzTrace)
+        }
+        if (fuzzTrace && telemetryLossUntilToggled)
+            fprintf(stderr, "     telemetry: lost from here on\n");
+        else if (fuzzTrace)
             fprintf(stderr, "     telemetry: next %u packets lost\n", telemetryLossRemaining);
         break;
     case EventOp::TX_POWER_CYCLE:
