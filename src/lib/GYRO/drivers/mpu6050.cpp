@@ -33,31 +33,13 @@ bool IMU_MPU6050::initialize()
     IMU_Driver_I2C::initialize();
     wire->setClock(400000);
     wire->setTimeOut(2);
-    m_address = MPU6050_DEFAULT_ADDRESS; // Defaults is MPU6050_ADDRESS_AD0_LOW (0x68)
-
-    DBGLN("Detecting MPU6050 (Address 0x68)");
+    uint8_t addr[2] = { MPU6050_ADDRESS_AD0_LOW, MPU6050_ADDRESS_AD0_HIGH };
 
     bool found = false;
-    for (int8_t i = 0; i < 5; i++)
-    {
-        // if (mpu->testConnection())
-        if (testConnection(this))
-        {
-            found = true;
-            break;
-        }
-        delay(50);
-    }
+    for (int8_t a = 0; a < 2; a++) {
+        m_address = addr[a];
+        DBGLN("Detecting MPU6050 (I2C) Addr=0x%x",m_address);
 
-    if (!found)
-    {
-        // mpu = nullptr;
-        DBGLN("Detecting MPU6050 (Alt Address 0x69)");
-        m_address = 0x69; // Use the alternate address (0x69)
-        // mpu =  new MPU6050(m_address);
-        // I2Cdev::readTimeout = 1; // 1ms timeout instead of 1000ms (1s)
-
-        found = false;
         for (int8_t i = 0; i < 5; i++)
         {
             // if (mpu->testConnection())
@@ -68,6 +50,8 @@ bool IMU_MPU6050::initialize()
             }
             delay(50);
         }
+
+        if (found) break;
     }
 
     if (!found)
