@@ -7,6 +7,7 @@
 // sim_tx.cpp is the TX, fuzz_channel.cpp decides what happens to each packet, fuzz_checks.cpp checks
 // what the RX emits. This file plays one test case.
 
+#include <cstdarg>
 #include <cstdio>
 #include <cstdint>
 #include <cstdlib>
@@ -32,6 +33,17 @@ constexpr unsigned MAX_SLOTS = 100000;     // seed length cap
 constexpr unsigned LOOP_PERIOD_US = 1000;  // between loop() calls
 
 bool fuzzTrace;
+
+// Prints to the per-packet trace, if FUZZ_TRACE is set
+void trace(const char *fmt, ...)
+{
+    if (!fuzzTrace)
+        return;
+    va_list args;
+    va_start(args, fmt);
+    vfprintf(stderr, fmt, args);
+    va_end(args);
+}
 
 // Runs the firmware's loop() once, then checks its output
 static void mainLoop()
@@ -79,8 +91,7 @@ static void slot()
             const bool lost = channelTelemetryLost();
             if (!lost)
                 tx.lastTelemetryMs = simNow() / 1000;
-            if (fuzzTrace)
-                fprintf(stderr, "%5u %7.1fms TLM  txNonce=%u %s\n", tx.slotNum, simNow() / 1000.0, tx.nonce, lost ? "lost" : "heard");
+            trace("%5u %7.1fms TLM  txNonce=%u %s\n", tx.slotNum, simNow() / 1000.0, tx.nonce, lost ? "lost" : "heard");
         }
         tx.rxPacketsAtLastTelemetrySlot = simRadio.packetsSent;
         return;
@@ -118,9 +129,8 @@ static void slot()
             checkRcPacket();
         checkOutput();
     }
-    if (fuzzTrace)
-        fprintf(stderr, "%5u %7.1fms %s txNonce=%u rxNonce=%u %-10s %s state=%d\n", tx.slotNum, simNow() / 1000.0, wasSync ? "SYNC" : "RC  ",
-            tx.nonce, OtaNonce, fateNames[fate], accepted ? "accepted" : "", connectionState);
+    trace("%5u %7.1fms %s txNonce=%u rxNonce=%u %-10s %s state=%d\n", tx.slotNum, simNow() / 1000.0, wasSync ? "SYNC" : "RC  ", tx.nonce,
+        OtaNonce, fateNames[fate], accepted ? "accepted" : "", connectionState);
     mainLoop();
 }
 
@@ -213,10 +223,9 @@ void fuzzRunInput(const uint8_t *data, size_t size)
     simSerialOut.clear();
 
     txStart(simNow(), uid);
-    if (fuzzTrace)
-        fprintf(stderr, "%s %uHz %s txMode=%d tlm=1:%u failsafe=%d clock=%+dppm drift=%+dppm/s jitter=%dus\n", protoNames[proto],
-            1000000 / tx.rate->interval, txIsFullRes() ? "fullres" : "std", tx.mode, tx.tlmDenom, failsafeMode,
-            tx.clockOffsetMilliPpm / 1000, tx.clockDriftMilliPpmPerS / 1000, arrivalJitterUs);
+    trace("%s %uHz %s txMode=%d tlm=1:%u failsafe=%d clock=%+dppm drift=%+dppm/s jitter=%dus\n", protoNames[proto],
+        1000000 / tx.rate->interval, txIsFullRes() ? "fullres" : "std", tx.mode, tx.tlmDenom, failsafeMode,
+        tx.clockOffsetMilliPpm / 1000, tx.clockDriftMilliPpmPerS / 1000, arrivalJitterUs);
 
     // One TX packet slot at a time, until the input runs out
     for (unsigned n = 0; n < MAX_SLOTS && channelActive(); n++)

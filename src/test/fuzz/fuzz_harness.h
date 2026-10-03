@@ -5,6 +5,8 @@
 #include <string>
 
 extern bool fuzzTrace;
+// Prints to the per-packet trace, if FUZZ_TRACE is set
+void trace(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
 
 constexpr size_t FUZZ_HEADER_BYTES = 3; // test case setup, before the opcodes
 

@@ -2,7 +2,6 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <cstdio>
 #include <cstring>
 #include <random>
 
@@ -143,10 +142,10 @@ static bool applyEvent(uint8_t op)
             telemetryLossUntilToggled = false;
             telemetryLossRemaining = 1u << arg;
         }
-        if (fuzzTrace && telemetryLossUntilToggled)
-            fprintf(stderr, "     telemetry: lost from here on\n");
-        else if (fuzzTrace)
-            fprintf(stderr, "     telemetry: next %u packets lost\n", telemetryLossRemaining);
+        if (telemetryLossUntilToggled)
+            trace("     telemetry: lost from here on\n");
+        else
+            trace("     telemetry: next %u packets lost\n", telemetryLossRemaining);
         break;
     case EventOp::TX_POWER_CYCLE:
         txPowerCycle();

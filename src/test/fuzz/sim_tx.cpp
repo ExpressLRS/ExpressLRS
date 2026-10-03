@@ -1,7 +1,6 @@
 #include "sim_tx.h"
 
 #include <cstdint>
-#include <cstdio>
 #include <cstring>
 
 #include "common.h"
@@ -141,6 +140,5 @@ void txPowerCycle()
     tx.nonce = 0;
     tx.fhssPtr = 0;
     tx.lastTelemetryMs = LONG_AGO_MS;
-    if (fuzzTrace)
-        fprintf(stderr, "     TX: power cycled\n");
+    trace("     TX: power cycled\n");
 }

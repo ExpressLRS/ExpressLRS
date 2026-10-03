@@ -68,13 +68,10 @@ static std::map<uint64_t, Result> results;
 static void startSeed(uint64_t seed)
 {
     const std::vector<uint8_t> in = inputFromSeed(seed);
-    if (fuzzTrace)
-    {
-        fprintf(stderr, "seed %llu, input:", (unsigned long long)seed);
-        for (auto b : in)
-            fprintf(stderr, " %02x", b);
-        fprintf(stderr, "\n");
-    }
+    trace("seed %llu, input:", (unsigned long long)seed);
+    for (auto b : in)
+        trace(" %02x", b);
+    trace("\n");
 
     // The firmware keeps its state in globals with no way to reset them, so every seed gets a fresh process
     int fds[2];
