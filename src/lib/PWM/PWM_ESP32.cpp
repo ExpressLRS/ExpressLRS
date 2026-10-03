@@ -55,6 +55,7 @@ static struct
     uint8_t resolution_bits;
     uint32_t interval;
     bool attached;
+    bool polarity_inverted;
     uint8_t tmr_idx;
 } ledc_config[LEDC_CHANNELS];
 static uint32_t ledcTimerConfigs[LEDC_TIMER_MAX] = {0};
@@ -80,7 +81,7 @@ static void ledcSetupEx(uint8_t chan, ledc_timer_t timer, uint32_t freq, uint8_t
     }
 }
 
-static void ledcAttachPinEx(uint8_t pin, uint8_t chan, ledc_timer_t timer)
+static void ledcAttachPinEx(uint8_t pin, uint8_t chan, ledc_timer_t timer, bool polarityInverted = false)
 {
     ledc_channel_config_t ledc_channel = {
         .gpio_num = pin,
@@ -90,6 +91,7 @@ static void ledcAttachPinEx(uint8_t pin, uint8_t chan, ledc_timer_t timer)
         .timer_sel = (ledc_timer_t)timer,
         .duty = 0,
         .hpoint = 0};
+    ledc_channel.flags.output_invert = polarityInverted;
     auto err = ledc_channel_config(&ledc_channel);
     if (err != OK)
     {
@@ -99,10 +101,17 @@ static void ledcAttachPinEx(uint8_t pin, uint8_t chan, ledc_timer_t timer)
 
 pwm_channel_t PWMController::allocate(uint8_t pin, uint32_t frequency)
 {
+    bool polarityInverted = false;
+    if (pin >= 100)
+    {
+        pin -= 100;
+        polarityInverted = true;
+    }
     // 1. see if we can allocate a MCPWM channel at this frequency
 #if SOC_MCPWM_SUPPORTED
     // 1a. see if theres a MCPWM already using this frequency we can piggy-back on
     int channel = -1;
+    bool newTimer = false;
 
     for (int i = 0; i < MCPWM_CHANNELS; i++)
     {
@@ -128,6 +137,7 @@ pwm_channel_t PWMController::allocate(uint8_t pin, uint32_t frequency)
             if (mcpwm_frequencies[i] == 0 && mcpwm_frequencies[i + 1] == 0)
             {
                 channel = i;
+                newTimer = true;
                 break;
             }
         }
@@ -146,7 +156,15 @@ pwm_channel_t PWMController::allocate(uint8_t pin, uint32_t frequency)
         {
             DBGLN("mcpwm_gpio_init failed with error 0x%x on pin %d", err, pin);
         }
-        mcpwm_init(mcpwm_config[channel].unit, mcpwm_config[channel].timer, &pwm_config);
+        if (newTimer)
+        {
+            mcpwm_init(mcpwm_config[channel].unit, mcpwm_config[channel].timer, &pwm_config);
+        }
+        mcpwm_set_duty_type(mcpwm_config[channel].unit,
+                                                mcpwm_config[channel].timer,
+                                                mcpwm_config[channel].generator,
+                                                polarityInverted ? MCPWM_DUTY_MODE_1 : MCPWM_DUTY_MODE_0);
+
         mcpwm_frequencies[channel] = frequency;
         return channel | MCPWM_CHANNEL_FLAG;
     }
@@ -175,11 +193,12 @@ pwm_channel_t PWMController::allocate(uint8_t pin, uint32_t frequency)
                 }
                 if (ledcTimerConfigs[timer_idx] == frequency)
                 {
-                    ledcAttachPinEx(pin, ch, (ledc_timer_t)timer_idx);
+                    ledcAttachPinEx(pin, ch, (ledc_timer_t)timer_idx, polarityInverted);
                     ledc_config[ch].pin = pin;
                     ledc_config[ch].resolution_bits = bits;
                     ledc_config[ch].interval = 1000000U / frequency;
                     ledc_config[ch].attached = true;
+                    ledc_config[ch].polarity_inverted = polarityInverted;
                     ledc_config[ch].tmr_idx = timer_idx;
                     DBGLN("allocate ledc_ch %d on pin %d using ledc_tim: %d, bits: %d", ch, pin, timer_idx, bits);
                     return ch | LEDC_CHANNEL_FLAG;
@@ -227,7 +246,9 @@ static void setLedcMapped(pwm_channel_t channel, bool active, uint32_t raw)
     {
         if (!ledc_config[ch].attached)
         {
-            ledcAttachPinEx(ledc_config[ch].pin, ch, (ledc_timer_t)(ledc_config[ch].tmr_idx));
+            ledcAttachPinEx(ledc_config[ch].pin, ch,
+                            (ledc_timer_t)(ledc_config[ch].tmr_idx),
+                            ledc_config[ch].polarity_inverted);
             ledc_config[ch].attached = true;
         }
 
