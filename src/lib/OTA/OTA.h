@@ -171,6 +171,7 @@ extern uint8_t UID[UID_LEN];
 extern elrsLinkStatistics_t linkStats;
 extern bool isArmed;
 extern bool OtaIsFullRes;
+extern uint8_t OtaNumChannels;
 extern volatile uint8_t OtaNonce;
 extern uint16_t OtaCrcInitializer;
 extern OtaSwitchMode_e OtaSwitchModeCurrent;
