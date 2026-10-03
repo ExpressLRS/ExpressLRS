@@ -95,9 +95,9 @@ static void slot()
     if (!rxCanHear())
         return;
 
-    uint8_t a = 0, b = 0;
-    const Fate fate = channelNextFate(&a, &b);
-    channelDamage(fate, &pkt, tx.packetSize, a, b);
+    Damage damage = {};
+    const Fate fate = channelNextFate(&damage);
+    channelDamage(fate, &pkt, tx.packetSize, damage);
 
     // The fuzzer does find real CRC collisions for damaged packets, they are no different to forged ones
     if (fate != DELIVER && fate != DROP)

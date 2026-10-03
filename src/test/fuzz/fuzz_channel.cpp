@@ -121,10 +121,10 @@ static bool opStallsLoop(uint8_t op)
 }
 
 // Reads where in the packet the damage goes and what it is
-static void readDamage(uint8_t *position, uint8_t *value)
+static void readDamage(Damage *damage)
 {
-    *position = nextByte();
-    *value = nextByte();
+    damage->position = nextByte();
+    damage->value = nextByte();
 }
 
 // Applies an event to the TX or the link. Returns true if the packet is dropped by it.
@@ -165,7 +165,7 @@ static bool applyEvent(uint8_t op)
 }
 
 // Reads opcodes until one says what happens to this packet. Events on the way are applied.
-Fate channelNextFate(uint8_t *a, uint8_t *b)
+Fate channelNextFate(Damage *damage)
 {
     if (dropRemaining)
     {
@@ -181,13 +181,13 @@ Fate channelNextFate(uint8_t *a, uint8_t *b)
         case PacketOp::DROP:
             return DROP;
         case PacketOp::CORRUPT:
-            readDamage(a, b);
+            readDamage(damage);
             return CORRUPT;
         case PacketOp::TRUNCATE:
-            readDamage(a, b);
+            readDamage(damage);
             return TRUNCATE;
         case PacketOp::FORGE:
-            readDamage(a, b);
+            readDamage(damage);
             // A corrupted packet passing the CRC is a rare event, so a test case gets one
             if (forgeUsed)
                 return CORRUPT;
@@ -207,17 +207,18 @@ Fate channelNextFate(uint8_t *a, uint8_t *b)
 }
 
 // Applies a corrupt, truncate or forge fate to the packet
-void channelDamage(Fate fate, OTA_Packet_s *pkt, uint8_t packetSize, uint8_t a, uint8_t b)
+void channelDamage(Fate fate, OTA_Packet_s *pkt, uint8_t packetSize, const Damage &damage)
 {
     uint8_t *raw = (uint8_t *)pkt;
+    const uint8_t start = damage.position % packetSize;
     switch (fate)
     {
     case CORRUPT:
     case FORGE:
-        raw[a % packetSize] ^= b ? b : 1;
+        raw[start] ^= damage.value ? damage.value : 1;
         break;
     case TRUNCATE:
-        memset(raw + a % packetSize, (b & 1) ? 0xff : 0x00, packetSize - a % packetSize);
+        memset(raw + start, (damage.value & 1) ? 0xff : 0x00, packetSize - start);
         break;
     default:
         break;
