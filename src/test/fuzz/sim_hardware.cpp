@@ -37,6 +37,16 @@ static uint64_t radioTxDoneAt;
 static bool inEvent;
 static unsigned microsCallsSinceAdvance;
 
+// Not zero: the firmware treats a zero timestamp as "never"
+constexpr uint64_t BOOT_TIME_US = 1000000;
+// micros() calls with no event in between that mean the firmware is busy-waiting on the clock
+constexpr unsigned BUSY_WAIT_POLLS = 1000;
+constexpr unsigned BUSY_WAIT_STEP_US = 100;    // clock step while busy-waiting with the timer stopped
+constexpr unsigned TIMER_START_DELAY_US = 20;  // resume() to first tock, as ESP8266_hwTimer.cpp
+constexpr int8_t IDLE_RSSI_DBM = -100;         // a quiet channel
+constexpr int8_t PACKET_RSSI_DBM = -50;        // a strong signal
+constexpr int8_t PACKET_SNR_DB = 10;
+
 static void runTimerEvent();
 // hwTimer::callback is private, init() leaves a pointer to it here
 static void (*timerCallback)();
@@ -45,7 +55,7 @@ static void (*timerCallback)();
 static unsigned long simMicros()
 {
     // rx_main busy-waits on micros() for the next tock, so a clock that only moves between events would hang it
-    if (!inEvent && ++microsCallsSinceAdvance > 1000)
+    if (!inEvent && ++microsCallsSinceAdvance > BUSY_WAIT_POLLS)
     {
         if (hwTimer::running)
         {
@@ -54,7 +64,7 @@ static unsigned long simMicros()
         }
         else
         {
-            now += 100;
+            now += BUSY_WAIT_STEP_US;
         }
         nativeClockMs() = now / 1000;
     }
@@ -70,8 +80,7 @@ static void serialSink(const uint8_t *data, size_t len)
 // Points the firmware's clock and Serial at the simulation
 void simInstall()
 {
-    // Not zero: the firmware treats a zero timestamp as "never"
-    now = 1000000;
+    now = BOOT_TIME_US;
     nativeClockMs() = now / 1000;
     nativeMicrosSource() = simMicros;
     nativeSerialSink() = serialSink;
@@ -142,13 +151,13 @@ void hwTimer::stop()
     running = false;
 }
 
-// Starts the timer, first tock in 20us
+// Starts the timer
 void hwTimer::resume()
 {
     if (!running)
     {
         isTick = false;
-        timerNext = now + 20;
+        timerNext = now + TIMER_START_DELAY_US;
         running = true;
     }
 }
@@ -257,7 +266,7 @@ bool SX1280Driver::GetFrequencyErrorbool(SX12XX_Radio_Number_t radioNumber)
 // Fixed, quiet channel
 int8_t SX1280Driver::GetRssiInst(SX12XX_Radio_Number_t radioNumber)
 {
-    return -100;
+    return IDLE_RSSI_DBM;
 }
 
 // There is no second radio
@@ -269,9 +278,9 @@ void SX1280Driver::CheckForSecondPacket()
 // Fixed, strong signal
 void SX1280Driver::GetLastPacketStats()
 {
-    LastPacketRSSI = -50;
-    LastPacketRSSI2 = -50;
-    LastPacketSNRRaw = 10 * RADIO_SNR_SCALE;
+    LastPacketRSSI = PACKET_RSSI_DBM;
+    LastPacketRSSI2 = PACKET_RSSI_DBM;
+    LastPacketSNRRaw = PACKET_SNR_DB * RADIO_SNR_SCALE;
 }
 
 // Starts listening
