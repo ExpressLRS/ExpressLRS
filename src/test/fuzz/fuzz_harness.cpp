@@ -132,9 +132,17 @@ void fuzzInit()
 
     // Distinct values. The TX here always sends the arm flag set. A real TX can take that flag from CH5
     // or from any switch, so CH5 is high to match the case where it comes from CH5.
+    constexpr uint32_t FIRST_CHANNEL_VALUE = 300;
+    constexpr uint32_t CHANNEL_VALUE_STEP = 80;
     for (unsigned ch = 0; ch < CRSF_NUM_CHANNELS; ch++)
-        tx.channels[ch] = 300 + ch * 80;
+        tx.channels[ch] = FIRST_CHANNEL_VALUE + ch * CHANNEL_VALUE_STEP;
     tx.channels[4] = CRSF_CHANNEL_VALUE_2000;
+}
+
+// The count bits of a header byte starting at bit first
+static unsigned bits(uint8_t byte, unsigned first, unsigned count)
+{
+    return (byte >> first) & ((1u << count) - 1);
 }
 
 // Boots the RX and plays one test case against it
@@ -151,7 +159,7 @@ void fuzzRunInput(const uint8_t *data, size_t size)
     //   2     4-5   clock drift: none, faster, slower, none
     //   2     6     arrival jitter on
     //   3...        opcodes read by channelNextFate()
-    if (size < 3)
+    if (size < FUZZ_HEADER_BYTES)
         return;
 
     // Pick the packet rate. The DVDA rates (D500, D250) send every packet 2 or 4 times on different
@@ -171,21 +179,22 @@ void fuzzRunInput(const uint8_t *data, size_t size)
 
     // Link setup: switch mode, output protocol, failsafe mode, telemetry ratio
     const uint8_t header = data[1];
-    tx.mode = txAdjustSwitchMode((header & 3) % 3);
-    const Proto proto = (Proto)(((header >> 2) & 3) % PROTO_COUNT);
+    tx.mode = txAdjustSwitchMode(bits(header, 0, 2) % SWITCH_MODE_COUNT);
+    const Proto proto = (Proto)(bits(header, 2, 2) % PROTO_COUNT);
     checksStart(proto);
-    const eFailsafeMode failsafeMode = (header & 0x10) ? FAILSAFE_LAST_POSITION : FAILSAFE_NO_PULSES;
+    const eFailsafeMode failsafeMode = bits(header, 4, 1) ? FAILSAFE_LAST_POSITION : FAILSAFE_NO_PULSES;
     static const expresslrs_tlm_ratio_e ratios[] = {TLM_RATIO_NO_TLM, TLM_RATIO_1_2, TLM_RATIO_1_8, TLM_RATIO_1_64};
-    tx.tlmRatio = ratios[header >> 6];
+    tx.tlmRatio = ratios[bits(header, 6, 2)];
     tx.tlmDenom = TLMratioEnumToValue(tx.tlmRatio);
 
     // How far off the TX's clock is, and how much arrival times vary
     const uint8_t timing = data[2];
-    tx.clockOffsetMilliPpm = ((int)(timing & 0x0f) - 8) * MAX_CLOCK_OFFSET_PPM * 1000 / 8;
+    constexpr int CLOCK_OFFSET_STEPS = 8; // each way from zero
+    tx.clockOffsetMilliPpm = ((int)bits(timing, 0, 4) - CLOCK_OFFSET_STEPS) * MAX_CLOCK_OFFSET_PPM * 1000 / CLOCK_OFFSET_STEPS;
     static const int driftDirection[] = {0, 1, -1, 0};
-    tx.clockDriftMilliPpmPerS = driftDirection[(timing >> 4) & 3] * MAX_CLOCK_DRIFT_PPM_PER_S * 1000;
-    const int arrivalJitterUs = (timing & 0x40) ? MAX_ARRIVAL_JITTER_US : 0;
-    channelStart(data, size, 3, arrivalJitterUs, timing);
+    tx.clockDriftMilliPpmPerS = driftDirection[bits(timing, 4, 2)] * MAX_CLOCK_DRIFT_PPM_PER_S * 1000;
+    const int arrivalJitterUs = bits(timing, 6, 1) ? MAX_ARRIVAL_JITTER_US : 0;
+    channelStart(data, size, FUZZ_HEADER_BYTES, arrivalJitterUs, timing);
 
     // Clock and Serial hooks must be in place before any firmware code runs
     simInstall();
