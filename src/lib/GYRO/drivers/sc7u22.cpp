@@ -14,32 +14,6 @@ const char *IMU_SC7U22::GetMPUName()
     return "SC7U22";
 }
 
-bool IMU_SC7U22::readRegisterRepeatedStart(uint8_t reg, uint8_t *data, size_t size)
-{
-    Wire.beginTransmission(m_address);
-    Wire.write(reg);
-    if (Wire.endTransmission(false) != 0)
-    {
-        return false;
-    }
-
-    if (Wire.requestFrom(m_address, size) != size)
-    {
-        return false;
-    }
-
-    return Wire.readBytes(data, size) == size;
-}
-
-void IMU_SC7U22::writeRegisterDelay(uint8_t reg, uint8_t value, uint16_t delayMs)
-{
-    writeRegister(reg, value);
-    if (delayMs != 0)
-    {
-        delay(delayMs);
-    }
-}
-
 bool IMU_SC7U22::detect()
 {
     const uint8_t addresses[] = {I2C_ADDRESS_SDO_HIGH, I2C_ADDRESS_SDO_LOW};
@@ -49,34 +23,68 @@ bool IMU_SC7U22::detect()
         m_address = address;
 
         // Ensure the general register bank is selected before reading WHO_AM_I.
-        Wire.beginTransmission(m_address);
-        Wire.write(REG_SEG_SEL);
-        Wire.write(0x00);
-        const uint8_t error = Wire.endTransmission();
-        delay(1);
-        if (error != 0)
-        {
-            continue;
-        }
+        writeRegister(REG_SEG_SEL, 0x00, 10);
 
         for (uint8_t attempt = 0; attempt < 5; ++attempt)
         {
             uint8_t chipId = 0;
-            if (readRegisterRepeatedStart(REG_WHO_AM_I, &chipId, 1) && chipId == CHIP_ID)
+            if (readRegister(REG_WHO_AM_I, &chipId, 1) && chipId == CHIP_ID)
             {
-                DBGLN("SC7U22 found at I2C address 0x%02x", m_address);
+                DBGLN("SC7U22 found at I2C address 0x%x", m_address);
                 return true;
             }
-            delay(10);
+            delay(1);
         }
     }
 
     return false;
 }
 
+bool IMU_SC7U22::configure()
+{
+    writeRegister(REG_SEG_SEL, 0x00, 10);  // Segment Selection, normal Registers
+    writeRegister(REG_COM_CONF, COM_CONF_BDU | COM_CONF_ADDR_AUTO, 10); // Mem-Reset, Block-Data-Update, Auto-Increment-addr
+
+    // SC7U22 requires two soft reset writes for reliable startup.
+    writeRegister(REG_SOFT_RST, SOFT_RESET_VALUE, 1);
+    writeRegister(REG_SOFT_RST, SOFT_RESET_VALUE, 1);
+    delay(RESET_DELAY_MS);
+
+    writeRegister(REG_SEG_SEL, 0x00, 10);  // Segment Selection, normal Registers
+    writeRegister(REG_COM_CONF, COM_CONF_BDU | COM_CONF_ADDR_AUTO, 10); // Block-Data-Update, Auto-Increment-addr
+
+    writeRegister(REG_INT1_OUT_SEL1, INT1_OUT_SEL1_GYR);   // Triger Int1 line when Gyro data is ready
+
+    writeRegister(REG_PWR_CTRL, 0x00, 1);               // Disable Temp, Gyro, ACC
+
+    // Configure ACC
+    writeRegister(REG_ACC_RANGE, ACC_RANGE_4G, 1);         // ACC range: 4g
+    writeRegister(REG_ACC_CONF,
+                  ACC_CONF_FILTER_PERF_HIGH | 
+                  ACC_CONF_BWP_NORM_AVG4 | ACC_CONF_ODR_800, 1); // Acc: Filter:   ODR:800,
+                  
+    // Configure Gyro
+    writeRegister(REG_GYR_RANGE, GYR_RANGE_2000DPS, 1);    // Gyro range: 2000dps
+    writeRegister(REG_GYR_CONF,
+                  GYR_CONF_FILTER_PERF_HIGH | GYR_CONF_NOISE_PERF_HIGH | // High performance, Noise Optimization on
+                  GYR_CONF_BWP_NORM_AVG4 | GYR_CONF_ODR_800, 1); // Gyro: Filter:      ODR:800,
+                  
+    // Enable Gyro/Acc
+    delay(5);
+    writeRegister(REG_PWR_CTRL,
+                  PWR_CTRL_TEMP_EN | PWR_CTRL_ACC_EN | PWR_CTRL_GYR_EN); // Enable Temp, Gyro and ACC
+
+    delay(SENSOR_START_DELAY_MS); 
+
+    return true;
+}
+
 bool IMU_SC7U22::initialize()
 {
-    Wire.setTimeOut(5);
+    IMU_Driver_I2C::initialize();
+    wire->setClock(400000);
+    wire->setTimeOut(2);
+
     DBGLN("Detecting SC7U22");
 
     if (!detect())
@@ -85,8 +93,7 @@ bool IMU_SC7U22::initialize()
         return false;
     }
 
-    // The sensor runs at 1600 Hz, but polling at 800 Hz leaves enough time for
-    // WiFi, PWM and the rest of the receiver processing.
+    // Start at 800hz
     gyroSampleRate = 800;
     period_us = 1000000 / gyroSampleRate;
 
@@ -95,27 +102,23 @@ bool IMU_SC7U22::initialize()
     gyroScaleDeg = 2000.0f / 32768.0f;
     gyroScaleRad = radians(gyroScaleDeg);
 
-    writeRegisterDelay(REG_SEG_SEL, 0x00, 1);
-    writeRegisterDelay(REG_COM_CONF, COM_CONF_BDU | COM_CONF_ADDR_AUTO, 1);
+    configure();
+    
+    int16_t ax,ay,az,gx,gy,gz;
+    int16_t ax1,ay1,az1;
 
-    // SC7U22 requires two reset writes for reliable startup.
-    writeRegisterDelay(REG_SOFT_RST, SOFT_RESET_VALUE, 1);
-    writeRegisterDelay(REG_SOFT_RST, SOFT_RESET_VALUE, RESET_DELAY_MS);
+    rawRead(&ax, &ay, &az, &gx, &gy, &gz);
+    delay(10);
+    rawRead(&ax1, &ay1, &az1, &gx, &gy, &gz);
 
-    writeRegisterDelay(REG_SEG_SEL, 0x00, 1);
-    writeRegisterDelay(REG_COM_CONF, COM_CONF_BDU | COM_CONF_ADDR_AUTO, 1);
-    writeRegisterDelay(REG_PWR_CTRL, 0x00, 1);
-    writeRegisterDelay(REG_ACC_RANGE, ACC_RANGE_4G, 1);
-    writeRegisterDelay(REG_GYR_RANGE, GYR_RANGE_2000DPS, 1);
-    writeRegisterDelay(REG_ACC_CONF,
-                       ACC_FILTER_PERF | ACC_BWP_OSR4_AVG1 | ACC_ODR_1600, 1);
-    writeRegisterDelay(REG_GYR_CONF,
-                       GYR_FILTER_PERF | GYR_BWP_OSR4_AVG1 | GYR_ODR_1600, 2);
-    writeRegisterDelay(REG_PWR_CTRL,
-                       PWR_CTRL_TEMP_EN | PWR_CTRL_ACC_EN | PWR_CTRL_GYR_EN,
-                       SENSOR_START_DELAY_MS);
+    if ((ax==ax1) && (ay==ay1) && (az==az1)) 
+    {
+        DBGLN("SC7U22 failed to configure, trying again");
+        configure();
+    }
 
-    DBGLN("SC7U22 initialized (1600Hz ODR, 800Hz polling)");
+
+    DBGLN("SC7U22 initialized");
     return true;
 }
 
@@ -135,7 +138,7 @@ bool IMU_SC7U22::rawRead(int16_t *ax, int16_t *ay, int16_t *az,
                          int16_t *gx, int16_t *gy, int16_t *gz)
 {
     uint8_t raw[12];
-    if (!readRegisterRepeatedStart(REG_ACC_XH, raw, sizeof(raw)))
+    if (!readRegister(REG_ACC_XH, raw, sizeof(raw)))
     {
         *ax = *ay = *az = 0;
         *gx = *gy = *gz = 0;
