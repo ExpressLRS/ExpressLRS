@@ -23,7 +23,7 @@ public:
 
     virtual uint8_t readRegister(uint8_t reg) = 0;
     virtual bool readRegister(uint8_t reg, uint8_t *data, size_t size) = 0;
-    virtual void writeRegister(uint8_t reg, uint8_t value) = 0;
+    virtual void writeRegister(uint8_t reg, uint8_t value, uint8_t delayMs = 0) = 0;
     void writeRegisterBits(uint8_t registerID, uint8_t mask, uint8_t value);
     void setupInterrupt(uint8_t pin);
     bool interruptReceived();
@@ -40,7 +40,7 @@ public:
     bool initialize() override;
     uint8_t readRegister(uint8_t reg) override;
     bool readRegister(uint8_t reg, uint8_t *data, size_t size) override;
-    void writeRegister(uint8_t reg, uint8_t value) override;
+    void writeRegister(uint8_t reg, uint8_t value, uint8_t delayMs = 0) override;
 
 protected:
     TwoWire *wire = nullptr;
@@ -54,7 +54,7 @@ public:
 
     uint8_t readRegister(uint8_t reg) override;
     bool readRegister(uint8_t reg, uint8_t *data, size_t size) override;
-    void writeRegister(uint8_t reg, uint8_t value) override;
+    void writeRegister(uint8_t reg, uint8_t value, uint8_t delayMs = 0) override;
 
 protected:
     SPISettings _spiSettings;

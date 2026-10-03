@@ -84,13 +84,19 @@ bool IMU_Driver_I2C::readRegister(uint8_t reg, uint8_t *data, size_t size)
     return r == size;
 }
 
-void IMU_Driver_I2C::writeRegister(uint8_t reg, uint8_t value)
+void IMU_Driver_I2C::writeRegister(uint8_t reg, uint8_t value, uint8_t delayMs)
 {
     uint8_t data = value;
     wire->beginTransmission(m_address);
     wire->write(reg);
     wire->write(&data, 1);
     wire->endTransmission();
+
+    if (delayMs != 0) 
+    {
+        delay(delayMs);
+    }
+
 }
 
 uint8_t IMU_Driver_SPI::readRegister(uint8_t reg)
@@ -122,16 +128,21 @@ bool IMU_Driver_SPI::readRegister(uint8_t reg, uint8_t *data, size_t size)
     return true;
 }
 
-void IMU_Driver_SPI::writeRegister(uint8_t reg, uint8_t value)
+void IMU_Driver_SPI::writeRegister(uint8_t reg, uint8_t value, uint8_t delayMs)
 {
     _spi.beginTransaction(_spiSettings);
     digitalWrite(cs_pin, LOW);
 
-    _spi.transfer(reg); // 写 = 最高位 0
+    _spi.transfer(reg);
     _spi.transfer(value);
 
     digitalWrite(cs_pin, HIGH);
     _spi.endTransaction();
+
+    if (delayMs != 0) 
+    {
+        delay(delayMs);
+    }
 }
 
 #endif 
