@@ -9,6 +9,7 @@
 
 #include "fuzz_harness.h"
 #include "sim_tx.h"
+#include "sim_tx_ota.h"
 
 const char *const fateNames[] = {"deliver", "drop", "corrupt", "truncate", "forged-crc"};
 
@@ -207,7 +208,10 @@ void channelDamage(Fate fate, OTA_Packet_s *pkt, uint8_t packetSize, uint8_t a, 
     default:
         break;
     }
-    // A corrupted packet that happens to pass the CRC, as seen from the RX side
+    // A corrupted packet that happens to pass the CRC with the nonce the RX is at
     if (fate == FORGE)
-        OtaGeneratePacketCrc(pkt);
+    {
+        txOtaSelect(tx.mode, packetSize, OtaNonce);
+        txOtaAddCrc(pkt);
+    }
 }

@@ -22,6 +22,7 @@
 #include "fuzz_harness.h"
 #include "sim_hardware.h"
 #include "sim_tx.h"
+#include "sim_tx_ota.h"
 
 extern ELRS_EEPROM eeprom;
 void setup();
@@ -101,8 +102,8 @@ static void slot()
     // The fuzzer does find real CRC collisions for damaged packets, they are no different to forged ones
     if (fate != DELIVER && fate != DROP)
     {
-        OTA_Packet_s probe = pkt;
-        if (OtaValidatePacketCrc(&probe))
+        txOtaSelect(tx.mode, tx.packetSize, OtaNonce);
+        if (txOtaCrcValid(&pkt))
             checksCrcCollision();
     }
 

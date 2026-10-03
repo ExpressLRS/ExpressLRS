@@ -31,6 +31,14 @@ TX_OTA_API void txOtaAddCrc(OTA_Packet_s *pkt)
     OtaGeneratePacketCrc(pkt);
 }
 
+// True if the packet's CRC is right for the selected packet size and nonce
+TX_OTA_API bool txOtaCrcValid(const OTA_Packet_s *pkt)
+{
+    // Validating clears the CRC bits of a std packet
+    OTA_Packet_s copy = *pkt;
+    return OtaValidatePacketCrc(&copy);
+}
+
 // Unpacks an RC packet the way a perfect RX would, without touching the RX under test
 TX_OTA_API void txOtaUnpackChannels(const OTA_Packet_s *pkt, uint32_t *channels)
 {
