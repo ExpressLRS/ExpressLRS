@@ -15,6 +15,9 @@
 
 SimTx tx;
 
+// Timestamp for something that has not happened yet: older than any interval the TX waits for
+constexpr int64_t LONG_AGO_MS = -1000000;
+
 // True when the TX sends full-res packets
 bool txIsFullRes()
 {
@@ -70,8 +73,8 @@ uint32_t txFreq()
 void txStart(uint64_t now, const uint8_t *uid)
 {
     txOtaStart(uid);
-    tx.lastSyncMs = -1000000;
-    tx.lastTelemetryMs = -1000000;
+    tx.lastSyncMs = LONG_AGO_MS;
+    tx.lastTelemetryMs = LONG_AGO_MS;
     tx.slotStart = now;
     tx.slotStartNs = tx.slotStart * 1000;
 }
@@ -137,7 +140,7 @@ void txPowerCycle()
 {
     tx.nonce = 0;
     tx.fhssPtr = 0;
-    tx.lastTelemetryMs = -1000000;
+    tx.lastTelemetryMs = LONG_AGO_MS;
     if (fuzzTrace)
         fprintf(stderr, "     TX: power cycled\n");
 }
