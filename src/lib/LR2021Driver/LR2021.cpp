@@ -239,7 +239,7 @@ void LR2021Driver::Config(const uint8_t bw, const uint8_t sf, const uint8_t cr, 
         CHECK("LR2021_RADIO_SET_RX_PATH_OC", hal.WriteCommand(LR2021_RADIO_SET_RX_PATH_OC, buf, sizeof(buf), radioNumber, 10000));
     }
 
-    WriteOutputPower(max(LR2021_POWER_MIN_HF_PA, LR2021_POWER_MIN_LF_PA), SX12XX_Radio_All);    // Force power into a good range for 900 & 2.4G
+    WriteOutputPower(max(LR2021_POWER_MIN_HF_PA, LR2021_POWER_MIN_LF_PA), radioNumber);    // Force power into a good range for 900 & 2.4G
     SetPaConfig(isSubGHz, radioNumber);
 
     pwrForceUpdate = true;              // force an update of the output power because the band may have changed, and we need to configure the power for the band.
@@ -782,6 +782,7 @@ bool ICACHE_RAM_ATTR LR2021Driver::RXnbISR(const SX12XX_Radio_Number_t radioNumb
     CHECK("CLEAR", hal.WriteCommand(LR2021_SYSTEM_CLEAR_RX_FIFO_OC, radioNumber));
     if (!RXdoneCallback(SX12XX_RX_OK))
     {
+        DecodeRssiSnr(radioNumber);
 #if defined(DEBUG_RCVR_SIGNAL_STATS)
         rxSignalStats[radioNumber == SX12XX_Radio_1 ? 0 : 1].fail_count++;
 #endif
