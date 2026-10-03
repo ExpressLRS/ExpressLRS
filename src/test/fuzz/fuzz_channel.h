@@ -14,7 +14,7 @@ extern const char *const fateNames[];
 
 extern bool rxLoopStalled; // RX loop() stalls for the rest of this TX slot, as if behind its interrupts
 
-void channelStart(const uint8_t *data, size_t size, size_t firstOpcode, int jitterUs, uint32_t jitterSeed);
+void channelStart(const uint8_t *data, size_t size, size_t firstOpcode, int jitterUs);
 bool channelActive();
 int channelJitter();
 bool channelTelemetryLost();

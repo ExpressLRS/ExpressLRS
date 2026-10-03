@@ -203,7 +203,7 @@ void fuzzRunInput(const uint8_t *data, size_t size)
     static const int driftDirection[] = {0, 1, -1, 0};
     tx.clockDriftMilliPpmPerS = driftDirection[bits(timing, 4, 2)] * MAX_CLOCK_DRIFT_PPM_PER_S * 1000;
     const int arrivalJitterUs = bits(timing, 6, 1) ? MAX_ARRIVAL_JITTER_US : 0;
-    channelStart(data, size, FUZZ_HEADER_BYTES, arrivalJitterUs, timing);
+    channelStart(data, size, FUZZ_HEADER_BYTES, arrivalJitterUs);
 
     // Clock and Serial hooks must be in place before any firmware code runs
     simInstall();

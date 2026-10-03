@@ -26,12 +26,14 @@ static int arrivalJitterUs;
 static std::mt19937 jitterRng;
 
 // Takes the test case's opcodes and jitter setting
-void channelStart(const uint8_t *data, size_t size, size_t firstOpcode, int jitterUs, uint32_t jitterSeed)
+void channelStart(const uint8_t *data, size_t size, size_t firstOpcode, int jitterUs)
 {
     input = data;
     inputSize = size;
     inputPos = firstOpcode;
     arrivalJitterUs = jitterUs;
+    // The jitter follows from the whole test case, so a seed replays with the same arrival times
+    std::seed_seq jitterSeed(data, data + size);
     jitterRng.seed(jitterSeed);
 }
 
