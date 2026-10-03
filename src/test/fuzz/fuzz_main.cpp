@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
+#include <iterator>
 #include <map>
 #include <random>
 #include <string>
@@ -32,15 +33,19 @@ void fuzzViolation(const std::string &kind, const std::string &detail)
 // The seed alone decides the test case. Keep this stable or recorded seeds stop reproducing.
 static std::vector<uint8_t> inputFromSeed(uint64_t seed)
 {
-    std::mt19937_64 rng(seed);
+    constexpr size_t MIN_INPUT_BYTES = FUZZ_HEADER_BYTES + 1;
+    constexpr size_t MAX_INPUT_BYTES = 256;
+    constexpr uint8_t OPCODE_DELIVER = 0;
+    // How healthy the link is: the share of opcodes that just deliver the packet. The rest are random.
     static const unsigned deliverPercent[] = {0, 50, 80, 95};
-    const unsigned deliver = deliverPercent[rng() % 4];
-    std::vector<uint8_t> in(4 + rng() % 253);
-    in[0] = rng();
-    in[1] = rng();
-    in[2] = rng();
-    for (size_t i = 3; i < in.size(); i++)
-        in[i] = (rng() % 100 < deliver) ? 0 : rng();
+
+    std::mt19937_64 rng(seed);
+    const unsigned deliver = deliverPercent[rng() % std::size(deliverPercent)];
+    std::vector<uint8_t> in(MIN_INPUT_BYTES + rng() % (MAX_INPUT_BYTES - MIN_INPUT_BYTES + 1));
+    for (size_t i = 0; i < FUZZ_HEADER_BYTES; i++)
+        in[i] = rng();
+    for (size_t i = FUZZ_HEADER_BYTES; i < in.size(); i++)
+        in[i] = (rng() % 100 < deliver) ? OPCODE_DELIVER : rng();
     return in;
 }
 

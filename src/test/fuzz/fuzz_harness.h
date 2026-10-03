@@ -6,6 +6,8 @@
 
 extern bool fuzzTrace;
 
+constexpr size_t FUZZ_HEADER_BYTES = 3; // test case setup, before the opcodes
+
 // Once per process, before any fork
 void fuzzInit();
 // Boots the RX and plays one test case against it. The firmware's state cannot be reset, so this
