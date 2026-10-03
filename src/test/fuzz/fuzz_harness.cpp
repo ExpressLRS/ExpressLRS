@@ -72,10 +72,9 @@ static void slot()
     // The TX listens for telemetry on this slot. The RX starts sending at its tock, just before the slot.
     if (txIsTelemetrySlot())
     {
-        static unsigned sentAtLastTelemetrySlot;
         const uint32_t freq = txFreq();
         advanceTo(tx.slotStart + tx.rate->interval - 1);
-        if (simRadio.packetsSent != sentAtLastTelemetrySlot && simRadio.freq == freq)
+        if (simRadio.packetsSent != tx.rxPacketsAtLastTelemetrySlot && simRadio.freq == freq)
         {
             const bool lost = channelTelemetryLost();
             if (!lost)
@@ -83,7 +82,7 @@ static void slot()
             if (fuzzTrace)
                 fprintf(stderr, "%5u %7.1fms TLM  txNonce=%u %s\n", tx.slotNum, simNow() / 1000.0, tx.nonce, lost ? "lost" : "heard");
         }
-        sentAtLastTelemetrySlot = simRadio.packetsSent;
+        tx.rxPacketsAtLastTelemetrySlot = simRadio.packetsSent;
         return;
     }
 

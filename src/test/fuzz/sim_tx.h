@@ -31,6 +31,7 @@ struct SimTx
     unsigned syncSlot;
     int64_t lastSyncMs;
     int64_t lastTelemetryMs;
+    unsigned rxPacketsAtLastTelemetrySlot; // the RX sent one this slot if its count has moved on
     unsigned slotNum;
     uint64_t slotStart;
     int64_t slotStartNs;
