@@ -56,6 +56,16 @@ static bool initialize()
                 driver = nullptr;
             }
         }
+
+        if (driver == nullptr && OPT_HAS_GYRO_LSM6DXX)
+        {
+            driver = new IMU_LSM6DXX_I2C();
+            if (!driver->initialize())
+            {
+                delete driver;
+                driver = nullptr;
+            }
+        }
     }
 
     // SPI Gyros

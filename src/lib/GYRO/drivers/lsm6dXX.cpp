@@ -9,15 +9,21 @@
 #define LSM6DSV16X_ADDRESS_HIGH 0x6B
 
 static uint8_t lsm6dID = 0;
+static bool  usingI2C = 0;
 
 /******************************
 ** Read STATUS_REG to get DataReady
 *******************************/
 static bool lsm6dxxAccGyroDataReady(IMU_Driver *driver)
 {
+    uint8_t bits;
     uint8_t status = driver->readRegister(LSM6DXX_REG_STATUS);
     // Check Accel (XL) and Gyro data available
-    uint8_t bits = LSM6DXX_VAL_STATUS_XLDA | LSM6DXX_VAL_STATUS_GDA;
+    if (lsm6dID != LSM6DS3_CHIP_ID) {
+        bits = LSM6DXX_VAL_STATUS_XLDA | LSM6DXX_VAL_STATUS_GDA;
+    } else {
+        bits = 0x02 | LSM6DXX_VAL_STATUS_GDA;
+    }
     return ((status & bits) == bits); // Has Gyro and Acce;
 }
 
@@ -28,9 +34,9 @@ static bool lsm6dxxDetect(IMU_Driver *driver)
 {
     // Read chip ID
     uint8_t id = driver->readRegister(LSM6DXX_REG_WHO_AM_I);
-    DBGLN("Gyro Id returned = 0x%x%x", id);
-    if (id != LSM6DSO_CHIP_ID && id != LSM6DSL_CHIP_ID)
-    { // 0x6C=LSM6DSO, 0x6A=LSM6DSL
+    DBGLN("Gyro Id returned = 0x%x", id);
+    if (id != LSM6DSO_CHIP_ID && id != LSM6DSL_CHIP_ID && id != LSM6DS3_CHIP_ID)
+    { // 0x69=LSM6DS3, 0x6C=LSM6DSO, 0x6A=LSM6DSL
         return false;
     }
 
@@ -38,33 +44,65 @@ static bool lsm6dxxDetect(IMU_Driver *driver)
     return true;
 }
 
-static void lsm6dxxConfig(IMU_Driver *driver)
+static void lsm6d_S3_Config(IMU_Driver *driver)
 {
     // Reset the device
-    driver->writeRegister(LSM6DXX_REG_CTRL3_C, 0x01); // SW_RESET
+    driver->writeRegister(LSM6DXX_REG_CTRL3_C, LSM6DXX_VAL_CTRL3_C_SW_RESET); // SW_RESET
     delay(100);
 
-    // Verify reset by reading back
-    // uint8_t ctrl3 = driver->readRegister(LSM6DXX_REG_CTRL3_C);
-    // DBGLN("SPI DEV CTRL3_C after reset: 0x%x", ctrl3);
+    // Configure interrupt pin 1 for gyro data ready only
+    driver->writeRegister(LSM6DXX_REG_INT1_CTRL, LSM6DXX_VAL_INT1_CTRL_DRDY_G);
+
+    // Disable interrupt pin 2
+    driver->writeRegister(LSM6DXX_REG_INT2_CTRL, LSM6DXX_VAL_INT2_CTRL_DISABLE);
+
+    // Configure accelerometer:
+    uint8_t data = (LSM6DXX_VAL_CTRL1_XL_ODR833 << 4) | // ODR 833Hz
+                   (LSM6DXX_VAL_CTRL1_XL_8G << 2) |     // 16G Scale
+                   (LSM6DS3_VAL_CTRL1_XL_FTYPE_100HZ);   // Filter to 100hz  (LSM6DS3 only)
+
+    driver->writeRegister(LSM6DXX_REG_CTRL1_XL, data);
+
+    // Configure gyro: ODR 833hz, ±2000dps
+    driver->writeRegister(LSM6DXX_REG_CTRL2_G,
+                          (LSM6DXX_VAL_CTRL2_G_ODR833 << 4) |  // ODR 1.6KHZ,  Original ODR 833Hz
+                          (LSM6DXX_VAL_CTRL2_G_2000DPS << 2)); // 2000dps scale
+
+    // Configure control register 3
+    // BDU: latch LSB/MSB during reads; prevents MSB from being updated while burst reading LSB/MSB
+    // set interrupt pins active high (def); set interrupt pins push/pull (def); set 4-wire SPI (def);
+    // enable auto-increment burst reads
+    driver->writeRegister(LSM6DXX_REG_CTRL3_C,
+                          LSM6DXX_VAL_CTRL3_C_BDU |                                                                 // output registers are not updated until MSB and LSB have been read (prevents MSB from being updated while burst reading LSB/MSB)
+                              LSM6DXX_VAL_CTRL3_C_H_LACTIVE | LSM6DXX_VAL_CTRL3_C_PP_OD | LSM6DXX_VAL_CTRL3_C_SIM | // Def 0s
+                              LSM6DXX_VAL_CTRL3_C_IF_INC);                                                          // enable auto-increment burst reads
+}
+
+
+static void lsm6d_SO_SL_Config(IMU_Driver *driver)
+{
+    // Reset the device
+    driver->writeRegister(LSM6DXX_REG_CTRL3_C, LSM6DXX_VAL_CTRL3_C_SW_RESET); // SW_RESET
+    delay(100);
 
     // Configure interrupt pin 1 for gyro data ready only
-    driver->writeRegister(LSM6DXX_REG_INT1_CTRL, LSM6DXX_VAL_INT1_CTRL_ENABLE);
+    driver->writeRegister(LSM6DXX_REG_INT1_CTRL, LSM6DXX_VAL_INT1_CTRL_DRDY_G);
 
     // Disable interrupt pin 2
     driver->writeRegister(LSM6DXX_REG_INT2_CTRL, LSM6DXX_VAL_INT2_CTRL_DISABLE);
 
     // Configure accelerometer:
     uint8_t data = (LSM6DXX_VAL_CTRL1_XL_ODR833 << 4) | // ODR 1.6KHZ,  Original ODR 833Hz
-                   (LSM6DXX_VAL_CTRL1_XL_16G << 2) |    // 16G Scale
-                   (LSM6DXX_VAL_CTRL1_XL_LPF1 << 1);    // Use output from LPF1
+                   (LSM6DXX_VAL_CTRL1_XL_8G << 2) |      // 16G Scale
+                   (LSM6DSO_VAL_CTRL1_XL_LPF1 << 1);    // Accel Use output from LPF1
+                 //(LSM6DSO_VAL_CTRL1_XL_LPF2 << 1);      // Accel Use output from LPF2
 
     driver->writeRegister(LSM6DXX_REG_CTRL1_XL, data);
 
     // Configure gyro: ODR 833hz, ±2000dps
     driver->writeRegister(LSM6DXX_REG_CTRL2_G,
-                          (LSM6DXX_VAL_CTRL2_G_ODR833 << 4) |      // ODR 833hz
-                              (LSM6DXX_VAL_CTRL2_G_2000DPS << 2)); // 2000dps scale
+                          (LSM6DXX_VAL_CTRL2_G_ODR833 << 4) |  // ODR 833Hz
+                          (LSM6DXX_VAL_CTRL2_G_2000DPS << 2)); // 2000dps scale
 
     // Configure control register 3
     // BDU: latch LSB/MSB during reads; prevents MSB from being updated while burst reading LSB/MSB
@@ -75,25 +113,35 @@ static void lsm6dxxConfig(IMU_Driver *driver)
                               LSM6DXX_VAL_CTRL3_C_H_LACTIVE | LSM6DXX_VAL_CTRL3_C_PP_OD | LSM6DXX_VAL_CTRL3_C_SIM | // Def 0s
                               LSM6DXX_VAL_CTRL3_C_IF_INC);                                                          // enable auto-increment burst reads
 
-    // Configure control register 4
+    // Configure control register 4   
     driver->writeRegister(LSM6DXX_REG_CTRL4_C,
-                          (LSM6DXX_VAL_CTRL4_C_DRDY_ENABLED | // enable accelerometer high performane mode;
-                           LSM6DXX_VAL_CTRL4_C_I2C_DISABLE |  // Disable I2C
-                           LSM6DXX_VAL_CTRL4_C_LPF1_SEL_G));  // enable gyro LPF1
+                        (LSM6DXX_VAL_CTRL4_C_DRDY_ENABLED | // enable accelerometer high performane mode;
+                        (usingI2C? LSM6DXX_VAL_CTRL4_C_SPI_DISABLE : LSM6DXX_VAL_CTRL4_C_I2C_DISABLE) |  // Disable I2C or SPI
+                        LSM6DXX_VAL_CTRL4_C_LPF1_SEL_G));  // enable gyro LPF1
+    
 
     // Configure control register 6 for Low Pass Filter (LPF1)
     driver->writeRegister(LSM6DXX_REG_CTRL6_C,
-                          (LSM6DXX_VAL_CTRL6_C_XL_HM_MODE | // High Performance Mode
-                                                            // LSM6DXX_VAL_CTRL6_C_FTYPE_99HZ // set gyro LPF1 cutoff 99Hz
-                           LSM6DXX_VAL_CTRL6_C_FTYPE_171HZ  // set gyro LPF1 cutoff 171Hz
-                           ));
+                        (LSM6DXX_VAL_CTRL6_C_XL_HM_MODE_HP_ENABLE | // High Performance Mode
+                        //LSM6DXX_VAL_CTRL6_C_FTYPE_49HZ  // set gyro LPF1 cutoff (Hz)
+                        LSM6DXX_VAL_CTRL6_C_FTYPE_171HZ  // set gyro LPF1 cutoff (Hz)
+                        ));
 
     // NEW: Configure control register 7
     // Set High Pass Filters for Accelerometer
     // Not needed
-    // writeReg(LSM6DXX_REG_CTRL7_G,
+    // writeRegister(LSM6DXX_REG_CTRL7_G,
     //    (LSM6DXX_VAL_CTRL7_G_HP_EN_G |    // enable gyro high-pass filter
     //     LSM6DXX_VAL_CTRL7_G_HPM_G_16));  // gyro HPF cutoff 16mHz
+
+    driver->writeRegister(LSM6DXX_REG_CTRL7_G,0); // Gyro High Performance Mode
+
+
+    // Accelerometer Low-Pass-Filter LPF2 
+    //driver->writeRegister(LSM6DXX_REG_CTRL8_XL,
+    //                        02 << 5  // ODR/20    888/20 = 44,  1.6khz/20=88
+    //                    );
+
 
     // Configure control register 9
     if (lsm6dID == LSM6DSO_CHIP_ID)
@@ -103,11 +151,23 @@ static void lsm6dxxConfig(IMU_Driver *driver)
     }
 }
 
+static void lsm6dxxConfig(IMU_Driver *driver)
+{   
+    if (lsm6dID == LSM6DS3_CHIP_ID) 
+    {
+        lsm6d_S3_Config(driver);
+    }
+    else
+    {
+        lsm6d_SO_SL_Config(driver);
+    }
+}
+
 static bool lsm6dxxAccGyroRead(IMU_Driver *driver, int16_t *ax, int16_t *ay, int16_t *az, int16_t *gx, int16_t *gy, int16_t *gz)
 {
     uint8_t data[12];
 
-    driver->readRegister(LSM6DXX_REG_OUTX_L_G, data, 12);
+    bool ok = driver->readRegister(LSM6DXX_REG_OUTX_L_G, data, 12);
 
     *gx = static_cast<int16_t>(data[0] | (data[1] << 8));
     *gy = static_cast<int16_t>(data[2] | (data[3] << 8));
@@ -116,15 +176,28 @@ static bool lsm6dxxAccGyroRead(IMU_Driver *driver, int16_t *ax, int16_t *ay, int
     *ax = static_cast<int16_t>(data[6] | (data[7] << 8));
     *ay = static_cast<int16_t>(data[8] | (data[9] << 8));
     *az = static_cast<int16_t>(data[10] | (data[11] << 8));
-    return true;
+
+    return ok;
+}
+
+const char *lsm6dxxIMUName(IMU_Driver *driver)
+{
+    switch (lsm6dID)
+    {
+    case LSM6DSO_CHIP_ID:
+        return "LSM6DSO";
+    case LSM6DSL_CHIP_ID:
+        return "LSM6DSL";
+    case LSM6DS3_CHIP_ID:
+        return "LSM6DS3";
+    default:
+        return "LSM6Dxx";
+    }
 }
 
 static bool lsm6dxxInit(IMU_Driver *driver)
 {
     bool found = false;
-
-    // Test The connection
-    DBGLN("Detecting LSM6DXX");
 
     for (int8_t i = 0; i < 5; i++)
     {
@@ -142,15 +215,25 @@ static bool lsm6dxxInit(IMU_Driver *driver)
         return false;
     }
 
-    DBGLN("LSM6DXX found!!");
+    DBGLN("%s found!!", lsm6dxxIMUName(driver));
 
-    driver->gyroSampleRate = 833;
+    if (lsm6dID == LSM6DS3_CHIP_ID || lsm6dID == LSM6DSO_CHIP_ID || lsm6dID == LSM6DSL_CHIP_ID)
+    {
+        driver->gyroSampleRate = 833;
+    } else {
+        driver->gyroSampleRate = 1000;
+    }
     driver->period_us = (1000000 / driver->gyroSampleRate);
 
     driver->accScaleG = 16 / 32768.0;        //   multiply adc by this to get Gs
     driver->acc1G_adc = 32768.0 / 16;        //   1G in adc values
 
-    driver->gyroScaleDeg = 2000.0 / 32768.0;              //   multiply adc by this to get deg°/s
+    driver->gyroScaleDeg = 2000.0 / 32768.0;              // 0.061f.  multiply adc by this to get deg°/s
+
+    // From Betaflight, seems that is not the same scale
+    // equivalent to 70 mdps/LSB, as specified in LSM6DSO datasheet section 4.1, symbol G_So
+    driver->gyroScaleDeg = 0.070f;              //   multiply adc by this to get deg°/s
+
     driver->gyroScaleRad = radians(driver->gyroScaleDeg); //   multiply adc by this to get rad°/s
 
     return true;
@@ -158,19 +241,13 @@ static bool lsm6dxxInit(IMU_Driver *driver)
 
 const char *IMU_LSM6DXX_SPI::GetMPUName()
 {
-    switch (lsm6dID)
-    {
-    case LSM6DSO_CHIP_ID:
-        return "LSM6DSO";
-    case LSM6DSL_CHIP_ID:
-        return "LSM6DSL";
-    default:
-        return "LSM6Dxx";
-    }
+    return lsm6dxxIMUName(this);
 }
 
 bool IMU_LSM6DXX_SPI::initialize()
 {
+    usingI2C = false;
+
     // Initialize CS
     cs_pin = GPIO_PIN_GYRO_NSS;
     int_pin = GPIO_PIN_GYRO_INT;
@@ -186,6 +263,8 @@ bool IMU_LSM6DXX_SPI::initialize()
         setupInterrupt(int_pin);
     }
 
+    // Test The connection
+    DBGLN("Detecting LSM6DXX (SPI)");
     if (lsm6dxxInit(this))
     {
         lsm6dxxConfig(this);
@@ -242,24 +321,27 @@ bool IMU_LSM6DXX_SPI::rawRead(int16_t *ax, int16_t *ay, int16_t *az, int16_t *gx
 
 const char *IMU_LSM6DXX_I2C::GetMPUName()
 {
-    switch (lsm6dID)
-    {
-    case LSM6DSO_CHIP_ID:
-        return "LSM6DSO";
-    case LSM6DSL_CHIP_ID:
-        return "LSM6DSL";
-    default:
-        return "LSM6Dxx";
-    }
+    return lsm6dxxIMUName(this);
 }
 
 bool IMU_LSM6DXX_I2C::initialize()
 {
-    m_address = LSM6DSV16X_ADDRESS_LOW;
-    if (lsm6dxxInit(this))
-    {
-        lsm6dxxConfig(this);
-        return true;
+    usingI2C = true;
+    IMU_Driver_I2C::initialize();
+    wire->setClock(400000);
+    wire->setTimeOut(2);
+    uint8_t addr[2] = { LSM6DSV16X_ADDRESS_LOW, LSM6DSV16X_ADDRESS_HIGH };
+
+    // Test The connection
+    for (uint8_t i=0;i<2;i++) {
+        m_address = addr[i];
+        
+        DBGLN("Detecting LSM6DXX (I2C) Addr=0x%x",m_address);
+        if (lsm6dxxInit(this))
+        {
+            lsm6dxxConfig(this);
+            return true;
+        }
     }
     return false;
 }
