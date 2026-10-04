@@ -1081,7 +1081,8 @@ static bool ICACHE_RAM_ATTR ProcessRfPacket_SYNC(uint32_t const now, OTA_Sync_s 
 
     // Will change the packet air rate in loop() if this changes
     ExpressLRS_nextAirRateIndex = proposedRateIdx;
-    updateSwitchModePendingFromOta(otaSync->switchEncMode);
+    uint8_t switchEncMode = otaSync->switchEncMode | otaSync->switchEncMode12 << 1;
+    updateSwitchModePendingFromOta(switchEncMode);
 
     // Update TLM ratio, should never be TLM_RATIO_STD/DISARMED, the TX calculates the correct value for the RX
     expresslrs_tlm_ratio_e TLMrateIn = (expresslrs_tlm_ratio_e)(otaSync->newTlmRatio + (uint8_t)TLM_RATIO_NO_TLM);
