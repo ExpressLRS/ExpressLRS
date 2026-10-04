@@ -2,6 +2,7 @@
 // simplified copy of tx_main.cpp.
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
 
 #include "common.h"
@@ -47,7 +48,7 @@ bool txSendsChannel(unsigned ch);
 bool txIsTelemetrySlot();
 uint32_t txFreq();
 
-void txStart(uint64_t now, const uint8_t *uid);
+void txStart(uint64_t now, const uint8_t *uid, const uint8_t *testCase, size_t testCaseSize);
 void txNextSlotTime();
 void txNextNonce();
 void txBuildPacket(OTA_Packet_s *pkt);

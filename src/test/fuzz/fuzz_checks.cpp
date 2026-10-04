@@ -29,11 +29,8 @@ static bool forgedCrcUsed;
 static unsigned packetsWithoutOutput;
 static uint32_t lastFrame[CRSF_NUM_CHANNELS]; // the last frame that was not flagged failsafe
 static bool lastFrameValid;
-// What each channel reads once received, by packet format (std, full-res) and switch mode
-static uint32_t expected[2][SWITCH_MODE_COUNT][CRSF_NUM_CHANNELS];
-// Packets in a row that carry every channel at least once, in any switch mode. The slowest is
-// Hybrid, which sends one of 7 switches per packet.
-constexpr unsigned PACKETS_FOR_ALL_CHANNELS = 64;
+// What the RX should hold for each channel: the packets it accepted, unpacked by the TX's OTA copy
+static uint32_t rxShouldHold[CRSF_NUM_CHANNELS];
 
 // True when the RX unpacks the way the TX packs
 static bool rxDecodesAsTxPacks()
@@ -102,11 +99,10 @@ static void unpackChannels(const uint8_t *packed, uint32_t *out)
     memcpy(out, channels, sizeof(channels));
 }
 
-// What a channel the TX sends reads on the wire once received
+// What a channel the RX has received reads on the wire
 static uint32_t expectedOnWire(unsigned ch)
 {
-    const uint32_t want = expected[txIsFullRes()][tx.mode][ch];
-    return proto == PROTO_SUMD ? CRSF_to_US(want) : want;
+    return proto == PROTO_SUMD ? CRSF_to_US(rxShouldHold[ch]) : rxShouldHold[ch];
 }
 
 // In failsafe mode "last position", a frame flagged failsafe holds each channel where it was
@@ -153,11 +149,14 @@ static void checkFrame(const uint32_t *emitted, bool flaggedFailsafe)
         const uint32_t minVal = proto == PROTO_SUMD ? CRSF_to_US(CRSF_CHANNEL_VALUE_EXT_MIN) : CRSF_CHANNEL_VALUE_EXT_MIN;
         if (txSendsChannel(ch))
         {
-            const uint32_t wantWire = expectedOnWire(ch);
             if (unset && enabled("leak"))
-                failChannel("leak", ch, emitted[ch], wantWire);
-            if (!unset && !forgedCrcUsed && emitted[ch] != wantWire && enabled("wrong-value"))
-                failChannel("wrong-value", ch, emitted[ch], wantWire);
+            {
+                char what[64];
+                snprintf(what, sizeof(what), "CH%u emitted %u, but has not been received", ch + 1, emitted[ch]);
+                fail("leak", what);
+            }
+            if (!unset && !forgedCrcUsed && emitted[ch] != expectedOnWire(ch) && enabled("wrong-value"))
+                failChannel("wrong-value", ch, emitted[ch], expectedOnWire(ch));
         }
         else if (unset && emitted[ch] != minVal && enabled("unset-not-min"))
         {
@@ -255,9 +254,15 @@ void checkOutput()
     b.erase(b.begin(), b.begin() + pos);
 }
 
-// Checks made when the RX accepts an RC packet
-void checkRcPacket()
+// Checks made when the RX accepts an RC packet. asSent is false if the packet was damaged or the
+// RX was at another nonce than the TX.
+void checkRcPacket(const OTA_Packet_s *pkt, bool asSent)
 {
+    if (asSent)
+    {
+        txOtaSelect(tx.mode, tx.packetSize, tx.nonce);
+        txOtaUnpackChannels(pkt, rxShouldHold);
+    }
     if (connectionState == connected && connectionHasModelMatch && modesAgree())
     {
         bool allReceived = true;
@@ -275,36 +280,12 @@ void checksCrcCollision()
     forgedCrcUsed = true;
 }
 
-// Works out what each channel reads after a clean round trip
-static void computeExpected()
-{
-    for (unsigned full = 0; full < 2; full++)
-    {
-        const uint8_t size = full ? OTA8_PACKET_SIZE : OTA4_PACKET_SIZE;
-        // sm12ch is full-res only
-        const unsigned modes = full ? SWITCH_MODE_COUNT : SWITCH_MODE_COUNT - 1;
-        for (unsigned mode = 0; mode < modes; mode++)
-        {
-            uint32_t *dst = expected[full][mode];
-            for (unsigned ch = 0; ch < CRSF_NUM_CHANNELS; ch++)
-                dst[ch] = CRSF_CHANNEL_VALUE_UNSET;
-            for (unsigned n = 0; n < PACKETS_FOR_ALL_CHANNELS; n++)
-            {
-                OTA_Packet_s pkt;
-                memset(&pkt, 0, sizeof(pkt));
-                txOtaSelect((OtaSwitchMode_e)mode, size, n);
-                txOtaPackChannels(&pkt, tx.channels);
-                txOtaUnpackChannels(&pkt, dst);
-            }
-        }
-    }
-}
-
 // Prepares the checks for one test case, whose frames are parsed as outputProtocol
 void checksStart(Proto outputProtocol)
 {
     const char *skip = getenv("FUZZ_SKIP");
     skipList = std::string(",") + (skip ? skip : "") + ",";
     proto = outputProtocol;
-    computeExpected();
+    for (auto &value : rxShouldHold)
+        value = CRSF_CHANNEL_VALUE_UNSET;
 }

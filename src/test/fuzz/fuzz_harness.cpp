@@ -126,7 +126,7 @@ static void slot()
         if (accepted && !nonceMatched)
             checksCrcCollision();
         if (accepted && pkt.std.type == PACKET_TYPE_RCDATA)
-            checkRcPacket();
+            checkRcPacket(&pkt, fate == DELIVER && nonceMatched);
         checkOutput();
     }
     trace("%5u %7.1fms %s txNonce=%u rxNonce=%u %-10s %s state=%d\n", tx.slotNum, simNow() / 1000.0, wasSync ? "SYNC" : "RC  ", tx.nonce,
@@ -134,18 +134,10 @@ static void slot()
     mainLoop();
 }
 
-// Reads FUZZ_TRACE and sets the channel values the TX sends
+// Reads FUZZ_TRACE
 void fuzzInit()
 {
     fuzzTrace = getenv("FUZZ_TRACE") != nullptr;
-
-    // Distinct values. The TX here always sends the arm flag set. A real TX can take that flag from CH5
-    // or from any switch, so CH5 is high to match the case where it comes from CH5.
-    constexpr uint32_t FIRST_CHANNEL_VALUE = 300;
-    constexpr uint32_t CHANNEL_VALUE_STEP = 80;
-    for (unsigned ch = 0; ch < CRSF_NUM_CHANNELS; ch++)
-        tx.channels[ch] = FIRST_CHANNEL_VALUE + ch * CHANNEL_VALUE_STEP;
-    tx.channels[4] = CRSF_CHANNEL_VALUE_2000;
 }
 
 // The count bits of a header byte starting at bit first
@@ -222,7 +214,7 @@ void fuzzRunInput(const uint8_t *data, size_t size)
     setup();
     simSerialOut.clear();
 
-    txStart(simNow(), uid);
+    txStart(simNow(), uid, data, size);
     trace("%s %uHz %s txMode=%d tlm=1:%u failsafe=%d clock=%+dppm drift=%+dppm/s jitter=%dus\n", protoNames[proto],
         1000000 / tx.rate->interval, txIsFullRes() ? "fullres" : "std", tx.mode, tx.tlmDenom, failsafeMode,
         tx.clockOffsetMilliPpm / 1000, tx.clockDriftMilliPpmPerS / 1000, arrivalJitterUs);

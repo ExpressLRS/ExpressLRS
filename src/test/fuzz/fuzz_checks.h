@@ -1,7 +1,8 @@
 // The checks made on every RC frame the RX emits, reported as VIOLATION <name>:
 //   leak               a channel the TX transmits was output before it was ever received, without
 //                      failsafe flagged
-//   wrong-value        a received channel was output with a value other than what the TX sent
+//   wrong-value        a received channel was output with a value other than the last one received
+//                      for it
 //   unset-not-min      a channel the TX never transmits was output as something other than minimum
 //   blackout           valid RC packets on a healthy link produce no output
 //   failsafe-not-held  the RX is set to hold the last position on failsafe, but after losing the
@@ -12,6 +13,7 @@
 #pragma once
 
 #include "common.h"
+#include "OTA.h"
 
 constexpr unsigned BLACKOUT_PACKETS = 40;  // valid packets, no output -> bug
 
@@ -22,5 +24,5 @@ extern const eSerialProtocol protoConfigValues[]; // what the RX is configured w
 void checksStart(Proto outputProtocol);
 void checksCrcCollision();
 void checkOutput();
-void checkRcPacket();
+void checkRcPacket(const OTA_Packet_s *pkt, bool asSent);
 void checkProtocol();

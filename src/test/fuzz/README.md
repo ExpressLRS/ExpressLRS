@@ -40,7 +40,7 @@ Every CRSF, SBUS and SUMD frame the receiver emits is checked:
 | Check | Fails when |
 |---|---|
 | `leak` | a channel the transmitter sends was output before it was ever received, without failsafe flagged |
-| `wrong-value` | a received channel was output with a value other than what was sent |
+| `wrong-value` | a received channel was output with a value other than the last one received for it |
 | `unset-not-min` | a channel the transmitter never sends was output as something other than minimum |
 | `blackout` | valid RC packets on a healthy link produce no output |
 | `failsafe-not-held` | the RX is set to hold the last position on failsafe, but after losing the link it output a channel at some other value than the last one it had |
@@ -93,16 +93,16 @@ in its place, it takes one from `/dev/urandom` and prints it:
 $ build/rx_fuzzer 1 5
 seed 3: VIOLATION leak on SBUS
   where     slot 1927, 333Hz fullres, txMode=1 rxMode=1, connected
-  what      CH1 emitted 0, expected 300
-  channels  - - - - - - - - 940 1020 1100 1180 1260 1340 1420 1500
+  what      CH1 emitted 0, but has not been received
+  channels  - - - - - - - - 954 1392 1106 1752 302 1540 1558 1406
 seed 4: VIOLATION unset-not-min on CRSF
   where     slot 19, 500Hz std, txMode=0 rxMode=0, connected
   what      CH13 emitted 2047, expected 0
-  channels  300 380 460 540 1792 699 775 851 927 1029 1105 1182 - 1792 - -
+  channels  622 1619 1443 512 1792 343 1080 267 1385 1131 1004 1512 - 1792 - -
 seed 5: VIOLATION unset-not-min on CRSF
   where     slot 176, 1000Hz std, txMode=0 rxMode=0, connected
   what      CH13 emitted 2047, expected 0
-  channels  300 380 460 540 1792 699 775 851 927 1029 1105 1182 - 1792 - -
+  channels  944 1060 1239 1624 1792 1334 368 1029 546 699 445 470 - 1792 - -
 seeds 1..5: 2 x unset-not-min:CRSF
 seeds 1..5: 1 x leak:SBUS
 ```
