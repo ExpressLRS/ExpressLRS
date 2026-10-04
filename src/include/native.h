@@ -29,6 +29,8 @@ typedef uint8_t byte;
 #define HEX 16
 #define DEC 10
 
+#define pgm_read_word(addr) (*reinterpret_cast<const uint16_t *>(addr))
+
 class Stream
 {
 public:
