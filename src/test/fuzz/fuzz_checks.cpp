@@ -206,7 +206,7 @@ constexpr size_t SUMD_CHANNELS_AT = 3;
 constexpr unsigned SUMD_EIGHTHS_SHIFT = 3;
 
 // Splits the captured serial bytes into frames and checks each
-void checkOutput()
+void checkRxFrames()
 {
     if (connectionState != disconnected)
         unflaggedFramesSinceLinkLost = 0;

@@ -52,7 +52,7 @@ static void mainLoop()
         return;
     loop();
     checkProtocol();
-    checkOutput();
+    checkRxFrames();
 }
 
 // Advances simulated time, running loop() once per millisecond
@@ -61,7 +61,7 @@ static void advanceTo(uint64_t t)
     while (simNow() < t)
     {
         const uint64_t step = simNow() + LOOP_PERIOD_US < t ? simNow() + LOOP_PERIOD_US : t;
-        simAdvanceTo(step, checkOutput);
+        simAdvanceTo(step, checkRxFrames);
         mainLoop();
     }
 }
@@ -127,7 +127,7 @@ static void slot()
         accepted = simRadioReceive((uint8_t *)&pkt, tx.packetSize);
         if (accepted && pkt.std.type == PACKET_TYPE_RCDATA)
             checkRcPacket(&pkt, asSent);
-        checkOutput();
+        checkRxFrames();
     }
     trace("%5u %7.1fms %s txNonce=%u rxNonce=%u %-10s %s state=%d\n", tx.slotNum, simNow() / 1000.0, wasSync ? "SYNC" : "RC  ", tx.nonce,
         OtaNonce, fateNames[fate], accepted ? "accepted" : "", connectionState);

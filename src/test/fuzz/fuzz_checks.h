@@ -26,6 +26,6 @@ extern const eSerialProtocol protoConfigValues[]; // what the RX is configured w
 
 void checksStart(Proto outputProtocol);
 void checksCrcCollision();
-void checkOutput();
+void checkRxFrames();
 void checkRcPacket(const OTA_Packet_s *pkt, bool asSent);
 void checkProtocol();
