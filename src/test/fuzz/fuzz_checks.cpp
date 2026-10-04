@@ -129,13 +129,13 @@ static void checkFrame(const uint32_t *emitted, bool flaggedFailsafe)
 {
     if (fuzzTrace)
         trace("    %s frame%s:%s\n", protoNames[proto], flaggedFailsafe ? " (failsafe)" : "", channelList(emitted, false).c_str());
-    // The frame that goes out between the link dropping and the driver being told carries the last
-    // values, which may have been decoded in a switch mode the RX has since left
     if (flaggedFailsafe)
     {
         checkFailsafeFrame(emitted);
         return;
     }
+    // The frame that goes out between the link dropping and the driver being told carries the last
+    // values, which may have been decoded in a switch mode the RX has since left
     if (connectionState == disconnected)
         return;
     memcpy(lastFrame, emitted, sizeof(lastFrame));

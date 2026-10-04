@@ -91,15 +91,20 @@ in its place, it takes one from `/dev/urandom` and prints it:
 
 ```
 $ build/rx_fuzzer 1 5
+seed 3: VIOLATION leak on SBUS
+  where     slot 1927, 333Hz fullres, txMode=1 rxMode=1, connected
+  what      CH1 emitted 0, expected 300
+  channels  - - - - - - - - 940 1020 1100 1180 1260 1340 1420 1500
 seed 4: VIOLATION unset-not-min on CRSF
   where     slot 19, 500Hz std, txMode=0 rxMode=0, connected
   what      CH13 emitted 2047, expected 0
   channels  300 380 460 540 1792 699 775 851 927 1029 1105 1182 - 1792 - -
 seed 5: VIOLATION unset-not-min on CRSF
-  where     slot 442, 1000Hz std, txMode=0 rxMode=0, connected
+  where     slot 176, 1000Hz std, txMode=0 rxMode=0, connected
   what      CH13 emitted 2047, expected 0
   channels  300 380 460 540 1792 699 775 851 927 1029 1105 1182 - 1792 - -
 seeds 1..5: 2 x unset-not-min:CRSF
+seeds 1..5: 1 x leak:SBUS
 ```
 
 Each failing seed gets a short report, up to three per kind. In the report for
@@ -114,8 +119,8 @@ seed 4:
 - `channels` is the receiver's 16 channel values, `-` for one it has never
   received.
 
-The last line counts the failing seeds of each kind and output protocol: 2 of
-the 5 seeds hit `unset-not-min` on CRSF.
+The last lines count the failing seeds of each kind and output protocol: 2 of
+the 5 seeds hit `unset-not-min` on CRSF and 1 hit `leak` on SBUS.
 
 `make repro SEED=4` replays that seed and prints every packet.
 
