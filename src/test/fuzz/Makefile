@@ -8,10 +8,14 @@ SEED ?= random
 COUNT ?= 1000000
 
 LIBDIRS := $(wildcard $(SRC)/lib/*/)
-CXXFLAGS := -std=c++17 -g -O1 -w -fsanitize=address,undefined -fno-sanitize=shift-base -fno-sanitize-recover=undefined \
+FIRMWARE_DIRS := $(SRC)/include $(LIBDIRS) $(SRC)/src $(SRC)/src/rx-serial
+CXXFLAGS := -std=c++17 -g -O1 -fsanitize=address,undefined -fno-sanitize=shift-base -fno-sanitize-recover=undefined \
 	-DTARGET_NATIVE -DTARGET_RX -DRADIO_SX128X=1 -DPROGMEM= \
-	-Istubs -include stubs/arduino_stubs.h -include $(SRC)/include/target/Unified_ESP_RX.h \
-	-I$(SRC)/include $(addprefix -I,$(LIBDIRS)) -I$(SRC)/src -I$(SRC)/src/rx-serial
+	-Istubs -include stubs/arduino_stubs.h -include target/Unified_ESP_RX.h
+# The firmware is built without warnings, as it is. The fuzzer's own files are built with them, and
+# see the firmware's headers as system headers so that only their own warnings show.
+FIRMWARE_FLAGS := -w $(addprefix -I,$(FIRMWARE_DIRS))
+HARNESS_FLAGS := -Wall -Wextra $(addprefix -isystem ,$(FIRMWARE_DIRS))
 
 # The firmware as built for an RX, minus what sim_hardware.cpp replaces: radio driver, hardware timer,
 # EEPROM, options and the device modules that need real peripherals
@@ -38,7 +42,9 @@ build/rx_fuzzer: $(OBJS)
 # The simulated TX gets its own copy of OTA.cpp, built with the packer. Everything in the copy except
 # the txOta*() functions is made local, so its globals are not the RX's.
 build/tx/%.o: CXXFLAGS += -DTARGET_TX -fvisibility=hidden
+build/tx/OTA.o: CXXFLAGS += $(FIRMWARE_FLAGS)
 build/tx/OTA.o: $(SRC)/lib/OTA/OTA.cpp $(HDRS)
+build/tx/sim_tx_ota.o: CXXFLAGS += $(HARNESS_FLAGS)
 build/tx/sim_tx_ota.o: sim_tx_ota.cpp $(HDRS)
 build/tx/%.o:
 	@mkdir -p $(dir $@)
@@ -52,12 +58,14 @@ build/tx_ota.o: build/tx/OTA.o build/tx/sim_tx_ota.o
 build/fw/%.o: $(SRC)/%.cpp $(HDRS)
 	@mkdir -p $(dir $@)
 	@echo "CXX $<"
-	@$(CXX) $(CXXFLAGS) -c $< -o $@
+	@$(CXX) $(CXXFLAGS) $(FIRMWARE_FLAGS) -c $< -o $@
 
+# Its stubs take the firmware's parameters and ignore most of them
+build/sim_hardware.o: HARNESS_FLAGS += -Wno-unused-parameter
 build/%.o: %.cpp $(HDRS)
 	@mkdir -p $(dir $@)
 	@echo "CXX $<"
-	@$(CXX) $(CXXFLAGS) -c $< -o $@
+	@$(CXX) $(CXXFLAGS) $(HARNESS_FLAGS) -c $< -o $@
 
 .PHONY: run repro clean
 run: build/rx_fuzzer
