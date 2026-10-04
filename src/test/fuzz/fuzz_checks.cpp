@@ -31,6 +31,7 @@ static uint32_t lastFrame[CRSF_NUM_CHANNELS]; // the last frame that was not fla
 static bool lastFrameValid;
 // What the RX should hold for each channel: the packets it accepted, unpacked by the TX's OTA copy
 static uint32_t rxShouldHold[CRSF_NUM_CHANNELS];
+static unsigned unflaggedFramesSinceLinkLost;
 
 // True when the RX unpacks the way the TX packs
 static bool rxDecodesAsTxPacks()
@@ -130,10 +131,14 @@ static void checkFrame(const uint32_t *emitted, bool flaggedFailsafe)
         checkFailsafeFrame(emitted);
         return;
     }
-    // The frame that goes out between the link dropping and the driver being told carries the last
-    // values, which may have been decoded in a switch mode the RX has since left
     if (connectionState == disconnected)
+    {
+        // One frame may go out between the link dropping and the driver being told. It carries the
+        // last values, which may have been decoded in a switch mode the RX has since left.
+        if (++unflaggedFramesSinceLinkLost > 1 && enabled("failsafe-not-flagged"))
+            fail("failsafe-not-flagged", "the link is lost, but RC frames keep going out without the failsafe flag");
         return;
+    }
     memcpy(lastFrame, emitted, sizeof(lastFrame));
     lastFrameValid = true;
     packetsWithoutOutput = 0;
@@ -203,6 +208,8 @@ constexpr unsigned SUMD_EIGHTHS_SHIFT = 3;
 // Splits the captured serial bytes into frames and checks each
 void checkOutput()
 {
+    if (connectionState != disconnected)
+        unflaggedFramesSinceLinkLost = 0;
     std::vector<uint8_t> &b = simSerialOut;
     if (protocolChanged())
     {
