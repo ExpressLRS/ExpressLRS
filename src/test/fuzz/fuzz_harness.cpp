@@ -109,24 +109,24 @@ static void slot()
     const Fate fate = channelNextFate(&damage);
     channelDamage(fate, &pkt, tx.packetSize, damage);
 
-    // The fuzzer does find real CRC collisions for damaged packets, they are no different to forged ones
-    if (fate != DELIVER && fate != DROP)
-    {
-        txOtaSelect(tx.mode, tx.packetSize, OtaNonce);
-        if (txOtaCrcValid(&pkt))
-            checksCrcCollision();
-    }
-
     bool accepted = false;
     if (fate != DROP)
     {
-        const bool nonceMatched = wasSync || OtaNonce == tx.nonce;
+        // The packet is undamaged, and the TX and the RX are at the same nonce. An RC packet's CRC
+        // depends on the nonce, a sync packet's does not.
+        const bool asSent = fate == DELIVER && (wasSync || OtaNonce == tx.nonce);
+        // Any other packet should fail the RX's CRC check. If it passes by chance, the RX takes in
+        // wrong data, and the checks need to know.
+        if (!asSent)
+        {
+            txOtaSelect(tx.mode, tx.packetSize, OtaNonce);
+            if (txOtaCrcValid(&pkt))
+                checksCrcCollision();
+        }
+
         accepted = simRadioReceive((uint8_t *)&pkt, tx.packetSize);
-        // The CRC is seeded with the nonce, so this is one more CRC collision
-        if (accepted && !nonceMatched)
-            checksCrcCollision();
         if (accepted && pkt.std.type == PACKET_TYPE_RCDATA)
-            checkRcPacket(&pkt, fate == DELIVER && nonceMatched);
+            checkRcPacket(&pkt, asSent);
         checkOutput();
     }
     trace("%5u %7.1fms %s txNonce=%u rxNonce=%u %-10s %s state=%d\n", tx.slotNum, simNow() / 1000.0, wasSync ? "SYNC" : "RC  ", tx.nonce,
