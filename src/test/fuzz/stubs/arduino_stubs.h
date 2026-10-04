@@ -46,9 +46,15 @@ struct FuzzFS
 };
 extern FuzzFS LittleFS;
 
+// The RX asks to reboot. Its state cannot be reset in this process, so the test case ends here.
+[[noreturn]] void fuzzRxRestarted();
+
 struct FuzzESP
 {
-    void restart() {}
+    void restart()
+    {
+        fuzzRxRestarted();
+    }
 };
 extern FuzzESP ESP;
 

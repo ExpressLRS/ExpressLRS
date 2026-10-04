@@ -45,6 +45,13 @@ void trace(const char *fmt, ...)
     va_end(args);
 }
 
+// The RX asked to reboot, which ends the test case. It is reported, so that it shows in the totals
+// if test cases start ending this way.
+void fuzzRxRestarted()
+{
+    fuzzViolation("rx-restart", "NOTE the RX asked to restart, which ends the test case");
+}
+
 // Runs the firmware's loop() once, then checks its output
 static void mainLoop()
 {
