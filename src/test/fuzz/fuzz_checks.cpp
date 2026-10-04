@@ -27,6 +27,8 @@ static std::string skipList; // FUZZ_SKIP with a comma at each end
 static Proto proto;
 static bool forgedCrcUsed;
 static unsigned packetsWithoutOutput;
+static uint32_t lastFrame[CRSF_NUM_CHANNELS]; // the last frame that was not flagged failsafe
+static bool lastFrameValid;
 // What each channel reads once received, by packet format (std, full-res) and switch mode
 static uint32_t expected[2][SWITCH_MODE_COUNT][CRSF_NUM_CHANNELS];
 // Packets in a row that carry every channel at least once, in any switch mode. The slowest is
@@ -100,6 +102,28 @@ static void unpackChannels(const uint8_t *packed, uint32_t *out)
     memcpy(out, channels, sizeof(channels));
 }
 
+// What a channel the TX sends reads on the wire once received
+static uint32_t expectedOnWire(unsigned ch)
+{
+    const uint32_t want = expected[txIsFullRes()][tx.mode][ch];
+    return proto == PROTO_SUMD ? CRSF_to_US(want) : want;
+}
+
+// In failsafe mode "last position", a frame flagged failsafe holds each channel where it was
+static void checkFailsafeFrame(const uint32_t *emitted)
+{
+    if (config.GetFailsafeMode() != FAILSAFE_LAST_POSITION || !lastFrameValid || forgedCrcUsed)
+        return;
+    for (unsigned ch = 0; ch < CRSF_NUM_CHANNELS; ch++)
+    {
+        // A packet after the last frame may have brought the channel's value
+        const bool heldLast = emitted[ch] == lastFrame[ch];
+        const bool receivedSince = txSendsChannel(ch) && emitted[ch] == expectedOnWire(ch);
+        if (!heldLast && !receivedSince && enabled("failsafe-not-held"))
+            failChannel("failsafe-not-held", ch, emitted[ch], lastFrame[ch]);
+    }
+}
+
 // Runs the checks on one RC frame the RX emitted
 static void checkFrame(const uint32_t *emitted, bool flaggedFailsafe)
 {
@@ -107,8 +131,15 @@ static void checkFrame(const uint32_t *emitted, bool flaggedFailsafe)
         trace("    %s frame%s:%s\n", protoNames[proto], flaggedFailsafe ? " (failsafe)" : "", channelList(emitted, false).c_str());
     // The frame that goes out between the link dropping and the driver being told carries the last
     // values, which may have been decoded in a switch mode the RX has since left
-    if (flaggedFailsafe || connectionState == disconnected)
+    if (flaggedFailsafe)
+    {
+        checkFailsafeFrame(emitted);
         return;
+    }
+    if (connectionState == disconnected)
+        return;
+    memcpy(lastFrame, emitted, sizeof(lastFrame));
+    lastFrameValid = true;
     packetsWithoutOutput = 0;
     if (!modesAgree())
         return;
@@ -122,8 +153,7 @@ static void checkFrame(const uint32_t *emitted, bool flaggedFailsafe)
         const uint32_t minVal = proto == PROTO_SUMD ? CRSF_to_US(CRSF_CHANNEL_VALUE_EXT_MIN) : CRSF_CHANNEL_VALUE_EXT_MIN;
         if (txSendsChannel(ch))
         {
-            const uint32_t want = expected[txIsFullRes()][tx.mode][ch];
-            const uint32_t wantWire = proto == PROTO_SUMD ? CRSF_to_US(want) : want;
+            const uint32_t wantWire = expectedOnWire(ch);
             if (unset && enabled("leak"))
                 failChannel("leak", ch, emitted[ch], wantWire);
             if (!unset && !forgedCrcUsed && emitted[ch] != wantWire && enabled("wrong-value"))

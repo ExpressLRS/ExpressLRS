@@ -43,6 +43,7 @@ Every CRSF, SBUS and SUMD frame the receiver emits is checked:
 | `wrong-value` | a received channel was output with a value other than what was sent |
 | `unset-not-min` | a channel the transmitter never sends was output as something other than minimum |
 | `blackout` | valid RC packets on a healthy link produce no output |
+| `failsafe-not-held` | in failsafe mode "last position", a frame flagged failsafe changed a channel's value |
 | `protocol-changed` | the configured serial protocol was changed by something received over the air |
 
 The build has AddressSanitizer and UndefinedBehaviorSanitizer on, so memory
