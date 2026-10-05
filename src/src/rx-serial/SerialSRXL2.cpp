@@ -14,6 +14,10 @@
 #if defined(CONFIG_IDF_TARGET_ESP32)
 #define SRXL2_HARDWARE_RX_BUSY() (uart_ll_get_rxfifo_len(UART_LL_GET_HW(0)) != 0 || \
     UART_LL_GET_HW(0)->status.st_urx_out != 0 || gpio_get_level(gpio_num_t(pin)) == 0)
+#elif defined(CONFIG_IDF_TARGET_ESP32C3) || defined(CONFIG_IDF_TARGET_ESP32S3)
+// C3/S3 keep the receive state machine in a separate register.
+#define SRXL2_HARDWARE_RX_BUSY() (uart_ll_get_rxfifo_len(UART_LL_GET_HW(0)) != 0 || \
+    UART_LL_GET_HW(0)->fsm_status.st_urx_out != 0 || gpio_get_level(gpio_num_t(pin)) == 0)
 #elif defined(PLATFORM_ESP32)
 #define SRXL2_HARDWARE_RX_BUSY() true // unsupported SoCs cannot start bus traffic
 #else
