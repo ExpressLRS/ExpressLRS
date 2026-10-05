@@ -4,7 +4,7 @@
 #include "common.h"
 #include "CRSFRouter.h"
 #include "../test_msp/mock_serial.h"
-#include "../../src/rx-serial/devSerialIO.h"
+#include "../../src/rx-serial/RCFrameState.h"
 using std::min;
 
 connectionState_e connectionState = connected;

@@ -2,7 +2,6 @@
 #include "SerialSRXL2.h"
 #include "CRSFRouter.h"
 #include "common.h"
-#include "devSerialIO.h"
 #if defined(PLATFORM_ESP32)
 #include "driver/gpio.h"
 #include "hal/uart_ll.h"
@@ -22,7 +21,7 @@
 #endif
 
 SerialSRXL2::SerialSRXL2(Stream *output, Stream *input, int8_t txPin)
-    : SerialIO(output, input), pin(txPin)
+    : SerialIO(output, input), pin(txPin), inputPort(input)
 {
     uint32_t uid = 0x12345678;
 #if defined(PLATFORM_ESP32)
@@ -103,7 +102,7 @@ void SerialSRXL2::sendQueuedData(uint32_t maxBytesToSend)
     synchronizeGeneration();
     link.setControlPermission(controlAllowed());
     completeTransmission(now);
-    const bool receivePending = _inputPort->available() > 0 || SRXL2_HARDWARE_RX_BUSY();
+    const bool receivePending = inputPort->available() > 0 || SRXL2_HARDWARE_RX_BUSY();
     if (receivePending) lastHardwareReceive = now;
     if (!transmitting && !receivePending && uint32_t(now - lastHardwareReceive) >= 174 && maxBytesToSend >= 16)
     {

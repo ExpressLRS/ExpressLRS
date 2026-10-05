@@ -7,7 +7,7 @@
 #include "config.h"
 #include "crsf_protocol.h"
 #include "device.h"
-#include "devSerialIO.h"
+#include "RCFrameState.h"
 
 #define NO_SERIALIO_INTERVAL 1000
 

@@ -59,7 +59,17 @@ Publication is limited to one CRSF frame every 100 ms, rotating among available 
 
 Base source is ExpressLRS tag 4.1.0, `a9d4a9cb5b5687c4c9d7e9e7fbdf44ad93651da6`. Hardware targets are pinned to `c8bb70d6ad08da08381fc898adf29b8ae40eae12`. Use PlatformIO 6.1.19, its pinned Espressif platforms, and the existing WebUI lockfile. No binding phrase or Wi-Fi credentials are included in the delivered image.
 
-From `src/html`, build the checked-in headers with `npm ci` and `npm run build:all`. Windows needs a native compiler for node-zopfli-es. This prepared workspace used an ignored Python Zopfli bridge when MSVC was unavailable; it recompressed the four original ER6 WebUI assets byte-identically. Exact local preparation is recorded in `src/.pio/environment.md`. The tracked build tooling and dependencies are unchanged.
+From `src/html`, install dependencies with `npm ci` and build the affected receiver headers:
+
+```powershell
+npm run build:lr1121-rx
+npm run build:sx128x-rx
+npm run build:sx127x-rx
+npm run build:sx128x-rx-8285
+npm run build:sx127x-rx-8285
+```
+
+The transmitter headers remain the exact upstream versions. `src/html/.gitattributes` keeps the HTML and icon build inputs in LF format to prevent Windows-only changes in compressed assets. The full ten-target build was checked; its transmitter payloads match upstream, with only platform-specific path comments differing. Windows needs a native compiler for node-zopfli-es. This prepared workspace used an ignored Python Zopfli bridge when MSVC was unavailable; it recompressed the four original ER6 WebUI assets byte-identically. Exact local preparation is recorded in `src/.pio/environment.md`. The tracked build tooling and dependencies are unchanged.
 
 From `src`, with native-test-only flags cleared:
 
@@ -96,5 +106,13 @@ $env:TMP = $env:TEMP
 ```
 
 The verifier requires a clean committed checkout, the embedded source revision, and the entire hardware configuration from the pinned hardware revision. Metadata/provenance regressions run with `python tools/test_verify_er6_image.py`.
+
+## Updating the fork
+
+Keep release changes on `feat/firma-smart-srxl2`, with `origin` pointing to the fork and `upstream` to ExpressLRS. Rebase or merge the chosen upstream release into that branch when upgrading; the current feature is based on 4.1.0. Review the remaining enum, receiver UART/reset/snapshot, WebUI/Lua and settings-validation integration points. Check that protocol ID 10 remains available and fits stored configuration before changing the base.
+
+The protocol and UART driver live in their own files. `SRXL2Config.h` owns capability/selection helpers, and `RCFrameState.h/.cpp` own the RF generation state. Upstream `SerialIO.h` and `devSerialIO.h` are unchanged. The small `native.h` compatibility addition is required to exercise the actual serial base class in tests. Preserve the RF generation reset, missing-channel handling and hardware RX guards when resolving conflicts, then rerun the native tests, receiver builds and image verifier above. Physical commissioning remains required after a firmware upgrade.
+
+AirPort is an independent mode and keeps its upstream precedence over a stale primary serial setting when serial pins are available. With no usable serial pins, its effective mode is disabled along with the serial driver. Mode and driver type must agree because RF handlers access AirPort-specific buffers. Check this invariant with `python tools/test_serial_setup.py`; it compiles the actual receiver factory and exercises all 16 stored protocol values with both AirPort states and both serial-pin availability states.
 
 Sources: [ER6 specifications](https://radiomasterrc.com/products/er6-2-4ghz-elrs-pwm-receiver), [ELRS serial wiring/update documentation](https://www.expresslrs.org/software/serial-protocols/), [Spektrum SRXL2](https://github.com/SpektrumRC/SRXL2), [Firma manual](https://www.spektrumrc.com/ProdInfo/Files/SPMXSE1085-Instruction-Sheet-EN.pdf), [MSRC Smart decoding](https://github.com/dgatf/msrc/blob/v1.10/board/project/sensor/smart_esc.c).

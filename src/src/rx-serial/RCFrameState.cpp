@@ -1,4 +1,4 @@
-#include "devSerialIO.h"
+#include "RCFrameState.h"
 
 #if defined(TARGET_RX) || defined(SRXL2_ADAPTER_TEST)
 SerialRCFrameState serialRCFrames[2];

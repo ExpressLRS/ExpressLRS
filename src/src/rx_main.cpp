@@ -1267,7 +1267,7 @@ static void setupSerial()
     bool hottTlmSerial = false;
     const bool smartSerial = config.GetSerialProtocol() == PROTOCOL_SRXL2;
 
-    if (!serialProtocolSupported(config.GetSerialProtocol(), supportsSRXL2()))
+    if (!firmwareOptions.is_airport && !serialProtocolSupported(config.GetSerialProtocol(), supportsSRXL2()))
     {
         serialIO = new SerialNOOP();
         BackpackOrLogStrm = new NullStream();
@@ -1276,6 +1276,7 @@ static void setupSerial()
 
     if (OPT_CRSF_RCVR_NO_SERIAL)
     {
+        firmwareOptions.is_airport = false;
         // For PWM receivers with no serial pins defined, only turn on the Serial port if logging is on
         #if defined(DEBUG_LOG) || defined(DEBUG_RCVR_LINKSTATS)
         #if defined(PLATFORM_ESP32_S3) && !defined(ESP32_S3_USB_JTAG_ENABLED)

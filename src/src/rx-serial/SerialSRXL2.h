@@ -2,6 +2,8 @@
 #if defined(TARGET_RX) || defined(SRXL2_ADAPTER_TEST)
 #include "SerialIO.h"
 #include "SRXL2.h"
+#include "SRXL2Config.h"
+#include "RCFrameState.h"
 class SerialSRXL2 : public SerialIO
 {
 public:
@@ -14,6 +16,7 @@ protected:
 private:
     SRXL2::Link link;
     int8_t pin;
+    Stream *inputPort;
     bool transmitting = false;
     uint32_t lastPublished = 0;
     uint8_t nextSensor = 0;

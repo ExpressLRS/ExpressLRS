@@ -37,6 +37,7 @@
 #include "devButton.h"
 #include "devAnalogVbat.h"
 #if defined(TARGET_RX)
+#include "SRXL2Config.h"
 #include "VbatCalibration.h"
 #endif
 #if defined(TARGET_RX) && defined(PLATFORM_ESP32)

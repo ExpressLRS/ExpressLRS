@@ -1,6 +1,7 @@
 #include "targets.h"
 #if !defined(UNIT_TEST)
 #include "RXEndpoint.h"
+#include "SRXL2Config.h"
 #include "FHSS.h"
 #include "POWERMGNT.h"
 #include "config.h"

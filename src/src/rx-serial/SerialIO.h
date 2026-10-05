@@ -121,6 +121,5 @@ private:
     const int defaultMaxSerialReadSize = 64;
     const int defaultMaxSerialWriteSize = 128;
 
-protected:
     Stream *_inputPort;
 };
