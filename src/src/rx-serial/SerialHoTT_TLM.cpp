@@ -84,17 +84,29 @@ void SerialHoTT_TLM::setRXMode()
 
 void SerialHoTT_TLM::processBytes(uint8_t *bytes, u_int16_t size)
 {
+    uint32_t now = millis();
+
+    if (connectionState != connected)
+    {
+        // suspend device discovery timer until receiver is connected
+        discoveryTimerStart = now;
+    }
+
+    // device discovery timer
+    if (discoveryMode && (now - discoveryTimerStart >= DISCOVERY_TIMEOUT))
+    {
+        discoveryMode = false;
+    }
+
     hottInputBuffer.pushBytes(bytes, size);
 
-    uint8_t bufferSize = hottInputBuffer.size();
-
-    if (bufferSize == sizeof(hottBusFrame))
+    if (hottInputBuffer.size() == sizeof(hottBusFrame))
     {
         // frame complete, prepare to poll next device after lead out time elapsed
-        lastPoll = millis() - HOTT_POLL_RATE + HOTT_LEAD_OUT;
+        lastPoll = now - HOTT_POLL_RATE + HOTT_LEAD_OUT;
 
         // fetch received serial data
-        hottInputBuffer.popBytes((uint8_t *)&hottBusFrame, bufferSize);
+        hottInputBuffer.popBytes((uint8_t *)&hottBusFrame, sizeof(hottBusFrame));
 
         // process received frame if CRC is ok
         if (hottBusFrame.payload[STARTBYTE_INDEX] == START_FRAME_B &&
@@ -104,26 +116,6 @@ void SerialHoTT_TLM::processBytes(uint8_t *bytes, u_int16_t size)
             processFrame();
         }
     }
-}
-
-void SerialHoTT_TLM::sendQueuedData(uint32_t maxBytesToSend)
-{
-    uint32_t now = millis();
-
-    if(connectionState != connected)
-    {
-        // suspend device discovery timer until receiver is connected
-        discoveryTimerStart = now;      
-    }
-
-    // device discovery timer
-    if (discoveryMode && (now - discoveryTimerStart >= DISCOVERY_TIMEOUT))
-    {
-        discoveryMode = false;
-    }
-
-    // device polling scheduler
-    scheduleDevicePolling(now);
 
     // CRSF packet scheduler
     scheduleCRSFtelemetry(now);
