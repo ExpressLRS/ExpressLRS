@@ -834,6 +834,7 @@ void ICACHE_RAM_ATTR TentativeConnection(unsigned long now)
     PFDloop.reset();
     setConnectionState(tentative);
     connectionHasModelMatch = false;
+    crsfRCFrameReset();
     ChannelDataReset();
     OtaResetChannelDataComplete();
     RXtimerState = tim_disconnected;
@@ -1366,6 +1367,7 @@ static void setupSerial()
 
     if (smartSerial) Serial.setTxBufferSize(0);
     Serial.begin(serialBaud, serialConfig, GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX, invert);
+    if (smartSerial) Serial.setRxFIFOFull(1);
 #endif
 
     if (firmwareOptions.is_airport)

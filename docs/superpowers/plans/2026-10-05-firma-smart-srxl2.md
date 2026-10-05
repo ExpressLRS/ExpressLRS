@@ -10,6 +10,8 @@
 
 **Spec:** `docs/superpowers/specs/2026-10-05-firma-smart-srxl2-design.md`
 
+**Execution status:** User-approved. Implementation, regression checks, documentation and the independent review fix pass are complete. This checklist records the source-commit checkpoint; the final post-commit image/manifest and delivery gates are recorded in `artifacts/validation.md`.
+
 ## Global Constraints
 
 - Base: ExpressLRS tag `4.1.0`, commit `a9d4a9cb5b5687c4c9d7e9e7fbdf44ad93651da6`; branch `feat/firma-smart-srxl2`.
@@ -60,35 +62,35 @@ TEST_ASSERT_EQUAL_HEX16(0x2AA0, SRXL2::encodeThrottle(0));
 TEST_ASSERT_EQUAL_HEX16(0xD554, SRXL2::encodeThrottle(2047));
 ```
 
-- [ ] Read the complete SRXL2 specification and inspect manufacturer telemetry definitions plus MSRC/GroundFlight Smart battery byte order. Record fixed packet sizes, timeout/handshake rules and golden packet vectors in the tests.
-- [ ] Establish clean baseline with `pio test -e native` from `src`, using `PLATFORMIO_BUILD_FLAGS=-DRegulatory_Domain_ISM_2400`. On Windows select an existing compatible native compiler; document the exact command. Diagnose baseline failures before attributing them to this change.
-- [ ] Write failing Unity tests in `src/test/test_srxl2/test_srxl2.cpp`: CRC known vector; handshake/control golden bytes; fragmented/concatenated input; malformed length/CRC/resynchronization; handshake/re-handshake; timer wrap; transmission-completion and response-window exclusion. Run `pio test -e native -f test_srxl2` and confirm failure is caused by the missing new implementation.
-- [ ] Implement the bounded encoder/parser and bus state in `src/lib/SRXL2/SRXL2.h` and `.cpp`; use fixed storage and existing CRC facilities where compatible. Pass those tests.
-- [ ] Add failing assertions for the specified nominal endpoints, lower/upper clamp, center `0x8000`, reserved low bits zero, inclusive neutral-band release, no motion before a fresh neutral sample, disconnect, missing authorized samples for 100 ms, model mismatch, team-race inhibition, and ESC/RF reconnect with non-neutral throttle. Assert rediscovery at 2 s without a valid reply, no rediscovery solely for sentinel optional fields, and no liveness from local TX echo. Implement explicit control permission/release state and pass the focused tests.
-- [ ] Add failing measurement tests: ESC field endianness/units and `0xFFFF`/`0xFF` sentinels; Smart battery subtypes/current/capacity/cells; per-field/group expiration; invalid replacement values; reconnect clearing; no fabricated consumption/percentage. Implement decoding and validity timestamps, then pass focused tests.
-- [ ] Commit the tested core and tests after a focused diff review.
+- [x] Read the complete SRXL2 specification and inspect manufacturer telemetry definitions plus MSRC/GroundFlight Smart battery byte order. Record fixed packet sizes, timeout/handshake rules and golden packet vectors in the tests.
+- [x] Establish clean baseline with `pio test -e native` from `src`, using `PLATFORMIO_BUILD_FLAGS=-DRegulatory_Domain_ISM_2400`. On Windows select an existing compatible native compiler; document the exact command. Diagnose baseline failures before attributing them to this change.
+- [x] Write failing Unity tests in `src/test/test_srxl2/test_srxl2.cpp`: CRC known vector; handshake/control golden bytes; fragmented/concatenated input; malformed length/CRC/resynchronization; handshake/re-handshake; timer wrap; transmission-completion and response-window exclusion. Run `pio test -e native -f test_srxl2` and confirm failure is caused by the missing new implementation.
+- [x] Implement the bounded encoder/parser and bus state in `src/lib/SRXL2/SRXL2.h` and `.cpp`; use fixed storage and existing CRC facilities where compatible. Pass those tests.
+- [x] Add failing assertions for the specified nominal endpoints, lower/upper clamp, center `0x8000`, reserved low bits zero, inclusive neutral-band release, no motion before a fresh neutral sample, disconnect, missing authorized samples for 100 ms, model mismatch, team-race inhibition, and ESC/RF reconnect with non-neutral throttle. Assert rediscovery at 2 s without a valid reply, no rediscovery solely for sentinel optional fields, and no liveness from local TX echo. Implement explicit control permission/release state and pass the focused tests.
+- [x] Add failing measurement tests: ESC field endianness/units and `0xFFFF`/`0xFF` sentinels; Smart battery subtypes/current/capacity/cells; per-field/group expiration; invalid replacement values; reconnect clearing; no fabricated consumption/percentage. Implement decoding and validity timestamps, then pass focused tests.
+- [x] Commit the tested core and tests after a focused diff review.
 
 ### Task 2: ER6 UART adapter and existing CRSF telemetry
 
 **Consumes:** Task 1's `SRXL2::Link` API and measurements. **Produces:** `SerialSRXL2(Stream *output, Stream *input, int8_t txPin)` implementing `sendRCFrame(bool, bool, uint32_t *)`, `processBytes(uint8_t *, uint16_t)`, `sendQueuedData(uint32_t)`, and safe destruction/reconfiguration.
 
-- [ ] Add failing checks that exercise actual adapter control gating and CRSF payload generation through the smallest runnable native harness/stubs compatible with existing `test_msp/mock_serial.h` and CRSF test patterns. Assert neutral on startup/mismatch/team-race/stale inputs, specified frame source IDs/endian values, source-sentinel suppression, voltage-only fallback, battery zero placeholders solely for unavailable capacity/percentage, and the 100 ms publication budget.
-- [ ] Implement `SerialSRXL2.h/.cpp`: use CH3 snapshots only when authorized; check current model/team-race/failsafe status before using cached input. Keep transmission and RX turnaround nonblocking in the main loop; observe actual UART transmit completion. Reuse existing half-duplex GPIO mapping and CRSF framing/router patterns. Disable debug/log output on the ESC UART.
-- [ ] Add primary `setupSerial()` selection in `rx_main.cpp` at 115200 8N1. Preserve GPIO/PWM assignments and existing adapter lifecycle. Unsupported builds must reject or safely disable Smart mode explicitly.
-- [ ] Pass focused core/adapter tests. Compile `pio run -e Unified_ESP32_2400_RX_via_UART` with `PLATFORMIO_BUILD_FLAGS=-DRegulatory_Domain_ISM_2400`; inspect size and warnings. A generic successful image is only build evidence at this stage.
-- [ ] Commit adapter and integration after reviewing every path that constructs, reconfigures or destroys the primary serial driver.
+- [x] Add failing checks that exercise actual adapter control gating and CRSF payload generation through the smallest runnable native harness/stubs compatible with existing `test_msp/mock_serial.h` and CRSF test patterns. Assert neutral on startup/mismatch/team-race/stale inputs, specified frame source IDs/endian values, source-sentinel suppression, voltage-only fallback, battery zero placeholders solely for unavailable capacity/percentage, and the 100 ms publication budget.
+- [x] Implement `SerialSRXL2.h/.cpp`: use CH3 snapshots only when authorized; check current model/team-race/failsafe status before using cached input. Keep transmission and RX turnaround nonblocking in the main loop; observe actual UART transmit completion. Reuse existing half-duplex GPIO mapping and CRSF framing/router patterns. Disable debug/log output on the ESC UART.
+- [x] Add primary `setupSerial()` selection in `rx_main.cpp` at 115200 8N1. Preserve GPIO/PWM assignments and existing adapter lifecycle. Unsupported builds must reject or safely disable Smart mode explicitly.
+- [x] Pass focused core/adapter tests. Compile `pio run -e Unified_ESP32_2400_RX_via_UART` with `PLATFORMIO_BUILD_FLAGS=-DRegulatory_Domain_ISM_2400`; inspect size and warnings. A generic successful image is only build evidence at this stage.
+- [x] Commit adapter and integration after reviewing every path that constructs, reconfigures or destroys the primary serial driver.
 
 ### Task 3: Selectable settings, complete firmware and delivery
 
 **Consumes:** The working adapter. **Produces:** **Spektrum Smart** protocol selection, an ER6-configured firmware image, passing regression evidence, committed instructions and a rollback path.
 
-- [ ] Add a focused configuration regression check: old protocol IDs remain 0-9, Smart is 10 and fits four-bit storage, existing config version/layout is unchanged, WebUI AirPort remains the final UI-only option, and Lua/WebUI enumerate matching protocol names. Exercise unsupported-platform selection validation.
-- [ ] Append the primary protocol enum and Lua string, insert the WebUI option before AirPort, and add capability/configuration validation without altering secondary serial settings. Pass the configuration check.
-- [ ] In `src/html`, run `npm ci` and `npm run build:all` using the repository's pinned tooling; include regenerated headers. Confirm the new option and old options in the actual built output.
-- [ ] Run the full native regression suite and focused adapter/configuration checks. Compile the ER6 ESP32 receiver and one existing ESP8266 receiver target to detect unsupported-platform regressions. Repeat only checks affected by subsequent fixes.
+- [x] Add a focused configuration regression check: old protocol IDs remain 0-9, Smart is 10 and fits four-bit storage, existing config version/layout is unchanged, WebUI AirPort remains the final UI-only option, and Lua/WebUI enumerate matching protocol names. Exercise unsupported-platform selection validation.
+- [x] Append the primary protocol enum and Lua string, insert the WebUI option before AirPort, and add capability/configuration validation without altering secondary serial settings. Pass the configuration check.
+- [x] In `src/html`, run `npm ci` and `npm run build:all` using the repository's pinned tooling; include regenerated headers. Confirm the new option and old options in the actual built output. Windows preparation used `npm ci --ignore-scripts` and an ignored genuine-Zopfli bridge after the native addon failed for absent MSVC; four baseline assets reproduced byte-identically, all ten builds and forty gzip assets passed.
+- [x] Run the full native regression suite and focused adapter/configuration checks. Compile the ER6 ESP32 receiver and one existing ESP8266 receiver target to detect unsupported-platform regressions. Repeat only checks affected by subsequent fixes.
 - [ ] Pin/record the `ExpressLRS/targets` revision and build with `board_config = radiomaster.rx_2400.er6` using upstream unified configuration. Verify the resulting binary embeds the ER6 product identity, correct serial GPIOs and all six PWM GPIOs. Record the source/hardware revisions, build command, file size and SHA-256 in the delivery manifest. Do not include binding phrases or Wi-Fi secrets.
-- [ ] Write `docs/firma-smart-er6.md`: custom-image installation; primary protocol selection; CH3 throttle mixer and six-PWM mapping; cable pinout/voltage checks; ESC calibration; Smart-battery-dependent readings; electrical RPM and reported current meanings; unsupported metadata; explicit capacity/percentage zero-placeholder and alarm limitations; restoring official ER6 4.1 firmware. Include bench checks for neutral/startup, forward/brake/reverse, ESC reset, RF loss, model mismatch and reconnect. Label these physical checks pending.
-- [ ] Request independent whole-change correctness review, including the five Review Focus cases. Fix confirmed findings and rerun affected verification.
+- [x] Write `docs/firma-smart-er6.md`: custom-image installation; primary protocol selection; CH3 throttle mixer and six-PWM mapping; cable pinout/voltage checks; ESC calibration; Smart-battery-dependent readings; electrical RPM and reported current meanings; unsupported metadata; explicit capacity/percentage zero-placeholder and alarm limitations; restoring official ER6 4.1 firmware. Include bench checks for neutral/startup, forward/brake/reverse, ESC reset, RF loss, model mismatch and reconnect. Label these physical checks pending.
+- [x] Request independent whole-change correctness review, including the five Review Focus cases. Fix confirmed findings and rerun affected verification.
 - [ ] Run `git diff --check`, inspect the final intended diff and artifact manifest, commit the verified source/docs, and report links to the plan, guide, firmware and validation results. Do not flash hardware or publish a PR unless requested.
 
 ## Execution Recommendation

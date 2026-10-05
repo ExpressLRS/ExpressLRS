@@ -17,7 +17,9 @@ private:
     bool transmitting = false;
     uint32_t lastPublished = 0;
     uint8_t nextSensor = 0;
+    uint32_t generation = 0, lastHardwareReceive = 0;
     bool controlAllowed() const;
+    bool synchronizeGeneration();
     void completeTransmission(uint32_t now);
     void publishTelemetry(uint32_t now);
 };

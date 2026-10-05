@@ -1,6 +1,6 @@
 # ER6 Firma Smart/SRXL2 design
 
-Status: proposed for written review before implementation.
+Status: user-approved and implemented. Software tests and receiver builds pass; physical ER6/Firma commissioning remains pending. Final image provenance and delivery evidence are recorded in `artifacts/manifest.json` and `artifacts/validation.md` after the source commit.
 
 ## Intended outcome
 

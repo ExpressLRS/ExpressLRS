@@ -249,11 +249,10 @@ void Link::decodeTelemetry(const uint8_t *p, uint32_t now)
 
 Telemetry Link::telemetry(uint32_t now) const
 {
-    Telemetry result = data;
-    Reading *fields[] = {&result.rpm,&result.voltage,&result.current,&result.temperatureFet,&result.temperatureBec,
-        &result.voltageBec,&result.currentBec,&result.batteryCurrent,&result.consumption,&result.batteryTemperature};
+    Reading *fields[] = {&data.rpm,&data.voltage,&data.current,&data.temperatureFet,&data.temperatureBec,
+        &data.voltageBec,&data.currentBec,&data.batteryCurrent,&data.consumption,&data.batteryTemperature};
     for (Reading *r : fields) r->valid &= uint32_t(now - r->updatedUs) < STALE_US;
-    for (Reading &r : result.cells) r.valid &= uint32_t(now - r.updatedUs) < CELL_STALE_US;
-    return result;
+    for (Reading &r : data.cells) r.valid &= uint32_t(now - r.updatedUs) < CELL_STALE_US;
+    return data;
 }
 }

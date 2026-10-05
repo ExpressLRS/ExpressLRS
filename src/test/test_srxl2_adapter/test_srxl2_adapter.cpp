@@ -4,20 +4,25 @@
 #include "common.h"
 #include "CRSFRouter.h"
 #include "../test_msp/mock_serial.h"
+#include "../../src/rx-serial/devSerialIO.h"
 using std::min;
 
 connectionState_e connectionState = connected;
 bool connectionHasModelMatch = true, teamraceHasModelMatch = true;
 bool crsfBatterySensorDetected = false;
 CRSFRouter crsfRouter;
+static bool uartReceiving = false;
 static uint32_t nowUs;
 static unsigned long testMicros() { return nowUs; }
 
 // Substitute only the clock and GPIO boundary; execute the actual adapter/router.
 #define SRXL2_ADAPTER_TEST
+#include "../../src/rx-serial/RCFrameState.cpp"
+#define SRXL2_HARDWARE_RX_BUSY() uartReceiving
 #define micros testMicros
 #include "../../src/rx-serial/SerialSRXL2.cpp"
 #undef micros
+#undef SRXL2_HARDWARE_RX_BUSY
 #include "../../src/rx-serial/SerialIO.cpp"
 
 class Capture : public CRSFConnector
@@ -37,6 +42,8 @@ void setUp()
     connectionState = connected;
     connectionHasModelMatch = teamraceHasModelMatch = true;
     capture.frames.clear();
+    uartReceiving = false;
+    for (auto &frame : serialRCFrames) frame = SerialRCFrameState{};
     capture.addDevice(CRSF_ADDRESS_RADIO_TRANSMITTER);
     crsfRouter.addConnector(&capture);
 }
@@ -176,6 +183,72 @@ void test_adapter_voltage_fallback_and_sentinel_suppression()
     TEST_ASSERT_FALSE(crsfBatterySensorDetected);
 }
 
+void test_rf_resync_between_callbacks_invalidates_actual_frame_state()
+{
+    std::string in, out;
+    StringStream rx(in), tx(out);
+    SerialSRXL2 driver(&tx, &rx, 1);
+    establish(driver, in, out);
+    uint32_t channels[16] = {};
+    channels[2] = 1811;
+    nowUs = 63000;
+    driver.sendRCFrame(true, false, channels);
+    send(driver, 63000);
+    send(driver, 64500);
+    crsfRCFrameAvailable(); // pending old RF frame before TentativeConnection
+    connectionState = tentative;
+    crsfRCFrameReset();
+    connectionHasModelMatch = false;
+    // GotConnection runs before any adapter callback can observe tentative.
+    connectionState = connected;
+    connectionHasModelMatch = true;
+    TEST_ASSERT_FALSE(serialRCFrames[0].takeAvailable());
+    TEST_ASSERT_EQUAL(CRSF_CHANNEL_VALUE_UNSET, serialChannelValue(CRSF_CHANNEL_VALUE_UNSET, true));
+    send(driver, 73000);
+    assert_neutral(out); // cached motion must already be revoked
+    send(driver, 74500);
+    channels[2] = 992;
+    crsfRCFrameAvailable();
+    nowUs = 80000;
+    driver.sendRCFrame(serialRCFrames[0].takeAvailable(), false, channels);
+    channels[2] = 1811;
+    crsfRCFrameAvailable();
+    nowUs = 81000;
+    driver.sendRCFrame(serialRCFrames[0].takeAvailable(), false, channels);
+    send(driver, 83000);
+    TEST_ASSERT_EQUAL(0x54, uint8_t(out[out.size() - 4]));
+    TEST_ASSERT_EQUAL(0xD5, uint8_t(out[out.size() - 3]));
+}
+
+void test_late_receive_hardware_and_partial_reply_block_transmit()
+{
+    std::string in, out;
+    StringStream rx(in), tx(out);
+    SerialSRXL2 driver(&tx, &rx, 1);
+    establish(driver, in, out);
+    send(driver, 153000); // telemetry grant
+    send(driver, 154400);
+    const size_t written = out.size();
+    uartReceiving = true; // receive start bit/FSM, no completed byte yet
+    send(driver, 163000);
+    TEST_ASSERT_EQUAL(written, out.size());
+    uartReceiving = false;
+    send(driver, 163173);
+    TEST_ASSERT_EQUAL(written, out.size());
+    in.append(reinterpret_cast<const char *>(esc), 3); // delayed FIFO delivery
+    send(driver, 163174);
+    TEST_ASSERT_EQUAL(written, out.size());
+    nowUs = 163200;
+    driver.processSerialInput();
+    send(driver, 164000);
+    TEST_ASSERT_EQUAL(written, out.size());
+    input(driver, in, esc + 3, sizeof(esc) - 3, 164100);
+    send(driver, 164273);
+    TEST_ASSERT_EQUAL(written, out.size());
+    send(driver, 164274);
+    TEST_ASSERT_EQUAL(written + 16, out.size());
+}
+
 int main()
 {
     UNITY_BEGIN();
@@ -183,5 +256,7 @@ int main()
     RUN_TEST(test_adapter_missing_frames_do_not_refresh_cached_throttle);
     RUN_TEST(test_adapter_real_crsf_payload_and_budget);
     RUN_TEST(test_adapter_voltage_fallback_and_sentinel_suppression);
+    RUN_TEST(test_rf_resync_between_callbacks_invalidates_actual_frame_state);
+    RUN_TEST(test_late_receive_hardware_and_partial_reply_block_transmit);
     return UNITY_END();
 }

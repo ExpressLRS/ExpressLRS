@@ -35,7 +35,7 @@ private:
     bool txBusy = false, requestReply = false, waitingReply = false, helloPending = false;
     bool broadcastTx = false, cellCountKnown = false;
     uint8_t input[80] = {}, inputSize = 0;
-    Telemetry data{};
+    mutable Telemetry data{}; // expiry is cached; a counter wrap must not revive it
     void restart(uint32_t nowUs);
     void processFrame(uint32_t nowUs);
     void decodeTelemetry(const uint8_t *payload, uint32_t nowUs);

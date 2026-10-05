@@ -2,11 +2,23 @@
 #include "SerialSRXL2.h"
 #include "CRSFRouter.h"
 #include "common.h"
+#include "devSerialIO.h"
 #if defined(PLATFORM_ESP32)
 #include "driver/gpio.h"
 #include "hal/uart_ll.h"
 #include "esp32-hal-matrix.h"
 #include "soc/gpio_sig_map.h"
+#endif
+
+#ifndef SRXL2_HARDWARE_RX_BUSY
+#if defined(CONFIG_IDF_TARGET_ESP32)
+#define SRXL2_HARDWARE_RX_BUSY() (uart_ll_get_rxfifo_len(UART_LL_GET_HW(0)) != 0 || \
+    UART_LL_GET_HW(0)->status.st_urx_out != 0 || gpio_get_level(gpio_num_t(pin)) == 0)
+#elif defined(PLATFORM_ESP32)
+#define SRXL2_HARDWARE_RX_BUSY() true // unsupported SoCs cannot start bus traffic
+#else
+#define SRXL2_HARDWARE_RX_BUSY() false
+#endif
 #endif
 
 SerialSRXL2::SerialSRXL2(Stream *output, Stream *input, int8_t txPin)
@@ -30,6 +42,8 @@ SerialSRXL2::SerialSRXL2(Stream *output, Stream *input, int8_t txPin)
     // Open-drain idle-high releases the bus and RX can capture an immediate reply.
     link.reset(uid, micros());
     lastPublished = micros();
+    generation = serialRCFrames[0].generation;
+    lastHardwareReceive = micros();
     crsfBatterySensorDetected = false;
 }
 
@@ -46,11 +60,22 @@ bool SerialSRXL2::controlAllowed() const
     return !failsafe && connectionState == connected && connectionHasModelMatch && teamraceHasModelMatch;
 }
 
+bool SerialSRXL2::synchronizeGeneration()
+{
+    const uint32_t current = serialRCFrames[0].generation;
+    if (generation == current) return true;
+    generation = current;
+    link.setControlPermission(false);
+    return false;
+}
+
 uint32_t SerialSRXL2::sendRCFrame(bool frameAvailable, bool, uint32_t *channels)
 {
-    const bool allowed = controlAllowed() && channels && channels[2] != CRSF_CHANNEL_VALUE_UNSET;
+    const bool sameGeneration = synchronizeGeneration();
+    const bool allowed = controlAllowed() && channels && channels[2] != CRSF_CHANNEL_VALUE_UNSET &&
+        serialRCFrames[0].deliveredGeneration == serialRCFrames[0].generation;
     link.setControlPermission(allowed);
-    if (allowed && frameAvailable) link.setThrottle(channels[2], micros());
+    if (sameGeneration && allowed && frameAvailable) link.setThrottle(channels[2], micros());
     return 1;
 }
 
@@ -75,9 +100,12 @@ void SerialSRXL2::processBytes(uint8_t *bytes, uint16_t size)
 void SerialSRXL2::sendQueuedData(uint32_t maxBytesToSend)
 {
     const uint32_t now = micros();
+    synchronizeGeneration();
     link.setControlPermission(controlAllowed());
     completeTransmission(now);
-    if (!transmitting && maxBytesToSend >= 16)
+    const bool receivePending = _inputPort->available() > 0 || SRXL2_HARDWARE_RX_BUSY();
+    if (receivePending) lastHardwareReceive = now;
+    if (!transmitting && !receivePending && uint32_t(now - lastHardwareReceive) >= 174 && maxBytesToSend >= 16)
     {
         SRXL2::Packet packet{};
         if (link.nextPacket(now, packet))

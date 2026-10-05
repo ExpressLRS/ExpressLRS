@@ -450,6 +450,7 @@ static void GetConfiguration(AsyncWebServerRequest *request)
     const auto settings = json["settings"].to<JsonObject>();
     #if defined(TARGET_RX)
     cfg["serial-protocol"] = config.GetSerialProtocol();
+    cfg["srxl2-supported"] = supportsSRXL2();
     #if defined(PLATFORM_ESP32)
     if ((GPIO_PIN_SERIAL1_RX != UNDEF_PIN && GPIO_PIN_SERIAL1_TX != UNDEF_PIN) || GPIO_PIN_PWM_OUTPUTS_COUNT > 0)
     {
@@ -646,7 +647,18 @@ static void JsonUidToConfig(JsonVariant &json)
 }
 static void UpdateConfiguration(AsyncWebServerRequest *request, JsonVariant &json)
 {
-  uint8_t protocol = json["serial-protocol"] | 0;
+  const JsonVariantConst serialValue = json["serial-protocol"];
+  if (!serialValue.isNull() && !serialValue.is<int>())
+  {
+    request->send(400, "text/plain", "Invalid serial protocol");
+    return;
+  }
+  const int protocol = serialValue | int(config.GetSerialProtocol());
+  if (protocol < 0 || protocol > 255 || !serialProtocolSupported(protocol, supportsSRXL2()))
+  {
+    request->send(400, "text/plain", "Unsupported serial protocol");
+    return;
+  }
   config.SetSerialProtocol((eSerialProtocol)protocol);
 
 #if defined(PLATFORM_ESP32)

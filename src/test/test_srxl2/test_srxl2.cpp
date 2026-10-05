@@ -282,6 +282,22 @@ void test_timer_wrap()
     TEST_ASSERT_EQUAL_HEX16(0xD554, channel(packet));
 }
 
+void test_expired_optional_measurements_do_not_revive_after_full_wrap()
+{
+    SRXL2::Link link;
+    connect(link);
+    feed(link, battery, sizeof(battery), 60000);
+    feed(link, cells, sizeof(cells), 61000);
+    TEST_ASSERT_TRUE(link.telemetry(61000).batteryCurrent.valid);
+    TEST_ASSERT_FALSE(link.telemetry(5061000).batteryCurrent.valid);
+    TEST_ASSERT_FALSE(link.telemetry(5061000).cells[0].valid);
+    // The same counter values one full 32-bit cycle later must remain expired.
+    TEST_ASSERT_FALSE(link.telemetry(61000).batteryCurrent.valid);
+    TEST_ASSERT_FALSE(link.telemetry(61000).cells[0].valid);
+    feed(link, battery, sizeof(battery), 62000);
+    TEST_ASSERT_TRUE(link.telemetry(62000).batteryCurrent.valid);
+}
+
 int main()
 {
     UNITY_BEGIN();
@@ -297,5 +313,6 @@ int main()
     RUN_TEST(test_wrong_master_and_disconnect_clear_data_and_motion);
     RUN_TEST(test_unavailable_fields_are_still_valid_bus_replies);
     RUN_TEST(test_timer_wrap);
+    RUN_TEST(test_expired_optional_measurements_do_not_revive_after_full_wrap);
     return UNITY_END();
 }

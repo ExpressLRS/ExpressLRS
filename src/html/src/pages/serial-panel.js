@@ -3,7 +3,7 @@ import {customElement, state} from "lit/decorators.js"
 import {_renderOptions} from "../utils/libs.js"
 import {elrsState, saveOptionsAndConfig} from "../utils/state.js"
 import {PWM_MODE_SERIAL, PWM_MODE_SERIAL2RX, PWM_MODE_SERIAL2TX} from "./connections-panel.js"
-import {SERIAL_OPTIONS1, SERIAL_OPTIONS2} from "../utils/globals.js"
+import {primarySerialOptions, SERIAL_OPTIONS1, SERIAL_OPTIONS2} from "../utils/globals.js"
 
 @customElement('serial-panel')
 class SerialPanel extends LitElement {
@@ -39,7 +39,9 @@ class SerialPanel extends LitElement {
                     ${this._hasSerial1() ? html`
                     <div class="mui-select">
                         <select name='serial-protocol' @change=${this._updateSerial1}>
-                            ${_renderOptions(SERIAL_OPTIONS1, this.serial1Protocol)}
+                            ${primarySerialOptions(elrsState.config['srxl2-supported']).map(option => html`
+                                <option .value="${option.value.toString()}" ?selected="${option.value === this.serial1Protocol}">${option.label}</option>
+                            `)}
                         </select>
                         <label>Serial 1 Protocol</label>
                     </div>
