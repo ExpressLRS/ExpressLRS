@@ -8,4 +8,3 @@ src/.vscode
 src/data/*.ini
 src/data/*.json
 src/hardware
-/tools/__pycache__/
