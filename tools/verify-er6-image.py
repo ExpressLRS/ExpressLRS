@@ -30,7 +30,8 @@ def verify(path):
     source = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
     hardware_commit = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT / "src" / "hardware", text=True).strip()
     dirty = bool(subprocess.check_output(["git", "status", "--porcelain"], cwd=ROOT, text=True).strip())
-    assert source[:7].encode() in blob, "Binary source revision does not match this checkout"
+    # Upstream elrs_helpers.get_git_version embeds six characters and a NUL.
+    assert source[:6].encode() + b"\0" in blob, "Binary source revision does not match this checkout"
     assert not dirty, "Commit source changes before producing a release manifest"
     assert hardware_commit == "c8bb70d6ad08da08381fc898adf29b8ae40eae12", "Unexpected hardware revision"
     targets = json.loads(subprocess.check_output(

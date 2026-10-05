@@ -47,7 +47,7 @@ class ImageProvenance(unittest.TestCase):
                 return verifier.verify(image)
 
     def test_matching_revision_and_complete_hardware(self):
-        result = self.check(SOURCE[:7], HARDWARE)
+        result = self.check(SOURCE[:6], HARDWARE)
         self.assertEqual(SOURCE, result["source_commit"])
         self.assertEqual(HARDWARE_SHA, result["hardware_commit"])
 
@@ -58,7 +58,7 @@ class ImageProvenance(unittest.TestCase):
     def test_other_hardware_fields_are_bound_to_revision(self):
         changed = {**HARDWARE, "radio_nss": HARDWARE["radio_nss"] + 1}
         with self.assertRaisesRegex(AssertionError, "hardware"):
-            self.check(SOURCE[:7], changed)
+            self.check(SOURCE[:6], changed)
 
 
 if __name__ == "__main__":
