@@ -705,14 +705,8 @@ static void JsonUidToConfig(JsonVariant &json)
 }
 static void UpdateConfiguration(AsyncWebServerRequest *request, JsonVariant &json)
 {
-  const JsonVariantConst serialValue = json["serial-protocol"];
-  if (!serialValue.isNull() && !serialValue.is<int>())
-  {
-    request->send(400, "text/plain", "Invalid serial protocol");
-    return;
-  }
-  const int protocol = serialValue | int(config.GetSerialProtocol());
-  if (protocol < 0 || protocol > 255 || !serialProtocolSupported(protocol, supportsSRXL2()))
+  uint8_t protocol = json["serial-protocol"] | 0;
+  if (protocol == PROTOCOL_SRXL2 && !supportsSRXL2())
   {
     request->send(400, "text/plain", "Unsupported serial protocol");
     return;

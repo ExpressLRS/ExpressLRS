@@ -518,7 +518,7 @@ void RXEndpoint::registerParameters()
   if (supportsSRXL2())
     luaSerialProtocol.options = "CRSF;Inverted CRSF;SBUS;Inverted SBUS;SUMD;DJI RS Pro;HoTT Telemetry;MAVLink;DisplayPort;GPS;Scorpion;Spektrum Smart";
   registerParameter(&luaSerialProtocol, [](propertiesCommon* item, uint8_t arg){
-    if (!serialProtocolSupported(arg, supportsSRXL2())) return;
+    if (arg == PROTOCOL_SRXL2 && !supportsSRXL2()) return;
     config.SetSerialProtocol((eSerialProtocol)arg);
     if (config.IsModified()) {
       deferExecutionMillis(100, [](){

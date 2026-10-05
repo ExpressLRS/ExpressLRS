@@ -3,26 +3,28 @@
 #include <vector>
 #include "common.h"
 #include "CRSFRouter.h"
-#include "../test_msp/mock_serial.h"
-#include "../../src/rx-serial/RCFrameState.h"
+#include "binary_serial.h"
 using std::min;
 
 connectionState_e connectionState = connected;
 bool connectionHasModelMatch = true, teamraceHasModelMatch = true;
 bool crsfBatterySensorDetected = false;
+uint32_t ChannelData[CRSF_NUM_CHANNELS] = {};
 CRSFRouter crsfRouter;
 static bool uartReceiving = false;
+static bool srxl2Selected = true;
 static uint32_t nowUs;
 static unsigned long testMicros() { return nowUs; }
 
 // Substitute only the clock and GPIO boundary; execute the actual adapter/router.
 #define SRXL2_ADAPTER_TEST
-#include "../../src/rx-serial/RCFrameState.cpp"
 #define SRXL2_HARDWARE_RX_BUSY() uartReceiving
+#define SRXL2_MODE_ACTIVE() srxl2Selected
 #define micros testMicros
 #include "../../src/rx-serial/SerialSRXL2.cpp"
 #undef micros
 #undef SRXL2_HARDWARE_RX_BUSY
+#undef SRXL2_MODE_ACTIVE
 #include "../../src/rx-serial/SerialIO.cpp"
 
 class Capture : public CRSFConnector
@@ -43,7 +45,8 @@ void setUp()
     connectionHasModelMatch = teamraceHasModelMatch = true;
     capture.frames.clear();
     uartReceiving = false;
-    for (auto &frame : serialRCFrames) frame = SerialRCFrameState{};
+    srxl2Selected = true;
+    for (auto &channel : ChannelData) channel = CRSF_CHANNEL_VALUE_UNSET;
     capture.addDevice(CRSF_ADDRESS_RADIO_TRANSMITTER);
     crsfRouter.addConnector(&capture);
 }
@@ -64,6 +67,12 @@ static void input(SerialSRXL2 &driver, std::string &in, const uint8_t *data, siz
     in.append(reinterpret_cast<const char *>(data), size);
     driver.processSerialInput();
 }
+
+static void deliver(SerialSRXL2 &driver, bool available, uint32_t *channels)
+{
+    std::memcpy(ChannelData, channels, sizeof(ChannelData));
+    driver.sendRCFrame(available, false, channels);
+}
 static void establish(SerialSRXL2 &driver, std::string &in, std::string &out)
 {
     send(driver, 50000);
@@ -75,9 +84,11 @@ static void establish(SerialSRXL2 &driver, std::string &in, std::string &out)
     uint32_t channels[16] = {};
     channels[0] = 1811; channels[2] = 992;
     nowUs = 53000;
-    driver.sendRCFrame(true, false, channels);
+    deliver(driver, true, channels);
     send(driver, 53000);
     TEST_ASSERT_EQUAL(0xCD, uint8_t(out[out.size() - 15]));
+    nowUs = 54000;
+    deliver(driver, true, channels); // first cached callback was discarded
     input(driver, in, esc, sizeof(esc), 55000);
 }
 static void assert_neutral(const std::string &out)
@@ -92,14 +103,14 @@ void test_adapter_ch3_and_all_inhibition_paths()
     for (unsigned reason = 0; reason < 4; ++reason)
     {
         std::string in, out;
-        StringStream rx(in), tx(out);
+        BinaryStringStream rx(in), tx(out);
         nowUs = 0;
         SerialSRXL2 driver(&tx, &rx, 1);
         establish(driver, in, out);
         uint32_t channels[16] = {};
         channels[0] = 172; channels[2] = 1811;
         nowUs = 63000;
-        driver.sendRCFrame(true, false, channels);
+        deliver(driver, true, channels);
         send(driver, 63000);
         TEST_ASSERT_EQUAL(0x54, uint8_t(out[out.size() - 4]));
         TEST_ASSERT_EQUAL(0xD5, uint8_t(out[out.size() - 3]));
@@ -118,21 +129,42 @@ void test_adapter_ch3_and_all_inhibition_paths()
 void test_adapter_missing_frames_do_not_refresh_cached_throttle()
 {
     std::string in, out;
-    StringStream rx(in), tx(out);
+    BinaryStringStream rx(in), tx(out);
     SerialSRXL2 driver(&tx, &rx, 1);
     establish(driver, in, out);
     uint32_t channels[16] = {};
     channels[2] = 1811;
     nowUs = 60000;
-    driver.sendRCFrame(false, true, channels);
-    send(driver, 153000);
+    deliver(driver, false, channels);
+    send(driver, 154000); // 100 ms after the accepted neutral sample
+    assert_neutral(out);
+}
+
+void test_missing_raw_ch3_is_not_an_extreme_throttle_snapshot()
+{
+    std::string in, out;
+    BinaryStringStream rx(in), tx(out);
+    SerialSRXL2 driver(&tx, &rx, 1);
+    establish(driver, in, out);
+    uint32_t channels[16] = {};
+    channels[2] = 1811;
+    ChannelData[2] = 1811;
+    nowUs = 63000;
+    deliver(driver, true, channels);
+    send(driver, 63000);
+    send(driver, 64500);
+    ChannelData[2] = CRSF_CHANNEL_VALUE_UNSET;
+    channels[2] = CRSF_CHANNEL_VALUE_EXT_MIN; // unchanged upstream snapshot conversion
+    nowUs = 70000;
+    driver.sendRCFrame(true, false, channels);
+    send(driver, 73000);
     assert_neutral(out);
 }
 
 void test_adapter_real_crsf_payload_and_budget()
 {
     std::string in, out;
-    StringStream rx(in), tx(out);
+    BinaryStringStream rx(in), tx(out);
     SerialSRXL2 driver(&tx, &rx, 1);
     establish(driver, in, out);
     send(driver, 100000);
@@ -165,7 +197,7 @@ void test_adapter_real_crsf_payload_and_budget()
 void test_adapter_voltage_fallback_and_sentinel_suppression()
 {
     std::string in, out;
-    StringStream rx(in), tx(out);
+    BinaryStringStream rx(in), tx(out);
     SerialSRXL2 driver(&tx, &rx, 1);
     establish(driver, in, out);
     uint8_t voltageOnly[22];
@@ -183,38 +215,38 @@ void test_adapter_voltage_fallback_and_sentinel_suppression()
     TEST_ASSERT_FALSE(crsfBatterySensorDetected);
 }
 
-void test_rf_resync_between_callbacks_invalidates_actual_frame_state()
+void test_rf_resync_drops_stale_callback_without_changing_core_latches()
 {
     std::string in, out;
-    StringStream rx(in), tx(out);
+    BinaryStringStream rx(in), tx(out);
     SerialSRXL2 driver(&tx, &rx, 1);
     establish(driver, in, out);
     uint32_t channels[16] = {};
     channels[2] = 1811;
     nowUs = 63000;
-    driver.sendRCFrame(true, false, channels);
+    deliver(driver, true, channels);
     send(driver, 63000);
     send(driver, 64500);
-    crsfRCFrameAvailable(); // pending old RF frame before TentativeConnection
     connectionState = tentative;
-    crsfRCFrameReset();
+    SerialSRXL2::onRFReset();
+    for (auto &channel : ChannelData) channel = CRSF_CHANNEL_VALUE_UNSET;
     connectionHasModelMatch = false;
     // GotConnection runs before any adapter callback can observe tentative.
     connectionState = connected;
     connectionHasModelMatch = true;
-    TEST_ASSERT_FALSE(serialRCFrames[0].takeAvailable());
-    TEST_ASSERT_EQUAL(CRSF_CHANNEL_VALUE_UNSET, serialChannelValue(CRSF_CHANNEL_VALUE_UNSET, true));
+    // Upstream's pending flag remains true; its snapshot substitutes minimum.
+    channels[2] = CRSF_CHANNEL_VALUE_EXT_MIN;
+    nowUs = 70000;
+    driver.sendRCFrame(true, false, channels);
     send(driver, 73000);
     assert_neutral(out); // cached motion must already be revoked
     send(driver, 74500);
     channels[2] = 992;
-    crsfRCFrameAvailable();
     nowUs = 80000;
-    driver.sendRCFrame(serialRCFrames[0].takeAvailable(), false, channels);
+    deliver(driver, true, channels);
     channels[2] = 1811;
-    crsfRCFrameAvailable();
     nowUs = 81000;
-    driver.sendRCFrame(serialRCFrames[0].takeAvailable(), false, channels);
+    deliver(driver, true, channels);
     send(driver, 83000);
     TEST_ASSERT_EQUAL(0x54, uint8_t(out[out.size() - 4]));
     TEST_ASSERT_EQUAL(0xD5, uint8_t(out[out.size() - 3]));
@@ -223,7 +255,7 @@ void test_rf_resync_between_callbacks_invalidates_actual_frame_state()
 void test_late_receive_hardware_and_partial_reply_block_transmit()
 {
     std::string in, out;
-    StringStream rx(in), tx(out);
+    BinaryStringStream rx(in), tx(out);
     SerialSRXL2 driver(&tx, &rx, 1);
     establish(driver, in, out);
     send(driver, 153000); // telemetry grant
@@ -249,14 +281,86 @@ void test_late_receive_hardware_and_partial_reply_block_transmit()
     TEST_ASSERT_EQUAL(written + 16, out.size());
 }
 
+void test_first_pending_neutral_after_rf_reset_cannot_release_motion()
+{
+    std::string in, out;
+    BinaryStringStream rx(in), tx(out);
+    SerialSRXL2 driver(&tx, &rx, 1);
+    establish(driver, in, out);
+    uint32_t channels[16] = {};
+    channels[2] = 1811;
+    nowUs = 63000;
+    deliver(driver, true, channels);
+    send(driver, 63000);
+    send(driver, 64500);
+    SerialSRXL2::onRFReset();
+    channels[2] = 992;
+    nowUs = 66000;
+    deliver(driver, true, channels); // a stale pending callback must be discarded
+    channels[2] = 1811;
+    nowUs = 67000;
+    deliver(driver, true, channels);
+    send(driver, 73000);
+    assert_neutral(out);
+    send(driver, 74500);
+    channels[2] = 992;
+    nowUs = 80000;
+    deliver(driver, true, channels);
+    channels[2] = 1811;
+    nowUs = 81000;
+    deliver(driver, true, channels);
+    send(driver, 83000);
+    TEST_ASSERT_EQUAL(0x54, uint8_t(out[out.size() - 4]));
+    TEST_ASSERT_EQUAL(0xD5, uint8_t(out[out.size() - 3]));
+}
+
+void test_live_driver_revokes_motion_when_another_protocol_is_selected()
+{
+    std::string in, out;
+    BinaryStringStream rx(in), tx(out);
+    SerialSRXL2 driver(&tx, &rx, 1);
+    establish(driver, in, out);
+    uint32_t channels[16] = {};
+    channels[2] = 1811;
+    nowUs = 63000;
+    deliver(driver, true, channels);
+    send(driver, 63000);
+    send(driver, 64500);
+
+    // Core can select MAVLink and defer replacing this object for 100 ms.
+    // A complete RF resync can occur before our callback, with no SRXL2 hook.
+    srxl2Selected = false;
+    send(driver, 73000);
+    assert_neutral(out);
+    send(driver, 74500);
+    srxl2Selected = true;
+    nowUs = 80000;
+    deliver(driver, true, channels);
+    send(driver, 83000);
+    assert_neutral(out); // changing back does not restore an old release latch
+    send(driver, 84500);
+    channels[2] = 992;
+    nowUs = 90000;
+    deliver(driver, true, channels);
+    channels[2] = 1811;
+    nowUs = 91000;
+    deliver(driver, true, channels);
+    send(driver, 93000);
+    TEST_ASSERT_EQUAL(0x54, uint8_t(out[out.size() - 4]));
+    TEST_ASSERT_EQUAL(0xD5, uint8_t(out[out.size() - 3]));
+}
+
 int main()
 {
     UNITY_BEGIN();
     RUN_TEST(test_adapter_ch3_and_all_inhibition_paths);
     RUN_TEST(test_adapter_missing_frames_do_not_refresh_cached_throttle);
+    RUN_TEST(test_missing_raw_ch3_is_not_an_extreme_throttle_snapshot);
     RUN_TEST(test_adapter_real_crsf_payload_and_budget);
     RUN_TEST(test_adapter_voltage_fallback_and_sentinel_suppression);
-    RUN_TEST(test_rf_resync_between_callbacks_invalidates_actual_frame_state);
+    RUN_TEST(test_rf_resync_drops_stale_callback_without_changing_core_latches);
     RUN_TEST(test_late_receive_hardware_and_partial_reply_block_transmit);
+    RUN_TEST(test_first_pending_neutral_after_rf_reset_cannot_release_motion);
+    RUN_TEST(test_live_driver_revokes_motion_when_another_protocol_is_selected);
     return UNITY_END();
 }

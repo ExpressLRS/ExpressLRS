@@ -12,8 +12,8 @@ public:
 
     // Stream methods
     int available() { return buf.length() - position; }
-    int read() { return position < buf.length() ? static_cast<uint8_t>(buf[position++]) : -1; }
-    int peek() { return position < buf.length() ? static_cast<uint8_t>(buf[position]) : -1; }
+    int read() { return position < buf.length() ? buf[position++] : -1; }
+    int peek() { return position < buf.length() ? buf[position] : -1; }
     void flush() { }
 
     // Print methods

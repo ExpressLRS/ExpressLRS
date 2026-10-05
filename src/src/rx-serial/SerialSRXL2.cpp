@@ -3,6 +3,7 @@
 #include "CRSFRouter.h"
 #include "common.h"
 #if defined(PLATFORM_ESP32)
+#include "config.h"
 #include "driver/gpio.h"
 #include "hal/uart_ll.h"
 #include "esp32-hal-matrix.h"
@@ -19,6 +20,21 @@
 #define SRXL2_HARDWARE_RX_BUSY() false
 #endif
 #endif
+
+#ifndef SRXL2_MODE_ACTIVE
+#if defined(TARGET_RX)
+#define SRXL2_MODE_ACTIVE() (config.GetSerialProtocol() == PROTOCOL_SRXL2 && !firmwareOptions.is_airport)
+#else
+#define SRXL2_MODE_ACTIVE() true
+#endif
+#endif
+
+static volatile uint32_t srxl2RFGeneration = 0;
+
+void ICACHE_RAM_ATTR SerialSRXL2::onRFReset()
+{
+    ++srxl2RFGeneration;
+}
 
 SerialSRXL2::SerialSRXL2(Stream *output, Stream *input, int8_t txPin)
     : SerialIO(output, input), pin(txPin), inputPort(input)
@@ -41,7 +57,7 @@ SerialSRXL2::SerialSRXL2(Stream *output, Stream *input, int8_t txPin)
     // Open-drain idle-high releases the bus and RX can capture an immediate reply.
     link.reset(uid, micros());
     lastPublished = micros();
-    generation = serialRCFrames[0].generation;
+    generation = srxl2RFGeneration;
     lastHardwareReceive = micros();
     crsfBatterySensorDetected = false;
 }
@@ -56,25 +72,32 @@ SerialSRXL2::~SerialSRXL2()
 
 bool SerialSRXL2::controlAllowed() const
 {
-    return !failsafe && connectionState == connected && connectionHasModelMatch && teamraceHasModelMatch;
+    return SRXL2_MODE_ACTIVE() && !failsafe && connectionState == connected && connectionHasModelMatch && teamraceHasModelMatch &&
+        ChannelData[2] != CRSF_CHANNEL_VALUE_UNSET;
 }
 
 bool SerialSRXL2::synchronizeGeneration()
 {
-    const uint32_t current = serialRCFrames[0].generation;
+    const uint32_t current = srxl2RFGeneration;
     if (generation == current) return true;
     generation = current;
     link.setControlPermission(false);
+    skipNextFrame = true;
     return false;
 }
 
-uint32_t SerialSRXL2::sendRCFrame(bool frameAvailable, bool, uint32_t *channels)
+uint32_t SerialSRXL2::sendRCFrame(bool frameAvailable, bool, uint32_t *)
 {
-    const bool sameGeneration = synchronizeGeneration();
-    const bool allowed = controlAllowed() && channels && channels[2] != CRSF_CHANNEL_VALUE_UNSET &&
-        serialRCFrames[0].deliveredGeneration == serialRCFrames[0].generation;
+    synchronizeGeneration();
+    // Upstream's shared snapshot replaces UNSET with minimum. Read only our
+    // throttle from the raw channel state, without changing other protocols.
+    noInterrupts();
+    const uint32_t throttle = ChannelData[2];
+    const bool allowed = controlAllowed();
+    interrupts();
     link.setControlPermission(allowed);
-    if (sameGeneration && allowed && frameAvailable) link.setThrottle(channels[2], micros());
+    if (frameAvailable && skipNextFrame) skipNextFrame = false;
+    else if (allowed && frameAvailable) link.setThrottle(throttle, micros());
     return 1;
 }
 

@@ -10,8 +10,3 @@ inline bool supportsSRXL2()
     return false;
 #endif
 }
-
-inline bool serialProtocolSupported(uint8_t protocol, bool smartSupported)
-{
-    return protocol <= PROTOCOL_SCORPION_TLM || (protocol == PROTOCOL_SRXL2 && smartSupported);
-}
