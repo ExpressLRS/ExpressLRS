@@ -13,5 +13,5 @@ inline bool supportsSRXL2()
 
 inline bool serialProtocolSupported(uint8_t protocol, bool smartSupported)
 {
-    return protocol <= PROTOCOL_GPS || (protocol == PROTOCOL_SRXL2 && smartSupported);
+    return protocol <= PROTOCOL_SCORPION_TLM || (protocol == PROTOCOL_SRXL2 && smartSupported);
 }

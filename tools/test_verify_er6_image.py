@@ -16,9 +16,12 @@ LAYOUT = json.loads((verifier.ROOT / "src/hardware/RX" / TARGET["layout_file"]).
 HARDWARE = {**LAYOUT, **TARGET["overlay"]}
 SOURCE = "abcdef012345678901234567890123456789012345"
 HARDWARE_SHA = "c8bb70d6ad08da08381fc898adf29b8ae40eae12"
+UPSTREAM_BASE = "8c51826de3ae95fa02002d813b120c677bdf122a"
 
 
 def git_result(args, cwd, text):
+    if args[1] == "merge-base":
+        return UPSTREAM_BASE + "\n"
     if args[1] == "status":
         return ""
     if args[1] == "show":
@@ -50,6 +53,8 @@ class ImageProvenance(unittest.TestCase):
         result = self.check(SOURCE[:6], HARDWARE)
         self.assertEqual(SOURCE, result["source_commit"])
         self.assertEqual(HARDWARE_SHA, result["hardware_commit"])
+        self.assertEqual(UPSTREAM_BASE, result["base_commit"])
+        self.assertEqual(11, result["smart_protocol_id"])
 
     def test_old_revision_must_not_receive_current_provenance(self):
         with self.assertRaisesRegex(AssertionError, "revision"):

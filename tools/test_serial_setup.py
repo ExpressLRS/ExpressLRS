@@ -28,10 +28,12 @@ struct NullStream : Stream {};
 struct Driver {
     Driver() = default;
     Driver(Stream &, Stream &) {}
+    Driver(Stream &, int8_t) {}
     virtual ~Driver() = default;
 };
 struct SerialNOOP : Driver { using Driver::Driver; };
 struct SerialAirPort : Driver { using Driver::Driver; };
+struct SerialScorpion_TLM : Driver { using Driver::Driver; };
 using SerialSBUS = Driver;
 using SerialSUMD = Driver;
 using SerialMavlink = Driver;
@@ -39,6 +41,9 @@ using SerialDisplayport = Driver;
 using SerialGPS = Driver;
 using SerialHoTT_TLM = Driver;
 using SerialCRSF = Driver;
+#define GPIO_PIN_RCSIGNAL_TX 1
+#define UNDEF_PIN -1
+#define U0TXD_GPIO_NUM 1
 Stream output, input;
 #define SERIAL_PROTOCOL_TX output
 #define SERIAL_PROTOCOL_RX input
@@ -57,6 +62,7 @@ struct Config {
 """
     probe = r"""
 int main() {
+    static_assert(PROTOCOL_SCORPION_TLM == 10 && PROTOCOL_SRXL2 == 11, "Persisted protocol IDs changed");
   for (bool unavailable : {false, true}) {
     noSerialPins = unavailable;
     for (bool airport : {false, true}) {
@@ -67,7 +73,8 @@ int main() {
             assert(firmwareOptions.is_airport == (airport && !unavailable));
             if (unavailable) assert(dynamic_cast<SerialNOOP *>(serialIO));
             else if (airport) assert(dynamic_cast<SerialAirPort *>(serialIO));
-            else if (protocol >= 10) assert(dynamic_cast<SerialNOOP *>(serialIO));
+            else if (protocol >= PROTOCOL_SRXL2) assert(dynamic_cast<SerialNOOP *>(serialIO));
+            else if (protocol == PROTOCOL_SCORPION_TLM) assert(dynamic_cast<SerialScorpion_TLM *>(serialIO));
             else assert(!dynamic_cast<SerialNOOP *>(serialIO));
             delete serialIO;
             delete BackpackOrLogStrm;

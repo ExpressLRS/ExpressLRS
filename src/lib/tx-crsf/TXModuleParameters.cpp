@@ -12,17 +12,22 @@
 #include "deferred.h"
 #include "msptypes.h"
 
-#define STR_LUA_ALLAUX         "AUX1;AUX2;AUX3;AUX4;AUX5;AUX6;AUX7;AUX8;AUX9;AUX10"
+#define STR_LUA_ALLAUX         "AUX1;AUX2;AUX3;AUX4;AUX5;AUX6;AUX7;AUX8;AUX9;AUX10;AUX11;AUX12"
 
 #define STR_LUA_ALLAUX_UPDOWN  "AUX1" LUASYM_ARROW_UP ";AUX1" LUASYM_ARROW_DN ";AUX2" LUASYM_ARROW_UP ";AUX2" LUASYM_ARROW_DN \
                                ";AUX3" LUASYM_ARROW_UP ";AUX3" LUASYM_ARROW_DN ";AUX4" LUASYM_ARROW_UP ";AUX4" LUASYM_ARROW_DN \
                                ";AUX5" LUASYM_ARROW_UP ";AUX5" LUASYM_ARROW_DN ";AUX6" LUASYM_ARROW_UP ";AUX6" LUASYM_ARROW_DN \
                                ";AUX7" LUASYM_ARROW_UP ";AUX7" LUASYM_ARROW_DN ";AUX8" LUASYM_ARROW_UP ";AUX8" LUASYM_ARROW_DN \
-                               ";AUX9" LUASYM_ARROW_UP ";AUX9" LUASYM_ARROW_DN ";AUX10" LUASYM_ARROW_UP ";AUX10" LUASYM_ARROW_DN
+                               ";AUX9" LUASYM_ARROW_UP ";AUX9" LUASYM_ARROW_DN ";AUX10" LUASYM_ARROW_UP ";AUX10" LUASYM_ARROW_DN \
+                               ";AUX11" LUASYM_ARROW_UP ";AUX11" LUASYM_ARROW_DN ";AUX12" LUASYM_ARROW_UP ";AUX12" LUASYM_ARROW_DN
 
 #if defined(RADIO_SX127X)
 #define STR_LUA_PACKETRATES \
     "D50Hz(-112dBm);25Hz(-123dBm);50Hz(-120dBm);100Hz(-117dBm);100Hz Full(-112dBm);200Hz(-112dBm)"
+#elif defined(RADIO_SX128X)
+#define STR_LUA_PACKETRATES \
+"50Hz(-115dBm);100Hz Full(-112dBm);150Hz(-112dBm);250Hz(-108dBm);333Hz Full(-105dBm);500Hz(-105dBm);" \
+"D250(-104dBm);D500(-104dBm);F500(-104dBm);F1000(-104dBm)"
 #elif defined(RADIO_LR1121)
 #define STR_LUA_PACKETRATES \
     "100Hz Full(-112dBm);150Hz(-112dBm);" \
@@ -30,10 +35,14 @@
     "DK250(-103dBm);DK500(-103dBm);K1000(-103dBm);" \
     "D50Hz(-112dBm);25Hz(-123dBm);50Hz(-120dBm);100Hz(-117dBm);100Hz Full(-112dBm);200Hz(-112dBm);200Hz Full(-111dBm);250Hz(-111dBm);" \
     "K1000 Full(-101dBm)"
-#elif defined(RADIO_SX128X)
+#elif defined(RADIO_LR2021)
 #define STR_LUA_PACKETRATES \
+    "100Hz Full(-112dBm);150Hz(-112dBm);" \
     "50Hz(-115dBm);100Hz Full(-112dBm);150Hz(-112dBm);250Hz(-108dBm);333Hz Full(-105dBm);500Hz(-105dBm);" \
-    "D250(-104dBm);D500(-104dBm);F500(-104dBm);F1000(-104dBm)"
+    "DK250(-103dBm);DK500(-103dBm);K1000(-103dBm);" \
+    "D250(-104dBm);D500(-104dBm);F500(-104dBm);F1000(-104dBm);" \
+    "D50Hz(-112dBm);25Hz(-123dBm);50Hz(-120dBm);100Hz(-117dBm);100Hz Full(-112dBm);200Hz(-112dBm);200Hz Full(-111dBm);250Hz(-111dBm);" \
+    "K1000 Full(-101dBm)"
 #else
 #error Invalid radio configuration!
 #endif
@@ -43,7 +52,7 @@
 extern char backpackVersion[];
 
 #if defined(Regulatory_Domain_EU_CE_2400)
-#if defined(RADIO_LR1121)
+#if defined(RADIO_LR1121) || defined(RADIO_LR2021)
 char strPowerLevels[] = "10/10;25/25;25/50;25/100;25/250;25/500;25/1000;25/2000;MatchTX ";
 #else
 char strPowerLevels[] = "10;25;50;100;250;500;1000;2000;MatchTX ";
@@ -65,14 +74,14 @@ static constexpr char switchmodeOpts8chMav[] = ";16ch Rate/2;";
 static constexpr char antennamodeOpts[] = "Gemini;Ant 1;Ant 2;Switch";
 static constexpr char antennamodeOptsDualBand[] = "Gemini;;;";
 static constexpr char linkModeOpts[] = "Normal;MAVLink";
-static constexpr char luastrDvrAux[] = "Off;" STR_LUA_ALLAUX_UPDOWN;
+static constexpr char luastrDvrAux[] = "Off;" STR_LUA_ALLAUX_UPDOWN ";Armed;!Armed";
 static constexpr char luastrDvrDelay[] = "0s;5s;15s;30s;45s;1min;2min";
 static constexpr char luastrHeadTrackingEnable[] = "Off;On;" STR_LUA_ALLAUX_UPDOWN;
 static constexpr char luastrHeadTrackingStart[] = "EdgeTX;" STR_LUA_ALLAUX;
 static constexpr char luastrOffOn[] = "Off;On";
 static char luastrPacketRates[] = STR_LUA_PACKETRATES;
 
-#if defined(RADIO_LR1121)
+#if defined(RADIO_LR1121) || defined(RADIO_LR2021)
 static char luastrRFBands[32];
 static RadioBandMod::Band currentRfBand;
 
@@ -126,7 +135,7 @@ static selectionParameter luaFanThreshold = {
 
 #if defined(Regulatory_Domain_EU_CE_2400)
 static stringParameter luaCELimit = {
-#if defined(RADIO_LR1121)
+#if defined(RADIO_LR1121) || defined(RADIO_LR2021)
     {"25/100mW 868M/2G4 CE LIMIT", CRSF_INFO},
 #else
     {"100mW 2G4 CE LIMIT", CRSF_INFO},
@@ -358,6 +367,11 @@ void TXModuleEndpoint::sendELRSstatus(const crsf_addr_e origin)
     "Baud rate too low",  //critical warning2, changing packet rate and baud rate too low
     ""   //critical warning1, reserved for future use
   };
+
+  setWarningFlag(LUA_FLAG_MODEL_MATCH, connectionState == connected && connectionHasModelMatch == false);
+  setWarningFlag(LUA_FLAG_CONNECTED, connectionState == connected);
+  setWarningFlag(LUA_FLAG_ISARMED, isArmed);
+
   auto warningInfo = "";
 
   for (int i = 7; i >= 0; i--)
@@ -371,10 +385,6 @@ void TXModuleEndpoint::sendELRSstatus(const crsf_addr_e origin)
   const uint8_t payloadSize = sizeof(elrsStatusParameter) + strlen(warningInfo) + 1;
   uint8_t buffer[sizeof(crsf_ext_header_t) + payloadSize + 1];
   const auto params = (elrsStatusParameter *)&buffer[sizeof(crsf_ext_header_t)];
-
-  setWarningFlag(LUA_FLAG_MODEL_MATCH, connectionState == connected && connectionHasModelMatch == false);
-  setWarningFlag(LUA_FLAG_CONNECTED, connectionState == connected);
-  setWarningFlag(LUA_FLAG_ISARMED, isArmed);
 
   params->pktsBad = CRSFHandset::BadPktsCountResult;
   params->pktsGood = htobe16(CRSFHandset::GoodPktsCountResult);
@@ -748,7 +758,7 @@ static void recalculatePacketRateOptions(int minInterval)
         const auto rateModParams = get_elrs_airRateConfig(rate);
         bool rateAllowed = (rateModParams->interval * rateModParams->numOfSends) >= minInterval;
 
-#if defined(RADIO_LR1121)
+#if defined(RADIO_LR1121) || defined(RADIO_LR2021)
         // Skip unsupported modes for hardware with only a single LR1121 or with a single RF path
         rateAllowed &= isSupportedRFRate(rate);
         // Skip modes on a diffrent band
@@ -780,7 +790,7 @@ void TXModuleEndpoint::registerParameters()
   auto sendCallback = [&](propertiesCommon *item, const uint8_t arg) { handleSimpleSendCmd(item, arg); };
 
   if (HAS_RADIO) {
-#if defined(RADIO_LR1121)
+#if defined(RADIO_LR1121) || defined(RADIO_LR2021)
     // Only allow selection of the band if both bands have power values defined
     if (POWER_OUTPUT_VALUES_COUNT != 0 && POWER_OUTPUT_VALUES_DUAL_COUNT != 0)
     {
@@ -980,7 +990,7 @@ void TXModuleEndpoint::updateParameters()
 {
   bool isMavlinkMode = config.GetLinkMode() == TX_MAVLINK_MODE;
   uint8_t currentRate = adjustPacketRateForBaud(config.GetRate());
-#if defined(RADIO_LR1121)
+#if defined(RADIO_LR1121) || defined(RADIO_LR2021)
   // calculate currentRfBand from current packet-rate
   currentRfBand = RadioBandMod::getBand(get_elrs_airRateConfig(currentRate)->radio_type);
   setTextSelectionValue(&luaRFBand, currentRfBand);

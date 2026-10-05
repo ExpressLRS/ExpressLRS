@@ -1,10 +1,16 @@
 #!/usr/bin/python
 
 import argparse
+import os
 import re
 import json
 import struct
 import sys
+
+# Environment variable that selects the hardware configuration non-interactively,
+# e.g. ELRS_UNIFIED_CONFIG=radiomaster.tx_dual.nomad. Used when no board_config
+# project option is set, so an automated build/upload never needs a TTY.
+ENV_UNIFIED_CONFIG = "ELRS_UNIFIED_CONFIG"
 
 from external import jmespath
 from firmware import TXType
@@ -171,7 +177,16 @@ def interactiveProductSelect(targets: dict, target_name: str) -> dict:
         print(f'default) {default_prod}')
         print('Choose a configuration to load into the firmware file')
 
-        choice = input()
+        try:
+            choice = input()
+        except EOFError:
+            # No usable stdin (automated build, redirected pipe, some IDE shells).
+            # Leave the firmware bare rather than aborting the build; it can be
+            # configured later via the web UI or binary_configurator.py.
+            print(f'No interactive terminal available; leaving the firmware "bare".')
+            print(f'Set the {ENV_UNIFIED_CONFIG} environment variable or the '
+                  f'"board_config" option to configure non-interactively.')
+            return None
         if choice == '':
             choice = default_prod
         if choice == '0':
@@ -194,8 +209,12 @@ def doConfiguration(file, defines, config, target_name, device_name, rx_as_tx):
         targets = json.load(f)
 
     if config is not None:
+        requested = config
         config ='.'.join(map(lambda s: f'"{s}"', config.split('.')))
         config = jmespath.search(config, targets)
+        if config is None:
+            print(f'Warning: configuration "{requested}" was not found in '
+                  f'targets.json; leaving the firmware "bare".')
     elif not sys.stdin.isatty():
         print('Not running in an interactive shell, leaving the firmware "bare".\n')
         print('The current compile options (user defines) have been included.')
@@ -217,6 +236,10 @@ def appendConfiguration(source, target, env):
     target_name = env.get('PIOENV', '')
     device_name = env.get('DEVICE_NAME', None)
     config = env.GetProjectOption('board_config', None)
+    # Fall back to the environment variable so a configuration can be selected
+    # without a TTY, e.g. ELRS_UNIFIED_CONFIG=radiomaster.tx_dual.nomad pio run -t upload
+    if config is None:
+        config = os.environ.get(ENV_UNIFIED_CONFIG) or None
     if 'Unified_' not in target_name and config is None:
         return
 

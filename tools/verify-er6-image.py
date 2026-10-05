@@ -28,6 +28,7 @@ def verify(path):
     assert not ({1, 3} & set(hardware["pwm_outputs"]))
     assert not any(key in options for key in ("uid", "wifi-ssid", "wifi-password")), "Private build options present"
     source = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
+    base = subprocess.check_output(["git", "merge-base", source, "upstream/master"], cwd=ROOT, text=True).strip()
     hardware_commit = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT / "src" / "hardware", text=True).strip()
     dirty = bool(subprocess.check_output(["git", "status", "--porcelain"], cwd=ROOT, text=True).strip())
     # Upstream elrs_helpers.get_git_version embeds six characters and a NUL.
@@ -44,10 +45,10 @@ def verify(path):
     return {
         "file": image.name, "bytes": len(blob), "sha256": hashlib.sha256(blob).hexdigest(),
         "product": product, "lua_name": lua_name, "source_commit": source, "source_dirty": dirty,
-        "base_commit": "a9d4a9cb5b5687c4c9d7e9e7fbdf44ad93651da6", "hardware_commit": hardware_commit,
+        "base_commit": base, "hardware_commit": hardware_commit,
         "target": "radiomaster.rx_2400.er6", "serial_rx": 3, "serial_tx": 1,
         "pwm_outputs": hardware["pwm_outputs"], "hardware_validation": "pending",
-        "smart_bus_gpio": 1, "throttle_channel": 3,
+        "smart_bus_gpio": 1, "throttle_channel": 3, "smart_protocol_id": 11,
         "build_command": "pio run -c platformio.er6.ini -e Unified_ESP32_2400_RX_via_UART",
     }
 

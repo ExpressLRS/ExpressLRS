@@ -32,7 +32,7 @@ class RxOptionsPanel extends LitElement {
                     <!-- FEATURE:HAS_SUBGHZ -->
                     <div class="mui-select">
                         <select id="domain" @change="${(e) => this.domain = parseInt(e.target.value)}">
-                            ${_renderOptions(['AU915','FCC915','EU868','IN866','AU433','EU433','US433','US433-Wide'], this.domain)}
+                            ${_renderOptions(['AU915','FCC915','EU868','IN866','AU433','EU433','US433','US433-Wide','TH920'], this.domain)}
                         </select>
                         <label for="domain">Regulatory domain</label>
                     </div>

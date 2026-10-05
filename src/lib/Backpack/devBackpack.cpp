@@ -139,29 +139,33 @@ void checkBackpackUpdate()
         {
             startPassthrough(false);
         }
-#if defined(PLATFORM_ESP32_S3)
-        // Start passthrough mode if an Espressif resync packet is detected on the USB port
-        static const uint8_t resync[] = {
-            0xc0,0x00,0x08,0x24,0x00,0x00,0x00,0x00,0x00,0x07,0x07,0x12,0x20,0x55,0x55,0x55,0x55,
-            0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55, 0x55,0x55,
-            0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0xc0
-        };
-        static int resync_pos = 0;
-        while(USBSerial.available())
-        {
-            const int byte = USBSerial.read();
-            if (byte == resync[resync_pos])
-            {
-                resync_pos++;
-                if (resync_pos == sizeof(resync)) startPassthrough(true);
-            }
-            else
-            {
-                resync_pos = 0;
-            }
-        }
-#endif
     }
+}
+
+void feedUSB(const uint8_t *buf, const uint16_t size)
+{
+#if defined(PLATFORM_ESP32_S3)
+    // Start passthrough mode if an Espressif resync packet is detected on the USB port
+    static const uint8_t resync[] = {
+        0xc0,0x00,0x08,0x24,0x00,0x00,0x00,0x00,0x00,0x07,0x07,0x12,0x20,0x55,0x55,0x55,0x55,
+        0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55, 0x55,0x55,
+        0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0xc0
+    };
+    static int resync_pos = 0;
+    for (int pos = 0 ; pos < size ; pos++)
+    {
+        const u_int8_t byte = buf[pos];
+        if (byte == resync[resync_pos])
+        {
+            resync_pos++;
+            if (resync_pos == sizeof(resync)) startPassthrough(true);
+        }
+        else
+        {
+            resync_pos = 0;
+        }
+    }
+#endif
 }
 
 static void BackpackWiFiToMSPOut(const uint16_t command)
@@ -339,7 +343,7 @@ static void BackpackPollAuxStates()
         const uint8_t auxNumber = (config.GetDvrAux() - 1) / 2 + AUX1;
         const uint8_t auxInverted = (config.GetDvrAux() + 1) % 2;
 
-        const bool recordingState = CRSF_to_BIT(ChannelData[auxNumber]) ^ auxInverted;
+        const bool recordingState = (auxNumber == CRSF_NUM_CHANNELS ? isArmed : CRSF_to_BIT(ChannelData[auxNumber])) ^ auxInverted;
         if (recordingState != lastRecordingState)
         {
             // Channel state has changed since we last checked, so schedule a MSP send
@@ -402,23 +406,25 @@ static void sendConfigToBackpack()
 
 static bool initialize()
 {
-    if (OPT_USE_TX_BACKPACK)
+    if (!OPT_USE_TX_BACKPACK || firmwareOptions.is_airport)
     {
-        if (GPIO_PIN_BACKPACK_EN != UNDEF_PIN)
-        {
-            pinMode(GPIO_PIN_BOOT0, INPUT); // setup so we can detect pin-change for passthrough mode
-            pinMode(GPIO_PIN_BACKPACK_BOOT, OUTPUT);
-            pinMode(GPIO_PIN_BACKPACK_EN, OUTPUT);
-            // Shut down the backpack via EN pin and hold it there until the first event()
-            digitalWrite(GPIO_PIN_BACKPACK_EN, LOW);   // enable low
-            digitalWrite(GPIO_PIN_BACKPACK_BOOT, LOW); // bootloader pin high
-            delay(20);
-            // Rely on event() to boot
-        }
-        // Set all channels of PTR data to "do not override" (0xffff)
-        memset(ptrChannelData, 0xff, sizeof(ptrChannelData));
+        return false;
     }
-    return OPT_USE_TX_BACKPACK;
+
+    if (GPIO_PIN_BACKPACK_EN != UNDEF_PIN)
+    {
+        pinMode(GPIO_PIN_BOOT0, INPUT); // setup so we can detect pin-change for passthrough mode
+        pinMode(GPIO_PIN_BACKPACK_BOOT, OUTPUT);
+        pinMode(GPIO_PIN_BACKPACK_EN, OUTPUT);
+        // Shut down the backpack via EN pin and hold it there until the first event()
+        digitalWrite(GPIO_PIN_BACKPACK_EN, LOW);   // enable low
+        digitalWrite(GPIO_PIN_BACKPACK_BOOT, LOW); // bootloader pin high
+        delay(20);
+        // Rely on event() to boot
+    }
+    // Set all channels of PTR data to "do not override" (0xffff)
+    memset(ptrChannelData, 0xff, sizeof(ptrChannelData));
+    return true;
 }
 
 static int start()

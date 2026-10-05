@@ -279,7 +279,7 @@ void OLEDDisplay::displayLinkstats()
     u8g2->setCursor(LINKSTATS_COL_THIRD, LINKSTATS_ROW_FOURTH);
     u8g2->print((int8_t)linkStats.downlink_SNR);
     u8g2->setCursor(LINKSTATS_COL_SECOND, LINKSTATS_ROW_FIFTH);
-    u8g2->print(linkStats.active_antenna);
+    u8g2->print(linkStats.active_antenna + 1);
 
     u8g2->sendBuffer();
 }
