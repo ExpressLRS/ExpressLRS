@@ -22,6 +22,7 @@
 #include "rx-serial/SerialSUMD.h"
 #include "rx-serial/SerialAirPort.h"
 #include "rx-serial/SerialHoTT_TLM.h"
+#include "rx-serial/SerialSRXL2.h"
 #include "rx-serial/SerialMavlink.h"
 #include "rx-serial/SerialTramp.h"
 #include "rx-serial/SerialSmartAudio.h"
@@ -1263,6 +1264,14 @@ static void setupSerial()
 	bool sumdSerialOutput = false;
     bool mavlinkSerialOutput = false;
     bool hottTlmSerial = false;
+    const bool smartSerial = config.GetSerialProtocol() == PROTOCOL_SRXL2;
+
+    if (!serialProtocolSupported(config.GetSerialProtocol(), supportsSRXL2()))
+    {
+        serialIO = new SerialNOOP();
+        BackpackOrLogStrm = new NullStream();
+        return;
+    }
 
     if (OPT_CRSF_RCVR_NO_SERIAL)
     {
@@ -1314,6 +1323,10 @@ static void setupSerial()
     {
         serialBaud = 115200;
     }
+    else if (smartSerial)
+    {
+        serialBaud = 115200;
+    }
     bool invert = config.GetSerialProtocol() == PROTOCOL_SBUS || config.GetSerialProtocol() == PROTOCOL_INVERTED_CRSF || config.GetSerialProtocol() == PROTOCOL_DJI_RS_PRO;
 
 #if defined(PLATFORM_ESP8266)
@@ -1351,6 +1364,7 @@ static void setupSerial()
     #endif
     // ARDUINO_CORE_INVERT_FIX PT2 end
 
+    if (smartSerial) Serial.setTxBufferSize(0);
     Serial.begin(serialBaud, serialConfig, GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX, invert);
 #endif
 
@@ -1382,18 +1396,31 @@ static void setupSerial()
     {
         serialIO = new SerialHoTT_TLM(SERIAL_PROTOCOL_TX, SERIAL_PROTOCOL_RX);
     }
+#if defined(PLATFORM_ESP32)
+    else if (smartSerial)
+    {
+        serialIO = new SerialSRXL2(&SERIAL_PROTOCOL_TX, &SERIAL_PROTOCOL_RX, GPIO_PIN_RCSIGNAL_TX);
+    }
+#endif
     else
     {
         serialIO = new SerialCRSF(SERIAL_PROTOCOL_TX, SERIAL_PROTOCOL_RX);
     }
 
 #if defined(DEBUG_ENABLED)
+    if (smartSerial)
+    {
+        BackpackOrLogStrm = new NullStream();
+    }
+    else
+    {
 #if defined(PLATFORM_ESP32_S3) || defined(PLATFORM_ESP32_C3)
     USBSerial.begin(460800);
     BackpackOrLogStrm = &USBSerial;
 #else
     BackpackOrLogStrm = &Serial;
 #endif
+    }
 #else
     BackpackOrLogStrm = new NullStream();
 #endif
