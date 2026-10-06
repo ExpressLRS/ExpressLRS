@@ -200,12 +200,8 @@ void Link::processFrame(uint32_t now)
 {
     if (input[1] == 0x21 && input[2] == 14 && input[3] == 0x40)
     {
-        if (input[4] == 0)
-        {
-            restart(now);
-            lastReply = now;
-        }
-        else if (input[4] == 0x21)
+        // An announcement already supplies the ESC's discovery data.
+        if (input[4] == 0 || input[4] == 0x21)
         {
             restart(now);
             phase = Broadcast;

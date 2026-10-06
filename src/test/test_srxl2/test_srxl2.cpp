@@ -74,6 +74,27 @@ void test_handshake_vectors_and_tx_ownership()
     TEST_ASSERT_TRUE(link.connected());
 }
 
+void test_captured_firma_announcements_finalize_discovery_at_115200()
+{
+    // Nine copies captured from the Firma 85A before the receiver's first TX.
+    const uint8_t announce[] = {0xA6,0x21,14,0x40,0,10,0,0,0,0,0,1,0x38,0x4E};
+    const uint8_t broadcast[] = {0xA6,0x21,14,0x21,0xFF,10,0,3,0xCF,0x27,0x4D,6,0x3E,0xBE};
+    SRXL2::Link link;
+    link.reset(0x064D27CF, 787824);
+    for (unsigned i = 0; i < 9; ++i) feed(link, announce, sizeof(announce), 910846);
+    SRXL2::Packet packet{};
+    TEST_ASSERT_FALSE(link.connected());
+    TEST_ASSERT_FALSE(link.nextPacket(911019, packet));
+    TEST_ASSERT_TRUE(link.nextPacket(911020, packet));
+    TEST_ASSERT_EQUAL_UINT8_ARRAY(broadcast, packet.bytes, sizeof(broadcast));
+    link.transmitted(912236);
+    TEST_ASSERT_TRUE(link.connected());
+    TEST_ASSERT_TRUE(link.nextPacket(912410, packet));
+    TEST_ASSERT_EQUAL_HEX8(0xCD, packet.bytes[1]);
+    TEST_ASSERT_EQUAL(1, packet.bytes[3]); // No RF permission: failsafe, neutral throttle.
+    TEST_ASSERT_EQUAL_HEX16(0x8000, channel(packet));
+}
+
 void test_local_echo_split_at_tx_done_preserves_immediate_hello()
 {
     // UID 107 has an independently calculated discovery CRC ending in A6.
@@ -589,6 +610,7 @@ int main()
     UNITY_BEGIN();
     RUN_TEST(test_crc_and_nominal_throttle);
     RUN_TEST(test_handshake_vectors_and_tx_ownership);
+    RUN_TEST(test_captured_firma_announcements_finalize_discovery_at_115200);
     RUN_TEST(test_local_echo_split_at_tx_done_preserves_immediate_hello);
     RUN_TEST(test_buffered_genuine_reply_survives_callback_gap_after_complete_echo);
     RUN_TEST(test_startup_neutral_release_and_failsafe_vector);
