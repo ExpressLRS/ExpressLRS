@@ -627,6 +627,29 @@ void test_edge_capture_separates_transmit_from_undecodable_reply_activity()
     TEST_ASSERT_EQUAL(0, state.rxBytes);
 }
 
+void test_wifi_probe_changes_only_the_discovery_destination()
+{
+    TEST_ASSERT_FALSE(setSRXL2ProbeAddress(0x41)); // No probe overrides in RF operation.
+    connectionState = wifiUpdate;
+    TEST_ASSERT_FALSE(setSRXL2ProbeAddress(0x3F));
+    TEST_ASSERT_FALSE(setSRXL2ProbeAddress(0x50));
+    TEST_ASSERT_TRUE(setSRXL2ProbeAddress(0x4F));
+    std::string in, out;
+    BinaryStringStream rx(in), tx(out);
+    SerialSRXL2 driver(&tx, &rx, 3);
+    send(driver, 50000);
+    const uint8_t expected[] = {0xA6,0x21,0x0E,0x21,0x4F,0x0A,0,3,0x78,0x56,0x34,0x12,0x2A,0x53};
+    TEST_ASSERT_EQUAL(sizeof(expected), out.size());
+    TEST_ASSERT_EQUAL_UINT8_ARRAY(expected, reinterpret_cast<const uint8_t *>(out.data()), sizeof(expected));
+    send(driver, 51216);
+    connectionState = connected;
+    send(driver, 100000);
+    TEST_ASSERT_EQUAL(28, out.size());
+    TEST_ASSERT_EQUAL_HEX8(0x40, uint8_t(out[18])); // Probe setting cannot affect RF operation.
+    connectionState = wifiUpdate;
+    TEST_ASSERT_TRUE(setSRXL2ProbeAddress(0x40));
+}
+
 void test_diagnostics_keep_rf_commands_and_received_bytes_for_wifi_capture()
 {
     std::string in, out;
@@ -732,6 +755,7 @@ int main()
     RUN_TEST(test_diagnostics_publish_once_on_wifi_entry_without_transmitting);
     RUN_TEST(test_wifi_live_capture_refreshes_while_motion_remains_inhibited);
     RUN_TEST(test_edge_capture_separates_transmit_from_undecodable_reply_activity);
+    RUN_TEST(test_wifi_probe_changes_only_the_discovery_destination);
     RUN_TEST(test_diagnostics_keep_rf_commands_and_received_bytes_for_wifi_capture);
     RUN_TEST(test_diagnostics_trace_first_handshake_before_the_rf_link_connects);
     RUN_TEST(test_diagnostics_measure_tx_completion_delay_without_changing_packets);

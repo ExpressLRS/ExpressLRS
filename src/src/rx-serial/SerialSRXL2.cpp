@@ -3,6 +3,16 @@
 #include "CRSFRouter.h"
 #include "common.h"
 #include <cstring>
+#if defined(SRXL2_DIAGNOSTICS)
+#include <atomic>
+static std::atomic<uint8_t> diagnosticProbeAddress{0x40};
+bool setSRXL2ProbeAddress(unsigned address)
+{
+    if (connectionState != wifiUpdate || address < 0x40 || address > 0x4F) return false;
+    diagnosticProbeAddress.store(uint8_t(address), std::memory_order_relaxed);
+    return true;
+}
+#endif
 #if defined(PLATFORM_ESP32)
 #include "config.h"
 #include "driver/gpio.h"
@@ -13,7 +23,6 @@
 #if defined(SRXL2_DIAGNOSTICS)
 #include <ArduinoJson.h>
 #include "freertos/semphr.h"
-#include <atomic>
 // One cache per receiver boot; the web task can read it across driver replacement.
 static SemaphoreHandle_t diagnosticMutex = nullptr;
 static String liveDiagnosticJson;
@@ -335,6 +344,15 @@ void SerialSRXL2::sendQueuedData(uint32_t maxBytesToSend)
         SRXL2::Packet packet{};
         if (link.nextPacket(now, packet))
         {
+#if defined(SRXL2_DIAGNOSTICS)
+            if (connectionState == wifiUpdate && packet.bytes[1] == 0x21 && packet.bytes[4] == 0x40)
+            {
+                packet.bytes[4] = diagnosticProbeAddress.load(std::memory_order_relaxed);
+                const uint16_t crc = SRXL2::crc16(packet.bytes, packet.length - 2);
+                packet.bytes[packet.length - 2] = crc >> 8;
+                packet.bytes[packet.length - 1] = crc;
+            }
+#endif
 #if defined(SRXL2_DIAGNOSTICS) && defined(SRXL2_EDGE_COUNT)
             if (diagnostics.edgeCounterReady)
             {
@@ -420,6 +438,7 @@ void SerialSRXL2::publishDiagnostics(bool wifiEntry)
     state["capture_us"] = lastDiagnosticUs;
     state["wifi_active"] = connectionState == wifiUpdate;
     state["control_allowed_now"] = controlAllowed();
+    state["probe_address"] = diagnosticProbeAddress.load(std::memory_order_relaxed);
     state["rf_connected_before_wifi"] = diagnostics.rfConnected;
     state["control_allowed_before_wifi"] = diagnostics.allowed;
     state["model_match"] = diagnostics.modelMatch;

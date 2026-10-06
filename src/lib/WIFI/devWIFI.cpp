@@ -44,6 +44,7 @@
 #include "devVTXSPI.h"
 #if defined(SRXL2_DIAGNOSTICS)
 extern String getSRXL2LiveDiagnostics();
+extern bool setSRXL2ProbeAddress(unsigned address);
 #endif
 #endif
 
@@ -1279,6 +1280,16 @@ static void startServices()
         "application/json", capture.length() ? capture : String("{\"error\":\"No Smart capture available\"}"));
     response->addHeader("Cache-Control", "no-store");
     request->send(response);
+  });
+  server.on("/srxl2", HTTP_POST, [](AsyncWebServerRequest *request) {
+    const String value = request->hasParam("address") ? request->getParam("address")->value() : String();
+    const int address = value.toInt();
+    if (String(address) != value || !setSRXL2ProbeAddress(address))
+    {
+      request->send(400, "application/json", "{\"error\":\"Wi-Fi probe requires an ESC address from 64 to 79\"}");
+      return;
+    }
+    request->send(200, "application/json", String("{\"address\":") + address + "}");
   });
 #endif
   server.on("/access", WebUpdateAccessPoint);
