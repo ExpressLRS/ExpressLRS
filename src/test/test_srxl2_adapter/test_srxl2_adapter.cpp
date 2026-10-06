@@ -574,6 +574,33 @@ void test_diagnostics_publish_once_on_wifi_entry_without_transmitting()
     TEST_ASSERT_EQUAL(sent, out.size());
 }
 
+void test_wifi_live_capture_refreshes_while_motion_remains_inhibited()
+{
+    std::string in, out;
+    BinaryStringStream rx(in), tx(out);
+    SerialSRXL2 driver(&tx, &rx, 3);
+    establish(driver, in, out);
+    uint32_t channels[16] = {};
+    channels[2] = 1811;
+    nowUs = 63000;
+    deliver(driver, true, channels);
+    send(driver, 63000);
+    send(driver, 64500);
+    connectionState = wifiUpdate;
+    driver.event();
+    const unsigned entryPublications = diagnosticPublications;
+    send(driver, 73000);
+    assert_neutral(out);
+    input(driver, in, esc, sizeof(esc), 75000);
+    send(driver, 1064500);
+    assert_neutral(out);
+    TEST_ASSERT_EQUAL(entryPublications + 1, diagnosticPublications);
+    send(driver, 1064600);
+    TEST_ASSERT_EQUAL(entryPublications + 1, diagnosticPublications);
+    send(driver, 2064500);
+    TEST_ASSERT_EQUAL(entryPublications + 2, diagnosticPublications);
+}
+
 void test_diagnostics_keep_rf_commands_and_received_bytes_for_wifi_capture()
 {
     std::string in, out;
@@ -677,6 +704,7 @@ int main()
     RUN_TEST(test_split_echo_and_buffered_reply_survive_delayed_tx_done_callback);
     RUN_TEST(test_adapter_preserves_delayed_genuine_reply_after_complete_echo);
     RUN_TEST(test_diagnostics_publish_once_on_wifi_entry_without_transmitting);
+    RUN_TEST(test_wifi_live_capture_refreshes_while_motion_remains_inhibited);
     RUN_TEST(test_diagnostics_keep_rf_commands_and_received_bytes_for_wifi_capture);
     RUN_TEST(test_diagnostics_trace_first_handshake_before_the_rf_link_connects);
     RUN_TEST(test_diagnostics_measure_tx_completion_delay_without_changing_packets);

@@ -12,6 +12,10 @@
 #include "soc/gpio_sig_map.h"
 #if defined(SRXL2_DIAGNOSTICS)
 #include <ArduinoJson.h>
+#include "freertos/semphr.h"
+// One cache per receiver boot; the web task can read it across driver replacement.
+static SemaphoreHandle_t diagnosticMutex = nullptr;
+static String liveDiagnosticJson;
 #endif
 #if defined(CONFIG_IDF_TARGET_ESP32)
 #include "driver/periph_ctrl.h"
@@ -126,6 +130,9 @@ SerialSRXL2::SerialSRXL2(Stream *output, Stream *input, int8_t txPin)
     link.reset(uid, initialized);
 #if defined(SRXL2_DIAGNOSTICS)
     diagnostics.driverInitUs = initialized;
+#if defined(PLATFORM_ESP32)
+    if (!diagnosticMutex) diagnosticMutex = xSemaphoreCreateMutex();
+#endif
 #endif
     lastPublished = micros();
     generation = srxl2RFGeneration;
@@ -311,18 +318,42 @@ void SerialSRXL2::sendQueuedData(uint32_t maxBytesToSend)
         }
     }
     publishTelemetry(now);
+#if defined(SRXL2_DIAGNOSTICS)
+    if (connectionState == wifiUpdate && uint32_t(now - lastDiagnosticUs) >= 1000000)
+        publishDiagnostics(false);
+#endif
 }
 
 #if defined(SRXL2_DIAGNOSTICS)
 void SerialSRXL2::event()
 {
     if (connectionState != wifiUpdate || diagnosticPublished) return;
+    publishDiagnostics(true);
+    diagnosticPublished = true;
+}
+
+#if defined(PLATFORM_ESP32)
+String getSRXL2LiveDiagnostics()
+{
+    if (!diagnosticMutex) return String();
+    xSemaphoreTake(diagnosticMutex, portMAX_DELAY);
+    String result = liveDiagnosticJson;
+    xSemaphoreGive(diagnosticMutex);
+    return result;
+}
+#endif
+
+void SerialSRXL2::publishDiagnostics(bool wifiEntry)
+{
+    lastDiagnosticUs = micros();
 #if defined(SRXL2_DIAGNOSTIC_PUBLISH)
     SRXL2_DIAGNOSTIC_PUBLISH();
 #elif defined(PLATFORM_ESP32)
     JsonDocument doc;
-    if (deserializeJson(doc, getOptions())) return;
-    auto state = doc["srxl2-diagnostics"].to<JsonObject>();
+    auto state = doc.to<JsonObject>();
+    state["capture_us"] = lastDiagnosticUs;
+    state["wifi_active"] = connectionState == wifiUpdate;
+    state["control_allowed_now"] = controlAllowed();
     state["rf_connected_before_wifi"] = diagnostics.rfConnected;
     state["control_allowed_before_wifi"] = diagnostics.allowed;
     state["model_match"] = diagnostics.modelMatch;
@@ -370,12 +401,24 @@ void SerialSRXL2::event()
     }
     state["last_rx_hex"] = received;
     state["last_rf_tx_hex"] = sent;
-    // ponytail: reuse the options cache for this capture; Web UI Save can persist the debug key.
     String result;
     serializeJson(doc, result);
-    setOptions(result);
+    if (diagnosticMutex && xSemaphoreTake(diagnosticMutex, 0) == pdTRUE)
+    {
+        liveDiagnosticJson = result;
+        xSemaphoreGive(diagnosticMutex);
+    }
+    if (wifiEntry)
+    {
+        // Keep the original RF capture; live updates never modify saved options.
+        JsonDocument options;
+        if (deserializeJson(options, getOptions())) return;
+        options["srxl2-diagnostics"] = doc;
+        result.clear();
+        serializeJson(options, result);
+        setOptions(result);
+    }
 #endif
-    diagnosticPublished = true;
 }
 #endif
 

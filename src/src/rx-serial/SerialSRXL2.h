@@ -51,6 +51,8 @@ private:
 #if defined(SRXL2_DIAGNOSTICS)
     Diagnostics diagnostics;
     bool diagnosticPublished = false;
+    uint32_t lastDiagnosticUs = 0;
+    void publishDiagnostics(bool wifiEntry);
 #endif
     bool controlAllowed() const;
     bool synchronizeGeneration();

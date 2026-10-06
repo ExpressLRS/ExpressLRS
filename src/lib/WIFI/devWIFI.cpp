@@ -42,6 +42,9 @@
 #endif
 #if defined(TARGET_RX) && defined(PLATFORM_ESP32)
 #include "devVTXSPI.h"
+#if defined(SRXL2_DIAGNOSTICS)
+extern String getSRXL2LiveDiagnostics();
+#endif
 #endif
 
 #include "WebContent.h"
@@ -1269,6 +1272,15 @@ static void startServices()
   server.on("/forget", WebUpdateForget);
   server.on("/connect", WebUpdateConnect);
   server.on("/config", HTTP_GET, GetConfiguration);
+#if defined(TARGET_RX) && defined(PLATFORM_ESP32) && defined(SRXL2_DIAGNOSTICS)
+  server.on("/srxl2", HTTP_GET, [](AsyncWebServerRequest *request) {
+    const String capture = getSRXL2LiveDiagnostics();
+    auto response = request->beginResponse(capture.length() ? 200 : 503,
+        "application/json", capture.length() ? capture : String("{\"error\":\"No Smart capture available\"}"));
+    response->addHeader("Cache-Control", "no-store");
+    request->send(response);
+  });
+#endif
   server.on("/access", WebUpdateAccessPoint);
   server.on("/firmware.bin", WebUpdateGetFirmware);
 
