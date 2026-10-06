@@ -593,6 +593,29 @@ void test_diagnostics_keep_rf_commands_and_received_bytes_for_wifi_capture()
     TEST_ASSERT_EQUAL(1, diagnosticPublications);
 }
 
+void test_diagnostics_measure_tx_completion_delay_without_changing_packets()
+{
+    std::string in, out;
+    BinaryStringStream rx(in), tx(out);
+    SerialSRXL2 driver(&tx, &rx, 1);
+    const auto &state = driver.getDiagnostics();
+    send(driver, 50000);
+    TEST_ASSERT_EQUAL(14, out.size());
+    send(driver, 51216); // 14 UART bytes at 115200 baud take 1216 us, rounded up.
+    TEST_ASSERT_EQUAL(1216, state.txDurationMaxUs);
+    TEST_ASSERT_EQUAL(0, state.txDelayMaxUs);
+    TEST_ASSERT_EQUAL(0, state.txDelayMinUs);
+    TEST_ASSERT_EQUAL(0, state.txDelayLongCount);
+    send(driver, 100000);
+    TEST_ASSERT_EQUAL(28, out.size());
+    send(driver, 102216); // Simulate the completion IRQ being delayed by 1000 us.
+    TEST_ASSERT_EQUAL(2216, state.txDurationMaxUs);
+    TEST_ASSERT_EQUAL(1000, state.txDelayMaxUs);
+    TEST_ASSERT_EQUAL(0, state.txDelayMinUs);
+    TEST_ASSERT_EQUAL(1, state.txDelayLongCount);
+    TEST_ASSERT_EQUAL(2, state.txDone);
+}
+
 int main()
 {
     UNITY_BEGIN();
@@ -611,5 +634,6 @@ int main()
     RUN_TEST(test_adapter_preserves_delayed_genuine_reply_after_complete_echo);
     RUN_TEST(test_diagnostics_publish_once_on_wifi_entry_without_transmitting);
     RUN_TEST(test_diagnostics_keep_rf_commands_and_received_bytes_for_wifi_capture);
+    RUN_TEST(test_diagnostics_measure_tx_completion_delay_without_changing_packets);
     return UNITY_END();
 }

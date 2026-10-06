@@ -19,6 +19,10 @@ public:
     {
         uint32_t frames = 0, txPackets = 0, rxBytes = 0;
         volatile uint32_t txDone = 0;
+        uint32_t txStartedUs = 0, txExpectedUs = 0;
+        volatile uint32_t txDurationMaxUs = 0, txDelayMaxUs = 0;
+        volatile uint32_t txDelayMinUs = 0xFFFFFFFFu, txDelayLongCount = 0;
+        volatile uint32_t gpioEnableAfterTx = 0, gpioMatrixAfterTx = 0;
         uint32_t ch3 = 0xFFFF, ch3Min = 0xFFFF, ch3Max = 0;
         bool rfConnected = false, allowed = false, modelMatch = false, teamMatch = false, failsafe = false;
         uint8_t lastRfTx[16] = {}, lastRfTxLength = 0, rxTail[64] = {};

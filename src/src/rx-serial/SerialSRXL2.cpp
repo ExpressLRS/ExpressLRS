@@ -225,7 +225,21 @@ void ICACHE_RAM_ATTR SerialSRXL2::onTxDone(void *argument)
 #endif
     driver->txComplete = true;
 #if defined(SRXL2_DIAGNOSTICS)
-    ++driver->diagnostics.txDone;
+    auto &state = driver->diagnostics;
+    const uint32_t elapsed = driver->txEnded - state.txStartedUs;
+    if (elapsed > state.txDurationMaxUs) state.txDurationMaxUs = elapsed;
+    const uint32_t delay = elapsed > state.txExpectedUs ? elapsed - state.txExpectedUs : 0;
+    if (delay < state.txDelayMinUs) state.txDelayMinUs = delay;
+    if (delay > state.txDelayMaxUs) state.txDelayMaxUs = delay;
+    constexpr uint32_t ONE_BIT_US = 9; // Rounded up at 115200 baud; estimated excess includes ISR overhead.
+    if (delay >= ONE_BIT_US) ++state.txDelayLongCount;
+#if defined(CONFIG_IDF_TARGET_ESP32)
+    state.gpioEnableAfterTx = driver->pin < 32
+        ? (GPIO.enable >> driver->pin) & 1
+        : (GPIO.enable1.val >> (driver->pin - 32)) & 1;
+    state.gpioMatrixAfterTx = GPIO.func_out_sel_cfg[driver->pin].val;
+#endif
+    ++state.txDone;
 #endif
 }
 
@@ -263,16 +277,24 @@ void SerialSRXL2::sendQueuedData(uint32_t maxBytesToSend)
                 diagnostics.lastRfTxLength = min(unsigned(packet.length), unsigned(sizeof(diagnostics.lastRfTx)));
                 std::memcpy(diagnostics.lastRfTx, packet.bytes, diagnostics.lastRfTxLength);
             }
+            // Estimated wire duration; completion timing also includes FIFO/ISR overhead.
+            diagnostics.txExpectedUs = (uint32_t(packet.length) * 10000000u + 115199u) / 115200u;
 #endif
 #if defined(CONFIG_IDF_TARGET_ESP32)
             // Only FIFO loading/IRQ arming is atomic; RF runs during transmission.
             // ponytail: current 14/16-byte packets fit the FIFO; add refill IRQs if they grow.
             noInterrupts();
             uart_ll_clr_intsts_mask(UART_LL_GET_HW(2), UART_INTR_TX_DONE);
+#if defined(SRXL2_DIAGNOSTICS)
+            diagnostics.txStartedUs = uint32_t(esp_timer_get_time());
+#endif
             uart_ll_write_txfifo(UART_LL_GET_HW(2), packet.bytes, packet.length);
             uart_ll_ena_intr_mask(UART_LL_GET_HW(2), UART_INTR_TX_DONE);
             interrupts();
 #else
+#if defined(SRXL2_DIAGNOSTICS)
+            diagnostics.txStartedUs = micros();
+#endif
             _outputPort->write(packet.bytes, packet.length);
 #endif
         }
@@ -302,12 +324,20 @@ void SerialSRXL2::event()
     state["tx_ready"] = txReady;
     state["tx_packets"] = diagnostics.txPackets;
     state["tx_completions"] = uint32_t(diagnostics.txDone);
+    state["tx_duration_max_us"] = uint32_t(diagnostics.txDurationMaxUs);
+    if (diagnostics.txDone) state["tx_release_excess_min_us"] = uint32_t(diagnostics.txDelayMinUs);
+    state["tx_release_excess_max_us"] = uint32_t(diagnostics.txDelayMaxUs);
+    state["tx_release_excess_over_bit_count"] = uint32_t(diagnostics.txDelayLongCount);
     state["rx_bytes"] = diagnostics.rxBytes;
     state["smart_connected"] = link.connected();
     state["rx_busy"] = SRXL2_HARDWARE_RX_BUSY();
     state["signal_level"] = gpio_get_level(gpio_num_t(pin));
 #if defined(CONFIG_IDF_TARGET_ESP32)
-    if (txReady) state["tx_fifo_bytes"] = uart_ll_get_txfifo_len(UART_LL_GET_HW(2));
+    if (txReady) state["tx_fifo_free_bytes"] = uart_ll_get_txfifo_len(UART_LL_GET_HW(2));
+    state["gpio_output_enabled_after_tx"] = uint32_t(diagnostics.gpioEnableAfterTx);
+    state["gpio_matrix_after_tx"] = uint32_t(diagnostics.gpioMatrixAfterTx);
+    state["uart0_rx_matrix"] = GPIO.func_in_sel_cfg[U0RXD_IN_IDX].val;
+    state["gpio_iomux"] = REG_READ(GPIO_PIN_MUX_REG[pin]);
 #endif
     const char hex[] = "0123456789abcdef";
     String received, sent;
