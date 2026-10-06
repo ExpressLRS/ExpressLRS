@@ -13,15 +13,45 @@
 #if defined(SRXL2_DIAGNOSTICS)
 #include <ArduinoJson.h>
 #include "freertos/semphr.h"
+#include <atomic>
 // One cache per receiver boot; the web task can read it across driver replacement.
 static SemaphoreHandle_t diagnosticMutex = nullptr;
 static String liveDiagnosticJson;
+static std::atomic<uint32_t> receiveErrors[6]{};
 #endif
 #if defined(CONFIG_IDF_TARGET_ESP32)
 #include "driver/periph_ctrl.h"
 #include "driver/uart.h"
 #include "esp_timer.h"
 #include "hal/gpio_ll.h"
+#if defined(SRXL2_DIAGNOSTICS)
+#include "driver/pcnt.h"
+#include "soc/pcnt_struct.h"
+static bool initSmartEdgeCounter(int pin)
+{
+    // Unit 0 belongs to the fan tachometer. Unit 1 observes the Smart signal.
+    pcnt_config_t config{};
+    config.pulse_gpio_num = pin;
+    config.ctrl_gpio_num = PCNT_PIN_NOT_USED;
+    config.pos_mode = PCNT_COUNT_INC;
+    config.neg_mode = PCNT_COUNT_DIS;
+    config.lctrl_mode = config.hctrl_mode = PCNT_MODE_KEEP;
+    config.counter_h_lim = 32767;
+    config.counter_l_lim = -1;
+    config.unit = PCNT_UNIT_1;
+    config.channel = PCNT_CHANNEL_0;
+    if (pcnt_unit_config(&config) != ESP_OK) return false;
+    pcnt_counter_pause(PCNT_UNIT_1);
+    pcnt_counter_clear(PCNT_UNIT_1);
+    pcnt_filter_disable(PCNT_UNIT_1);
+    pcnt_counter_resume(PCNT_UNIT_1);
+    return true;
+}
+#define SRXL2_EDGE_COUNTER_INIT() initSmartEdgeCounter(pin)
+#define SRXL2_EDGE_COUNT() int16_t(PCNT.cnt_unit[PCNT_UNIT_1].cnt_val)
+// Direct registers keep TX_DONE IRAM-safe; this SDK's pcnt_ll.h is C-only.
+#define SRXL2_EDGE_CLEAR() do { PCNT.ctrl.val |= BIT(2 * PCNT_UNIT_1); PCNT.ctrl.val &= ~BIT(2 * PCNT_UNIT_1); } while (0)
+#endif
 #endif
 #endif
 
@@ -132,6 +162,14 @@ SerialSRXL2::SerialSRXL2(Stream *output, Stream *input, int8_t txPin)
     diagnostics.driverInitUs = initialized;
 #if defined(PLATFORM_ESP32)
     if (!diagnosticMutex) diagnosticMutex = xSemaphoreCreateMutex();
+    for (auto &count : receiveErrors) count.store(0, std::memory_order_relaxed);
+    Serial.onReceiveError([](hardwareSerial_error_t error) {
+        if (error > UART_NO_ERROR && error <= UART_PARITY_ERROR)
+            receiveErrors[error].fetch_add(1, std::memory_order_relaxed);
+    });
+#endif
+#if defined(SRXL2_EDGE_COUNTER_INIT)
+    diagnostics.edgeCounterReady = SRXL2_EDGE_COUNTER_INIT();
 #endif
 #endif
     lastPublished = micros();
@@ -142,6 +180,12 @@ SerialSRXL2::SerialSRXL2(Stream *output, Stream *input, int8_t txPin)
 
 SerialSRXL2::~SerialSRXL2()
 {
+#if defined(SRXL2_DIAGNOSTICS) && defined(PLATFORM_ESP32)
+    Serial.onReceiveError(nullptr);
+#if defined(CONFIG_IDF_TARGET_ESP32)
+    if (diagnostics.edgeCounterReady) pcnt_counter_pause(PCNT_UNIT_1);
+#endif
+#endif
 #if defined(CONFIG_IDF_TARGET_ESP32)
     if (txInterrupt)
     {
@@ -233,6 +277,13 @@ void ICACHE_RAM_ATTR SerialSRXL2::onTxDone(void *argument)
 {
     auto driver = static_cast<SerialSRXL2 *>(argument);
     SRXL2_RELEASE_TX(); // Release first: the ESC can start its reply immediately.
+#if defined(SRXL2_DIAGNOSTICS) && defined(SRXL2_EDGE_COUNT)
+    if (driver->diagnostics.edgeCounterReady)
+    {
+        driver->diagnostics.txWireEdges += SRXL2_EDGE_COUNT();
+        SRXL2_EDGE_CLEAR();
+    }
+#endif
 #if defined(CONFIG_IDF_TARGET_ESP32)
     uart_ll_disable_intr_mask(UART_LL_GET_HW(2), UART_INTR_TX_DONE);
     uart_ll_clr_intsts_mask(UART_LL_GET_HW(2), UART_INTR_TX_DONE);
@@ -284,11 +335,26 @@ void SerialSRXL2::sendQueuedData(uint32_t maxBytesToSend)
         SRXL2::Packet packet{};
         if (link.nextPacket(now, packet))
         {
+#if defined(SRXL2_DIAGNOSTICS) && defined(SRXL2_EDGE_COUNT)
+            if (diagnostics.edgeCounterReady)
+            {
+                // ponytail: 32767 edges per listen interval; use a waveform capture
+                // if continuous noise prevents the normal 50 ms discovery polls.
+                diagnostics.rxWireEdges += SRXL2_EDGE_COUNT();
+                SRXL2_EDGE_CLEAR();
+            }
+#endif
             SRXL2_BEGIN_TX();
             txComplete = false;
             transmitting = true;
 #if defined(SRXL2_DIAGNOSTICS)
             ++diagnostics.txPackets;
+            for (unsigned i = 0; i < packet.length; ++i)
+            {
+                const unsigned value = packet.bytes[i];
+                // Start bit is low; include the high stop bit after eight data bits.
+                diagnostics.txExpectedEdges += __builtin_popcount((value | 0x100) & ~(value << 1));
+            }
             if (diagnostics.txPackets == 1) diagnostics.firstTxUs = now;
             if (connectionState == connected)
             {
@@ -373,6 +439,15 @@ void SerialSRXL2::publishDiagnostics(bool wifiEntry)
     state["tx_release_excess_max_us"] = uint32_t(diagnostics.txDelayMaxUs);
     state["tx_release_excess_over_bit_count"] = uint32_t(diagnostics.txDelayLongCount);
     state["rx_bytes"] = diagnostics.rxBytes;
+    state["edge_counter_ready"] = diagnostics.edgeCounterReady;
+    state["rx_wire_edges"] = diagnostics.rxWireEdges;
+    state["tx_wire_edges"] = uint32_t(diagnostics.txWireEdges);
+    state["tx_expected_edges"] = diagnostics.txExpectedEdges;
+    state["uart_break_errors"] = receiveErrors[UART_BREAK_ERROR].load(std::memory_order_relaxed);
+    state["uart_buffer_full_errors"] = receiveErrors[UART_BUFFER_FULL_ERROR].load(std::memory_order_relaxed);
+    state["uart_fifo_overflow_errors"] = receiveErrors[UART_FIFO_OVF_ERROR].load(std::memory_order_relaxed);
+    state["uart_frame_errors"] = receiveErrors[UART_FRAME_ERROR].load(std::memory_order_relaxed);
+    state["uart_parity_errors"] = receiveErrors[UART_PARITY_ERROR].load(std::memory_order_relaxed);
     state["smart_connected"] = link.connected();
     state["rx_busy"] = SRXL2_HARDWARE_RX_BUSY();
     state["signal_level"] = gpio_get_level(gpio_num_t(pin));

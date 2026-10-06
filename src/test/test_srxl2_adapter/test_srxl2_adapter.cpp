@@ -19,6 +19,7 @@ static bool busDriving, txDrained, releasedBeforeDrain;
 static bool autoTxDone = true;
 static bool replyBlocked;
 static unsigned diagnosticPublications;
+static uint16_t signalEdges;
 static UartStartupSpy uartStartup;
 static constexpr uint32_t SERIAL_8N1 = 0x800001c;
 static void (*txDoneInterrupt)(void *);
@@ -53,6 +54,9 @@ static void releaseBusTransmit()
 #define SRXL2_ADAPTER_TEST
 #define SRXL2_DIAGNOSTICS
 #define SRXL2_DIAGNOSTIC_PUBLISH() (++diagnosticPublications)
+#define SRXL2_EDGE_COUNTER_INIT() true
+#define SRXL2_EDGE_COUNT() signalEdges
+#define SRXL2_EDGE_CLEAR() (signalEdges = 0)
 #define SRXL2_HARDWARE_RX_BUSY() uartReceiving
 #define SRXL2_MODE_ACTIVE() srxl2Selected
 #define SRXL2_INSTALL_TX_IRQ(handler, argument) installTxInterrupt(handler, argument)
@@ -95,6 +99,7 @@ void setUp()
     autoTxDone = true;
     replyBlocked = false;
     diagnosticPublications = 0;
+    signalEdges = 0;
     uartStartup = UartStartupSpy();
     txDoneInterrupt = nullptr;
     immediateReplyInput = nullptr;
@@ -601,6 +606,27 @@ void test_wifi_live_capture_refreshes_while_motion_remains_inhibited()
     TEST_ASSERT_EQUAL(entryPublications + 2, diagnosticPublications);
 }
 
+void test_edge_capture_separates_transmit_from_undecodable_reply_activity()
+{
+    std::string in, out;
+    BinaryStringStream rx(in), tx(out);
+    SerialSRXL2 driver(&tx, &rx, 3);
+    signalEdges = 7; // Digital activity before the first request, no UART bytes.
+    send(driver, 50000);
+    signalEdges = 36; // Rising edges independently counted in the startup vector.
+    send(driver, 51216);
+    const auto &state = driver.getDiagnostics();
+    TEST_ASSERT_TRUE(state.edgeCounterReady);
+    TEST_ASSERT_EQUAL(7, state.rxWireEdges);
+    TEST_ASSERT_EQUAL(36, state.txWireEdges);
+    TEST_ASSERT_EQUAL(36, state.txExpectedEdges);
+    signalEdges = 11; // A malformed reply is still visible to the pulse counter.
+    send(driver, 100000);
+    TEST_ASSERT_EQUAL(18, state.rxWireEdges);
+    TEST_ASSERT_EQUAL(36, state.txWireEdges);
+    TEST_ASSERT_EQUAL(0, state.rxBytes);
+}
+
 void test_diagnostics_keep_rf_commands_and_received_bytes_for_wifi_capture()
 {
     std::string in, out;
@@ -705,6 +731,7 @@ int main()
     RUN_TEST(test_adapter_preserves_delayed_genuine_reply_after_complete_echo);
     RUN_TEST(test_diagnostics_publish_once_on_wifi_entry_without_transmitting);
     RUN_TEST(test_wifi_live_capture_refreshes_while_motion_remains_inhibited);
+    RUN_TEST(test_edge_capture_separates_transmit_from_undecodable_reply_activity);
     RUN_TEST(test_diagnostics_keep_rf_commands_and_received_bytes_for_wifi_capture);
     RUN_TEST(test_diagnostics_trace_first_handshake_before_the_rf_link_connects);
     RUN_TEST(test_diagnostics_measure_tx_completion_delay_without_changing_packets);
