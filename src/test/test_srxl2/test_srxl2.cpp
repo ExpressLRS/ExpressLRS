@@ -74,6 +74,55 @@ void test_handshake_vectors_and_tx_ownership()
     TEST_ASSERT_TRUE(link.connected());
 }
 
+void test_local_echo_split_at_tx_done_preserves_immediate_hello()
+{
+    // UID 107 has an independently calculated discovery CRC ending in A6.
+    const uint8_t request[] = {0xA6,0x21,14,0x21,0x40,10,0,3,107,0,0,0,0x64,0xA6};
+    for (unsigned split = 0; split <= sizeof(request); ++split)
+    {
+        for (uint32_t delay : {200u, 4000u})
+        {
+          for (bool afterTxDone : {false, true})
+          {
+            SRXL2::Link link;
+            link.reset(107, 0);
+            SRXL2::Packet packet{};
+            TEST_ASSERT_TRUE(link.nextPacket(50000, packet));
+            TEST_ASSERT_EQUAL_UINT8_ARRAY(request, packet.bytes, sizeof(request));
+            if (afterTxDone) link.transmitted(51216);
+            feed(link, request, split, afterTxDone ? 51216 : 51100);
+            if (!afterTxDone) link.transmitted(51216);
+            const uint32_t replyTime = 51216 + delay;
+            feed(link, request + split, sizeof(request) - split, replyTime);
+            TEST_ASSERT_FALSE(link.nextPacket(replyTime, packet)); // Echo is not an ESC reply.
+            feed(link, hello, sizeof(hello), replyTime);
+            TEST_ASSERT_FALSE(link.nextPacket(replyTime + 173, packet));
+            TEST_ASSERT_TRUE(link.nextPacket(replyTime + 174, packet));
+            TEST_ASSERT_EQUAL_HEX8(0xFF, packet.bytes[4]); // Broadcast acknowledges the ESC hello.
+          }
+        }
+    }
+}
+
+void test_buffered_genuine_reply_survives_callback_gap_after_complete_echo()
+{
+    for (unsigned split = 1; split < sizeof(hello); ++split)
+    {
+        SRXL2::Link link;
+        link.reset(107, 0);
+        SRXL2::Packet packet{};
+        TEST_ASSERT_TRUE(link.nextPacket(50000, packet));
+        const SRXL2::Packet echo = packet;
+        link.transmitted(51216);
+        feed(link, echo.bytes, echo.length, 51400);
+        feed(link, hello, split, 51400);
+        feed(link, hello + split, sizeof(hello) - split, 55400);
+        TEST_ASSERT_FALSE(link.nextPacket(55573, packet));
+        TEST_ASSERT_TRUE(link.nextPacket(55574, packet));
+        TEST_ASSERT_EQUAL_HEX8(0xFF, packet.bytes[4]);
+    }
+}
+
 void test_startup_neutral_release_and_failsafe_vector()
 {
     SRXL2::Link link;
@@ -156,9 +205,220 @@ void test_response_window_and_control_cadence()
     link.transmitted(54400);
     TEST_ASSERT_FALSE(link.nextPacket(55000, packet));
     TEST_ASSERT_FALSE(link.nextPacket(62399, packet));
-    TEST_ASSERT_FALSE(link.nextPacket(62999, packet));
-    TEST_ASSERT_TRUE(link.nextPacket(63000, packet));
+    TEST_ASSERT_FALSE(link.nextPacket(63999, packet));
+    TEST_ASSERT_TRUE(link.nextPacket(64000, packet));
     TEST_ASSERT_EQUAL(0, packet.bytes[4]);
+}
+
+void test_control_follows_fresh_rf_at_20ms_10ms_and_2ms()
+{
+    for (uint32_t period : {20000u, 10000u, 2000u})
+    {
+        for (bool released : {false, true})
+        {
+            SRXL2::Link link;
+            connect(link);
+            link.setControlPermission(true);
+            link.setThrottle(released ? 992 : 1811, 53000);
+            SRXL2::Packet packet{};
+            TEST_ASSERT_TRUE(link.nextPacket(53000, packet));
+            link.transmitted(54390);
+            feed(link, esc, sizeof(esc), 54564);
+            for (unsigned sample = 1; sample <= 4; ++sample)
+            {
+                const uint32_t time = 53000 + sample * period;
+                TEST_ASSERT_FALSE(link.nextPacket(time - 1, packet)); // No repeated cached RF value.
+                link.setThrottle(sample % 2 ? 1811 : 172, time);
+                TEST_ASSERT_TRUE(link.nextPacket(time, packet));
+                TEST_ASSERT_EQUAL(released ? 0 : 1, packet.bytes[3]);
+                TEST_ASSERT_EQUAL_HEX16(released ? (sample % 2 ? 0xD554 : 0x2AA0) : 0x8000, channel(packet));
+                TEST_ASSERT_FALSE(link.nextPacket(time + 1389, packet));
+                link.transmitted(time + 1390);
+                TEST_ASSERT_FALSE(link.nextPacket(time + 1564, packet));
+            }
+        }
+    }
+}
+
+void test_1ms_rf_updates_coalesce_to_latest_after_tx_and_reply_grant()
+{
+    SRXL2::Link link;
+    connect(link);
+    link.setControlPermission(true);
+    link.setThrottle(992, 53000);
+    SRXL2::Packet packet{};
+    TEST_ASSERT_TRUE(link.nextPacket(53000, packet));
+    link.transmitted(54390);
+    // Updates during a grant keep only the latest accepted throttle.
+    link.setThrottle(172, 54000);
+    link.setThrottle(1811, 55000);
+    TEST_ASSERT_FALSE(link.nextPacket(55000, packet));
+    feed(link, esc, sizeof(esc), 55000);
+    TEST_ASSERT_FALSE(link.nextPacket(55173, packet));
+    TEST_ASSERT_TRUE(link.nextPacket(55174, packet));
+    TEST_ASSERT_EQUAL_HEX16(0xD554, channel(packet));
+    link.setThrottle(172, 56000);
+    TEST_ASSERT_FALSE(link.nextPacket(56000, packet)); // FIFO/shifter still owns the bus.
+    link.transmitted(56564);
+    TEST_ASSERT_FALSE(link.nextPacket(56737, packet));
+    TEST_ASSERT_TRUE(link.nextPacket(56738, packet));
+    TEST_ASSERT_EQUAL_HEX16(0x2AA0, channel(packet));
+    link.setThrottle(1811, 57000);
+    link.setThrottle(992, 58000);
+    TEST_ASSERT_FALSE(link.nextPacket(58000, packet));
+    link.transmitted(58128);
+    TEST_ASSERT_TRUE(link.nextPacket(58302, packet));
+    TEST_ASSERT_EQUAL_HEX16(0x8000, channel(packet));
+    link.transmitted(59692);
+    TEST_ASSERT_FALSE(link.nextPacket(59866, packet)); // Coalesced samples were consumed once.
+}
+
+void test_permission_loss_schedules_neutral_as_soon_as_bus_is_free()
+{
+    SRXL2::Link link;
+    connect(link);
+    link.setControlPermission(true);
+    link.setThrottle(992, 53000);
+    SRXL2::Packet packet{};
+    TEST_ASSERT_TRUE(link.nextPacket(53000, packet));
+    link.transmitted(54390);
+    feed(link, esc, sizeof(esc), 54564);
+    link.setThrottle(1811, 55000);
+    TEST_ASSERT_TRUE(link.nextPacket(55000, packet));
+    link.setControlPermission(false);
+    TEST_ASSERT_FALSE(link.nextPacket(55100, packet));
+    link.transmitted(56390);
+    TEST_ASSERT_FALSE(link.nextPacket(56563, packet));
+    TEST_ASSERT_TRUE(link.nextPacket(56564, packet));
+    TEST_ASSERT_EQUAL(1, packet.bytes[3]);
+    TEST_ASSERT_EQUAL_HEX16(0x8000, channel(packet));
+    link.transmitted(57954);
+    TEST_ASSERT_FALSE(link.nextPacket(67563, packet));
+    TEST_ASSERT_TRUE(link.nextPacket(67564, packet)); // Inhibited output repeats every 11 ms.
+}
+
+void test_missed_rf_sends_fade_without_refreshing_authorized_sample()
+{
+    SRXL2::Link link;
+    connect(link);
+    link.setControlPermission(true);
+    link.setThrottle(992, 53000);
+    SRXL2::Packet packet{};
+    TEST_ASSERT_TRUE(link.nextPacket(53000, packet));
+    link.transmitted(54390);
+    feed(link, esc, sizeof(esc), 54564);
+    link.setThrottle(1811, 73000);
+    TEST_ASSERT_TRUE(link.nextPacket(73000, packet));
+    link.transmitted(74390);
+    link.missedFrame();
+    TEST_ASSERT_TRUE(link.nextPacket(113000, packet));
+    const uint8_t fade[] = {0xA6,0xCD,14,0,0,100,0,0,0,0,0,0,0x62,0xE8};
+    TEST_ASSERT_EQUAL(14, packet.length);
+    TEST_ASSERT_EQUAL_UINT8_ARRAY(fade, packet.bytes, sizeof(fade));
+    link.transmitted(114216);
+    link.missedFrame();
+    TEST_ASSERT_TRUE(link.nextPacket(153000, packet));
+    TEST_ASSERT_EQUAL(14, packet.length);
+    TEST_ASSERT_EQUAL_HEX8(0x40, packet.bytes[4]); // Polling continues across RF misses.
+    link.transmitted(154216);
+    feed(link, esc, sizeof(esc), 154400);
+    link.missedFrame();
+    TEST_ASSERT_TRUE(link.nextPacket(173000, packet)); // 100 ms since the authorized sample.
+    TEST_ASSERT_EQUAL(16, packet.length);
+    TEST_ASSERT_EQUAL(1, packet.bytes[3]);
+    TEST_ASSERT_EQUAL_HEX16(0x8000, channel(packet));
+}
+
+void test_fresh_pending_control_takes_precedence_over_fade()
+{
+    SRXL2::Link link;
+    connect(link);
+    link.setControlPermission(true);
+    link.setThrottle(992, 53000);
+    SRXL2::Packet packet{};
+    TEST_ASSERT_TRUE(link.nextPacket(53000, packet));
+    link.setThrottle(1811, 54000);
+    link.missedFrame(); // Cannot replace the fresh update while TX/grant is busy.
+    link.transmitted(54390);
+    feed(link, esc, sizeof(esc), 54564);
+    TEST_ASSERT_TRUE(link.nextPacket(54738, packet));
+    TEST_ASSERT_EQUAL(16, packet.length);
+    TEST_ASSERT_EQUAL_HEX16(0xD554, channel(packet));
+    link.transmitted(56128);
+    link.missedFrame();
+    link.setThrottle(172, 57000); // A fresh update replaces an already queued fade.
+    TEST_ASSERT_TRUE(link.nextPacket(57000, packet));
+    TEST_ASSERT_EQUAL(16, packet.length);
+    TEST_ASSERT_EQUAL_HEX16(0x2AA0, channel(packet));
+}
+
+void test_non_rc_rf_slots_get_keepalive_before_slave_timeout()
+{
+    for (bool released : {false, true})
+    {
+        SRXL2::Link link;
+        connect(link);
+        link.setControlPermission(true);
+        link.setThrottle(released ? 992 : 1811, 53000);
+        SRXL2::Packet packet{};
+        TEST_ASSERT_TRUE(link.nextPacket(53000, packet));
+        link.transmitted(54390);
+        feed(link, esc, sizeof(esc), 54564);
+        // DATA/SYNC slots yield neither a new control sample nor a missed callback.
+        TEST_ASSERT_FALSE(link.nextPacket(92999, packet));
+        TEST_ASSERT_TRUE(link.nextPacket(93000, packet));
+        TEST_ASSERT_EQUAL(released ? 14 : 16, packet.length);
+        TEST_ASSERT_EQUAL(released ? 0 : 1, packet.bytes[3]);
+        if (!released) TEST_ASSERT_EQUAL_HEX16(0x8000, channel(packet));
+        link.transmitted(94390);
+        TEST_ASSERT_FALSE(link.nextPacket(132999, packet));
+        TEST_ASSERT_TRUE(link.nextPacket(133000, packet));
+        TEST_ASSERT_EQUAL(released ? 14 : 16, packet.length);
+        link.transmitted(134390);
+        TEST_ASSERT_FALSE(link.nextPacket(152999, packet));
+        TEST_ASSERT_TRUE(link.nextPacket(153000, packet));
+        TEST_ASSERT_EQUAL(16, packet.length);
+        TEST_ASSERT_EQUAL(1, packet.bytes[3]);
+        TEST_ASSERT_EQUAL_HEX16(0x8000, channel(packet));
+    }
+}
+
+void test_rediscovery_waits_for_outstanding_reply_and_revokes_motion()
+{
+    for (bool reply : {false, true})
+    {
+        SRXL2::Link link;
+        connect(link);
+        SRXL2::Packet packet{};
+        TEST_ASSERT_TRUE(link.nextPacket(53000, packet));
+        link.transmitted(54400);
+        feed(link, esc, sizeof(esc), 55000);
+        link.setControlPermission(true);
+        link.setThrottle(992, 2052000);
+        link.setThrottle(1811, 2052500);
+        TEST_ASSERT_TRUE(link.nextPacket(2053000, packet));
+        TEST_ASSERT_EQUAL_HEX8(0x40, packet.bytes[4]);
+        TEST_ASSERT_EQUAL_HEX16(0xD554, channel(packet));
+        link.transmitted(2054390);
+        TEST_ASSERT_FALSE(link.nextPacket(2055000, packet));
+        TEST_ASSERT_TRUE(link.connected());
+        if (reply)
+        {
+            feed(link, esc, sizeof(esc), 2056000);
+            TEST_ASSERT_TRUE(link.nextPacket(2063000, packet));
+            TEST_ASSERT_EQUAL_HEX8(0xCD, packet.bytes[1]);
+            TEST_ASSERT_EQUAL(1, packet.bytes[3]);
+            TEST_ASSERT_EQUAL_HEX16(0x8000, channel(packet));
+            TEST_ASSERT_TRUE(link.connected());
+        }
+        else
+        {
+            TEST_ASSERT_FALSE(link.nextPacket(2062389, packet));
+            TEST_ASSERT_TRUE(link.nextPacket(2062390, packet));
+            TEST_ASSERT_EQUAL_HEX8(0x21, packet.bytes[1]);
+            TEST_ASSERT_FALSE(link.connected());
+        }
+    }
 }
 
 void test_esc_scaling_and_invalid_replacement()
@@ -217,6 +477,10 @@ void test_parser_recovers_from_noise_bad_crc_and_partial_timeout()
     feed(link, broken, sizeof(broken), 61000);
     TEST_ASSERT_FALSE(link.telemetry(61000).voltage.valid);
     feed(link, esc, 5, 62000);
+    SRXL2::Packet packet{};
+    TEST_ASSERT_FALSE(link.nextPacket(64499, packet));
+    TEST_ASSERT_TRUE(link.nextPacket(64500, packet)); // Observed idle expires the partial frame at 2500 us.
+    link.transmitted(65890);
     feed(link, esc, sizeof(esc), 72000);
     TEST_ASSERT_TRUE(link.telemetry(72000).voltage.valid);
     feed(link, battery, 9, 73000);
@@ -224,6 +488,28 @@ void test_parser_recovers_from_noise_bad_crc_and_partial_timeout()
     feed(link, cells, sizeof(cells), 73200);
     TEST_ASSERT_EQUAL(3000, link.telemetry(73200).batteryCurrent.value);
     TEST_ASSERT_EQUAL(4097, link.telemetry(73200).cells[0].value);
+}
+
+void test_parser_retains_frames_after_resynchronizing_at_declared_length()
+{
+    for (uint8_t length : {uint8_t(26), uint8_t(80)})
+    {
+        SRXL2::Link link;
+        connect(link);
+        const uint8_t noise[] = {0xA6, 0x80, length};
+        feed(link, noise, sizeof(noise), 60000);
+        feed(link, esc, sizeof(esc), 60100);
+        feed(link, battery, sizeof(battery), 60200);
+        feed(link, cells, sizeof(cells), 60300);
+        feed(link, identity, sizeof(identity), 60400);
+        const auto values = link.telemetry(60400);
+        TEST_ASSERT_TRUE(values.voltage.valid);
+        TEST_ASSERT_EQUAL(12340, values.voltage.value);
+        TEST_ASSERT_TRUE(values.batteryCurrent.valid);
+        TEST_ASSERT_EQUAL(3000, values.batteryCurrent.value);
+        TEST_ASSERT_EQUAL(4097, values.cells[0].value);
+        TEST_ASSERT_EQUAL(3, values.cellCount);
+    }
 }
 
 void test_wrong_master_and_disconnect_clear_data_and_motion()
@@ -303,13 +589,23 @@ int main()
     UNITY_BEGIN();
     RUN_TEST(test_crc_and_nominal_throttle);
     RUN_TEST(test_handshake_vectors_and_tx_ownership);
+    RUN_TEST(test_local_echo_split_at_tx_done_preserves_immediate_hello);
+    RUN_TEST(test_buffered_genuine_reply_survives_callback_gap_after_complete_echo);
     RUN_TEST(test_startup_neutral_release_and_failsafe_vector);
     RUN_TEST(test_neutral_band_boundaries_and_permission_recovery);
     RUN_TEST(test_stale_control_needs_new_neutral);
     RUN_TEST(test_response_window_and_control_cadence);
+    RUN_TEST(test_control_follows_fresh_rf_at_20ms_10ms_and_2ms);
+    RUN_TEST(test_1ms_rf_updates_coalesce_to_latest_after_tx_and_reply_grant);
+    RUN_TEST(test_permission_loss_schedules_neutral_as_soon_as_bus_is_free);
+    RUN_TEST(test_missed_rf_sends_fade_without_refreshing_authorized_sample);
+    RUN_TEST(test_fresh_pending_control_takes_precedence_over_fade);
+    RUN_TEST(test_non_rc_rf_slots_get_keepalive_before_slave_timeout);
+    RUN_TEST(test_rediscovery_waits_for_outstanding_reply_and_revokes_motion);
     RUN_TEST(test_esc_scaling_and_invalid_replacement);
     RUN_TEST(test_smart_battery_endian_and_cells);
     RUN_TEST(test_parser_recovers_from_noise_bad_crc_and_partial_timeout);
+    RUN_TEST(test_parser_retains_frames_after_resynchronizing_at_declared_length);
     RUN_TEST(test_wrong_master_and_disconnect_clear_data_and_motion);
     RUN_TEST(test_unavailable_fields_are_still_valid_bus_replies);
     RUN_TEST(test_timer_wrap);

@@ -158,7 +158,7 @@ bool SerialSRXL2::synchronizeGeneration()
     return false;
 }
 
-uint32_t SerialSRXL2::sendRCFrame(bool frameAvailable, bool, uint32_t *)
+uint32_t SerialSRXL2::sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t *)
 {
     synchronizeGeneration();
     // Upstream's shared snapshot replaces UNSET with minimum. Read only our
@@ -191,6 +191,7 @@ uint32_t SerialSRXL2::sendRCFrame(bool frameAvailable, bool, uint32_t *)
     link.setControlPermission(allowed);
     if (frameAvailable && skipNextFrame) skipNextFrame = false;
     else if (allowed && frameAvailable) link.setThrottle(throttle, micros());
+    else if (frameMissed) link.missedFrame();
     return 1;
 }
 

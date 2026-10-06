@@ -5,7 +5,7 @@
 
 namespace SRXL2
 {
-static constexpr uint32_t CONTROL_US = 10000, REQUEST_US = 100000;
+static constexpr uint32_t FAILSAFE_US = 11000, FADE_US = 40000, REQUEST_US = 100000;
 static constexpr uint32_t IDLE_US = 174, RESPONSE_US = 8000, DISCOVERY_US = 50000;
 static constexpr uint32_t STALE_US = 2000000, CELL_STALE_US = 5000000;
 
@@ -57,6 +57,7 @@ void Link::restart(uint32_t now)
     released = hasSample = waitingReply = cellCountKnown = false;
     data = {};
     throttle = 0x8000;
+    fadePending = false;
     // The bus has already been initialized; only first boot needs the 50 ms listen.
     started = lastHello = now - DISCOVERY_US;
     helloPending = true;
@@ -64,6 +65,7 @@ void Link::restart(uint32_t now)
 
 void Link::setControlPermission(bool allowed)
 {
+    if (permitted && !allowed) { controlPending = true; fadePending = false; }
     permitted = allowed;
     if (!allowed) { released = hasSample = false; throttle = 0x8000; }
 }
@@ -74,6 +76,8 @@ void Link::setThrottle(uint16_t value, uint32_t now)
     if (hasSample && uint32_t(now - lastSample) >= REQUEST_US) released = false;
     lastSample = now;
     hasSample = true;
+    controlPending = true;
+    fadePending = false;
     if (!released && value >= 976 && value <= 1008)
     {
         released = true;
@@ -84,13 +88,21 @@ void Link::setThrottle(uint16_t value, uint32_t now)
 
 bool Link::connected() const { return phase == Active; }
 
+void Link::missedFrame()
+{
+    if (phase != Active || controlPending) return;
+    controlPending = fadePending = true;
+}
+
 bool Link::nextPacket(uint32_t now, Packet &p)
 {
-    if (phase == Active && uint32_t(now - lastReply) >= STALE_US) restart(now);
-    if (hasSample && uint32_t(now - lastSample) >= REQUEST_US)
+    if (hasSample && (uint32_t(now - lastSample) >= REQUEST_US ||
+        (phase == Active && uint32_t(now - lastReply) >= STALE_US)))
     {
         released = hasSample = false;
         throttle = 0x8000;
+        controlPending = true;
+        fadePending = false;
     }
     if (txBusy) return false;
     if (waitingReply)
@@ -98,6 +110,7 @@ bool Link::nextPacket(uint32_t now, Packet &p)
         if (uint32_t(now - txEnded) < RESPONSE_US) return false;
         waitingReply = false;
     }
+    if (phase == Active && uint32_t(now - lastReply) >= STALE_US) restart(now);
     if (inputSize && uint32_t(now - lastByte) >= 2500) inputSize = 0;
     if (inputSize || uint32_t(now - lastBus) < IDLE_US) return false;
     p = {};
@@ -117,15 +130,20 @@ bool Link::nextPacket(uint32_t now, Packet &p)
     }
     else
     {
-        if (uint32_t(now - lastControl) < CONTROL_US) return false;
+        if (!controlPending && uint32_t(now - lastControl) < (permitted && hasSample ? FADE_US : FAILSAFE_US)) return false;
         const bool safe = !permitted || !released || !hasSample;
+        const bool fade = !safe && (fadePending || !controlPending);
+        controlPending = fadePending = false;
         requestReply = uint32_t(now - lastRequest) >= REQUEST_US;
-        p.length = 16;
-        const uint8_t header[] = {0xA6,0xCD,16,uint8_t(safe ? 1 : 0),uint8_t(requestReply ? 0x40 : 0),uint8_t(safe ? 0 : 100),0,0,1,0,0,0};
+        p.length = fade ? 14 : 16;
+        const uint8_t header[] = {0xA6,0xCD,p.length,uint8_t(safe ? 1 : 0),uint8_t(requestReply ? 0x40 : 0),uint8_t(safe ? 0 : 100),0,0,uint8_t(fade ? 0 : 1),0,0,0};
         std::memcpy(p.bytes, header, sizeof(header));
-        const uint16_t channel = safe ? 0x8000 : throttle;
-        p.bytes[12] = channel;
-        p.bytes[13] = channel >> 8;
+        if (!fade)
+        {
+            const uint16_t channel = safe ? 0x8000 : throttle;
+            p.bytes[12] = channel;
+            p.bytes[13] = channel >> 8;
+        }
         lastControl = now;
         if (requestReply) lastRequest = now;
     }
@@ -143,7 +161,9 @@ void Link::transmitted(uint32_t now)
     if (broadcastTx)
     {
         phase = Active;
-        lastControl = now - CONTROL_US;
+        controlPending = true;
+        fadePending = false;
+        lastControl = now - FAILSAFE_US;
         lastRequest = now - REQUEST_US;
     }
 }
@@ -158,19 +178,21 @@ void Link::resync()
 
 void Link::receive(uint8_t byte, uint32_t now)
 {
-    if (txBusy) return; // discard local transmit echo
-    if (inputSize && uint32_t(now - lastByte) >= 2500) inputSize = 0;
+    // UART0 buffers echoes and replies. Callback gaps are not wire gaps:
+    // only the idle scheduler expires partial input; receiver-source frames are ignored.
     lastByte = lastBus = now;
     if (!inputSize && byte != 0xA6) return;
     input[inputSize++] = byte;
     while (inputSize >= 3)
     {
+        if (input[0] != 0xA6) { resync(); continue; }
         const uint8_t length = input[2];
         if (length < 5 || length > sizeof(input)) { resync(); continue; }
         if (inputSize < length) return;
         if (crc16(input, length - 2) != be16(input + length - 2)) { resync(); continue; }
         processFrame(now);
-        inputSize = 0;
+        inputSize -= length;
+        std::memmove(input, input + length, inputSize);
     }
 }
 

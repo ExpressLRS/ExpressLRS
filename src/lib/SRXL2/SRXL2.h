@@ -20,6 +20,7 @@ public:
     void reset(uint32_t uid, uint32_t nowUs);
     void setControlPermission(bool permitted);
     void setThrottle(uint16_t crsfValue, uint32_t nowUs);
+    void missedFrame();
     void receive(uint8_t byte, uint32_t nowUs);
     bool nextPacket(uint32_t nowUs, Packet &packet);
     void transmitted(uint32_t nowUs);
@@ -33,7 +34,7 @@ private:
     uint16_t throttle = 0x8000;
     bool permitted = false, released = false, hasSample = false;
     bool txBusy = false, requestReply = false, waitingReply = false, helloPending = false;
-    bool broadcastTx = false, cellCountKnown = false;
+    bool broadcastTx = false, cellCountKnown = false, controlPending = false, fadePending = false;
     uint8_t input[80] = {}, inputSize = 0;
     mutable Telemetry data{}; // expiry is cached; a counter wrap must not revive it
     void restart(uint32_t nowUs);

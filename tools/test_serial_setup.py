@@ -9,6 +9,78 @@ import tempfile
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def check_teamrace(compiler, environment, directory):
+    directory = Path(directory)
+    mock_config = directory / "teamrace-config.h"
+    mock_config.write_text("""#pragma once
+#include <cstdint>
+struct Config {
+    uint8_t position = 1, channel = 10;
+    uint8_t GetTeamracePosition() const { return position; }
+    uint8_t GetTeamraceChannel() const { return channel; }
+};
+extern Config config;
+""")
+    source = directory / "devSerialIO.cpp"
+    source.write_text((ROOT / "src/src/rx-serial/devSerialIO.cpp").read_text().replace(
+        '#include "config.h"', '#include "teamrace-config.h"'))
+    probe = directory / "teamrace.cpp"
+    probe.write_text(r"""
+#include <cassert>
+#include <cstdio>
+#include "targets.h"
+#include "common.h"
+#include "SerialIO.h"
+#include "crsf_protocol.h"
+#include "devSerialIO.h"
+#include "teamrace-config.h"
+Config config;
+connectionState_e connectionState = connected;
+bool connectionHasModelMatch = true, teamraceHasModelMatch = true;
+uint32_t ChannelData[CRSF_NUM_CHANNELS] = {};
+class Probe : public SerialIO {
+public:
+    Probe() : SerialIO(nullptr, nullptr) {}
+    uint32_t sendRCFrame(bool available, bool, uint32_t *) override {
+        passed = available;
+        return 1;
+    }
+    bool passed = false;
+    void processBytes(uint8_t *, uint16_t) override {}
+};
+void SerialIO::setFailsafe(bool value) { failsafe = value; }
+void SerialIO::processSerialInput() {}
+void SerialIO::sendQueuedData(uint32_t) {}
+Probe probe;
+SerialIO *serialIO = &probe;
+static void frame() { crsfRCFrameAvailable(); Serial0_device.timeout(); }
+int main() {
+    Serial0_device.start();
+    ChannelData[config.channel] = 1811; // Wrong team-race switch position.
+    frame(); frame(); frame();
+    assert(!teamraceHasModelMatch && !probe.passed);
+    config.position = 0; // Lua can disable team race without rebooting.
+    connectionState = disconnected; Serial0_device.event();
+    connectionState = connected; Serial0_device.event();
+    connectionHasModelMatch = false;
+    frame();
+    assert(!probe.passed && !teamraceHasModelMatch); // Model mismatch still rejects the frame.
+    connectionHasModelMatch = true;
+    ChannelData[2] = 992;
+    for (unsigned i = 0; i < 10; ++i) frame();
+    assert(probe.passed && teamraceHasModelMatch); // SRXL2's permission gate can recover.
+    std::puts("Team-race Off: live inhibition clears after reconnect; model mismatch remains blocked");
+}
+""")
+    executable = directory / "teamrace.exe"
+    includes = ["-I" + str(ROOT / "src/include"), "-I" + str(ROOT / "src/src/rx-serial")]
+    includes += ["-I" + str(path) for path in (ROOT / "src/lib").iterdir() if path.is_dir()]
+    subprocess.run([compiler, "-std=gnu++17", "-mno-ms-bitfields", "-DTARGET_NATIVE", "-DUNIT_TEST",
+                    "-DTARGET_RX", "-DRegulatory_Domain_ISM_2400", *includes,
+                    str(source), str(probe), "-o", str(executable)], env=environment, check=True)
+    subprocess.run([str(executable)], env=environment, check=True)
+
+
 def check():
     source = (ROOT / "src/src/rx_main.cpp").read_text()
     # ELRS uses an unindented closing brace for this top-level function.
@@ -114,6 +186,7 @@ int main() {
         subprocess.run([compiler, "-std=c++11", str(cpp), "-o", str(executable)],
                        env=environment, check=True)
         subprocess.run([str(executable)], env=environment, check=True)
+        check_teamrace(compiler, environment, directory)
 
 
 if __name__ == "__main__":

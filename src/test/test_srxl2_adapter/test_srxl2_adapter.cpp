@@ -16,6 +16,7 @@ static bool srxl2Selected = true;
 static uint32_t nowUs;
 static unsigned long testMicros() { return nowUs; }
 static bool busDriving, txDrained, releasedBeforeDrain;
+static bool autoTxDone = true;
 static bool replyBlocked;
 static unsigned diagnosticPublications;
 static void (*txDoneInterrupt)(void *);
@@ -55,7 +56,7 @@ static void releaseBusTransmit()
 #define SRXL2_INSTALL_TX_IRQ(handler, argument) installTxInterrupt(handler, argument)
 #define SRXL2_REMOVE_TX_IRQ() (txDoneInterrupt = nullptr)
 #define SRXL2_BEGIN_TX() startBusTransmit()
-#define SRXL2_POLL_TX_IRQ() drainBusTransmit()
+#define SRXL2_POLL_TX_IRQ() do { if (autoTxDone) drainBusTransmit(); } while (0)
 #define SRXL2_RELEASE_TX() releaseBusTransmit()
 #define micros testMicros
 #include "../../src/rx-serial/SerialSRXL2.cpp"
@@ -87,6 +88,7 @@ void setUp()
     uartReceiving = false;
     srxl2Selected = true;
     busDriving = txDrained = releasedBeforeDrain = false;
+    autoTxDone = true;
     replyBlocked = false;
     diagnosticPublications = 0;
     txDoneInterrupt = nullptr;
@@ -184,6 +186,43 @@ void test_adapter_missing_frames_do_not_refresh_cached_throttle()
     deliver(driver, false, channels);
     send(driver, 154000); // 100 ms after the accepted neutral sample
     assert_neutral(out);
+}
+
+void test_adapter_missed_flag_sends_fade_until_sample_expires()
+{
+    std::string in, out;
+    BinaryStringStream rx(in), tx(out);
+    SerialSRXL2 driver(&tx, &rx, 1);
+    establish(driver, in, out);
+    uint32_t channels[16] = {};
+    channels[2] = 1811;
+    nowUs = 63000;
+    deliver(driver, true, channels);
+    send(driver, 63000);
+    send(driver, 64500);
+    for (uint32_t time : {83000u, 123000u})
+    {
+        nowUs = time;
+        driver.sendRCFrame(false, true, channels);
+        const size_t before = out.size();
+        send(driver, time);
+        TEST_ASSERT_EQUAL(before + 14, out.size());
+        TEST_ASSERT_EQUAL(0, uint8_t(out[before + 3]));
+        const uint8_t noChannels[] = {0,0,0,0};
+        TEST_ASSERT_EQUAL_UINT8_ARRAY(noChannels, reinterpret_cast<const uint8_t *>(out.data()) + before + 8, 4);
+        send(driver, time + 1300);
+    }
+    nowUs = 163000;
+    driver.sendRCFrame(false, true, channels);
+    const size_t before = out.size();
+    send(driver, 163000);
+    TEST_ASSERT_EQUAL(before + 16, out.size());
+    assert_neutral(out); // Missed callbacks cannot refresh the 100 ms sample deadline.
+    input(driver, in, esc, sizeof(esc), 165000);
+    nowUs = 173000;
+    deliver(driver, true, channels);
+    send(driver, 173000);
+    assert_neutral(out); // Recovery still requires a fresh centered sample.
 }
 
 void test_missing_raw_ch3_is_not_an_extreme_throttle_snapshot()
@@ -431,6 +470,70 @@ void test_tx_interrupt_releases_bus_while_main_loop_is_suspended()
     TEST_ASSERT_EQUAL_UINT8(0xFF, uint8_t(out[18])); // Accepted ESC hello causes a broadcast.
 }
 
+void test_split_echo_and_buffered_reply_survive_delayed_tx_done_callback()
+{
+    for (unsigned split = 0; split <= 16; ++split)
+    {
+        for (uint32_t delay : {0u, 4000u})
+        {
+            std::string in, out;
+            BinaryStringStream rx(in), tx(out);
+            nowUs = 0;
+            autoTxDone = true;
+            SerialSRXL2 driver(&tx, &rx, 1);
+            establish(driver, in, out);
+            uint32_t channels[16] = {};
+            channels[2] = 198; // This grant's independently calculated CRC is 36 A6.
+            nowUs = 153000;
+            deliver(driver, true, channels);
+            autoTxDone = false; // Hardware FIFO/shifter remains busy during the echo prefix.
+            const size_t before = out.size();
+            send(driver, 153000);
+            TEST_ASSERT_EQUAL(before + 16, out.size());
+            const std::string echo = out.substr(before);
+            TEST_ASSERT_EQUAL_HEX8(0x40, uint8_t(echo[4]));
+            TEST_ASSERT_EQUAL_HEX8(0x36, uint8_t(echo[14]));
+            TEST_ASSERT_EQUAL_HEX8(0xA6, uint8_t(echo[15]));
+            input(driver, in, reinterpret_cast<const uint8_t *>(echo.data()), split, 154000);
+            TEST_ASSERT_TRUE(busDriving);
+            nowUs = 154390;
+            drainBusTransmit(); // TX_DONE releases GPIO while the main loop is suspended.
+            TEST_ASSERT_FALSE(busDriving);
+            TEST_ASSERT_FALSE(releasedBeforeDrain);
+            in.append(echo.data() + split, echo.size() - split);
+            in.append(reinterpret_cast<const char *>(hello), sizeof(hello));
+            nowUs = 154390 + delay;
+            driver.processSerialInput(); // Contiguous wire bytes may wait >2500 us for this callback.
+            send(driver, nowUs + 173);
+            TEST_ASSERT_EQUAL(before + 16, out.size());
+            send(driver, nowUs + 1);
+            TEST_ASSERT_EQUAL(before + 30, out.size());
+            TEST_ASSERT_EQUAL_HEX8(0xFF, uint8_t(out[out.size() - 10]));
+            drainBusTransmit();
+        }
+    }
+}
+
+void test_adapter_preserves_delayed_genuine_reply_after_complete_echo()
+{
+    std::string in, out;
+    BinaryStringStream rx(in), tx(out);
+    SerialSRXL2 driver(&tx, &rx, 1);
+    send(driver, 50000);
+    nowUs = 51216;
+    drainBusTransmit();
+    in.append(out); // Complete outgoing echo has reached the UART0 buffer.
+    in.append(reinterpret_cast<const char *>(hello), 4);
+    nowUs = 51400;
+    driver.processSerialInput();
+    input(driver, in, hello + 4, sizeof(hello) - 4, 55400); // Late callback, contiguous wire reply.
+    send(driver, 55573);
+    TEST_ASSERT_EQUAL(14, out.size());
+    send(driver, 55574);
+    TEST_ASSERT_EQUAL(28, out.size());
+    TEST_ASSERT_EQUAL_HEX8(0xFF, uint8_t(out[18]));
+}
+
 void test_diagnostics_publish_once_on_wifi_entry_without_transmitting()
 {
     std::string in, out;
@@ -495,6 +598,7 @@ int main()
     UNITY_BEGIN();
     RUN_TEST(test_adapter_ch3_and_all_inhibition_paths);
     RUN_TEST(test_adapter_missing_frames_do_not_refresh_cached_throttle);
+    RUN_TEST(test_adapter_missed_flag_sends_fade_until_sample_expires);
     RUN_TEST(test_missing_raw_ch3_is_not_an_extreme_throttle_snapshot);
     RUN_TEST(test_adapter_real_crsf_payload_and_budget);
     RUN_TEST(test_adapter_voltage_fallback_and_sentinel_suppression);
@@ -503,6 +607,8 @@ int main()
     RUN_TEST(test_first_pending_neutral_after_rf_reset_cannot_release_motion);
     RUN_TEST(test_live_driver_revokes_motion_when_another_protocol_is_selected);
     RUN_TEST(test_tx_interrupt_releases_bus_while_main_loop_is_suspended);
+    RUN_TEST(test_split_echo_and_buffered_reply_survive_delayed_tx_done_callback);
+    RUN_TEST(test_adapter_preserves_delayed_genuine_reply_after_complete_echo);
     RUN_TEST(test_diagnostics_publish_once_on_wifi_entry_without_transmitting);
     RUN_TEST(test_diagnostics_keep_rf_commands_and_received_bytes_for_wifi_capture);
     return UNITY_END();
