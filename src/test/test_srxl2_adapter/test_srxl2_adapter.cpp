@@ -650,6 +650,30 @@ void test_wifi_probe_changes_only_the_discovery_destination()
     TEST_ASSERT_TRUE(setSRXL2ProbeAddress(0x40));
 }
 
+void test_startup_capture_keeps_early_bytes_after_the_tail_is_overwritten()
+{
+    std::string in, out;
+    BinaryStringStream rx(in), tx(out);
+    SerialSRXL2 driver(&tx, &rx, 3);
+    uint8_t early[126], later[200];
+    std::memset(early, 0x55, sizeof(early));
+    std::memset(later, 0x5A, sizeof(later));
+    input(driver, in, early, sizeof(early), 12345);
+    while (rx.available()) driver.processSerialInput();
+    send(driver, 50000);
+    send(driver, 51216);
+    input(driver, in, later, sizeof(later), 60000);
+    while (rx.available()) driver.processSerialInput();
+    const auto &state = driver.getDiagnostics();
+    TEST_ASSERT_EQUAL(12345, state.firstRxUs);
+    TEST_ASSERT_EQUAL(126, state.rxBeforeFirstTx);
+    TEST_ASSERT_EQUAL(256, state.rxHeadSize);
+    TEST_ASSERT_EQUAL_UINT8_ARRAY(early, state.rxHead, sizeof(early));
+    for (unsigned i = sizeof(early); i < sizeof(state.rxHead); ++i)
+        TEST_ASSERT_EQUAL_HEX8(0x5A, state.rxHead[i]);
+    for (auto byte : state.rxTail) TEST_ASSERT_EQUAL_HEX8(0x5A, byte);
+}
+
 void test_diagnostics_keep_rf_commands_and_received_bytes_for_wifi_capture()
 {
     std::string in, out;
@@ -756,6 +780,7 @@ int main()
     RUN_TEST(test_wifi_live_capture_refreshes_while_motion_remains_inhibited);
     RUN_TEST(test_edge_capture_separates_transmit_from_undecodable_reply_activity);
     RUN_TEST(test_wifi_probe_changes_only_the_discovery_destination);
+    RUN_TEST(test_startup_capture_keeps_early_bytes_after_the_tail_is_overwritten);
     RUN_TEST(test_diagnostics_keep_rf_commands_and_received_bytes_for_wifi_capture);
     RUN_TEST(test_diagnostics_trace_first_handshake_before_the_rf_link_connects);
     RUN_TEST(test_diagnostics_measure_tx_completion_delay_without_changing_packets);

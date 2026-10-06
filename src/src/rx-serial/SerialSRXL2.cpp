@@ -325,8 +325,14 @@ void SerialSRXL2::processBytes(uint8_t *bytes, uint16_t size)
     const uint32_t now = micros();
     completeTransmission(now);
 #if defined(SRXL2_DIAGNOSTICS)
+    if (size && diagnostics.rxHeadSize == 0) diagnostics.firstRxUs = now;
+    if (diagnostics.txPackets == 0) diagnostics.rxBeforeFirstTx += size;
     for (unsigned i = 0; i < size; ++i)
+    {
+        if (diagnostics.rxHeadSize < sizeof(diagnostics.rxHead))
+            diagnostics.rxHead[diagnostics.rxHeadSize++] = bytes[i];
         diagnostics.rxTail[diagnostics.rxBytes++ % sizeof(diagnostics.rxTail)] = bytes[i];
+    }
 #endif
     for (unsigned i = 0; i < size; ++i) link.receive(bytes[i], now);
 }
@@ -452,6 +458,8 @@ void SerialSRXL2::publishDiagnostics(bool wifiEntry)
     state["tx_packets"] = diagnostics.txPackets;
     state["driver_init_us"] = diagnostics.driverInitUs;
     state["first_tx_attempt_us"] = diagnostics.firstTxUs;
+    state["first_rx_callback_us"] = diagnostics.firstRxUs;
+    state["rx_before_first_tx"] = diagnostics.rxBeforeFirstTx;
     state["tx_completions"] = uint32_t(diagnostics.txDone);
     state["tx_duration_max_us"] = uint32_t(diagnostics.txDurationMaxUs);
     if (diagnostics.txDone) state["tx_release_excess_min_us"] = uint32_t(diagnostics.txDelayMinUs);
@@ -480,7 +488,12 @@ void SerialSRXL2::publishDiagnostics(bool wifiEntry)
     state["gpio_iomux"] = REG_READ(GPIO_PIN_MUX_REG[pin]);
 #endif
     const char hex[] = "0123456789abcdef";
-    String received, sent;
+    String received, sent, firstReceived;
+    for (unsigned i = 0; i < diagnostics.rxHeadSize; ++i)
+    {
+        const uint8_t byte = diagnostics.rxHead[i];
+        firstReceived += hex[byte >> 4]; firstReceived += hex[byte & 15];
+    }
     const unsigned size = diagnostics.rxBytes < 64 ? diagnostics.rxBytes : 64;
     const unsigned start = diagnostics.rxBytes < 64 ? 0 : diagnostics.rxBytes % 64;
     for (unsigned i = 0; i < size; ++i)
@@ -494,6 +507,7 @@ void SerialSRXL2::publishDiagnostics(bool wifiEntry)
         sent += hex[byte >> 4]; sent += hex[byte & 15];
     }
     state["last_rx_hex"] = received;
+    state["first_rx_hex"] = firstReceived;
     state["last_rf_tx_hex"] = sent;
     String result;
     serializeJson(doc, result);

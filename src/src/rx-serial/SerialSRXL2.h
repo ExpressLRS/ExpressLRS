@@ -19,6 +19,9 @@ public:
     {
         uint32_t frames = 0, txPackets = 0, rxBytes = 0;
         uint32_t driverInitUs = 0, firstTxUs = 0;
+        uint32_t firstRxUs = 0, rxBeforeFirstTx = 0;
+        uint16_t rxHeadSize = 0;
+        uint8_t rxHead[256] = {};
         bool edgeCounterReady = false;
         uint32_t rxWireEdges = 0, txExpectedEdges = 0;
         volatile uint32_t txWireEdges = 0;
