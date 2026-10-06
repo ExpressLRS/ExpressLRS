@@ -1383,9 +1383,9 @@ static void setupSerial()
     #endif
     // ARDUINO_CORE_INVERT_FIX PT2 end
 
-    if (smartSerial) Serial.setTxBufferSize(0);
-    Serial.begin(serialBaud, serialConfig, GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX, invert);
-    if (smartSerial) Serial.setRxFIFOFull(1);
+    // SRXL2 initializes its shared signal as RX-only in its own driver.
+    if (!smartSerial)
+        Serial.begin(serialBaud, serialConfig, GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX, invert);
 #endif
 
     if (firmwareOptions.is_airport)

@@ -19,6 +19,8 @@ static bool busDriving, txDrained, releasedBeforeDrain;
 static bool autoTxDone = true;
 static bool replyBlocked;
 static unsigned diagnosticPublications;
+static UartStartupSpy uartStartup;
+static constexpr uint32_t SERIAL_8N1 = 0x800001c;
 static void (*txDoneInterrupt)(void *);
 static void *txDoneArgument;
 static bool installTxInterrupt(void (*handler)(void *), void *argument)
@@ -59,7 +61,9 @@ static void releaseBusTransmit()
 #define SRXL2_POLL_TX_IRQ() do { if (autoTxDone) drainBusTransmit(); } while (0)
 #define SRXL2_RELEASE_TX() releaseBusTransmit()
 #define micros testMicros
+#define Serial uartStartup
 #include "../../src/rx-serial/SerialSRXL2.cpp"
+#undef Serial
 #undef micros
 #undef SRXL2_HARDWARE_RX_BUSY
 #undef SRXL2_MODE_ACTIVE
@@ -91,6 +95,7 @@ void setUp()
     autoTxDone = true;
     replyBlocked = false;
     diagnosticPublications = 0;
+    uartStartup = UartStartupSpy();
     txDoneInterrupt = nullptr;
     immediateReplyInput = nullptr;
     immediateReply.clear();
@@ -103,6 +108,24 @@ void tearDown() { crsfRouter.removeConnector(&capture); }
 static const uint8_t hello[] = {0xA6,0x21,14,0x40,0x21,10,0,0,0x11,0x22,0x33,0x44,0xC9,0xE7};
 static const uint8_t esc[] = {0xA6,0x80,22,0x21,0x20,0,0x30,0x39,4,0xD2,1,0x5E,3,0xE8,0,0xFA,15,0x78,0x64,0x64,0x74,0x74};
 static const uint8_t battery[] = {0xA6,0x80,22,0x21,0x42,0,0,0xF6,0xB8,0x0B,0,0,0x39,0x30,1,0x0E,0xD0,0x0E,0,0,0x97,0x9C};
+
+void test_smart_startup_attaches_receive_without_driving_the_signal_pin()
+{
+    for (int8_t signal : {1, 3})
+    {
+        std::string in, out;
+        BinaryStringStream rx(in), tx(out);
+        SerialSRXL2 driver(&tx, &rx, signal);
+        TEST_ASSERT_EQUAL_INT8(signal, uartStartup.rxPin);
+        TEST_ASSERT_EQUAL_INT8(-1, uartStartup.txPin);
+        TEST_ASSERT_EQUAL_UINT32(115200, uartStartup.baud);
+        TEST_ASSERT_EQUAL_HEX32(SERIAL_8N1, uartStartup.format);
+        TEST_ASSERT_FALSE(uartStartup.inverted);
+        TEST_ASSERT_EQUAL(0, uartStartup.txBufferSize);
+        TEST_ASSERT_EQUAL(1, uartStartup.rxThreshold);
+        TEST_ASSERT_TRUE(out.empty());
+    }
+}
 
 static void send(SerialSRXL2 &driver, uint32_t time)
 {
@@ -593,6 +616,26 @@ void test_diagnostics_keep_rf_commands_and_received_bytes_for_wifi_capture()
     TEST_ASSERT_EQUAL(1, diagnosticPublications);
 }
 
+void test_diagnostics_trace_first_handshake_before_the_rf_link_connects()
+{
+    connectionState = disconnected;
+    nowUs = 1000;
+    std::string in, out;
+    BinaryStringStream rx(in), tx(out);
+    SerialSRXL2 driver(&tx, &rx, 1);
+    const auto &state = driver.getDiagnostics();
+    TEST_ASSERT_EQUAL(1000, state.driverInitUs);
+    send(driver, 50999);
+    TEST_ASSERT_TRUE(out.empty());
+    send(driver, 51000);
+    TEST_ASSERT_EQUAL(14, out.size());
+    TEST_ASSERT_EQUAL(51000, state.firstTxUs);
+    send(driver, 52216); // Complete the 14-byte transmission before the next poll.
+    send(driver, 101000);
+    TEST_ASSERT_EQUAL(28, out.size());
+    TEST_ASSERT_EQUAL(51000, state.firstTxUs);
+}
+
 void test_diagnostics_measure_tx_completion_delay_without_changing_packets()
 {
     std::string in, out;
@@ -619,6 +662,7 @@ void test_diagnostics_measure_tx_completion_delay_without_changing_packets()
 int main()
 {
     UNITY_BEGIN();
+    RUN_TEST(test_smart_startup_attaches_receive_without_driving_the_signal_pin);
     RUN_TEST(test_adapter_ch3_and_all_inhibition_paths);
     RUN_TEST(test_adapter_missing_frames_do_not_refresh_cached_throttle);
     RUN_TEST(test_adapter_missed_flag_sends_fade_until_sample_expires);
@@ -634,6 +678,7 @@ int main()
     RUN_TEST(test_adapter_preserves_delayed_genuine_reply_after_complete_echo);
     RUN_TEST(test_diagnostics_publish_once_on_wifi_entry_without_transmitting);
     RUN_TEST(test_diagnostics_keep_rf_commands_and_received_bytes_for_wifi_capture);
+    RUN_TEST(test_diagnostics_trace_first_handshake_before_the_rf_link_connects);
     RUN_TEST(test_diagnostics_measure_tx_completion_delay_without_changing_packets);
     return UNITY_END();
 }

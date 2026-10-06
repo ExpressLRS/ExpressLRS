@@ -18,6 +18,7 @@ public:
     struct Diagnostics
     {
         uint32_t frames = 0, txPackets = 0, rxBytes = 0;
+        uint32_t driverInitUs = 0, firstTxUs = 0;
         volatile uint32_t txDone = 0;
         uint32_t txStartedUs = 0, txExpectedUs = 0;
         volatile uint32_t txDurationMaxUs = 0, txDelayMaxUs = 0;

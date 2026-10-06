@@ -8,6 +8,7 @@
 #include "driver/gpio.h"
 #include "hal/uart_ll.h"
 #include "esp32-hal-matrix.h"
+#include "esp32-hal-uart.h"
 #include "soc/gpio_sig_map.h"
 #if defined(SRXL2_DIAGNOSTICS)
 #include <ArduinoJson.h>
@@ -71,6 +72,11 @@ void ICACHE_RAM_ATTR SerialSRXL2::onRFReset()
 SerialSRXL2::SerialSRXL2(Stream *output, Stream *input, int8_t txPin)
     : SerialIO(output, input), pin(txPin), inputPort(input)
 {
+    // Receive on the shared signal immediately, without attaching an idle-high
+    // UART0 TX output. The GPIO/UART transmitter below owns bus direction.
+    Serial.setTxBufferSize(0);
+    Serial.begin(115200, SERIAL_8N1, pin, -1, false);
+    Serial.setRxFIFOFull(1);
     uint32_t uid = 0x12345678;
 #if defined(PLATFORM_ESP32)
     const uint64_t mac = ESP.getEfuseMac();
@@ -116,7 +122,11 @@ SerialSRXL2::SerialSRXL2(Stream *output, Stream *input, int8_t txPin)
 #if defined(SRXL2_INSTALL_TX_IRQ)
     txReady = SRXL2_INSTALL_TX_IRQ(onTxDone, this);
 #endif
-    link.reset(uid, micros());
+    const uint32_t initialized = micros();
+    link.reset(uid, initialized);
+#if defined(SRXL2_DIAGNOSTICS)
+    diagnostics.driverInitUs = initialized;
+#endif
     lastPublished = micros();
     generation = srxl2RFGeneration;
     lastHardwareReceive = micros();
@@ -272,6 +282,7 @@ void SerialSRXL2::sendQueuedData(uint32_t maxBytesToSend)
             transmitting = true;
 #if defined(SRXL2_DIAGNOSTICS)
             ++diagnostics.txPackets;
+            if (diagnostics.txPackets == 1) diagnostics.firstTxUs = now;
             if (connectionState == connected)
             {
                 diagnostics.lastRfTxLength = min(unsigned(packet.length), unsigned(sizeof(diagnostics.lastRfTx)));
@@ -323,6 +334,8 @@ void SerialSRXL2::event()
     state["input_frames"] = diagnostics.frames;
     state["tx_ready"] = txReady;
     state["tx_packets"] = diagnostics.txPackets;
+    state["driver_init_us"] = diagnostics.driverInitUs;
+    state["first_tx_attempt_us"] = diagnostics.firstTxUs;
     state["tx_completions"] = uint32_t(diagnostics.txDone);
     state["tx_duration_max_us"] = uint32_t(diagnostics.txDurationMaxUs);
     if (diagnostics.txDone) state["tx_release_excess_min_us"] = uint32_t(diagnostics.txDelayMinUs);
@@ -337,6 +350,8 @@ void SerialSRXL2::event()
     state["gpio_output_enabled_after_tx"] = uint32_t(diagnostics.gpioEnableAfterTx);
     state["gpio_matrix_after_tx"] = uint32_t(diagnostics.gpioMatrixAfterTx);
     state["uart0_rx_matrix"] = GPIO.func_in_sel_cfg[U0RXD_IN_IDX].val;
+    state["uart0_rx_pin"] = uart_get_RxPin(0);
+    state["uart0_tx_pin"] = uart_get_TxPin(0);
     state["gpio_iomux"] = REG_READ(GPIO_PIN_MUX_REG[pin]);
 #endif
     const char hex[] = "0123456789abcdef";
