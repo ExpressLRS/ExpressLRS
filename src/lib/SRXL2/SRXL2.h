@@ -22,6 +22,7 @@ public:
     void setControlPermission(bool permitted);
     void setThrottle(uint16_t crsfValue, uint32_t nowUs);
     void missedFrame();
+    void requestNeutralProbe(bool pending) { probePending = pending; }
     void receive(uint8_t byte, uint32_t nowUs);
     bool nextPacket(uint32_t nowUs, Packet &packet);
     void transmitted(uint32_t nowUs);
@@ -37,6 +38,7 @@ private:
     bool txBusy = false, requestReply = false, waitingReply = false, helloPending = false;
     bool monitorReplies = false;
     bool urgentControl = false;
+    bool probePending = false;
     bool broadcastTx = false, cellCountKnown = false, controlPending = false, fadePending = false;
     uint8_t input[80] = {}, inputSize = 0;
     mutable Telemetry data{}; // expiry is cached; a counter wrap must not revive it

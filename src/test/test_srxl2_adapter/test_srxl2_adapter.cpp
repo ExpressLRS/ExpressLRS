@@ -14,7 +14,18 @@ CRSFRouter crsfRouter;
 static bool uartReceiving = false;
 static bool srxl2Selected = true;
 static uint32_t nowUs;
-static unsigned long testMicros() { return nowUs; }
+static void (*afterClockRead)();
+static unsigned long testMicros()
+{
+    const uint32_t snapshot = nowUs;
+    if (afterClockRead)
+    {
+        auto callback = afterClockRead;
+        afterClockRead = nullptr;
+        callback();
+    }
+    return snapshot;
+}
 static bool busDriving, txDrained, releasedBeforeDrain;
 static bool autoTxDone = true;
 static bool replyBlocked;
@@ -90,6 +101,9 @@ public:
 void setUp()
 {
     nowUs = 0;
+    afterClockRead = nullptr;
+    diagnosticNeutralProbeUs.store(0);
+    diagnosticProbeAddress.store(0x40);
     connectionState = connected;
     connectionHasModelMatch = teamraceHasModelMatch = true;
     capture.frames.clear();
@@ -686,6 +700,155 @@ void test_startup_capture_keeps_early_bytes_after_the_tail_is_overwritten()
     for (auto byte : state.rxTail) TEST_ASSERT_EQUAL_HEX8(0x5A, byte);
 }
 
+void test_wifi_neutral_probe_polls_without_rf_and_expires_across_timer_wrap()
+{
+    TEST_ASSERT_FALSE(requestSRXL2NeutralProbe());
+    for (uint32_t base : {50000u, 0xFFFF0000u})
+    {
+        connectionState = wifiUpdate;
+        TEST_ASSERT_TRUE(setSRXL2ProbeAddress(0x4F)); // This scan setting must not redirect the neutral probe.
+        nowUs = base;
+        std::string in, out;
+        BinaryStringStream rx(in), tx(out);
+        SerialSRXL2 driver(&tx, &rx, 3);
+        srxl2Selected = false;
+        TEST_ASSERT_FALSE(requestSRXL2NeutralProbe());
+        srxl2Selected = true;
+        nowUs = base + 1000;
+        TEST_ASSERT_TRUE(requestSRXL2NeutralProbe());
+        autoTxDone = false;
+        send(driver, base + 1000);
+        TEST_ASSERT_EQUAL(14, out.size());
+        TEST_ASSERT_EQUAL_HEX8(0x40, uint8_t(out[4]));
+        send(driver, base + 2200);
+        TEST_ASSERT_EQUAL(14, out.size()); // An undrained UART still owns the bus.
+        nowUs = base + 2216;
+        drainBusTransmit();
+        autoTxDone = true;
+        send(driver, base + 2216);
+        send(driver, base + 22215);
+        TEST_ASSERT_EQUAL(14, out.size()); // Respect the outstanding reply grant.
+        send(driver, base + 22216);
+        TEST_ASSERT_EQUAL(28, out.size());
+        TEST_ASSERT_EQUAL_HEX8(0xFF, uint8_t(out[18]));
+        send(driver, base + 23432);
+        send(driver, base + 43431);
+        TEST_ASSERT_EQUAL(28, out.size());
+        send(driver, base + 43432);
+        const uint8_t wanted[] = {0xA6,0xCD,16,0,0x40,100,0,0,1,0,0,0,0,0x80,0x90,0x9A};
+        TEST_ASSERT_EQUAL(44, out.size());
+        TEST_ASSERT_EQUAL_UINT8_ARRAY(wanted, reinterpret_cast<const uint8_t *>(out.data()) + 28, 16);
+        uint32_t channels[16] = {};
+        channels[2] = 1811; // RF callbacks and cached extremes cannot change the probe throttle.
+        for (uint32_t delta = 45432; delta < 1001000; delta += 2000)
+        {
+            nowUs = base + delta;
+            deliver(driver, true, channels);
+            send(driver, nowUs);
+        }
+        unsigned polls = 0, controls = 0;
+        for (size_t i = 28; i < out.size(); i += 16)
+        {
+            TEST_ASSERT_EQUAL_HEX8(0xCD, uint8_t(out[i + 1]));
+            TEST_ASSERT_EQUAL(16, uint8_t(out[i + 2]));
+            TEST_ASSERT_EQUAL(0, uint8_t(out[i + 3]));
+            TEST_ASSERT_EQUAL_HEX8(0x80, uint8_t(out[i + 13]));
+            TEST_ASSERT_EQUAL(0, uint8_t(out[i + 12]));
+            if (uint8_t(out[i + 4]) == 0x40) ++polls;
+            ++controls;
+        }
+        TEST_ASSERT_EQUAL(5, polls);
+        TEST_ASSERT_GREATER_THAN(40, controls);
+        send(driver, base + 1001000);
+        send(driver, base + 1003000);
+        assert_neutral(out);
+        TEST_ASSERT_EQUAL(0, uint8_t(out[out.size() - 12])); // Expiry stops telemetry polling.
+        input(driver, in, esc, sizeof(esc), base + 1003200);
+        send(driver, base + 1005000);
+        TEST_ASSERT_EQUAL(base + 1003200, driver.getDiagnostics().lastTelemetryUs);
+    }
+    TEST_ASSERT_TRUE(setSRXL2ProbeAddress(0x40));
+}
+
+void test_wifi_neutral_probe_accepts_a_request_between_clock_reads()
+{
+    connectionState = wifiUpdate;
+    nowUs = 50000;
+    std::string in, out;
+    BinaryStringStream rx(in), tx(out);
+    SerialSRXL2 driver(&tx, &rx, 3);
+    afterClockRead = []() {
+        ++nowUs; // Web accepts the command after the serial task took its clock snapshot.
+        TEST_ASSERT_TRUE(requestSRXL2NeutralProbe());
+    };
+    send(driver, 51000);
+    TEST_ASSERT_EQUAL(14, out.size());
+    TEST_ASSERT_EQUAL_HEX8(0x40, uint8_t(out[4]));
+}
+
+void test_leaving_wifi_probe_requires_real_rf_neutral_before_motion()
+{
+    connectionState = wifiUpdate;
+    nowUs = 50000;
+    std::string in, out;
+    BinaryStringStream rx(in), tx(out);
+    SerialSRXL2 driver(&tx, &rx, 3);
+    nowUs = 51000;
+    TEST_ASSERT_TRUE(requestSRXL2NeutralProbe());
+    send(driver, 51000);
+    send(driver, 52216);
+    send(driver, 72216);
+    send(driver, 73432);
+    send(driver, 93432);
+    send(driver, 94822);
+    input(driver, in, esc, sizeof(esc), 95000);
+    connectionState = connected; // Resume RF before the one-second probe expires.
+    uint32_t channels[16] = {};
+    channels[2] = 1811;
+    nowUs = 96000;
+    deliver(driver, true, channels);
+    nowUs = 97000;
+    deliver(driver, true, channels);
+    send(driver, 113432);
+    assert_neutral(out, 0);
+    send(driver, 114822);
+    input(driver, in, esc, sizeof(esc), 115000);
+    channels[2] = 992;
+    nowUs = 116000;
+    deliver(driver, true, channels);
+    channels[2] = 1811;
+    nowUs = 117000;
+    deliver(driver, true, channels);
+    send(driver, 133432);
+    TEST_ASSERT_EQUAL_HEX8(0x54, uint8_t(out[out.size() - 4]));
+    TEST_ASSERT_EQUAL_HEX8(0xD5, uint8_t(out[out.size() - 3]));
+}
+
+void test_wifi_neutral_probe_waits_for_an_outstanding_telemetry_grant()
+{
+    std::string in, out;
+    BinaryStringStream rx(in), tx(out);
+    SerialSRXL2 driver(&tx, &rx, 3);
+    establish(driver, in, out);
+    uint32_t channels[16] = {};
+    channels[2] = 1811;
+    nowUs = 63000;
+    deliver(driver, true, channels);
+    send(driver, 63000);
+    send(driver, 64500);
+    const size_t sent = out.size();
+    connectionState = wifiUpdate;
+    nowUs = 65000;
+    TEST_ASSERT_TRUE(requestSRXL2NeutralProbe());
+    send(driver, 65000);
+    send(driver, 84499);
+    TEST_ASSERT_EQUAL(sent, out.size());
+    send(driver, 84500);
+    TEST_ASSERT_EQUAL(sent + 14, out.size());
+    TEST_ASSERT_EQUAL_HEX8(0x21, uint8_t(out[sent + 1]));
+    TEST_ASSERT_EQUAL_HEX8(0x40, uint8_t(out[sent + 4]));
+}
+
 void test_diagnostics_keep_rf_commands_and_received_bytes_for_wifi_capture()
 {
     std::string in, out;
@@ -806,6 +969,10 @@ int main()
     RUN_TEST(test_edge_capture_separates_transmit_from_undecodable_reply_activity);
     RUN_TEST(test_wifi_probe_changes_only_the_discovery_destination);
     RUN_TEST(test_startup_capture_keeps_early_bytes_after_the_tail_is_overwritten);
+    RUN_TEST(test_wifi_neutral_probe_polls_without_rf_and_expires_across_timer_wrap);
+    RUN_TEST(test_leaving_wifi_probe_requires_real_rf_neutral_before_motion);
+    RUN_TEST(test_wifi_neutral_probe_waits_for_an_outstanding_telemetry_grant);
+    RUN_TEST(test_wifi_neutral_probe_accepts_a_request_between_clock_reads);
     RUN_TEST(test_diagnostics_keep_rf_commands_and_received_bytes_for_wifi_capture);
     RUN_TEST(test_diagnostics_trace_first_handshake_before_the_rf_link_connects);
     RUN_TEST(test_diagnostics_measure_tx_completion_delay_without_changing_packets);

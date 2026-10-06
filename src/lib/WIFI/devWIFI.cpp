@@ -45,6 +45,7 @@
 #if defined(SRXL2_DIAGNOSTICS)
 extern String getSRXL2LiveDiagnostics();
 extern bool setSRXL2ProbeAddress(unsigned address);
+extern bool requestSRXL2NeutralProbe();
 #endif
 #endif
 
@@ -1282,6 +1283,14 @@ static void startServices()
     request->send(response);
   });
   server.on("/srxl2", HTTP_POST, [](AsyncWebServerRequest *request) {
+    if (request->hasParam("neutral"))
+    {
+      const bool accepted = request->getParam("neutral")->value() == "1" && requestSRXL2NeutralProbe();
+      request->send(accepted ? 200 : 400, "application/json", accepted
+          ? "{\"neutral_probe_ms\":1000}"
+          : "{\"error\":\"Neutral probe requires Smart mode, Wi-Fi and neutral=1\"}");
+      return;
+    }
     const String value = request->hasParam("address") ? request->getParam("address")->value() : String();
     const int address = value.toInt();
     if (String(address) != value || !setSRXL2ProbeAddress(address))

@@ -6,6 +6,7 @@
 #if defined(SRXL2_DIAGNOSTICS)
 #include <atomic>
 static std::atomic<uint8_t> diagnosticProbeAddress{0x40};
+static std::atomic<uint32_t> diagnosticNeutralProbeUs{0};
 bool setSRXL2ProbeAddress(unsigned address)
 {
     if (connectionState != wifiUpdate || address < 0x40 || address > 0x4F) return false;
@@ -105,6 +106,16 @@ static bool initSmartEdgeCounter(int pin)
 #endif
 #endif
 
+#if defined(SRXL2_DIAGNOSTICS)
+bool requestSRXL2NeutralProbe()
+{
+    const uint32_t now = micros();
+    if (connectionState != wifiUpdate || !SRXL2_MODE_ACTIVE() || !now) return false;
+    diagnosticNeutralProbeUs.store(now, std::memory_order_relaxed);
+    return true;
+}
+#endif
+
 static volatile uint32_t srxl2RFGeneration = 0;
 
 void ICACHE_RAM_ATTR SerialSRXL2::onRFReset()
@@ -169,6 +180,7 @@ SerialSRXL2::SerialSRXL2(Stream *output, Stream *input, int8_t txPin)
     link.reset(uid, initialized);
 #if defined(SRXL2_DIAGNOSTICS)
     diagnostics.driverInitUs = initialized;
+    lastNeutralProbeRequestUs = diagnosticNeutralProbeUs.load(std::memory_order_relaxed);
 #if defined(PLATFORM_ESP32)
     if (!diagnosticMutex) diagnosticMutex = xSemaphoreCreateMutex();
     for (auto &count : receiveErrors) count.store(0, std::memory_order_relaxed);
@@ -228,9 +240,34 @@ bool SerialSRXL2::synchronizeGeneration()
     return false;
 }
 
+#if defined(SRXL2_DIAGNOSTICS)
+bool SerialSRXL2::updateNeutralProbe()
+{
+    const uint32_t requested = diagnosticNeutralProbeUs.load(std::memory_order_relaxed);
+    const uint32_t now = micros(); // Sample after the request; a concurrent Web timestamp cannot be in the future.
+    const bool valid = connectionState == wifiUpdate && SRXL2_MODE_ACTIVE() &&
+        requested && uint32_t(now - requested) < 1000000;
+    if (requested != lastNeutralProbeRequestUs)
+    {
+        lastNeutralProbeRequestUs = requested;
+        if (valid) { neutralProbeActive = true; link.requestNeutralProbe(true); }
+    }
+    if (neutralProbeActive && !valid)
+    {
+        neutralProbeActive = false;
+        link.requestNeutralProbe(false);
+        link.setControlPermission(false); // A synthetic center must never arm resumed RF control.
+    }
+    return neutralProbeActive;
+}
+#endif
+
 uint32_t SerialSRXL2::sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t *)
 {
     synchronizeGeneration();
+#if defined(SRXL2_DIAGNOSTICS)
+    if (updateNeutralProbe()) return 1;
+#endif
     // Upstream's shared snapshot replaces UNSET with minimum. Read only our
     // throttle from the raw channel state, without changing other protocols.
     noInterrupts();
@@ -346,7 +383,13 @@ void SerialSRXL2::sendQueuedData(uint32_t maxBytesToSend)
 {
     const uint32_t now = micros();
     synchronizeGeneration();
+#if defined(SRXL2_DIAGNOSTICS)
+    const bool probe = updateNeutralProbe();
+    link.setControlPermission(probe || controlAllowed());
+    if (probe) link.setThrottle(992, now); // Only neutral; no RF channel values enter this probe.
+#else
     link.setControlPermission(controlAllowed());
+#endif
     completeTransmission(now);
     const bool receivePending = inputPort->available() > 0 || SRXL2_HARDWARE_RX_BUSY();
     if (receivePending) lastHardwareReceive = now;
@@ -356,7 +399,7 @@ void SerialSRXL2::sendQueuedData(uint32_t maxBytesToSend)
         if (link.nextPacket(now, packet))
         {
 #if defined(SRXL2_DIAGNOSTICS)
-            if (connectionState == wifiUpdate && packet.bytes[1] == 0x21 && packet.bytes[4] == 0x40)
+            if (connectionState == wifiUpdate && !neutralProbeActive && packet.bytes[1] == 0x21 && packet.bytes[4] == 0x40)
             {
                 packet.bytes[4] = diagnosticProbeAddress.load(std::memory_order_relaxed);
                 const uint16_t crc = SRXL2::crc16(packet.bytes, packet.length - 2);
@@ -469,6 +512,8 @@ void SerialSRXL2::publishDiagnostics(bool wifiEntry)
     state["wifi_active"] = connectionState == wifiUpdate;
     state["control_allowed_now"] = controlAllowed();
     state["probe_address"] = diagnosticProbeAddress.load(std::memory_order_relaxed);
+    state["neutral_probe_active"] = neutralProbeActive;
+    state["neutral_probe_requested_us"] = lastNeutralProbeRequestUs;
     state["rf_connected_before_wifi"] = diagnostics.rfConnected;
     state["control_allowed_before_wifi"] = diagnostics.allowed;
     state["model_match"] = diagnostics.modelMatch;

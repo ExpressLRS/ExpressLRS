@@ -120,6 +120,12 @@ bool Link::nextPacket(uint32_t now, Packet &p)
     if (peerExpired) restart(now);
     if (inputSize && uint32_t(now - lastByte) >= 2500) inputSize = 0;
     if (inputSize || uint32_t(now - lastBus) < IDLE_US) return false;
+    if (probePending)
+    {
+        probePending = false;
+        restart(now);
+        phase = Acknowledge; // Explicit diagnostic handshake; no received ESC packet is invented.
+    }
     p = {};
     broadcastTx = false;
     if (phase != Active)

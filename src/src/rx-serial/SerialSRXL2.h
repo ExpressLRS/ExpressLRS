@@ -62,6 +62,9 @@ private:
     Diagnostics diagnostics;
     bool diagnosticPublished = false;
     uint32_t lastDiagnosticUs = 0;
+    uint32_t lastNeutralProbeRequestUs = 0;
+    bool neutralProbeActive = false;
+    bool updateNeutralProbe();
     void publishDiagnostics(bool wifiEntry);
 #endif
     bool controlAllowed() const;
