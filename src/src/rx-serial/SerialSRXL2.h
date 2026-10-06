@@ -3,6 +3,9 @@
 #include "SerialIO.h"
 #include "SRXL2.h"
 #include "SRXL2Config.h"
+#if defined(CONFIG_IDF_TARGET_ESP32)
+#include "esp_intr_alloc.h"
+#endif
 class SerialSRXL2 : public SerialIO
 {
 public:
@@ -18,6 +21,12 @@ private:
     int8_t pin;
     Stream *inputPort;
     bool transmitting = false;
+    bool txReady = true;
+    volatile bool txComplete = false;
+    volatile uint32_t txEnded = 0;
+#if defined(CONFIG_IDF_TARGET_ESP32)
+    intr_handle_t txInterrupt = nullptr;
+#endif
     bool skipNextFrame = true;
     uint32_t lastPublished = 0;
     uint8_t nextSensor = 0;
@@ -25,6 +34,7 @@ private:
     bool controlAllowed() const;
     bool synchronizeGeneration();
     void completeTransmission(uint32_t now);
+    static void onTxDone(void *argument);
     void publishTelemetry(uint32_t now);
 };
 #endif

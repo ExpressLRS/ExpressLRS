@@ -15,16 +15,52 @@ static bool uartReceiving = false;
 static bool srxl2Selected = true;
 static uint32_t nowUs;
 static unsigned long testMicros() { return nowUs; }
+static bool busDriving, txDrained, releasedBeforeDrain;
+static bool replyBlocked;
+static void (*txDoneInterrupt)(void *);
+static void *txDoneArgument;
+static bool installTxInterrupt(void (*handler)(void *), void *argument)
+{
+    txDoneInterrupt = handler;
+    txDoneArgument = argument;
+    return true;
+}
+static std::string *immediateReplyInput;
+static std::string immediateReply;
+static void startBusTransmit() { busDriving = true; txDrained = false; }
+static void drainBusTransmit()
+{
+    txDrained = true;
+    if (txDoneInterrupt) txDoneInterrupt(txDoneArgument);
+    if (immediateReplyInput)
+    {
+        replyBlocked |= busDriving;
+        if (!busDriving) immediateReplyInput->append(immediateReply);
+    }
+}
+static void releaseBusTransmit()
+{
+    releasedBeforeDrain |= !txDrained;
+    busDriving = false;
+}
 
 // Substitute only the clock and GPIO boundary; execute the actual adapter/router.
 #define SRXL2_ADAPTER_TEST
 #define SRXL2_HARDWARE_RX_BUSY() uartReceiving
 #define SRXL2_MODE_ACTIVE() srxl2Selected
+#define SRXL2_INSTALL_TX_IRQ(handler, argument) installTxInterrupt(handler, argument)
+#define SRXL2_REMOVE_TX_IRQ() (txDoneInterrupt = nullptr)
+#define SRXL2_BEGIN_TX() startBusTransmit()
+#define SRXL2_POLL_TX_IRQ() drainBusTransmit()
+#define SRXL2_RELEASE_TX() releaseBusTransmit()
 #define micros testMicros
 #include "../../src/rx-serial/SerialSRXL2.cpp"
 #undef micros
 #undef SRXL2_HARDWARE_RX_BUSY
 #undef SRXL2_MODE_ACTIVE
+#undef SRXL2_BEGIN_TX
+#undef SRXL2_POLL_TX_IRQ
+#undef SRXL2_RELEASE_TX
 #include "../../src/rx-serial/SerialIO.cpp"
 
 class Capture : public CRSFConnector
@@ -46,6 +82,11 @@ void setUp()
     capture.frames.clear();
     uartReceiving = false;
     srxl2Selected = true;
+    busDriving = txDrained = releasedBeforeDrain = false;
+    replyBlocked = false;
+    txDoneInterrupt = nullptr;
+    immediateReplyInput = nullptr;
+    immediateReply.clear();
     for (auto &channel : ChannelData) channel = CRSF_CHANNEL_VALUE_UNSET;
     capture.addDevice(CRSF_ADDRESS_RADIO_TRANSMITTER);
     crsfRouter.addConnector(&capture);
@@ -350,6 +391,41 @@ void test_live_driver_revokes_motion_when_another_protocol_is_selected()
     TEST_ASSERT_EQUAL(0xD5, uint8_t(out[out.size() - 3]));
 }
 
+void test_tx_interrupt_releases_bus_while_main_loop_is_suspended()
+{
+    class WireStream : public BinaryStringStream
+    {
+    public:
+        using BinaryStringStream::BinaryStringStream;
+        bool wroteWithoutDrive = false;
+        size_t write(const uint8_t *bytes, size_t size) override
+        {
+            wroteWithoutDrive |= !busDriving;
+            const size_t written = BinaryStringStream::write(bytes, size);
+            // Hardware finishes and the ESC replies before write() returns.
+            drainBusTransmit();
+            return written;
+        }
+    };
+    std::string in, out;
+    BinaryStringStream rx(in);
+    WireStream tx(out);
+    SerialSRXL2 driver(&tx, &rx, 1);
+    immediateReplyInput = &in;
+    immediateReply.assign(reinterpret_cast<const char *>(hello), sizeof(hello));
+    send(driver, 50000);
+    immediateReplyInput = nullptr;
+    TEST_ASSERT_FALSE(tx.wroteWithoutDrive);
+    TEST_ASSERT_TRUE(txDrained);
+    TEST_ASSERT_FALSE(releasedBeforeDrain);
+    TEST_ASSERT_FALSE(busDriving);
+    TEST_ASSERT_FALSE(replyBlocked);
+    driver.processSerialInput(); // Reply already buffered when the last stop bit ended.
+    send(driver, 50174);
+    TEST_ASSERT_EQUAL(28, out.size());
+    TEST_ASSERT_EQUAL_UINT8(0xFF, uint8_t(out[18])); // Accepted ESC hello causes a broadcast.
+}
+
 int main()
 {
     UNITY_BEGIN();
@@ -362,5 +438,6 @@ int main()
     RUN_TEST(test_late_receive_hardware_and_partial_reply_block_transmit);
     RUN_TEST(test_first_pending_neutral_after_rf_reset_cannot_release_motion);
     RUN_TEST(test_live_driver_revokes_motion_when_another_protocol_is_selected);
+    RUN_TEST(test_tx_interrupt_releases_bus_while_main_loop_is_suspended);
     return UNITY_END();
 }

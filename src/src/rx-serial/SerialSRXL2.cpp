@@ -8,6 +8,16 @@
 #include "hal/uart_ll.h"
 #include "esp32-hal-matrix.h"
 #include "soc/gpio_sig_map.h"
+#if defined(CONFIG_IDF_TARGET_ESP32)
+#include "driver/periph_ctrl.h"
+#include "driver/uart.h"
+#include "esp_timer.h"
+#include "hal/gpio_ll.h"
+#endif
+#endif
+
+#if defined(CONFIG_IDF_TARGET_ESP32) || defined(SRXL2_INSTALL_TX_IRQ)
+#define SRXL2_IRQ_TX
 #endif
 
 #ifndef SRXL2_HARDWARE_RX_BUSY
@@ -22,6 +32,20 @@
 #define SRXL2_HARDWARE_RX_BUSY() true // unsupported SoCs cannot start bus traffic
 #else
 #define SRXL2_HARDWARE_RX_BUSY() false
+#endif
+#endif
+
+#ifndef SRXL2_BEGIN_TX
+#if defined(CONFIG_IDF_TARGET_ESP32)
+#define SRXL2_BEGIN_TX() do { \
+    gpio_set_level(gpio_num_t(pin), 1); \
+    gpio_set_direction(gpio_num_t(pin), GPIO_MODE_INPUT_OUTPUT); \
+    pinMatrixOutAttach(pin, U2TXD_OUT_IDX, false, false); \
+} while (0)
+#define SRXL2_RELEASE_TX() gpio_ll_output_disable(&GPIO, gpio_num_t(driver->pin))
+#else
+#define SRXL2_BEGIN_TX() ((void)0)
+#define SRXL2_RELEASE_TX() ((void)0)
 #endif
 #endif
 
@@ -49,16 +73,45 @@ SerialSRXL2::SerialSRXL2(Stream *output, Stream *input, int8_t txPin)
     uid = uint32_t(mac) ^ uint32_t(mac >> 32);
     gpio_config_t config{};
     config.pin_bit_mask = uint64_t(1) << pin;
+#if defined(CONFIG_IDF_TARGET_ESP32)
+    config.mode = GPIO_MODE_INPUT;
+#else
     config.mode = GPIO_MODE_INPUT_OUTPUT_OD;
+#endif
     config.pull_up_en = GPIO_PULLUP_ENABLE;
     config.pull_down_en = GPIO_PULLDOWN_DISABLE;
     config.intr_type = GPIO_INTR_DISABLE;
     gpio_config(&config);
-    // Configure direction first: IDF resets the TX matrix when changing it.
-    pinMatrixOutAttach(pin, U0TXD_OUT_IDX, false, false);
     pinMatrixInAttach(pin, U0RXD_IN_IDX, false);
+#if defined(CONFIG_IDF_TARGET_ESP32)
+    // UART0 retains Arduino's RX buffering. Own the otherwise unused UART2 TX
+    // so a short IRAM interrupt can release the bus without task scheduling.
+    txReady = false;
+    if (!uart_is_driver_installed(UART_NUM_2))
+    {
+        periph_module_enable(PERIPH_UART2_MODULE);
+        periph_module_reset(PERIPH_UART2_MODULE);
+        auto hw = UART_LL_GET_HW(2);
+        uart_ll_disable_intr_mask(hw, UART_LL_INTR_MASK);
+        uart_ll_clr_intsts_mask(hw, UART_LL_INTR_MASK);
+        uart_ll_set_sclk(hw, UART_SCLK_APB);
+        uart_ll_set_baudrate(hw, 115200);
+        uart_ll_set_data_bit_num(hw, UART_DATA_8_BITS);
+        uart_ll_set_parity(hw, UART_PARITY_DISABLE);
+        uart_ll_set_stop_bits(hw, UART_STOP_BITS_1);
+        uart_ll_set_tx_idle_num(hw, 0);
+        uart_ll_set_hw_flow_ctrl(hw, UART_HW_FLOWCTRL_DISABLE, 0);
+        txReady = esp_intr_alloc(ETS_UART2_INTR_SOURCE, ESP_INTR_FLAG_IRAM | ESP_INTR_FLAG_LEVEL3,
+            onTxDone, this, &txInterrupt) == ESP_OK;
+        if (!txReady) periph_module_disable(PERIPH_UART2_MODULE);
+    }
+#else
+    pinMatrixOutAttach(pin, U0TXD_OUT_IDX, false, false);
 #endif
-    // Open-drain idle-high releases the bus and RX can capture an immediate reply.
+#endif
+#if defined(SRXL2_INSTALL_TX_IRQ)
+    txReady = SRXL2_INSTALL_TX_IRQ(onTxDone, this);
+#endif
     link.reset(uid, micros());
     lastPublished = micros();
     generation = srxl2RFGeneration;
@@ -68,6 +121,17 @@ SerialSRXL2::SerialSRXL2(Stream *output, Stream *input, int8_t txPin)
 
 SerialSRXL2::~SerialSRXL2()
 {
+#if defined(CONFIG_IDF_TARGET_ESP32)
+    if (txInterrupt)
+    {
+        uart_ll_disable_intr_mask(UART_LL_GET_HW(2), UART_LL_INTR_MASK);
+        esp_intr_free(txInterrupt);
+        periph_module_disable(PERIPH_UART2_MODULE);
+    }
+#endif
+#if defined(SRXL2_REMOVE_TX_IRQ)
+    SRXL2_REMOVE_TX_IRQ();
+#endif
 #if defined(PLATFORM_ESP32)
     gpio_set_direction(gpio_num_t(pin), GPIO_MODE_INPUT);
 #endif
@@ -108,12 +172,32 @@ uint32_t SerialSRXL2::sendRCFrame(bool frameAvailable, bool, uint32_t *)
 void SerialSRXL2::completeTransmission(uint32_t now)
 {
     if (!transmitting) return;
-#if defined(PLATFORM_ESP32)
+#if defined(SRXL2_IRQ_TX)
+#if defined(SRXL2_POLL_TX_IRQ)
+    SRXL2_POLL_TX_IRQ();
+#endif
+    if (!txComplete) return;
+    now = txEnded;
+#elif defined(PLATFORM_ESP32)
     // The factory disables software TX buffering; observe both FIFO and shifter.
     if (!uart_ll_is_tx_idle(UART_LL_GET_HW(0))) return;
 #endif
     transmitting = false;
     link.transmitted(now);
+}
+
+void ICACHE_RAM_ATTR SerialSRXL2::onTxDone(void *argument)
+{
+    auto driver = static_cast<SerialSRXL2 *>(argument);
+    SRXL2_RELEASE_TX(); // Release first: the ESC can start its reply immediately.
+#if defined(CONFIG_IDF_TARGET_ESP32)
+    uart_ll_disable_intr_mask(UART_LL_GET_HW(2), UART_INTR_TX_DONE);
+    uart_ll_clr_intsts_mask(UART_LL_GET_HW(2), UART_INTR_TX_DONE);
+    driver->txEnded = uint32_t(esp_timer_get_time());
+#else
+    driver->txEnded = micros();
+#endif
+    driver->txComplete = true;
 }
 
 void SerialSRXL2::processBytes(uint8_t *bytes, uint16_t size)
@@ -131,13 +215,25 @@ void SerialSRXL2::sendQueuedData(uint32_t maxBytesToSend)
     completeTransmission(now);
     const bool receivePending = inputPort->available() > 0 || SRXL2_HARDWARE_RX_BUSY();
     if (receivePending) lastHardwareReceive = now;
-    if (!transmitting && !receivePending && uint32_t(now - lastHardwareReceive) >= 174 && maxBytesToSend >= 16)
+    if (txReady && !transmitting && !receivePending && uint32_t(now - lastHardwareReceive) >= 174 && maxBytesToSend >= 16)
     {
         SRXL2::Packet packet{};
         if (link.nextPacket(now, packet))
         {
-            _outputPort->write(packet.bytes, packet.length);
+            SRXL2_BEGIN_TX();
+            txComplete = false;
             transmitting = true;
+#if defined(CONFIG_IDF_TARGET_ESP32)
+            // Only FIFO loading/IRQ arming is atomic; RF runs during transmission.
+            // ponytail: current 14/16-byte packets fit the FIFO; add refill IRQs if they grow.
+            noInterrupts();
+            uart_ll_clr_intsts_mask(UART_LL_GET_HW(2), UART_INTR_TX_DONE);
+            uart_ll_write_txfifo(UART_LL_GET_HW(2), packet.bytes, packet.length);
+            uart_ll_ena_intr_mask(UART_LL_GET_HW(2), UART_INTR_TX_DONE);
+            interrupts();
+#else
+            _outputPort->write(packet.bytes, packet.length);
+#endif
         }
     }
     publishTelemetry(now);
