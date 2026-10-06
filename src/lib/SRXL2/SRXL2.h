@@ -28,7 +28,7 @@ public:
     bool connected() const;
     Telemetry telemetry(uint32_t nowUs) const;
 private:
-    enum Phase { Discover, Broadcast, Active };
+    enum Phase { Discover, Acknowledge, Broadcast, Active };
     Phase phase = Discover;
     uint32_t uid = 0, started = 0, lastHello = 0, lastBus = 0, lastByte = 0;
     uint32_t lastControl = 0, lastRequest = 0, lastReply = 0, lastSample = 0, txEnded = 0;

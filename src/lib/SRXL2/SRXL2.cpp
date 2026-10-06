@@ -130,7 +130,7 @@ bool Link::nextPacket(uint32_t now, Packet &p)
         const uint8_t header[] = {0xA6,0x21,14,0x21, uint8_t(phase == Broadcast ? 0xFF : 0x40),10,0,3};
         std::memcpy(p.bytes, header, sizeof(header));
         for (unsigned i = 0; i < 4; ++i) p.bytes[8 + i] = uid >> (8 * i);
-        requestReply = phase == Discover;
+        requestReply = phase != Broadcast;
         broadcastTx = phase == Broadcast;
         lastHello = now;
         helloPending = false;
@@ -175,6 +175,7 @@ void Link::transmitted(uint32_t now)
     txBusy = false;
     txEnded = lastBus = now;
     waitingReply = requestReply;
+    if (phase == Acknowledge) phase = Broadcast;
     if (broadcastTx)
     {
         phase = Active;
@@ -218,12 +219,15 @@ void Link::processFrame(uint32_t now)
 {
     if (input[1] == 0x21 && input[2] == 14 && input[3] == 0x40)
     {
-        // An announcement already supplies the ESC's discovery data.
         if (input[4] == 0 || input[4] == 0x21)
         {
+            // Match Spektrum's startup master: acknowledge before the final broadcast.
+            // Discovery data is already known, so a duplicate reply is optional.
+            const bool acknowledge = input[4] == 0 && (phase == Discover || phase == Acknowledge);
+            const bool keepWaiting = input[4] == 0 && phase == Broadcast && waitingReply;
             restart(now);
-            phase = Broadcast;
-            waitingReply = false;
+            phase = acknowledge ? Acknowledge : Broadcast;
+            waitingReply = keepWaiting;
             lastReply = now;
         }
     }

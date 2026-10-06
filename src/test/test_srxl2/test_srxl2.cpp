@@ -77,22 +77,45 @@ void test_captured_firma_announcements_finalize_discovery_at_115200()
 {
     // Nine copies captured from the Firma 85A before the receiver's first TX.
     const uint8_t announce[] = {0xA6,0x21,14,0x40,0,10,0,0,0,0,0,1,0x38,0x4E};
+    const uint8_t acknowledge[] = {0xA6,0x21,14,0x21,0x40,10,0,3,0xCF,0x27,0x4D,6,0x5C,0x21};
     const uint8_t broadcast[] = {0xA6,0x21,14,0x21,0xFF,10,0,3,0xCF,0x27,0x4D,6,0x3E,0xBE};
-    SRXL2::Link link;
-    link.reset(0x064D27CF, 787824);
-    for (unsigned i = 0; i < 9; ++i) feed(link, announce, sizeof(announce), 910846);
-    SRXL2::Packet packet{};
-    TEST_ASSERT_FALSE(link.connected());
-    TEST_ASSERT_FALSE(link.nextPacket(911019, packet));
-    TEST_ASSERT_TRUE(link.nextPacket(911020, packet));
-    TEST_ASSERT_EQUAL_UINT8_ARRAY(broadcast, packet.bytes, sizeof(broadcast));
-    link.transmitted(912236);
-    TEST_ASSERT_TRUE(link.connected());
-    TEST_ASSERT_FALSE(link.nextPacket(932235, packet));
-    TEST_ASSERT_TRUE(link.nextPacket(932236, packet));
-    TEST_ASSERT_EQUAL_HEX8(0xCD, packet.bytes[1]);
-    TEST_ASSERT_EQUAL(1, packet.bytes[3]); // No RF permission: failsafe, neutral throttle.
-    TEST_ASSERT_EQUAL_HEX16(0x8000, channel(packet));
+    for (bool reply : {false, true})
+    {
+        SRXL2::Link link;
+        link.reset(0x064D27CF, 787824);
+        for (unsigned i = 0; i < 9; ++i) feed(link, announce, sizeof(announce), 910846);
+        SRXL2::Packet packet{};
+        TEST_ASSERT_FALSE(link.connected());
+        TEST_ASSERT_FALSE(link.nextPacket(911019, packet));
+        TEST_ASSERT_TRUE(link.nextPacket(911020, packet));
+        TEST_ASSERT_EQUAL_UINT8_ARRAY(acknowledge, packet.bytes, sizeof(acknowledge));
+        link.transmitted(912236);
+        feed(link, acknowledge, sizeof(acknowledge), 912236); // Local echo cannot end the reply wait.
+        TEST_ASSERT_FALSE(link.connected());
+        feed(link, announce, sizeof(announce), 912436); // A buffered duplicate is not an addressed reply.
+        TEST_ASSERT_FALSE(link.nextPacket(912610, packet));
+        uint32_t finalUs = 932236;
+        if (reply)
+        {
+            feed(link, hello, sizeof(hello), 912636);
+            finalUs = 912810;
+        }
+        // The startup announcement is sufficient discovery data even without a duplicate reply.
+        TEST_ASSERT_FALSE(link.nextPacket(finalUs - 1, packet));
+        TEST_ASSERT_TRUE(link.nextPacket(finalUs, packet));
+        TEST_ASSERT_EQUAL_UINT8_ARRAY(broadcast, packet.bytes, sizeof(broadcast));
+        link.transmitted(finalUs + 1216);
+        TEST_ASSERT_TRUE(link.connected());
+        TEST_ASSERT_FALSE(link.nextPacket(finalUs + 21215, packet));
+        TEST_ASSERT_TRUE(link.nextPacket(finalUs + 21216, packet));
+        TEST_ASSERT_EQUAL_HEX8(0xCD, packet.bytes[1]);
+        TEST_ASSERT_EQUAL(1, packet.bytes[3]); // No RF permission: failsafe, neutral throttle.
+        TEST_ASSERT_EQUAL_HEX16(0x8000, channel(packet));
+        link.transmitted(finalUs + 22606);
+        feed(link, announce, sizeof(announce), finalUs + 23000);
+        TEST_ASSERT_TRUE(link.nextPacket(finalUs + 23174, packet));
+        TEST_ASSERT_EQUAL_UINT8_ARRAY(broadcast, packet.bytes, sizeof(broadcast)); // Running master re-finalizes directly.
+    }
 }
 
 void test_local_echo_split_at_tx_done_preserves_immediate_hello()
