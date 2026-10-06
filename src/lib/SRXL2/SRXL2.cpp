@@ -5,8 +5,8 @@
 
 namespace SRXL2
 {
-static constexpr uint32_t FAILSAFE_US = 11000, FADE_US = 40000, REQUEST_US = 100000;
-static constexpr uint32_t IDLE_US = 174, RESPONSE_US = 8000, DISCOVERY_US = 50000;
+static constexpr uint32_t CONTROL_US = 20000, FADE_US = 40000, SAMPLE_US = 100000, REQUEST_US = 200000;
+static constexpr uint32_t IDLE_US = 174, RESPONSE_US = 20000, DISCOVERY_US = 50000;
 static constexpr uint32_t STALE_US = 2000000, CELL_STALE_US = 5000000;
 
 uint16_t crc16(uint8_t *bytes, uint8_t length)
@@ -58,6 +58,7 @@ void Link::restart(uint32_t now)
     data = {};
     throttle = 0x8000;
     fadePending = false;
+    urgentControl = false;
     // The bus has already been initialized; only first boot needs the 50 ms listen.
     started = lastHello = now - DISCOVERY_US;
     helloPending = true;
@@ -65,7 +66,7 @@ void Link::restart(uint32_t now)
 
 void Link::setControlPermission(bool allowed)
 {
-    if (permitted && !allowed) { controlPending = true; fadePending = false; }
+    if (permitted && !allowed) { controlPending = urgentControl = true; fadePending = false; }
     permitted = allowed;
     if (!allowed) { released = hasSample = monitorReplies = false; throttle = 0x8000; }
 }
@@ -73,7 +74,11 @@ void Link::setControlPermission(bool allowed)
 void Link::setThrottle(uint16_t value, uint32_t now)
 {
     if (!permitted || phase != Active) return;
-    if (hasSample && uint32_t(now - lastSample) >= REQUEST_US) released = monitorReplies = false;
+    if (hasSample && uint32_t(now - lastSample) >= SAMPLE_US)
+    {
+        released = monitorReplies = false;
+        urgentControl = true;
+    }
     lastSample = now;
     hasSample = true;
     controlPending = true;
@@ -96,14 +101,14 @@ void Link::missedFrame()
 
 bool Link::nextPacket(uint32_t now, Packet &p)
 {
-    const bool sampleExpired = hasSample && uint32_t(now - lastSample) >= REQUEST_US;
+    const bool sampleExpired = hasSample && uint32_t(now - lastSample) >= SAMPLE_US;
     if (sampleExpired) monitorReplies = false;
     const bool peerExpired = phase == Active && monitorReplies && uint32_t(now - lastReply) >= STALE_US;
     if (sampleExpired || peerExpired)
     {
         released = hasSample = false;
         throttle = 0x8000;
-        controlPending = true;
+        controlPending = urgentControl = true;
         fadePending = false;
     }
     if (txBusy) return false;
@@ -132,11 +137,13 @@ bool Link::nextPacket(uint32_t now, Packet &p)
     }
     else
     {
-        if (!controlPending && uint32_t(now - lastControl) < (permitted && hasSample ? FADE_US : FAILSAFE_US)) return false;
         const bool failsafe = !permitted || !hasSample;
         const bool safe = failsafe || !released;
+        const bool urgentNeutral = urgentControl && (safe || throttle == 0x8000);
+        const uint32_t interval = controlPending || failsafe ? CONTROL_US : FADE_US;
+        if (!urgentNeutral && uint32_t(now - lastControl) < interval) return false;
         const bool fade = !safe && (fadePending || !controlPending);
-        controlPending = fadePending = false;
+        controlPending = fadePending = urgentControl = false;
         requestReply = !failsafe && (!monitorReplies || uint32_t(now - lastRequest) >= REQUEST_US);
         if (failsafe) monitorReplies = false;
         else if (requestReply && !monitorReplies)
@@ -173,7 +180,8 @@ void Link::transmitted(uint32_t now)
         phase = Active;
         controlPending = true;
         fadePending = false;
-        lastControl = now - FAILSAFE_US;
+        lastControl = now;
+        urgentControl = false;
         lastRequest = now - REQUEST_US;
     }
 }

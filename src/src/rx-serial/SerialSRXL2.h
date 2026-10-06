@@ -21,6 +21,8 @@ public:
         uint32_t driverInitUs = 0, firstTxUs = 0;
         uint32_t firstRFFrameUs = 0, firstNormalTxUs = 0, lastTelemetryUs = 0;
         uint8_t lastNormalTx[16] = {}, lastNormalTxLength = 0;
+        uint32_t normalTxPackets = 0, lastNormalTxStartedUs = 0, normalTxSpacingMinUs = 0xFFFFFFFFu;
+        uint32_t rfPacketIntervalUs = 0;
         uint32_t firstRxUs = 0, rxBeforeFirstTx = 0;
         uint16_t rxHeadSize = 0;
         uint8_t rxHead[256] = {};

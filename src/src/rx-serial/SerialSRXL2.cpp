@@ -242,6 +242,10 @@ uint32_t SerialSRXL2::sendRCFrame(bool frameAvailable, bool frameMissed, uint32_
     if (connectionState != wifiUpdate)
     {
         diagnostics.rfConnected = connectionState == connected;
+#if defined(PLATFORM_ESP32)
+        if (diagnostics.rfConnected && ExpressLRS_currAirRate_Modparams)
+            diagnostics.rfPacketIntervalUs = ExpressLRS_currAirRate_Modparams->interval;
+#endif
         diagnostics.allowed = allowed;
         diagnostics.modelMatch = connectionHasModelMatch;
         diagnostics.teamMatch = teamraceHasModelMatch;
@@ -412,6 +416,19 @@ void SerialSRXL2::sendQueuedData(uint32_t maxBytesToSend)
 #endif
             _outputPort->write(packet.bytes, packet.length);
 #endif
+#if defined(SRXL2_DIAGNOSTICS)
+            if (packet.bytes[1] == 0xCD && packet.bytes[3] == 0)
+            {
+                const uint32_t started = diagnostics.txStartedUs;
+                if (diagnostics.normalTxPackets)
+                {
+                    const uint32_t spacing = started - diagnostics.lastNormalTxStartedUs;
+                    if (spacing < diagnostics.normalTxSpacingMinUs) diagnostics.normalTxSpacingMinUs = spacing;
+                }
+                diagnostics.lastNormalTxStartedUs = started;
+                ++diagnostics.normalTxPackets;
+            }
+#endif
         }
     }
     publishTelemetry(now);
@@ -468,6 +485,9 @@ void SerialSRXL2::publishDiagnostics(bool wifiEntry)
     state["first_rx_callback_us"] = diagnostics.firstRxUs;
     state["first_rf_frame_us"] = diagnostics.firstRFFrameUs;
     state["first_normal_tx_attempt_us"] = diagnostics.firstNormalTxUs;
+    state["rf_packet_interval_us_before_wifi"] = diagnostics.rfPacketIntervalUs;
+    state["normal_tx_packets"] = diagnostics.normalTxPackets;
+    if (diagnostics.normalTxPackets > 1) state["normal_tx_spacing_min_us"] = diagnostics.normalTxSpacingMinUs;
     state["last_esc_telemetry_us"] = diagnostics.lastTelemetryUs;
     state["rx_before_first_tx"] = diagnostics.rxBeforeFirstTx;
     state["tx_completions"] = uint32_t(diagnostics.txDone);

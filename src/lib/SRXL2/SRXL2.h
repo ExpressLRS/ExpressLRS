@@ -36,6 +36,7 @@ private:
     bool permitted = false, released = false, hasSample = false;
     bool txBusy = false, requestReply = false, waitingReply = false, helloPending = false;
     bool monitorReplies = false;
+    bool urgentControl = false;
     bool broadcastTx = false, cellCountKnown = false, controlPending = false, fadePending = false;
     uint8_t input[80] = {}, inputSize = 0;
     mutable Telemetry data{}; // expiry is cached; a counter wrap must not revive it

@@ -151,12 +151,15 @@ static void deliver(SerialSRXL2 &driver, bool available, uint32_t *channels)
 }
 static void establish(SerialSRXL2 &driver, std::string &in, std::string &out)
 {
-    send(driver, 50000);
+    // Model an ESC already advertising while the receiver starts listening.
+    input(driver, in, hello, sizeof(hello), 1400);
+    send(driver, 1600);
     TEST_ASSERT_EQUAL(14, out.size());
-    send(driver, 51200);
-    input(driver, in, hello, sizeof(hello), 51400);
-    send(driver, 51600);
-    send(driver, 52800);
+    send(driver, 2800);
+    send(driver, 23000);
+    send(driver, 24400);
+    send(driver, 43000);
+    send(driver, 44400);
     uint32_t channels[16] = {};
     channels[0] = 1811; channels[2] = 992;
     nowUs = 53000;
@@ -196,6 +199,7 @@ void test_adapter_ch3_and_all_inhibition_paths()
         if (reason == 2) driver.setFailsafe(true);
         if (reason == 3) connectionState = disconnected;
         send(driver, 73000);
+        send(driver, 84500); // Complete the reserved telemetry reply window before safety TX.
         assert_neutral(out);
         connectionState = connected;
         connectionHasModelMatch = teamraceHasModelMatch = true;
@@ -228,7 +232,7 @@ void test_adapter_missed_flag_sends_fade_until_sample_expires()
     deliver(driver, true, channels);
     send(driver, 63000);
     send(driver, 64500);
-    for (uint32_t time : {83000u, 123000u})
+    for (uint32_t time : {93000u, 123000u})
     {
         nowUs = time;
         driver.sendRCFrame(false, true, channels);
@@ -250,6 +254,7 @@ void test_adapter_missed_flag_sends_fade_until_sample_expires()
     nowUs = 173000;
     deliver(driver, true, channels);
     send(driver, 173000);
+    send(driver, 183000);
     assert_neutral(out, 0); // Recovery still requires a fresh centered sample.
 }
 
@@ -271,6 +276,7 @@ void test_missing_raw_ch3_is_not_an_extreme_throttle_snapshot()
     nowUs = 70000;
     driver.sendRCFrame(true, false, channels);
     send(driver, 73000);
+    send(driver, 84500);
     assert_neutral(out);
 }
 
@@ -352,15 +358,16 @@ void test_rf_resync_drops_stale_callback_without_changing_core_latches()
     nowUs = 70000;
     driver.sendRCFrame(true, false, channels);
     send(driver, 73000);
+    send(driver, 84500);
     assert_neutral(out); // cached motion must already be revoked
-    send(driver, 74500);
+    send(driver, 86000);
     channels[2] = 992;
-    nowUs = 80000;
+    nowUs = 90000;
     deliver(driver, true, channels);
     channels[2] = 1811;
-    nowUs = 81000;
+    nowUs = 91000;
     deliver(driver, true, channels);
-    send(driver, 83000);
+    send(driver, 104500);
     TEST_ASSERT_EQUAL(0x54, uint8_t(out[out.size() - 4]));
     TEST_ASSERT_EQUAL(0xD5, uint8_t(out[out.size() - 3]));
 }
@@ -414,15 +421,17 @@ void test_first_pending_neutral_after_rf_reset_cannot_release_motion()
     nowUs = 67000;
     deliver(driver, true, channels);
     send(driver, 73000);
+    send(driver, 84500);
     assert_neutral(out, 0);
-    send(driver, 74500);
+    send(driver, 86000);
+    input(driver, in, esc, sizeof(esc), 88000);
     channels[2] = 992;
-    nowUs = 80000;
+    nowUs = 90000;
     deliver(driver, true, channels);
     channels[2] = 1811;
-    nowUs = 81000;
+    nowUs = 91000;
     deliver(driver, true, channels);
-    send(driver, 83000);
+    send(driver, 104500);
     TEST_ASSERT_EQUAL(0x54, uint8_t(out[out.size() - 4]));
     TEST_ASSERT_EQUAL(0xD5, uint8_t(out[out.size() - 3]));
 }
@@ -444,21 +453,23 @@ void test_live_driver_revokes_motion_when_another_protocol_is_selected()
     // A complete RF resync can occur before our callback, with no SRXL2 hook.
     srxl2Selected = false;
     send(driver, 73000);
-    assert_neutral(out);
-    send(driver, 74500);
-    srxl2Selected = true;
-    nowUs = 80000;
-    deliver(driver, true, channels);
-    send(driver, 83000);
-    assert_neutral(out, 0); // changing back does not restore an old release latch
     send(driver, 84500);
-    channels[2] = 992;
+    assert_neutral(out);
+    send(driver, 86000);
+    srxl2Selected = true;
     nowUs = 90000;
     deliver(driver, true, channels);
-    channels[2] = 1811;
-    nowUs = 91000;
+    send(driver, 104500);
+    assert_neutral(out, 0); // changing back does not restore an old release latch
+    send(driver, 106000);
+    input(driver, in, esc, sizeof(esc), 108000);
+    channels[2] = 992;
+    nowUs = 110000;
     deliver(driver, true, channels);
-    send(driver, 93000);
+    channels[2] = 1811;
+    nowUs = 111000;
+    deliver(driver, true, channels);
+    send(driver, 124500);
     TEST_ASSERT_EQUAL(0x54, uint8_t(out[out.size() - 4]));
     TEST_ASSERT_EQUAL(0xD5, uint8_t(out[out.size() - 3]));
 }
@@ -595,8 +606,9 @@ void test_wifi_live_capture_refreshes_while_motion_remains_inhibited()
     driver.event();
     const unsigned entryPublications = diagnosticPublications;
     send(driver, 73000);
+    send(driver, 84500);
     assert_neutral(out);
-    input(driver, in, esc, sizeof(esc), 75000);
+    input(driver, in, esc, sizeof(esc), 86500);
     send(driver, 1064500);
     assert_neutral(out);
     TEST_ASSERT_EQUAL(entryPublications + 1, diagnosticPublications);
@@ -700,6 +712,7 @@ void test_diagnostics_keep_rf_commands_and_received_bytes_for_wifi_capture()
     TEST_ASSERT_EQUAL(0, state.lastRfTx[3]);
     TEST_ASSERT_EQUAL_HEX8(0x54, state.lastRfTx[12]);
     TEST_ASSERT_EQUAL_HEX8(0xD5, state.lastRfTx[13]);
+    TEST_ASSERT_EQUAL(1, state.normalTxPackets);
     TEST_ASSERT_EQUAL(63000, state.firstNormalTxUs);
     TEST_ASSERT_EQUAL(16, state.lastNormalTxLength);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(state.lastRfTx, state.lastNormalTx, 16);
@@ -711,6 +724,13 @@ void test_diagnostics_keep_rf_commands_and_received_bytes_for_wifi_capture()
     driver.processSerialInput(); // The existing read limit is 64 bytes per call.
     for (unsigned i = 0; i < 64; ++i)
         TEST_ASSERT_EQUAL(i + 16, state.rxTail[(state.rxBytes % 64 + i) % 64]);
+    input(driver, in, esc, sizeof(esc), 66000);
+    nowUs = 83000;
+    deliver(driver, true, channels);
+    send(driver, 83000);
+    TEST_ASSERT_EQUAL(2, state.normalTxPackets);
+    TEST_ASSERT_EQUAL(20000, state.normalTxSpacingMinUs);
+    TEST_ASSERT_EQUAL(66000, state.lastTelemetryUs);
     connectionState = wifiUpdate;
     ChannelData[2] = CRSF_CHANNEL_VALUE_UNSET;
     driver.sendRCFrame(false, false, channels);
