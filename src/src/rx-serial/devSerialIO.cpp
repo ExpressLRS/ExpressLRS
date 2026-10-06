@@ -193,6 +193,15 @@ static bool confirmFrameAvailable(devserial_ctx_t *ctx)
     return retVal;
 }
 
+static void copyLocalChannelData(uint32_t *dest)
+{
+    for (unsigned i = 0; i < CRSF_NUM_CHANNELS; i++)
+    {
+        const uint32_t crsfVal = ChannelData[i];
+        dest[i] = (crsfVal == CRSF_CHANNEL_VALUE_UNSET) ? CRSF_CHANNEL_VALUE_EXT_MIN : crsfVal;
+    }
+}
+
 static int timeout(devserial_ctx_t *ctx)
 {
     if (*(ctx->io) == nullptr)
@@ -232,16 +241,15 @@ static int timeout(devserial_ctx_t *ctx)
     // there will be to each channel slot in the array, and the global buffer may be updated
     // in-between access to each channel slot.
     WORD_ALIGNED_ATTR uint32_t localChannelData[CRSF_NUM_CHANNELS];
-    for (unsigned i = 0; i < CRSF_NUM_CHANNELS; i++)
-    {
-        const uint32_t crsfVal = ChannelData[i];
-        localChannelData[i] = (crsfVal == CRSF_CHANNEL_VALUE_UNSET) ? CRSF_CHANNEL_VALUE_EXT_MIN : crsfVal;
-    }
+    copyLocalChannelData(localChannelData);
     return (*(ctx->io))->sendRCFrame(sendChannels, missed, localChannelData);
 }
 
 void sendImmediateRC()
 {
+    WORD_ALIGNED_ATTR uint32_t localChannelData[CRSF_NUM_CHANNELS];
+    bool channelDataCopied = false;
+
     if (*(serial0.io) != nullptr && (*(serial0.io))->sendImmediateRC() && connectionState != serialUpdate)
     {
         const bool missed = serial0.frameMissed;
@@ -250,7 +258,10 @@ void sendImmediateRC()
         // Verify there is new ChannelData and they should be sent on
         const bool sendChannels = confirmFrameAvailable(&serial0);
 
-        (*(serial0.io))->sendRCFrame(sendChannels, missed, ChannelData);
+        copyLocalChannelData(localChannelData);
+        channelDataCopied = true;
+
+        (*(serial0.io))->sendRCFrame(sendChannels, missed, localChannelData);
     }
 #if defined(PLATFORM_ESP32)
     if (*(serial1.io) != nullptr && (*(serial1.io))->sendImmediateRC() && connectionState != serialUpdate)
@@ -261,7 +272,12 @@ void sendImmediateRC()
         // Verify the new channel data should be sent on
         const bool sendChannels = confirmFrameAvailable(&serial1);
 
-        (*(serial1.io))->sendRCFrame(sendChannels, missed, ChannelData);
+        if (!channelDataCopied)
+        {
+            copyLocalChannelData(localChannelData);
+        }
+
+        (*(serial1.io))->sendRCFrame(sendChannels, missed, localChannelData);
     }
 #endif
 }
