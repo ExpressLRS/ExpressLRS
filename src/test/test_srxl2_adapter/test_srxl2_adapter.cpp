@@ -167,9 +167,9 @@ static void establish(SerialSRXL2 &driver, std::string &in, std::string &out)
     deliver(driver, true, channels); // first cached callback was discarded
     input(driver, in, esc, sizeof(esc), 55000);
 }
-static void assert_neutral(const std::string &out)
+static void assert_neutral(const std::string &out, uint8_t command = 1)
 {
-    TEST_ASSERT_EQUAL(1, uint8_t(out[out.size() - 13]));
+    TEST_ASSERT_EQUAL(command, uint8_t(out[out.size() - 13]));
     TEST_ASSERT_EQUAL(0, uint8_t(out[out.size() - 4]));
     TEST_ASSERT_EQUAL(0x80, uint8_t(out[out.size() - 3]));
 }
@@ -250,7 +250,7 @@ void test_adapter_missed_flag_sends_fade_until_sample_expires()
     nowUs = 173000;
     deliver(driver, true, channels);
     send(driver, 173000);
-    assert_neutral(out); // Recovery still requires a fresh centered sample.
+    assert_neutral(out, 0); // Recovery still requires a fresh centered sample.
 }
 
 void test_missing_raw_ch3_is_not_an_extreme_throttle_snapshot()
@@ -414,7 +414,7 @@ void test_first_pending_neutral_after_rf_reset_cannot_release_motion()
     nowUs = 67000;
     deliver(driver, true, channels);
     send(driver, 73000);
-    assert_neutral(out);
+    assert_neutral(out, 0);
     send(driver, 74500);
     channels[2] = 992;
     nowUs = 80000;
@@ -450,7 +450,7 @@ void test_live_driver_revokes_motion_when_another_protocol_is_selected()
     nowUs = 80000;
     deliver(driver, true, channels);
     send(driver, 83000);
-    assert_neutral(out); // changing back does not restore an old release latch
+    assert_neutral(out, 0); // changing back does not restore an old release latch
     send(driver, 84500);
     channels[2] = 992;
     nowUs = 90000;
@@ -682,6 +682,7 @@ void test_diagnostics_keep_rf_commands_and_received_bytes_for_wifi_capture()
     establish(driver, in, out);
     const auto &state = driver.getDiagnostics();
     TEST_ASSERT_EQUAL(2, state.frames);
+    TEST_ASSERT_EQUAL(53000, state.firstRFFrameUs);
     TEST_ASSERT_EQUAL(3, state.txPackets);
     TEST_ASSERT_EQUAL(3, state.txDone);
     TEST_ASSERT_EQUAL(sizeof(hello) + sizeof(esc), state.rxBytes);
@@ -699,6 +700,10 @@ void test_diagnostics_keep_rf_commands_and_received_bytes_for_wifi_capture()
     TEST_ASSERT_EQUAL(0, state.lastRfTx[3]);
     TEST_ASSERT_EQUAL_HEX8(0x54, state.lastRfTx[12]);
     TEST_ASSERT_EQUAL_HEX8(0xD5, state.lastRfTx[13]);
+    TEST_ASSERT_EQUAL(63000, state.firstNormalTxUs);
+    TEST_ASSERT_EQUAL(16, state.lastNormalTxLength);
+    TEST_ASSERT_EQUAL_UINT8_ARRAY(state.lastRfTx, state.lastNormalTx, 16);
+    TEST_ASSERT_EQUAL(55000, state.lastTelemetryUs);
 
     uint8_t bytes[80];
     for (unsigned i = 0; i < sizeof(bytes); ++i) bytes[i] = i;

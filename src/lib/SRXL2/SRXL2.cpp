@@ -54,7 +54,7 @@ void Link::reset(uint32_t deviceUid, uint32_t now)
 void Link::restart(uint32_t now)
 {
     phase = Discover;
-    released = hasSample = waitingReply = cellCountKnown = false;
+    released = hasSample = waitingReply = cellCountKnown = monitorReplies = false;
     data = {};
     throttle = 0x8000;
     fadePending = false;
@@ -67,13 +67,13 @@ void Link::setControlPermission(bool allowed)
 {
     if (permitted && !allowed) { controlPending = true; fadePending = false; }
     permitted = allowed;
-    if (!allowed) { released = hasSample = false; throttle = 0x8000; }
+    if (!allowed) { released = hasSample = monitorReplies = false; throttle = 0x8000; }
 }
 
 void Link::setThrottle(uint16_t value, uint32_t now)
 {
     if (!permitted || phase != Active) return;
-    if (hasSample && uint32_t(now - lastSample) >= REQUEST_US) released = false;
+    if (hasSample && uint32_t(now - lastSample) >= REQUEST_US) released = monitorReplies = false;
     lastSample = now;
     hasSample = true;
     controlPending = true;
@@ -96,8 +96,10 @@ void Link::missedFrame()
 
 bool Link::nextPacket(uint32_t now, Packet &p)
 {
-    if (hasSample && (uint32_t(now - lastSample) >= REQUEST_US ||
-        (phase == Active && uint32_t(now - lastReply) >= STALE_US)))
+    const bool sampleExpired = hasSample && uint32_t(now - lastSample) >= REQUEST_US;
+    if (sampleExpired) monitorReplies = false;
+    const bool peerExpired = phase == Active && monitorReplies && uint32_t(now - lastReply) >= STALE_US;
+    if (sampleExpired || peerExpired)
     {
         released = hasSample = false;
         throttle = 0x8000;
@@ -110,7 +112,7 @@ bool Link::nextPacket(uint32_t now, Packet &p)
         if (uint32_t(now - txEnded) < RESPONSE_US) return false;
         waitingReply = false;
     }
-    if (phase == Active && uint32_t(now - lastReply) >= STALE_US) restart(now);
+    if (peerExpired) restart(now);
     if (inputSize && uint32_t(now - lastByte) >= 2500) inputSize = 0;
     if (inputSize || uint32_t(now - lastBus) < IDLE_US) return false;
     p = {};
@@ -131,12 +133,20 @@ bool Link::nextPacket(uint32_t now, Packet &p)
     else
     {
         if (!controlPending && uint32_t(now - lastControl) < (permitted && hasSample ? FADE_US : FAILSAFE_US)) return false;
-        const bool safe = !permitted || !released || !hasSample;
+        const bool failsafe = !permitted || !hasSample;
+        const bool safe = failsafe || !released;
         const bool fade = !safe && (fadePending || !controlPending);
         controlPending = fadePending = false;
-        requestReply = uint32_t(now - lastRequest) >= REQUEST_US;
+        requestReply = !failsafe && (!monitorReplies || uint32_t(now - lastRequest) >= REQUEST_US);
+        if (failsafe) monitorReplies = false;
+        else if (requestReply && !monitorReplies)
+        {
+            // Start the reply timeout with an actual telemetry poll, not startup failsafe.
+            monitorReplies = true;
+            lastReply = now;
+        }
         p.length = fade ? 14 : 16;
-        const uint8_t header[] = {0xA6,0xCD,p.length,uint8_t(safe ? 1 : 0),uint8_t(requestReply ? 0x40 : 0),uint8_t(safe ? 0 : 100),0,0,uint8_t(fade ? 0 : 1),0,0,0};
+        const uint8_t header[] = {0xA6,0xCD,p.length,uint8_t(failsafe ? 1 : 0),uint8_t(requestReply ? 0x40 : 0),uint8_t(failsafe ? 0 : 100),0,0,uint8_t(fade ? 0 : 1),0,0,0};
         std::memcpy(p.bytes, header, sizeof(header));
         if (!fade)
         {
@@ -214,6 +224,7 @@ void Link::processFrame(uint32_t now)
         if (input[3] == 0xFF) { restart(now); return; }
         if (phase != Active || input[3] != 0x21) return;
         lastReply = now;
+        data.receivedUs = now;
         waitingReply = false;
         decodeTelemetry(input + 4, now);
     }

@@ -7,6 +7,7 @@ struct Packet { uint8_t bytes[80]; uint8_t length; };
 struct Reading { int32_t value; uint32_t updatedUs; bool valid; };
 struct Telemetry
 {
+    uint32_t receivedUs;
     Reading rpm, voltage, current, temperatureFet, temperatureBec;
     Reading voltageBec, currentBec, batteryCurrent, consumption, batteryTemperature;
     Reading cells[18];
@@ -34,6 +35,7 @@ private:
     uint16_t throttle = 0x8000;
     bool permitted = false, released = false, hasSample = false;
     bool txBusy = false, requestReply = false, waitingReply = false, helloPending = false;
+    bool monitorReplies = false;
     bool broadcastTx = false, cellCountKnown = false, controlPending = false, fadePending = false;
     uint8_t input[80] = {}, inputSize = 0;
     mutable Telemetry data{}; // expiry is cached; a counter wrap must not revive it

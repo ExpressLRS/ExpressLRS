@@ -149,11 +149,11 @@ void test_startup_neutral_release_and_failsafe_vector()
     SRXL2::Link link;
     connect(link);
     SRXL2::Packet packet{};
-    const uint8_t safe[] = {0xA6,0xCD,0x10,1,0x40,0,0,0,1,0,0,0,0,0x80,0x2C,0x19};
+    const uint8_t guarded[] = {0xA6,0xCD,0x10,0,0x40,100,0,0,1,0,0,0,0,0x80,0x90,0x9A};
     link.setControlPermission(true);
     link.setThrottle(1811, 53000);
     TEST_ASSERT_TRUE(link.nextPacket(53000, packet));
-    TEST_ASSERT_EQUAL_UINT8_ARRAY(safe, packet.bytes, 16);
+    TEST_ASSERT_EQUAL_UINT8_ARRAY(guarded, packet.bytes, 16);
     link.transmitted(54400);
     feed(link, esc, sizeof(esc), 55000);
     link.setThrottle(992, 56000);
@@ -168,6 +168,7 @@ void test_startup_neutral_release_and_failsafe_vector()
     link.setControlPermission(false);
     TEST_ASSERT_TRUE(link.nextPacket(83000, packet));
     TEST_ASSERT_EQUAL(1, packet.bytes[3]);
+    TEST_ASSERT_EQUAL(0, packet.bytes[4]);
     TEST_ASSERT_EQUAL_HEX16(0x8000, channel(packet));
 }
 
@@ -189,7 +190,7 @@ void test_neutral_band_boundaries_and_permission_recovery()
         link.setControlPermission(true);
         link.setThrottle(1811, 63000);
         TEST_ASSERT_TRUE(link.nextPacket(63000, packet));
-        TEST_ASSERT_EQUAL(1, packet.bytes[3]);
+        TEST_ASSERT_EQUAL(0, packet.bytes[3]);
         TEST_ASSERT_EQUAL_HEX16(0x8000, channel(packet));
     }
 }
@@ -215,6 +216,63 @@ void test_stale_control_needs_new_neutral()
     link.setThrottle(1811, 166000);
     TEST_ASSERT_TRUE(link.nextPacket(166000, packet));
     TEST_ASSERT_EQUAL_HEX16(0x8000, channel(packet));
+}
+
+void test_delayed_rf_start_uses_normal_neutral_data_after_startup_failsafe()
+{
+    SRXL2::Link link;
+    connect(link);
+    SRXL2::Packet packet{};
+    for (uint32_t now = 53000; now < 5000000; now += 20000)
+    {
+        TEST_ASSERT_TRUE(link.nextPacket(now, packet));
+        TEST_ASSERT_EQUAL_HEX8(0xCD, packet.bytes[1]);
+        TEST_ASSERT_EQUAL(1, packet.bytes[3]);
+        TEST_ASSERT_EQUAL(0, packet.bytes[4]); // Failsafe does not request telemetry.
+        TEST_ASSERT_EQUAL_HEX16(0x8000, channel(packet));
+        link.transmitted(now + 1390);
+    }
+    TEST_ASSERT_TRUE(link.connected());
+    link.setControlPermission(true);
+    link.setThrottle(968, 5000000); // Captured TX12 value is outside the arming band.
+    TEST_ASSERT_TRUE(link.nextPacket(5000000, packet));
+    TEST_ASSERT_EQUAL_HEX8(0xCD, packet.bytes[1]);
+    TEST_ASSERT_EQUAL(0, packet.bytes[3]);
+    TEST_ASSERT_EQUAL_HEX8(0x40, packet.bytes[4]);
+    TEST_ASSERT_EQUAL_HEX16(0x8000, channel(packet));
+    link.transmitted(5001390);
+    feed(link, esc, sizeof(esc), 5002000);
+    link.setThrottle(1811, 5003000);
+    TEST_ASSERT_TRUE(link.nextPacket(5003000, packet));
+    TEST_ASSERT_EQUAL_HEX16(0x8000, channel(packet)); // Still unarmed.
+    link.transmitted(5004390);
+    link.setThrottle(992, 5005000);
+    TEST_ASSERT_TRUE(link.nextPacket(5005000, packet));
+    TEST_ASSERT_EQUAL_HEX16(0x8000, channel(packet));
+    link.transmitted(5006390);
+    link.setThrottle(1811, 5007000);
+    TEST_ASSERT_TRUE(link.nextPacket(5007000, packet));
+    TEST_ASSERT_EQUAL_HEX16(0xD554, channel(packet));
+}
+
+void test_recovered_rf_sample_restarts_reply_timeout_before_idle_processing()
+{
+    SRXL2::Link link;
+    connect(link);
+    link.setControlPermission(true);
+    link.setThrottle(992, 53000);
+    SRXL2::Packet packet{};
+    TEST_ASSERT_TRUE(link.nextPacket(53000, packet));
+    link.transmitted(54390);
+    feed(link, esc, sizeof(esc), 55000);
+    // A fresh RF callback can run before the serial loop notices the stale gap.
+    link.setThrottle(1811, 3055000);
+    TEST_ASSERT_TRUE(link.nextPacket(3055000, packet));
+    TEST_ASSERT_EQUAL_HEX8(0xCD, packet.bytes[1]);
+    TEST_ASSERT_EQUAL(0, packet.bytes[3]);
+    TEST_ASSERT_EQUAL_HEX8(0x40, packet.bytes[4]);
+    TEST_ASSERT_EQUAL_HEX16(0x8000, channel(packet));
+    TEST_ASSERT_TRUE(link.connected());
 }
 
 void test_response_window_and_control_cadence()
@@ -251,7 +309,7 @@ void test_control_follows_fresh_rf_at_20ms_10ms_and_2ms()
                 TEST_ASSERT_FALSE(link.nextPacket(time - 1, packet)); // No repeated cached RF value.
                 link.setThrottle(sample % 2 ? 1811 : 172, time);
                 TEST_ASSERT_TRUE(link.nextPacket(time, packet));
-                TEST_ASSERT_EQUAL(released ? 0 : 1, packet.bytes[3]);
+                TEST_ASSERT_EQUAL(0, packet.bytes[3]);
                 TEST_ASSERT_EQUAL_HEX16(released ? (sample % 2 ? 0xD554 : 0x2AA0) : 0x8000, channel(packet));
                 TEST_ASSERT_FALSE(link.nextPacket(time + 1389, packet));
                 link.transmitted(time + 1390);
@@ -389,7 +447,7 @@ void test_non_rc_rf_slots_get_keepalive_before_slave_timeout()
         TEST_ASSERT_FALSE(link.nextPacket(92999, packet));
         TEST_ASSERT_TRUE(link.nextPacket(93000, packet));
         TEST_ASSERT_EQUAL(released ? 14 : 16, packet.length);
-        TEST_ASSERT_EQUAL(released ? 0 : 1, packet.bytes[3]);
+        TEST_ASSERT_EQUAL(0, packet.bytes[3]);
         if (!released) TEST_ASSERT_EQUAL_HEX16(0x8000, channel(packet));
         link.transmitted(94390);
         TEST_ASSERT_FALSE(link.nextPacket(132999, packet));
@@ -410,10 +468,18 @@ void test_rediscovery_waits_for_outstanding_reply_and_revokes_motion()
     {
         SRXL2::Link link;
         connect(link);
+        link.setControlPermission(true);
+        link.setThrottle(992, 53000);
         SRXL2::Packet packet{};
         TEST_ASSERT_TRUE(link.nextPacket(53000, packet));
         link.transmitted(54400);
         feed(link, esc, sizeof(esc), 55000);
+        for (uint32_t now = 103000; now < 2052000; now += 50000)
+        {
+            link.setThrottle(1811, now);
+            TEST_ASSERT_TRUE(link.nextPacket(now, packet));
+            link.transmitted(now + 1390);
+        }
         link.setControlPermission(true);
         link.setThrottle(992, 2052000);
         link.setThrottle(1811, 2052500);
@@ -448,6 +514,7 @@ void test_esc_scaling_and_invalid_replacement()
     connect(link);
     feed(link, esc, sizeof(esc), 60000);
     auto values = link.telemetry(60000);
+    TEST_ASSERT_EQUAL(60000, values.receivedUs);
     TEST_ASSERT_EQUAL(123450, values.rpm.value);
     TEST_ASSERT_EQUAL(12340, values.voltage.value);
     TEST_ASSERT_EQUAL(10000, values.current.value);
@@ -549,16 +616,25 @@ void test_wrong_master_and_disconnect_clear_data_and_motion()
     link.setThrottle(992, 62000);
     link.setThrottle(1811, 63000);
     SRXL2::Packet packet{};
-    TEST_ASSERT_TRUE(link.nextPacket(2061000, packet));
+    TEST_ASSERT_TRUE(link.nextPacket(63000, packet));
+    link.transmitted(64390);
+    for (uint32_t now = 113000; now < 2063000; now += 50000)
+    {
+        link.setThrottle(1811, now);
+        TEST_ASSERT_TRUE(link.nextPacket(now, packet));
+        link.transmitted(now + 1390);
+    }
+    link.setThrottle(1811, 2063000);
+    TEST_ASSERT_TRUE(link.nextPacket(2063000, packet));
     TEST_ASSERT_FALSE(link.connected());
-    TEST_ASSERT_FALSE(link.telemetry(2061000).voltage.valid);
+    TEST_ASSERT_FALSE(link.telemetry(2063000).voltage.valid);
     TEST_ASSERT_EQUAL(0x21, packet.bytes[1]);
-    link.transmitted(2062200);
-    feed(link, hello, sizeof(hello), 2062400);
-    TEST_ASSERT_TRUE(link.nextPacket(2062600, packet));
-    link.transmitted(2063800);
-    link.setThrottle(1811, 2064000);
-    TEST_ASSERT_TRUE(link.nextPacket(2064000, packet));
+    link.transmitted(2064200);
+    feed(link, hello, sizeof(hello), 2064400);
+    TEST_ASSERT_TRUE(link.nextPacket(2064600, packet));
+    link.transmitted(2065800);
+    link.setThrottle(1811, 2066000);
+    TEST_ASSERT_TRUE(link.nextPacket(2066000, packet));
     TEST_ASSERT_EQUAL_HEX16(0x8000, channel(packet));
 }
 
@@ -616,6 +692,8 @@ int main()
     RUN_TEST(test_startup_neutral_release_and_failsafe_vector);
     RUN_TEST(test_neutral_band_boundaries_and_permission_recovery);
     RUN_TEST(test_stale_control_needs_new_neutral);
+    RUN_TEST(test_delayed_rf_start_uses_normal_neutral_data_after_startup_failsafe);
+    RUN_TEST(test_recovered_rf_sample_restarts_reply_timeout_before_idle_processing);
     RUN_TEST(test_response_window_and_control_cadence);
     RUN_TEST(test_control_follows_fresh_rf_at_20ms_10ms_and_2ms);
     RUN_TEST(test_1ms_rf_updates_coalesce_to_latest_after_tx_and_reply_grant);

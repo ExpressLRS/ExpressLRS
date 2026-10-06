@@ -249,6 +249,7 @@ uint32_t SerialSRXL2::sendRCFrame(bool frameAvailable, bool frameMissed, uint32_
         diagnostics.ch3 = throttle;
         if (frameAvailable)
         {
+            if (!diagnostics.frames) diagnostics.firstRFFrameUs = micros();
             ++diagnostics.frames;
             if (throttle != CRSF_CHANNEL_VALUE_UNSET)
             {
@@ -385,6 +386,12 @@ void SerialSRXL2::sendQueuedData(uint32_t maxBytesToSend)
                 diagnostics.lastRfTxLength = min(unsigned(packet.length), unsigned(sizeof(diagnostics.lastRfTx)));
                 std::memcpy(diagnostics.lastRfTx, packet.bytes, diagnostics.lastRfTxLength);
             }
+            if (packet.bytes[1] == 0xCD && packet.bytes[3] == 0)
+            {
+                if (!diagnostics.firstNormalTxUs) diagnostics.firstNormalTxUs = now;
+                diagnostics.lastNormalTxLength = min(unsigned(packet.length), unsigned(sizeof(diagnostics.lastNormalTx)));
+                std::memcpy(diagnostics.lastNormalTx, packet.bytes, diagnostics.lastNormalTxLength);
+            }
             // Estimated wire duration; completion timing also includes FIFO/ISR overhead.
             diagnostics.txExpectedUs = (uint32_t(packet.length) * 10000000u + 115199u) / 115200u;
 #endif
@@ -459,6 +466,9 @@ void SerialSRXL2::publishDiagnostics(bool wifiEntry)
     state["driver_init_us"] = diagnostics.driverInitUs;
     state["first_tx_attempt_us"] = diagnostics.firstTxUs;
     state["first_rx_callback_us"] = diagnostics.firstRxUs;
+    state["first_rf_frame_us"] = diagnostics.firstRFFrameUs;
+    state["first_normal_tx_attempt_us"] = diagnostics.firstNormalTxUs;
+    state["last_esc_telemetry_us"] = diagnostics.lastTelemetryUs;
     state["rx_before_first_tx"] = diagnostics.rxBeforeFirstTx;
     state["tx_completions"] = uint32_t(diagnostics.txDone);
     state["tx_duration_max_us"] = uint32_t(diagnostics.txDurationMaxUs);
@@ -488,7 +498,7 @@ void SerialSRXL2::publishDiagnostics(bool wifiEntry)
     state["gpio_iomux"] = REG_READ(GPIO_PIN_MUX_REG[pin]);
 #endif
     const char hex[] = "0123456789abcdef";
-    String received, sent, firstReceived;
+    String received, sent, firstReceived, normalSent;
     for (unsigned i = 0; i < diagnostics.rxHeadSize; ++i)
     {
         const uint8_t byte = diagnostics.rxHead[i];
@@ -509,6 +519,12 @@ void SerialSRXL2::publishDiagnostics(bool wifiEntry)
     state["last_rx_hex"] = received;
     state["first_rx_hex"] = firstReceived;
     state["last_rf_tx_hex"] = sent;
+    for (unsigned i = 0; i < diagnostics.lastNormalTxLength; ++i)
+    {
+        const uint8_t byte = diagnostics.lastNormalTx[i];
+        normalSent += hex[byte >> 4]; normalSent += hex[byte & 15];
+    }
+    state["last_normal_tx_hex"] = normalSent;
     String result;
     serializeJson(doc, result);
     if (diagnosticMutex && xSemaphoreTake(diagnosticMutex, 0) == pdTRUE)
@@ -538,6 +554,9 @@ static void putBE(uint8_t *bytes, uint32_t value, unsigned count)
 void SerialSRXL2::publishTelemetry(uint32_t now)
 {
     const SRXL2::Telemetry values = link.telemetry(now);
+#if defined(SRXL2_DIAGNOSTICS)
+    if (values.receivedUs) diagnostics.lastTelemetryUs = values.receivedUs;
+#endif
     const SRXL2::Reading &current = values.batteryCurrent.valid ? values.batteryCurrent : values.current;
     const bool battery = values.voltage.valid && current.valid && current.value >= 0 && current.value / 100 <= 32767;
     crsfBatterySensorDetected = battery;
