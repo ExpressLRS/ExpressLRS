@@ -14,6 +14,18 @@ public:
     static void onRFReset();
     uint32_t sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t *channels) override;
     void sendQueuedData(uint32_t maxBytesToSend) override;
+#if defined(SRXL2_DIAGNOSTICS)
+    struct Diagnostics
+    {
+        uint32_t frames = 0, txPackets = 0, rxBytes = 0;
+        volatile uint32_t txDone = 0;
+        uint32_t ch3 = 0xFFFF, ch3Min = 0xFFFF, ch3Max = 0;
+        bool rfConnected = false, allowed = false, modelMatch = false, teamMatch = false, failsafe = false;
+        uint8_t lastRfTx[16] = {}, lastRfTxLength = 0, rxTail[64] = {};
+    };
+    const Diagnostics &getDiagnostics() const { return diagnostics; }
+    void event() override;
+#endif
 protected:
     void processBytes(uint8_t *bytes, uint16_t size) override;
 private:
@@ -31,6 +43,10 @@ private:
     uint32_t lastPublished = 0;
     uint8_t nextSensor = 0;
     uint32_t generation = 0, lastHardwareReceive = 0;
+#if defined(SRXL2_DIAGNOSTICS)
+    Diagnostics diagnostics;
+    bool diagnosticPublished = false;
+#endif
     bool controlAllowed() const;
     bool synchronizeGeneration();
     void completeTransmission(uint32_t now);

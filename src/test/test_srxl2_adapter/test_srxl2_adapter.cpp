@@ -17,6 +17,7 @@ static uint32_t nowUs;
 static unsigned long testMicros() { return nowUs; }
 static bool busDriving, txDrained, releasedBeforeDrain;
 static bool replyBlocked;
+static unsigned diagnosticPublications;
 static void (*txDoneInterrupt)(void *);
 static void *txDoneArgument;
 static bool installTxInterrupt(void (*handler)(void *), void *argument)
@@ -30,6 +31,7 @@ static std::string immediateReply;
 static void startBusTransmit() { busDriving = true; txDrained = false; }
 static void drainBusTransmit()
 {
+    if (!busDriving) return;
     txDrained = true;
     if (txDoneInterrupt) txDoneInterrupt(txDoneArgument);
     if (immediateReplyInput)
@@ -46,6 +48,8 @@ static void releaseBusTransmit()
 
 // Substitute only the clock and GPIO boundary; execute the actual adapter/router.
 #define SRXL2_ADAPTER_TEST
+#define SRXL2_DIAGNOSTICS
+#define SRXL2_DIAGNOSTIC_PUBLISH() (++diagnosticPublications)
 #define SRXL2_HARDWARE_RX_BUSY() uartReceiving
 #define SRXL2_MODE_ACTIVE() srxl2Selected
 #define SRXL2_INSTALL_TX_IRQ(handler, argument) installTxInterrupt(handler, argument)
@@ -84,6 +88,7 @@ void setUp()
     srxl2Selected = true;
     busDriving = txDrained = releasedBeforeDrain = false;
     replyBlocked = false;
+    diagnosticPublications = 0;
     txDoneInterrupt = nullptr;
     immediateReplyInput = nullptr;
     immediateReply.clear();
@@ -426,6 +431,65 @@ void test_tx_interrupt_releases_bus_while_main_loop_is_suspended()
     TEST_ASSERT_EQUAL_UINT8(0xFF, uint8_t(out[18])); // Accepted ESC hello causes a broadcast.
 }
 
+void test_diagnostics_publish_once_on_wifi_entry_without_transmitting()
+{
+    std::string in, out;
+    BinaryStringStream rx(in), tx(out);
+    SerialSRXL2 driver(&tx, &rx, 1);
+    establish(driver, in, out);
+    driver.event();
+    TEST_ASSERT_EQUAL(0, diagnosticPublications);
+    const size_t sent = out.size();
+    connectionState = wifiUpdate;
+    driver.event();
+    TEST_ASSERT_EQUAL(1, diagnosticPublications);
+    driver.event();
+    TEST_ASSERT_EQUAL(1, diagnosticPublications);
+    TEST_ASSERT_EQUAL(sent, out.size());
+}
+
+void test_diagnostics_keep_rf_commands_and_received_bytes_for_wifi_capture()
+{
+    std::string in, out;
+    BinaryStringStream rx(in), tx(out);
+    SerialSRXL2 driver(&tx, &rx, 1);
+    establish(driver, in, out);
+    const auto &state = driver.getDiagnostics();
+    TEST_ASSERT_EQUAL(2, state.frames);
+    TEST_ASSERT_EQUAL(3, state.txPackets);
+    TEST_ASSERT_EQUAL(3, state.txDone);
+    TEST_ASSERT_EQUAL(sizeof(hello) + sizeof(esc), state.rxBytes);
+    TEST_ASSERT_EQUAL(992, state.ch3);
+    TEST_ASSERT_EQUAL(1, state.lastRfTx[3]); // Neutral gate hadn't been released at TX.
+
+    uint32_t channels[16] = {};
+    channels[2] = 1811;
+    nowUs = 63000;
+    deliver(driver, true, channels);
+    send(driver, 63000);
+    TEST_ASSERT_TRUE(state.allowed);
+    TEST_ASSERT_EQUAL(992, state.ch3Min);
+    TEST_ASSERT_EQUAL(1811, state.ch3Max);
+    TEST_ASSERT_EQUAL(0, state.lastRfTx[3]);
+    TEST_ASSERT_EQUAL_HEX8(0x54, state.lastRfTx[12]);
+    TEST_ASSERT_EQUAL_HEX8(0xD5, state.lastRfTx[13]);
+
+    uint8_t bytes[80];
+    for (unsigned i = 0; i < sizeof(bytes); ++i) bytes[i] = i;
+    input(driver, in, bytes, sizeof(bytes), 65000);
+    driver.processSerialInput(); // The existing read limit is 64 bytes per call.
+    for (unsigned i = 0; i < 64; ++i)
+        TEST_ASSERT_EQUAL(i + 16, state.rxTail[(state.rxBytes % 64 + i) % 64]);
+    connectionState = wifiUpdate;
+    ChannelData[2] = CRSF_CHANNEL_VALUE_UNSET;
+    driver.sendRCFrame(false, false, channels);
+    driver.event();
+    TEST_ASSERT_TRUE(state.rfConnected);
+    TEST_ASSERT_TRUE(state.allowed);
+    TEST_ASSERT_EQUAL(1811, state.ch3);
+    TEST_ASSERT_EQUAL(1, diagnosticPublications);
+}
+
 int main()
 {
     UNITY_BEGIN();
@@ -439,5 +503,7 @@ int main()
     RUN_TEST(test_first_pending_neutral_after_rf_reset_cannot_release_motion);
     RUN_TEST(test_live_driver_revokes_motion_when_another_protocol_is_selected);
     RUN_TEST(test_tx_interrupt_releases_bus_while_main_loop_is_suspended);
+    RUN_TEST(test_diagnostics_publish_once_on_wifi_entry_without_transmitting);
+    RUN_TEST(test_diagnostics_keep_rf_commands_and_received_bytes_for_wifi_capture);
     return UNITY_END();
 }

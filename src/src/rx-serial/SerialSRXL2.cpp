@@ -2,12 +2,16 @@
 #include "SerialSRXL2.h"
 #include "CRSFRouter.h"
 #include "common.h"
+#include <cstring>
 #if defined(PLATFORM_ESP32)
 #include "config.h"
 #include "driver/gpio.h"
 #include "hal/uart_ll.h"
 #include "esp32-hal-matrix.h"
 #include "soc/gpio_sig_map.h"
+#if defined(SRXL2_DIAGNOSTICS)
+#include <ArduinoJson.h>
+#endif
 #if defined(CONFIG_IDF_TARGET_ESP32)
 #include "driver/periph_ctrl.h"
 #include "driver/uart.h"
@@ -163,6 +167,27 @@ uint32_t SerialSRXL2::sendRCFrame(bool frameAvailable, bool, uint32_t *)
     const uint32_t throttle = ChannelData[2];
     const bool allowed = controlAllowed();
     interrupts();
+#if defined(SRXL2_DIAGNOSTICS)
+    // Preserve the RF state when Lua switches into Wi-Fi without a reboot.
+    if (connectionState != wifiUpdate)
+    {
+        diagnostics.rfConnected = connectionState == connected;
+        diagnostics.allowed = allowed;
+        diagnostics.modelMatch = connectionHasModelMatch;
+        diagnostics.teamMatch = teamraceHasModelMatch;
+        diagnostics.failsafe = failsafe;
+        diagnostics.ch3 = throttle;
+        if (frameAvailable)
+        {
+            ++diagnostics.frames;
+            if (throttle != CRSF_CHANNEL_VALUE_UNSET)
+            {
+                if (throttle < diagnostics.ch3Min) diagnostics.ch3Min = throttle;
+                if (throttle > diagnostics.ch3Max) diagnostics.ch3Max = throttle;
+            }
+        }
+    }
+#endif
     link.setControlPermission(allowed);
     if (frameAvailable && skipNextFrame) skipNextFrame = false;
     else if (allowed && frameAvailable) link.setThrottle(throttle, micros());
@@ -198,12 +223,19 @@ void ICACHE_RAM_ATTR SerialSRXL2::onTxDone(void *argument)
     driver->txEnded = micros();
 #endif
     driver->txComplete = true;
+#if defined(SRXL2_DIAGNOSTICS)
+    ++driver->diagnostics.txDone;
+#endif
 }
 
 void SerialSRXL2::processBytes(uint8_t *bytes, uint16_t size)
 {
     const uint32_t now = micros();
     completeTransmission(now);
+#if defined(SRXL2_DIAGNOSTICS)
+    for (unsigned i = 0; i < size; ++i)
+        diagnostics.rxTail[diagnostics.rxBytes++ % sizeof(diagnostics.rxTail)] = bytes[i];
+#endif
     for (unsigned i = 0; i < size; ++i) link.receive(bytes[i], now);
 }
 
@@ -223,6 +255,14 @@ void SerialSRXL2::sendQueuedData(uint32_t maxBytesToSend)
             SRXL2_BEGIN_TX();
             txComplete = false;
             transmitting = true;
+#if defined(SRXL2_DIAGNOSTICS)
+            ++diagnostics.txPackets;
+            if (connectionState == connected)
+            {
+                diagnostics.lastRfTxLength = min(unsigned(packet.length), unsigned(sizeof(diagnostics.lastRfTx)));
+                std::memcpy(diagnostics.lastRfTx, packet.bytes, diagnostics.lastRfTxLength);
+            }
+#endif
 #if defined(CONFIG_IDF_TARGET_ESP32)
             // Only FIFO loading/IRQ arming is atomic; RF runs during transmission.
             // ponytail: current 14/16-byte packets fit the FIFO; add refill IRQs if they grow.
@@ -238,6 +278,60 @@ void SerialSRXL2::sendQueuedData(uint32_t maxBytesToSend)
     }
     publishTelemetry(now);
 }
+
+#if defined(SRXL2_DIAGNOSTICS)
+void SerialSRXL2::event()
+{
+    if (connectionState != wifiUpdate || diagnosticPublished) return;
+#if defined(SRXL2_DIAGNOSTIC_PUBLISH)
+    SRXL2_DIAGNOSTIC_PUBLISH();
+#elif defined(PLATFORM_ESP32)
+    JsonDocument doc;
+    if (deserializeJson(doc, getOptions())) return;
+    auto state = doc["srxl2-diagnostics"].to<JsonObject>();
+    state["rf_connected_before_wifi"] = diagnostics.rfConnected;
+    state["control_allowed_before_wifi"] = diagnostics.allowed;
+    state["model_match"] = diagnostics.modelMatch;
+    state["team_match"] = diagnostics.teamMatch;
+    state["failsafe"] = diagnostics.failsafe;
+    state["ch3_raw"] = diagnostics.ch3;
+    state["ch3_min"] = diagnostics.ch3Min;
+    state["ch3_max"] = diagnostics.ch3Max;
+    state["input_frames"] = diagnostics.frames;
+    state["tx_ready"] = txReady;
+    state["tx_packets"] = diagnostics.txPackets;
+    state["tx_completions"] = uint32_t(diagnostics.txDone);
+    state["rx_bytes"] = diagnostics.rxBytes;
+    state["smart_connected"] = link.connected();
+    state["rx_busy"] = SRXL2_HARDWARE_RX_BUSY();
+    state["signal_level"] = gpio_get_level(gpio_num_t(pin));
+#if defined(CONFIG_IDF_TARGET_ESP32)
+    if (txReady) state["tx_fifo_bytes"] = uart_ll_get_txfifo_len(UART_LL_GET_HW(2));
+#endif
+    const char hex[] = "0123456789abcdef";
+    String received, sent;
+    const unsigned size = diagnostics.rxBytes < 64 ? diagnostics.rxBytes : 64;
+    const unsigned start = diagnostics.rxBytes < 64 ? 0 : diagnostics.rxBytes % 64;
+    for (unsigned i = 0; i < size; ++i)
+    {
+        const uint8_t byte = diagnostics.rxTail[(start + i) % 64];
+        received += hex[byte >> 4]; received += hex[byte & 15];
+    }
+    for (unsigned i = 0; i < diagnostics.lastRfTxLength; ++i)
+    {
+        const uint8_t byte = diagnostics.lastRfTx[i];
+        sent += hex[byte >> 4]; sent += hex[byte & 15];
+    }
+    state["last_rx_hex"] = received;
+    state["last_rf_tx_hex"] = sent;
+    // ponytail: reuse the options cache for this capture; Web UI Save can persist the debug key.
+    String result;
+    serializeJson(doc, result);
+    setOptions(result);
+#endif
+    diagnosticPublished = true;
+}
+#endif
 
 static void putBE(uint8_t *bytes, uint32_t value, unsigned count)
 {
