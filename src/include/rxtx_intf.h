@@ -25,6 +25,11 @@ void SetSyncSpam();
 #if defined(TARGET_RX)
 #include "gpsTelemetry.h"
 uint8_t getLq();
+#if defined(PLATFORM_ESP32)
+int8_t getSerial1TxPin();
+int8_t getSerial1RxPin();
+int8_t getSRXL2Port();
+#endif
 // Fills out with a snapshot of the GPS driver state, or returns false if no GPS is running
 bool getGpsTelemetry(gps_telemetry_t &out);
 #endif
