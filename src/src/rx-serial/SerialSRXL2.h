@@ -9,7 +9,7 @@
 class SerialSRXL2 : public SerialIO
 {
 public:
-    SerialSRXL2(Stream *output, Stream *input, int8_t txPin);
+    SerialSRXL2(Stream *output, Stream *input, int8_t txPin, uint8_t serialPort = 0);
     ~SerialSRXL2() override;
     static void onRFReset();
     uint32_t sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t *channels) override;
@@ -19,6 +19,7 @@ protected:
 private:
     SRXL2::Link link;
     int8_t pin;
+    uint8_t port;
     Stream *inputPort;
     bool transmitting = false;
     bool txReady = true;

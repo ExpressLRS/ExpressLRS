@@ -18,9 +18,11 @@ struct UartStartupSpy
     bool inverted = false;
     size_t txBufferSize = 1;
     uint8_t rxThreshold = 0;
+    unsigned begins = 0;
     void setTxBufferSize(size_t size) { txBufferSize = size; }
     void begin(uint32_t rate, uint32_t config, int8_t rx, int8_t tx, bool invert)
     {
+        ++begins;
         baud = rate; format = config; rxPin = rx; txPin = tx; inverted = invert;
     }
     void setRxFIFOFull(uint8_t threshold) { rxThreshold = threshold; }

@@ -66,8 +66,8 @@ int main() {
 """
     hardware_probe = r"""
 #include "soc/uart_struct.h"
-uart_dev_t uart{};
-static uart_dev_t *getUart(int index) { assert(index == 0); return &uart; }
+uart_dev_t uarts[2]{};
+static uart_dev_t *getUart(int index) { assert(index == 0 || index == 1); return &uarts[index]; }
 #define UART_LL_GET_HW(index) getUart(index)
 static unsigned uart_ll_get_rxfifo_len(uart_dev_t *hw) { return hw->status.rxfifo_cnt; }
 using gpio_num_t = int;
@@ -77,6 +77,10 @@ static int gpio_get_level(gpio_num_t pin) { assert(pin == txPin); return busLeve
     busy_probe = r"""
 int main() {
     const int pin = txPin = BUS_PIN;
+  for (unsigned port : {0u, 1u}) {
+    auto &uart = uarts[port];
+    auto &other = uarts[1 - port];
+    other.status.rxfifo_cnt = 1; // Traffic on the other UART must not block this bus.
     for (unsigned fifo : {0u, 1u}) {
         uart.status.rxfifo_cnt = fifo;
         for (unsigned state : {0u, 1u, 2u, 11u, 13u}) {
@@ -91,6 +95,7 @@ int main() {
             }
         }
     }
+  }
 }
 """
     with tempfile.TemporaryDirectory(prefix="elrs-srxl2-platforms-") as directory:
@@ -117,7 +122,7 @@ int main() {
                 [sdk / mcu / "include/soc" / mcu / "include"])
             run(hardware_probe + busy + busy_probe, [*flags, "-DBUS_PIN=" + str(pin)],
                 [sdk / mcu / "include/soc" / mcu / "include"])
-            print(f"{mcu}: capability and 20 FIFO/state/bus-level combinations passed", flush=True)
+            print(f"{mcu}: both-port capability and 40 FIFO/state/bus-level combinations passed", flush=True)
         for flags in (
             ["-DTARGET_RX", "-DPLATFORM_ESP32", "-DCONFIG_IDF_TARGET_ESP32C6"],
             ["-DTARGET_RX", "-DPLATFORM_ESP8266"],

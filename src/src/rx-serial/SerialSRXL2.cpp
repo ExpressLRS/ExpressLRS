@@ -2,6 +2,7 @@
 #include "SerialSRXL2.h"
 #include "CRSFRouter.h"
 #include "common.h"
+#include "rxtx_intf.h"
 #if defined(PLATFORM_ESP32)
 #include "config.h"
 #include "driver/gpio.h"
@@ -22,12 +23,12 @@
 
 #ifndef SRXL2_HARDWARE_RX_BUSY
 #if defined(CONFIG_IDF_TARGET_ESP32)
-#define SRXL2_HARDWARE_RX_BUSY() (uart_ll_get_rxfifo_len(UART_LL_GET_HW(0)) != 0 || \
-    UART_LL_GET_HW(0)->status.st_urx_out != 0 || gpio_get_level(gpio_num_t(pin)) == 0)
+#define SRXL2_HARDWARE_RX_BUSY() (uart_ll_get_rxfifo_len(UART_LL_GET_HW(port)) != 0 || \
+    UART_LL_GET_HW(port)->status.st_urx_out != 0 || gpio_get_level(gpio_num_t(pin)) == 0)
 #elif defined(CONFIG_IDF_TARGET_ESP32C3) || defined(CONFIG_IDF_TARGET_ESP32S3)
 // C3/S3 keep the receive state machine in a separate register.
-#define SRXL2_HARDWARE_RX_BUSY() (uart_ll_get_rxfifo_len(UART_LL_GET_HW(0)) != 0 || \
-    UART_LL_GET_HW(0)->fsm_status.st_urx_out != 0 || gpio_get_level(gpio_num_t(pin)) == 0)
+#define SRXL2_HARDWARE_RX_BUSY() (uart_ll_get_rxfifo_len(UART_LL_GET_HW(port)) != 0 || \
+    UART_LL_GET_HW(port)->fsm_status.st_urx_out != 0 || gpio_get_level(gpio_num_t(pin)) == 0)
 #elif defined(PLATFORM_ESP32)
 #define SRXL2_HARDWARE_RX_BUSY() true // unsupported SoCs cannot start bus traffic
 #else
@@ -51,7 +52,8 @@
 
 #ifndef SRXL2_MODE_ACTIVE
 #if defined(TARGET_RX)
-#define SRXL2_MODE_ACTIVE() (config.GetSerialProtocol() == PROTOCOL_SRXL2 && !firmwareOptions.is_airport)
+#define SRXL2_MODE_ACTIVE() (getSRXL2Port() == port && \
+    (port == 0 ? GPIO_PIN_RCSIGNAL_TX : getSerial1TxPin()) == pin)
 #else
 #define SRXL2_MODE_ACTIVE() true
 #endif
@@ -89,6 +91,7 @@ static void listenForEarlyESC(Stream &input, Stream &output, uint32_t uid, SRXL2
     }
     uint32_t lastHardwareReceive = micros();
     const int8_t pin = SRXL2_EARLY_STARTUP_PIN;
+    const uint8_t port = 0;
     (void)pin; // Native tests substitute the hardware boundary.
     bool wasBusy = false;
     bool acknowledged = false;
@@ -144,14 +147,15 @@ void ICACHE_RAM_ATTR SerialSRXL2::onRFReset()
     ++srxl2RFGeneration;
 }
 
-SerialSRXL2::SerialSRXL2(Stream *output, Stream *input, int8_t txPin)
-    : SerialIO(output, input), pin(txPin), inputPort(input)
+SerialSRXL2::SerialSRXL2(Stream *output, Stream *input, int8_t txPin, uint8_t serialPort)
+    : SerialIO(output, input), pin(txPin), port(serialPort), inputPort(input)
 {
     // Receive on the shared signal immediately, without attaching an idle-high
-    // UART0 TX output. The GPIO/UART transmitter below owns bus direction.
-    Serial.setTxBufferSize(0);
-    Serial.begin(115200, SERIAL_8N1, pin, -1, false);
-    Serial.setRxFIFOFull(1);
+    // UART TX output. The GPIO/UART transmitter below owns bus direction.
+    auto &uart = port == 0 ? Serial : Serial1;
+    uart.setTxBufferSize(0);
+    uart.begin(115200, SERIAL_8N1, pin, -1, false);
+    uart.setRxFIFOFull(1);
     uint32_t uid = 0x12345678;
 #if defined(PLATFORM_ESP32)
     const uint64_t mac = ESP.getEfuseMac();
@@ -167,9 +171,9 @@ SerialSRXL2::SerialSRXL2(Stream *output, Stream *input, int8_t txPin)
     config.pull_down_en = GPIO_PULLDOWN_DISABLE;
     config.intr_type = GPIO_INTR_DISABLE;
     gpio_config(&config);
-    pinMatrixInAttach(pin, U0RXD_IN_IDX, false);
+    pinMatrixInAttach(pin, port == 0 ? U0RXD_IN_IDX : U1RXD_IN_IDX, false);
 #if defined(CONFIG_IDF_TARGET_ESP32)
-    // UART0 retains Arduino's RX buffering. Own the otherwise unused UART2 TX
+    // The selected UART retains Arduino's RX buffering. Own unused UART2 TX
     // so a short IRAM interrupt can release the bus without task scheduling.
     txReady = false;
     if (!uart_is_driver_installed(UART_NUM_2))
@@ -191,7 +195,7 @@ SerialSRXL2::SerialSRXL2(Stream *output, Stream *input, int8_t txPin)
         if (!txReady) periph_module_disable(PERIPH_UART2_MODULE);
     }
 #else
-    pinMatrixOutAttach(pin, U0TXD_OUT_IDX, false, false);
+    pinMatrixOutAttach(pin, port == 0 ? U0TXD_OUT_IDX : U1TXD_OUT_IDX, false, false);
 #endif
 #endif
 #if defined(SRXL2_INSTALL_TX_IRQ)
@@ -199,7 +203,7 @@ SerialSRXL2::SerialSRXL2(Stream *output, Stream *input, int8_t txPin)
 #endif
     link.reset(uid, micros());
 #if defined(SRXL2_EARLY_STARTUP_PIN)
-    if (txReady && pin == SRXL2_EARLY_STARTUP_PIN && startupState.ackEndUs && !startupState.handedOff)
+    if (txReady && port == 0 && pin == SRXL2_EARLY_STARTUP_PIN && startupState.ackEndUs && !startupState.handedOff)
     {
         // An announcing ESC may suppress its duplicate addressed reply. Its validated
         // startup announcement and completed ACK are enough to send the final broadcast.
@@ -274,7 +278,7 @@ void SerialSRXL2::completeTransmission(uint32_t now)
     now = txEnded;
 #elif defined(PLATFORM_ESP32)
     // The factory disables software TX buffering; observe both FIFO and shifter.
-    if (!uart_ll_is_tx_idle(UART_LL_GET_HW(0))) return;
+    if (!uart_ll_is_tx_idle(UART_LL_GET_HW(port))) return;
 #endif
     transmitting = false;
     link.transmitted(now);

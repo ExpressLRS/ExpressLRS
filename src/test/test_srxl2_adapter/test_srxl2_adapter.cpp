@@ -14,13 +14,16 @@ bool crsfBatterySensorDetected = false;
 uint32_t ChannelData[CRSF_NUM_CHANNELS] = {};
 CRSFRouter crsfRouter;
 static bool uartReceiving = false;
+static bool secondaryReceiving = false;
 static bool srxl2Selected = true;
+static bool secondarySelected = true;
 static uint32_t nowUs;
 static unsigned long testMicros() { return nowUs; }
 static bool busDriving, txDrained, releasedBeforeDrain;
 static bool autoTxDone = true;
 static bool replyBlocked;
 static UartStartupSpy uartStartup;
+static UartStartupSpy uartStartup1;
 static constexpr uint32_t SERIAL_8N1 = 0x800001c;
 static void (*txDoneInterrupt)(void *);
 static void *txDoneArgument;
@@ -69,8 +72,8 @@ static void releaseBusTransmit()
 #define SRXL2_EARLY_BEGIN_TX() startBusTransmit()
 #define SRXL2_EARLY_RELEASE_TX() releaseBusTransmit()
 #define SRXL2_EARLY_YIELD() startupYield()
-#define SRXL2_HARDWARE_RX_BUSY() uartReceiving
-#define SRXL2_MODE_ACTIVE() srxl2Selected
+#define SRXL2_HARDWARE_RX_BUSY() (port == 0 ? uartReceiving : secondaryReceiving)
+#define SRXL2_MODE_ACTIVE() (port == 0 ? srxl2Selected : secondarySelected)
 #define SRXL2_INSTALL_TX_IRQ(handler, argument) installTxInterrupt(handler, argument)
 #define SRXL2_REMOVE_TX_IRQ() (txDoneInterrupt = nullptr)
 #define SRXL2_BEGIN_TX() startBusTransmit()
@@ -78,8 +81,10 @@ static void releaseBusTransmit()
 #define SRXL2_RELEASE_TX() releaseBusTransmit()
 #define micros testMicros
 #define Serial uartStartup
+#define Serial1 uartStartup1
 #include "../../src/rx-serial/SerialSRXL2.cpp"
 #undef Serial
+#undef Serial1
 #undef micros
 #undef SRXL2_HARDWARE_RX_BUSY
 #undef SRXL2_MODE_ACTIVE
@@ -110,11 +115,14 @@ void setUp()
     uint8_t queuedSize, queued[CRSF_MAX_PACKET_LEN];
     while (capture.GetNextPayload(&queuedSize, queued)) {}
     uartReceiving = false;
+    secondaryReceiving = false;
     srxl2Selected = true;
+    secondarySelected = true;
     busDriving = txDrained = releasedBeforeDrain = false;
     autoTxDone = true;
     replyBlocked = false;
     uartStartup = UartStartupSpy();
+    uartStartup1 = UartStartupSpy();
     txDoneInterrupt = nullptr;
     immediateReplyInput = nullptr;
     immediateReply.clear();
@@ -784,6 +792,64 @@ void test_adapter_preserves_delayed_genuine_reply_after_complete_echo()
     TEST_ASSERT_EQUAL_HEX8(0xFF, uint8_t(out[18]));
 }
 
+void test_secondary_uses_its_uart_and_ignores_primary_receive_activity()
+{
+    std::string in, out;
+    BinaryStringStream rx(in), tx(out);
+    SerialSRXL2 driver(&tx, &rx, 14, 1);
+    TEST_ASSERT_EQUAL(0, uartStartup.begins);
+    TEST_ASSERT_EQUAL(1, uartStartup1.begins);
+    TEST_ASSERT_EQUAL_INT8(14, uartStartup1.rxPin);
+    TEST_ASSERT_EQUAL_INT8(-1, uartStartup1.txPin);
+    TEST_ASSERT_EQUAL(115200, uartStartup1.baud);
+    uartReceiving = true;
+    send(driver, 50000);
+    TEST_ASSERT_EQUAL(14, out.size());
+    send(driver, 51216);
+    secondaryReceiving = true;
+    send(driver, 100000);
+    TEST_ASSERT_EQUAL(14, out.size());
+    secondaryReceiving = false;
+    send(driver, 100173);
+    TEST_ASSERT_EQUAL(14, out.size());
+    send(driver, 100174);
+    TEST_ASSERT_EQUAL(28, out.size());
+    TEST_ASSERT_FALSE(releasedBeforeDrain);
+}
+
+void test_secondary_preserves_neutral_and_all_inhibition_paths()
+{
+    for (unsigned reason = 0; reason < 7; ++reason)
+    {
+        nowUs = 0;
+        connectionState = connected;
+        connectionHasModelMatch = teamraceHasModelMatch = secondarySelected = true;
+        uartReceiving = true; // Busy CRSF UART0 must not delay the Smart bus.
+        std::string in, out;
+        BinaryStringStream rx(in), tx(out);
+        SerialSRXL2 driver(&tx, &rx, 14, 1);
+        establish(driver, in, out);
+        uint32_t channels[16] = {};
+        channels[2] = 1811;
+        nowUs = 63000;
+        deliver(driver, true, channels);
+        send(driver, 63000);
+        TEST_ASSERT_EQUAL_HEX8(0xD5, uint8_t(out[out.size() - 3]));
+        send(driver, 64500);
+        if (reason == 0) connectionHasModelMatch = false;
+        if (reason == 1) teamraceHasModelMatch = false;
+        if (reason == 2) driver.setFailsafe(true);
+        if (reason == 3) connectionState = wifiUpdate;
+        if (reason == 4) secondarySelected = false;
+        if (reason == 5) ChannelData[2] = CRSF_CHANNEL_VALUE_UNSET;
+        if (reason == 6) SerialSRXL2::onRFReset();
+        send(driver, 73000);
+        send(driver, 84500);
+        assert_neutral(out);
+        TEST_ASSERT_EQUAL(0, uartStartup.begins);
+    }
+}
+
 int main()
 {
     UNITY_BEGIN();
@@ -807,5 +873,7 @@ int main()
     RUN_TEST(test_tx_interrupt_releases_bus_while_main_loop_is_suspended);
     RUN_TEST(test_split_echo_and_buffered_reply_survive_delayed_tx_done_callback);
     RUN_TEST(test_adapter_preserves_delayed_genuine_reply_after_complete_echo);
+    RUN_TEST(test_secondary_uses_its_uart_and_ignores_primary_receive_activity);
+    RUN_TEST(test_secondary_preserves_neutral_and_all_inhibition_paths);
     return UNITY_END();
 }

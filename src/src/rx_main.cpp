@@ -846,8 +846,7 @@ void ICACHE_RAM_ATTR TentativeConnection(unsigned long now)
     setConnectionState(tentative);
     connectionHasModelMatch = false;
 #if defined(PLATFORM_ESP32)
-    if (!firmwareOptions.is_airport && config.GetSerialProtocol() == PROTOCOL_SRXL2)
-        SerialSRXL2::onRFReset();
+    SerialSRXL2::onRFReset();
 #endif
     ChannelDataReset();
     OtaResetChannelDataComplete();
