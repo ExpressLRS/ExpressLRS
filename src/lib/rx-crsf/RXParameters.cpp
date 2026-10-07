@@ -1,6 +1,7 @@
 #include "targets.h"
 #if !defined(UNIT_TEST)
 #include "RXEndpoint.h"
+#include "SRXL2Config.h"
 #include "FHSS.h"
 #include "POWERMGNT.h"
 #include "config.h"
@@ -43,7 +44,7 @@ static selectionParameter luaSerialProtocol = {
 static selectionParameter luaSerial1Protocol = {
     {"Protocol2", CRSF_TEXT_SELECTION},
     0, // value
-  "Off;CRSF;Inverted CRSF;SBUS;Inverted SBUS;SUMD;DJI RS Pro;HoTT Telemetry;Tramp;SmartAudio;DisplayPort;GPS;Scorpion",
+  "Off;CRSF;Inverted CRSF;SBUS;Inverted SBUS;SUMD;DJI RS Pro;HoTT Telemetry;Tramp;SmartAudio;DisplayPort;GPS;Scorpion;Spektrum Smart",
     STR_EMPTYSPACE
 };
 #endif
@@ -407,7 +408,7 @@ static void luaparamMappingChannelIn(propertiesCommon *item, uint8_t arg)
   config.SetPwmChannelRaw(ch, newPwmCh.raw);
 }
 
-static void configureSerialPin(uint8_t sibling, uint8_t oldMode, uint8_t newMode)
+static void configureSerialPin(uint8_t sibling, uint8_t newMode, uint32_t *pwm)
 {
   for (int ch=0 ; ch<GPIO_PIN_PWM_OUTPUTS_COUNT ; ch++)
   {
@@ -415,7 +416,7 @@ static void configureSerialPin(uint8_t sibling, uint8_t oldMode, uint8_t newMode
     {
       // Retain as much of the sibling's current config as possible
       rx_config_pwm_t siblingPinConfig;
-      siblingPinConfig.raw = config.GetPwmChannel(ch)->raw;
+      siblingPinConfig.raw = pwm[ch];
 
       // If the new mode is serial, the sibling is also forced to serial
       if (newMode == somSerial)
@@ -428,17 +429,11 @@ static void configureSerialPin(uint8_t sibling, uint8_t oldMode, uint8_t newMode
         siblingPinConfig.val.mode = som50Hz;
       }
 
-      config.SetPwmChannelRaw(ch, siblingPinConfig.raw);
+      pwm[ch] = siblingPinConfig.raw;
       break;
     }
   }
 
-  if (oldMode != newMode)
-  {
-    deferExecutionMillis(100, [](){
-      reconfigureSerial();
-    });
-  }
 }
 
 static void luaparamMappingOutputMode(propertiesCommon *item, uint8_t arg)
@@ -449,17 +444,35 @@ static void luaparamMappingOutputMode(propertiesCommon *item, uint8_t arg)
   newPwmCh.raw = config.GetPwmChannel(ch)->raw;
   uint8_t oldMode = newPwmCh.val.mode;
   newPwmCh.val.mode = sanitizePwmMode(arg);
+  uint32_t proposedPwm[PWM_MAX_CHANNELS];
+  for (unsigned channel = 0; channel < GPIO_PIN_PWM_OUTPUTS_COUNT; ++channel)
+    proposedPwm[channel] = config.GetPwmChannel(channel)->raw;
+  proposedPwm[ch] = newPwmCh.raw;
+#if defined(PLATFORM_ESP32)
+  const int8_t oldTx = getSerial1TxPin(), oldRx = getSerial1RxPin();
+#endif
 
   // Check if pin == 1/3 and do other pin adjustment accordingly
   if (GPIO_PIN_PWM_OUTPUTS[ch] == 1)
   {
-    configureSerialPin(3, oldMode, newPwmCh.val.mode);
+    configureSerialPin(3, newPwmCh.val.mode, proposedPwm);
   }
   else if (GPIO_PIN_PWM_OUTPUTS[ch] == 3)
   {
-    configureSerialPin(1, oldMode, newPwmCh.val.mode);
+    configureSerialPin(1, newPwmCh.val.mode, proposedPwm);
   }
-  config.SetPwmChannelRaw(ch, newPwmCh.raw);
+#if defined(PLATFORM_ESP32)
+  if (config.GetSerial1Protocol() == PROTOCOL_SERIAL1_SRXL2 && !isSecondarySmartPinUsable(proposedPwm)) return;
+#endif
+  for (unsigned channel = 0; channel < GPIO_PIN_PWM_OUTPUTS_COUNT; ++channel)
+    if (proposedPwm[channel] != config.GetPwmChannel(channel)->raw)
+      config.SetPwmChannelRaw(channel, proposedPwm[channel]);
+  if (oldMode != newPwmCh.val.mode && (GPIO_PIN_PWM_OUTPUTS[ch] == 1 || GPIO_PIN_PWM_OUTPUTS[ch] == 3))
+    deferExecutionMillis(100, [](){ reconfigureSerial(); });
+#if defined(PLATFORM_ESP32)
+  if (oldTx != getSerial1TxPin() || oldRx != getSerial1RxPin())
+    deferExecutionMillis(100, [](){ reconfigureSerial1(); });
+#endif
 }
 
 static void luaparamMappingInverted(propertiesCommon *item, uint8_t arg)
@@ -515,6 +528,11 @@ static void luaparamSetPower(propertiesCommon* item, uint8_t arg)
 void RXEndpoint::registerParameters()
 {
   registerParameter(&luaSerialProtocol, [](propertiesCommon* item, uint8_t arg){
+    uint8_t secondary = 0;
+#if defined(PLATFORM_ESP32)
+    secondary = config.GetSerial1Protocol();
+#endif
+    if (!isValidSerialProtocolPair(arg, secondary)) return;
     config.SetSerialProtocol((eSerialProtocol)arg);
     if (config.IsModified()) {
       deferExecutionMillis(100, [](){
@@ -527,6 +545,8 @@ void RXEndpoint::registerParameters()
   if (RX_HAS_SERIAL1)
   {
     registerParameter(&luaSerial1Protocol, [](propertiesCommon* item, uint8_t arg){
+      if (!isValidSerialProtocolPair(config.GetSerialProtocol(), arg)) return;
+      if (arg == PROTOCOL_SERIAL1_SRXL2 && !isSecondarySmartPinUsable()) return;
       config.SetSerial1Protocol((eSerial1Protocol)arg);
       if (config.IsModified()) {
         deferExecutionMillis(100, [](){

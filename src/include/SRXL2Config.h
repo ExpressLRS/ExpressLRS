@@ -36,3 +36,9 @@ inline bool isValidSerialProtocolPair(uint8_t primary, uint8_t secondary)
     return primary <= PROTOCOL_SRXL2 && secondary == 0;
 #endif
 }
+
+#if (defined(TARGET_RX) && defined(PLATFORM_ESP32)) || defined(SRXL2_ADAPTER_TEST)
+bool hasSRXL2BatteryTelemetry();
+#else
+inline bool hasSRXL2BatteryTelemetry() { return false; }
+#endif

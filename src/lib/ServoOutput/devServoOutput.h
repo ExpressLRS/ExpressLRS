@@ -14,5 +14,6 @@ extern device_t ServoOut_device;
 void servoNewChannelsAvailable();
 // Copy the current output values to the config's failsafe values
 void servoCurrentToFailsafeConfig();
+void reconfigureServoOutput();
 
 #endif

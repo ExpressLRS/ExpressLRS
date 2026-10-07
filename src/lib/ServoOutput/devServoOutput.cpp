@@ -16,6 +16,8 @@ static int8_t servoPins[PWM_MAX_CHANNELS];
 static pwm_channel_t pwmChannels[PWM_MAX_CHANNELS];
 static uint16_t pwmChannelValues[PWM_MAX_CHANNELS];
 static bool initialized = false;
+static bool outputsConfigured = false;
+static uint8_t outputModes[PWM_MAX_CHANNELS];
 
 #if defined(PLATFORM_ESP32)
 static DShotRMT *dshotInstances[PWM_MAX_CHANNELS] = {nullptr};
@@ -260,6 +262,7 @@ static bool initialize()
 #endif
         // Mark servo pins that are being used for serial (or other purposes) as disconnected
         auto mode = (eServoOutputMode)config.GetPwmChannel(ch)->val.mode;
+        outputModes[ch] = mode;
         if (mode >= somSerial)
         {
             pin = UNDEF_PIN;
@@ -297,6 +300,7 @@ static bool initialize()
             digitalWrite(pin, LOW);
         }
     }
+    outputsConfigured = true;
     return true;
 }
 
@@ -349,6 +353,26 @@ static int event()
         }
     }
     return DURATION_IMMEDIATELY;
+}
+
+void reconfigureServoOutput()
+{
+    if (!outputsConfigured) return;
+    bool changed = false;
+    for (int ch = 0; ch < GPIO_PIN_PWM_OUTPUTS_COUNT; ++ch)
+        changed |= outputModes[ch] != config.GetPwmChannel(ch)->val.mode;
+    if (!changed) return;
+    for (int ch = 0; ch < GPIO_PIN_PWM_OUTPUTS_COUNT; ++ch)
+    {
+        if (pwmChannels[ch] != -1) PWM.release(pwmChannels[ch]);
+#if defined(PLATFORM_ESP32)
+        delete dshotInstances[ch];
+        dshotInstances[ch] = nullptr;
+#endif
+    }
+    initialized = false;
+    initialize();
+    event();
 }
 
 static int timeout()

@@ -1,6 +1,7 @@
 #include "CRSFRouter.h"
 #include "LowPassFilter.h"
 #include "rxtx_common.h"
+#include "rxtx_intf.h"
 
 #include "crc.h"
 #include "stubborn_sender.h"
@@ -23,6 +24,7 @@
 #include "rx-serial/SerialAirPort.h"
 #include "rx-serial/SerialHoTT_TLM.h"
 #include "rx-serial/SerialSRXL2.h"
+#include <atomic>
 #include "rx-serial/SerialScorpion_TLM.h"
 #include "rx-serial/SerialMavlink.h"
 #include "rx-serial/SerialTramp.h"
@@ -126,6 +128,8 @@ uint32_t serialBaud;
     const Stream *serial1_protocol_tx = &(SERIAL1_PROTOCOL_TX);
 
     SerialIO *serial1IO = nullptr;
+    static SerialSRXL2 *srxl2IO = nullptr;
+    static std::atomic<uint8_t> pendingSerialChanges{0};
 #endif
 
 SerialIO *serialIO = nullptr;
@@ -1273,16 +1277,27 @@ void DataUlReceiveComplete()
 }
 
 #if defined(PLATFORM_ESP32)
-static int8_t getSerial1Pin(int8_t pin, eServoOutputMode mode)
+static int8_t getSerial1Pin(int8_t pin, eServoOutputMode mode, const uint32_t *pwm)
 {
     if (pin == UNDEF_PIN)
         for (uint8_t ch = 0; ch < GPIO_PIN_PWM_OUTPUTS_COUNT; ++ch)
-            if (config.GetPwmChannel(ch)->val.mode == mode) pin = GPIO_PIN_PWM_OUTPUTS[ch];
+            if ((pwm ? (pwm[ch] >> 16) & 15 : config.GetPwmChannel(ch)->val.mode) == mode) pin = GPIO_PIN_PWM_OUTPUTS[ch];
     return pin;
 }
 
-int8_t getSerial1TxPin() { return getSerial1Pin(GPIO_PIN_SERIAL1_TX, somSerial1TX); }
-int8_t getSerial1RxPin() { return getSerial1Pin(GPIO_PIN_SERIAL1_RX, somSerial1RX); }
+int8_t getSerial1TxPin(const uint32_t *pwm) { return getSerial1Pin(GPIO_PIN_SERIAL1_TX, somSerial1TX, pwm); }
+int8_t getSerial1RxPin(const uint32_t *pwm) { return getSerial1Pin(GPIO_PIN_SERIAL1_RX, somSerial1RX, pwm); }
+
+bool isSecondarySmartPinUsable(const uint32_t *pwm)
+{
+    const int8_t pin = getSerial1TxPin(pwm);
+    if (!supportsSRXL2(1, pin) || (!OPT_CRSF_RCVR_NO_SERIAL &&
+        (pin == GPIO_PIN_RCSIGNAL_TX || pin == GPIO_PIN_RCSIGNAL_RX))) return false;
+    for (uint8_t ch = 0; ch < GPIO_PIN_PWM_OUTPUTS_COUNT; ++ch)
+        if (GPIO_PIN_PWM_OUTPUTS[ch] == pin &&
+            (pwm ? (pwm[ch] >> 16) & 15 : config.GetPwmChannel(ch)->val.mode) != somSerial1TX) return false;
+    return true;
+}
 
 int8_t getSRXL2Port()
 {
@@ -1294,8 +1309,7 @@ int8_t getSRXL2Port()
             (primary == secondary || primary == getSerial1RxPin())) return -1;
         return 0;
     }
-    if (config.GetSerial1Protocol() == PROTOCOL_SERIAL1_SRXL2 && supportsSRXL2(1, secondary) &&
-        (OPT_CRSF_RCVR_NO_SERIAL || (secondary != GPIO_PIN_RCSIGNAL_TX && secondary != GPIO_PIN_RCSIGNAL_RX))) return 1;
+    if (config.GetSerial1Protocol() == PROTOCOL_SERIAL1_SRXL2 && isSecondarySmartPinUsable()) return 1;
     return -1;
 }
 #endif
@@ -1308,7 +1322,11 @@ static void setupSerial()
     bool hottTlmSerial = false;
     const bool smartSerial = !firmwareOptions.is_airport && config.GetSerialProtocol() == PROTOCOL_SRXL2;
 
-    if (smartSerial && !supportsSRXL2())
+    if (smartSerial && (!supportsSRXL2()
+#if defined(PLATFORM_ESP32)
+        || getSRXL2Port() != 0
+#endif
+        ))
     {
         serialIO = new SerialNOOP();
         BackpackOrLogStrm = new NullStream();
@@ -1448,7 +1466,7 @@ static void setupSerial()
 #if defined(PLATFORM_ESP32)
     else if (smartSerial)
     {
-        serialIO = new SerialSRXL2(&SERIAL_PROTOCOL_TX, &SERIAL_PROTOCOL_RX, GPIO_PIN_RCSIGNAL_TX);
+        serialIO = srxl2IO = new SerialSRXL2(&SERIAL_PROTOCOL_TX, &SERIAL_PROTOCOL_RX, GPIO_PIN_RCSIGNAL_TX);
     }
 #endif
     else if (config.GetSerialProtocol() == PROTOCOL_SCORPION_TLM)
@@ -1484,6 +1502,7 @@ static void serial1Shutdown()
 {
     if(serial1IO != nullptr)
     {
+        if (serial1IO == srxl2IO) srxl2IO = nullptr;
         Serial1.end();
         delete serial1IO;
         serial1IO = nullptr;
@@ -1495,27 +1514,8 @@ static void setupSerial1()
     //
     // init secondary serial and protocol
     //
-    int8_t serial1RXpin = GPIO_PIN_SERIAL1_RX;
-
-    if (serial1RXpin == UNDEF_PIN)
-    {
-        for (uint8_t ch = 0; ch < GPIO_PIN_PWM_OUTPUTS_COUNT; ch++)
-        {
-            if (config.GetPwmChannel(ch)->val.mode == somSerial1RX)
-                serial1RXpin = GPIO_PIN_PWM_OUTPUTS[ch];
-        }
-    }
-
-    int8_t serial1TXpin = GPIO_PIN_SERIAL1_TX;
-
-    if (serial1TXpin == UNDEF_PIN)
-    {
-        for (uint8_t ch = 0; ch < GPIO_PIN_PWM_OUTPUTS_COUNT; ch++)
-        {
-            if (config.GetPwmChannel(ch)->val.mode == somSerial1TX)
-                serial1TXpin = GPIO_PIN_PWM_OUTPUTS[ch];
-        }
-    }
+    const int8_t serial1RXpin = getSerial1RxPin();
+    const int8_t serial1TXpin = getSerial1TxPin();
 
     switch(config.GetSerial1Protocol())
     {
@@ -1571,13 +1571,18 @@ static void setupSerial1()
             Serial1.begin(38400, SERIAL_8N1, serial1RXpin, serial1TXpin, false);
             serial1IO = new SerialScorpion_TLM(SERIAL1_PROTOCOL_TX, SERIAL1_PROTOCOL_RX);
             break;
+        case PROTOCOL_SERIAL1_SRXL2:
+            if (getSRXL2Port() == 1)
+                serial1IO = srxl2IO = new SerialSRXL2(&SERIAL1_PROTOCOL_TX, &SERIAL1_PROTOCOL_RX, serial1TXpin, 1);
+            else
+                serial1IO = new SerialNOOP();
+            break;
     }
 }
 
 void reconfigureSerial1()
 {
-    serial1Shutdown();
-    setupSerial1();
+    reconfigureSerialPorts(false, true);
 }
 #else
     void setupSerial1() {};
@@ -1589,6 +1594,9 @@ static void serialShutdown()
     BackpackOrLogStrm = new NullStream();
     if(serialIO != nullptr)
     {
+#if defined(PLATFORM_ESP32)
+        if (serialIO == srxl2IO) srxl2IO = nullptr;
+#endif
         Serial.end();
         delete serialIO;
         serialIO = nullptr;
@@ -1597,9 +1605,44 @@ static void serialShutdown()
 
 void reconfigureSerial()
 {
+#if defined(PLATFORM_ESP32)
+    reconfigureSerialPorts(true, false);
+#else
     serialShutdown();
     setupSerial();
+#endif
 }
+
+#if defined(PLATFORM_ESP32)
+void reconfigureSerialPorts(bool primaryChanged, bool secondaryChanged)
+{
+    pendingSerialChanges.fetch_or((primaryChanged ? 1 : 0) | (secondaryChanged ? 2 : 0), std::memory_order_release);
+}
+
+static void updateSerialPorts()
+{
+    uint8_t changed = pendingSerialChanges.exchange(0, std::memory_order_acquire);
+    if (!changed) return;
+    const int8_t desired = getSRXL2Port();
+    if (srxl2IO && ((changed & (1 << srxl2IO->getPort())) || desired != srxl2IO->getPort() ||
+        srxl2IO->getPin() != (desired == 0 ? GPIO_PIN_RCSIGNAL_TX : getSerial1TxPin())))
+    {
+        if (!srxl2IO->readyForShutdown(micros()))
+        {
+            pendingSerialChanges.fetch_or(changed, std::memory_order_release);
+            return;
+        }
+        changed |= 1 << srxl2IO->getPort();
+    }
+    if (desired >= 0 && (!srxl2IO || desired != srxl2IO->getPort())) changed |= 1 << desired;
+    if (changed & 1) serialShutdown();
+    if (changed & 2) serial1Shutdown();
+    reconfigureServoOutput();
+    if (changed & 1) setupSerial();
+    if (changed & 2) setupSerial1();
+    devicesTriggerEvent(EVENT_CONFIG_SERIAL_CHANGE);
+}
+#endif
 
 static void setupConfigAndPocCheck()
 {
@@ -2175,6 +2218,9 @@ void loop()
 
     CheckConfigChangePending();
     executeDeferredFunction(micros());
+#if defined(PLATFORM_ESP32)
+    updateSerialPorts();
+#endif
 
     if (connectionState > MODE_STATES)
     {

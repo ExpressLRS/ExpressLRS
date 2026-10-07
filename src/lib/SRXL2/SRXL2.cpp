@@ -94,6 +94,11 @@ void Link::setThrottle(uint16_t value, uint32_t now)
 
 bool Link::connected() const { return phase == Active; }
 
+bool Link::busIdle(uint32_t now) const
+{
+    return !txBusy && (!waitingReply || uint32_t(now - txEnded) >= RESPONSE_US);
+}
+
 void Link::missedFrame()
 {
     if (phase != Active || controlPending) return;

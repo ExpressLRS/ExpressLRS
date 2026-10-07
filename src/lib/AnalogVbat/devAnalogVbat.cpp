@@ -1,4 +1,5 @@
 #include "devAnalogVbat.h"
+#include "SRXL2Config.h"
 
 #if defined(TARGET_RX)
 
@@ -177,7 +178,7 @@ static void reportVbat()
     if (triggerPacket || (now - lastTelemSentMs >= VBAT_MIN_CRSFRATE))
     {
         // send battery packets (0x08) only if no external decive is sending 0x08 packets
-        if (!crsfBatterySensorDetected && config.GetSerialProtocol() != PROTOCOL_MAVLINK)
+        if (!crsfBatterySensorDetected && !hasSRXL2BatteryTelemetry() && config.GetSerialProtocol() != PROTOCOL_MAVLINK)
         {
             // CRSF_FRAMETYPE_BATTERY (0x08)
             CRSF_MK_FRAME_T(crsf_sensor_battery_t) crsfbatt = { 0 };
