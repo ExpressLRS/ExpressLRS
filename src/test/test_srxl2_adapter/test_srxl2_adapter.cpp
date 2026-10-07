@@ -47,10 +47,12 @@ static std::string *startupInput;
 static std::string startupAnnouncement, startupReply;
 static uint32_t startupInjectUs;
 static uint32_t startupSecondInjectUs;
+static uint32_t startupRxBusyUntilUs;
 static std::string startupSecondAnnouncement;
 static void startupYield()
 {
     nowUs += 1000;
+    if (startupRxBusyUntilUs && nowUs == startupRxBusyUntilUs) uartReceiving = false;
     if (startupInput && nowUs == startupInjectUs) startupInput->append(startupAnnouncement);
     if (startupInput && nowUs == startupSecondInjectUs) startupInput->append(startupSecondAnnouncement);
 }
@@ -76,7 +78,6 @@ static void releaseBusTransmit()
 #define SRXL2_ADAPTER_TEST
 #define SRXL2_DIAGNOSTICS
 #define SRXL2_EARLY_STARTUP_PIN 3
-#define SRXL2_EARLY_CLEAR_RX() ((void)0)
 #define SRXL2_EARLY_BEGIN_TX() startBusTransmit()
 #define SRXL2_EARLY_RELEASE_TX() releaseBusTransmit()
 #define SRXL2_EARLY_YIELD() startupYield()
@@ -139,6 +140,7 @@ void setUp()
     startupReply.clear();
     startupInjectUs = 0;
     startupSecondInjectUs = 0;
+    startupRxBusyUntilUs = 0;
     startupSecondAnnouncement.clear();
     for (auto &channel : ChannelData) channel = CRSF_CHANNEL_VALUE_UNSET;
     capture.addDevice(CRSF_ADDRESS_RADIO_TRANSMITTER);
@@ -162,7 +164,7 @@ public:
     }
 };
 
-void test_early_startup_ack_requires_a_fresh_announcement_and_releases_the_wire()
+void test_early_startup_ack_handles_a_fresh_announcement_and_releases_the_wire()
 {
     const uint8_t announcement[] = {0xA6,0x21,14,0x40,0,10,0,0,0,0,0,1,0x38,0x4E};
     for (uint32_t start : {50000u, 0xFFFFF000u, uint32_t(0u - 11000u)})
@@ -170,7 +172,6 @@ void test_early_startup_ack_requires_a_fresh_announcement_and_releases_the_wire(
         nowUs = start;
         busDriving = txDrained = releasedBeforeDrain = false;
         std::string in, out;
-        for (unsigned i = 0; i < 9; ++i) in.append(reinterpret_cast<const char *>(announcement), sizeof(announcement));
         BinaryStringStream rx(in);
         StartupTxStream tx(out);
         startupInput = &in;
@@ -179,7 +180,7 @@ void test_early_startup_ack_requires_a_fresh_announcement_and_releases_the_wire(
         startupReply.assign(reinterpret_cast<const char *>(hello), sizeof(hello));
         SRXL2StartupCapture capture;
         listenForEarlyESC(rx, tx, 0x12345678, capture);
-        TEST_ASSERT_EQUAL(126, capture.discardedBytes);
+        TEST_ASSERT_EQUAL(0, capture.bufferedBytes);
         TEST_ASSERT_EQUAL_UINT32(start + 10000, capture.firstReadUs);
         TEST_ASSERT_EQUAL_UINT32(start + 11000, capture.ackStartUs); // Two-character idle before ACK.
         TEST_ASSERT_EQUAL_UINT32(start + 12216, capture.ackEndUs);
@@ -195,11 +196,12 @@ void test_early_startup_ack_requires_a_fresh_announcement_and_releases_the_wire(
     }
 }
 
-void test_early_startup_does_not_ack_stale_corrupt_or_unaddressed_frames()
+void test_early_startup_does_not_ack_corrupt_or_nonannouncement_frames()
 {
     const uint8_t announcement[] = {0xA6,0x21,14,0x40,0,10,0,0,0,0,0,1,0x38,0x4E};
     nowUs = 50000;
     std::string in(reinterpret_cast<const char *>(announcement), sizeof(announcement)), out;
+    in.back() ^= 1; // Buffered corruption must not trigger an ACK either.
     BinaryStringStream rx(in);
     StartupTxStream tx(out);
     startupInput = &in;
@@ -210,11 +212,37 @@ void test_early_startup_does_not_ack_stale_corrupt_or_unaddressed_frames()
     startupAnnouncement.append(reinterpret_cast<const char *>(announcement), 7);
     SRXL2StartupCapture capture;
     listenForEarlyESC(rx, tx, 0x12345678, capture);
-    TEST_ASSERT_EQUAL(14, capture.discardedBytes);
+    TEST_ASSERT_EQUAL(14, capture.bufferedBytes);
     TEST_ASSERT_TRUE(out.empty());
     TEST_ASSERT_EQUAL(0, capture.ackStartUs);
     TEST_ASSERT_EQUAL_UINT32(300000, capture.exitedUs);
     TEST_ASSERT_FALSE(busDriving);
+}
+
+void test_early_startup_acknowledges_buffered_announcements_after_hardware_idle()
+{
+    const uint8_t announcement[] = {0xA6,0x21,14,0x40,0,10,0,0,0,0,0,1,0x38,0x4E};
+    nowUs = 50000;
+    std::string in, out;
+    for (unsigned i = 0; i < 9; ++i) in.append(reinterpret_cast<const char *>(announcement), sizeof(announcement));
+    BinaryStringStream rx(in);
+    StartupTxStream tx(out);
+    startupInput = &in;
+    startupReply.assign(reinterpret_cast<const char *>(hello), sizeof(hello));
+    uartReceiving = true;
+    startupRxBusyUntilUs = 53000;
+    SRXL2StartupCapture capture;
+    listenForEarlyESC(rx, tx, 0x12345678, capture);
+    TEST_ASSERT_EQUAL(14, out.size());
+    TEST_ASSERT_EQUAL(126, capture.bufferedBytes);
+    for (unsigned i = 0; i < 9; ++i)
+        TEST_ASSERT_EQUAL_UINT8_ARRAY(announcement, capture.buffered + i * sizeof(announcement), sizeof(announcement));
+    TEST_ASSERT_EQUAL_UINT32(54000, capture.ackStartUs);
+    TEST_ASSERT_GREATER_THAN(capture.ackEndUs, capture.firstReadUs); // The reply is fresh, the queued announcements are not.
+    TEST_ASSERT_EQUAL(14, capture.receivedBytes);
+    TEST_ASSERT_EQUAL_UINT8_ARRAY(hello, capture.bytes, sizeof(hello));
+    TEST_ASSERT_FALSE(busDriving);
+    TEST_ASSERT_FALSE(releasedBeforeDrain);
 }
 
 void test_early_startup_recovers_after_unsuitable_input_before_an_announcement()
@@ -1064,8 +1092,9 @@ int main()
 {
     UNITY_BEGIN();
     RUN_TEST(test_smart_startup_attaches_receive_without_driving_the_signal_pin);
-    RUN_TEST(test_early_startup_ack_requires_a_fresh_announcement_and_releases_the_wire);
-    RUN_TEST(test_early_startup_does_not_ack_stale_corrupt_or_unaddressed_frames);
+    RUN_TEST(test_early_startup_ack_handles_a_fresh_announcement_and_releases_the_wire);
+    RUN_TEST(test_early_startup_does_not_ack_corrupt_or_nonannouncement_frames);
+    RUN_TEST(test_early_startup_acknowledges_buffered_announcements_after_hardware_idle);
     RUN_TEST(test_early_startup_recovers_after_unsuitable_input_before_an_announcement);
     RUN_TEST(test_adapter_ch3_and_all_inhibition_paths);
     RUN_TEST(test_adapter_missing_frames_do_not_refresh_cached_throttle);

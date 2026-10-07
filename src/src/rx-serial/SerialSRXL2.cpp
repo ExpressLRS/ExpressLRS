@@ -33,6 +33,11 @@ static std::atomic<uint32_t> receiveErrors[6]{};
 #include "driver/periph_ctrl.h"
 #include "driver/uart.h"
 #include "esp_timer.h"
+#if defined(SRXL2_DIAGNOSTICS) && defined(SRXL2_EARLY_STARTUP_PIN)
+#include "esp_private/esp_clk.h"
+#include "soc/rtc.h"
+#include "esp32/rom/rtc.h"
+#endif
 #include "hal/gpio_ll.h"
 #if defined(SRXL2_DIAGNOSTICS)
 #include "driver/pcnt.h"
@@ -119,8 +124,7 @@ bool requestSRXL2NeutralProbe()
 static volatile uint32_t srxl2RFGeneration = 0;
 
 #if defined(SRXL2_DIAGNOSTICS) && defined(SRXL2_EARLY_STARTUP_PIN)
-#ifndef SRXL2_EARLY_CLEAR_RX
-#define SRXL2_EARLY_CLEAR_RX() uart_flush_input(UART_NUM_0)
+#ifndef SRXL2_EARLY_BEGIN_TX
 #define SRXL2_EARLY_BEGIN_TX() do { \
     gpio_set_level(gpio_num_t(SRXL2_EARLY_STARTUP_PIN), 1); \
     gpio_set_direction(gpio_num_t(SRXL2_EARLY_STARTUP_PIN), GPIO_MODE_INPUT_OUTPUT); \
@@ -131,21 +135,33 @@ static volatile uint32_t srxl2RFGeneration = 0;
 #endif
 struct SRXL2StartupCapture
 {
-    uint32_t enteredUs = 0, clearedUs = 0, firstReadUs = 0, ackStartUs = 0, ackEndUs = 0, exitedUs = 0;
-    uint16_t fifoBytes = 0, discardedBytes = 0, receivedBytes = 0;
-    uint8_t bytes[128] = {};
+    uint32_t enteredUs = 0, readyUs = 0, firstReadUs = 0, ackStartUs = 0, ackEndUs = 0, exitedUs = 0;
+    uint64_t rtcTicks = 0;
+    uint32_t rtcCalibration = 0;
+    uint8_t resetReason = 0, cpuResetReason = 0;
+    uint16_t fifoBytes = 0, bufferedBytes = 0, receivedBytes = 0;
+    uint8_t buffered[128] = {}, bytes[128] = {};
 };
 static SRXL2StartupCapture startupCapture;
 static void listenForEarlyESC(Stream &input, Stream &output, uint32_t uid, SRXL2StartupCapture &capture)
 {
     if (!capture.enteredUs) capture.enteredUs = micros();
-    // UART0 can retain ROM-era announcements. Discard them before assigning timestamps.
-    const int buffered = input.available();
-    for (int i = 0; i < buffered; ++i) { input.read(); ++capture.discardedBytes; }
-    SRXL2_EARLY_CLEAR_RX();
-    capture.clearedUs = micros();
     SRXL2::Link early;
-    early.reset(uid, capture.clearedUs, true);
+    early.reset(uid, micros(), true);
+    // Process UART0's queued startup announcements, without inventing wire-arrival timestamps.
+    const int buffered = input.available();
+    for (int i = 0; i < buffered; ++i)
+    {
+        const uint8_t byte = input.read();
+        if (capture.bufferedBytes < sizeof(capture.buffered)) capture.buffered[capture.bufferedBytes] = byte;
+        ++capture.bufferedBytes;
+        early.receive(byte, micros());
+    }
+    capture.readyUs = micros();
+    uint32_t lastHardwareReceive = capture.readyUs;
+    const int8_t pin = SRXL2_EARLY_STARTUP_PIN;
+    (void)pin; // Native tests substitute the hardware boundary.
+    bool wasBusy = false;
     bool acknowledged = false;
     while (uint32_t(micros() - capture.enteredUs) < 250000)
     {
@@ -159,7 +175,10 @@ static void listenForEarlyESC(Stream &input, Stream &output, uint32_t uid, SRXL2
             early.receive(byte, now);
         }
         const uint32_t now = micros();
-        if (!acknowledged)
+        const bool busy = input.available() > 0 || SRXL2_HARDWARE_RX_BUSY();
+        if (busy || wasBusy) lastHardwareReceive = now;
+        wasBusy = busy;
+        if (!acknowledged && !busy && uint32_t(now - lastHardwareReceive) >= 174)
         {
             SRXL2::Packet packet;
             if (early.nextPacket(now, packet))
@@ -184,6 +203,10 @@ static void listenForEarlyESC(Stream &input, Stream &output, uint32_t uid, SRXL2
 extern "C" void initVariant()
 {
     startupCapture.enteredUs = micros();
+    startupCapture.rtcTicks = rtc_time_get();
+    startupCapture.rtcCalibration = esp_clk_slowclk_cal_get();
+    startupCapture.resetReason = esp_reset_reason();
+    startupCapture.cpuResetReason = rtc_get_reset_reason(0);
     startupCapture.fifoBytes = uart_ll_get_rxfifo_len(UART_LL_GET_HW(0));
     Serial.setTxBufferSize(0);
     Serial.begin(115200, SERIAL_8N1, SRXL2_EARLY_STARTUP_PIN, -1, false);
@@ -606,13 +629,17 @@ void SerialSRXL2::publishDiagnostics(bool wifiEntry)
 #if defined(SRXL2_EARLY_STARTUP_PIN)
     state["early_startup_pin"] = SRXL2_EARLY_STARTUP_PIN;
     state["early_startup_enter_us"] = startupCapture.enteredUs;
-    state["early_startup_clear_us"] = startupCapture.clearedUs;
+    state["early_startup_ready_us"] = startupCapture.readyUs;
+    state["early_startup_rtc_ticks"] = startupCapture.rtcTicks;
+    state["early_startup_rtc_calibration"] = startupCapture.rtcCalibration;
+    state["early_startup_reset_reason"] = startupCapture.resetReason;
+    state["early_startup_cpu_reset_reason"] = startupCapture.cpuResetReason;
     state["early_startup_first_read_us"] = startupCapture.firstReadUs;
     state["early_startup_ack_start_us"] = startupCapture.ackStartUs;
     state["early_startup_ack_end_us"] = startupCapture.ackEndUs;
     state["early_startup_exit_us"] = startupCapture.exitedUs;
     state["early_startup_fifo_bytes"] = startupCapture.fifoBytes;
-    state["early_startup_discarded_bytes"] = startupCapture.discardedBytes;
+    state["early_startup_buffered_bytes"] = startupCapture.bufferedBytes;
     state["early_startup_received_bytes"] = startupCapture.receivedBytes;
     String earlyHex;
     const char earlyDigits[] = "0123456789abcdef";
@@ -622,6 +649,13 @@ void SerialSRXL2::publishDiagnostics(bool wifiEntry)
         earlyHex += earlyDigits[startupCapture.bytes[i] & 15];
     }
     state["early_startup_rx_hex"] = earlyHex;
+    String bufferedHex;
+    for (unsigned i = 0; i < min(unsigned(startupCapture.bufferedBytes), unsigned(sizeof(startupCapture.buffered))); ++i)
+    {
+        bufferedHex += earlyDigits[startupCapture.buffered[i] >> 4];
+        bufferedHex += earlyDigits[startupCapture.buffered[i] & 15];
+    }
+    state["early_startup_buffered_hex"] = bufferedHex;
 #endif
     state["tx_packets"] = diagnostics.txPackets;
     state["driver_init_us"] = diagnostics.driverInitUs;
