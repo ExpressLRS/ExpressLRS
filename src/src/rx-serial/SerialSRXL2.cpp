@@ -118,6 +118,85 @@ bool requestSRXL2NeutralProbe()
 
 static volatile uint32_t srxl2RFGeneration = 0;
 
+#if defined(SRXL2_DIAGNOSTICS) && defined(SRXL2_EARLY_STARTUP_PIN)
+#ifndef SRXL2_EARLY_CLEAR_RX
+#define SRXL2_EARLY_CLEAR_RX() uart_flush_input(UART_NUM_0)
+#define SRXL2_EARLY_BEGIN_TX() do { \
+    gpio_set_level(gpio_num_t(SRXL2_EARLY_STARTUP_PIN), 1); \
+    gpio_set_direction(gpio_num_t(SRXL2_EARLY_STARTUP_PIN), GPIO_MODE_INPUT_OUTPUT); \
+    pinMatrixOutAttach(SRXL2_EARLY_STARTUP_PIN, U0TXD_OUT_IDX, false, false); \
+} while (0)
+#define SRXL2_EARLY_RELEASE_TX() gpio_set_direction(gpio_num_t(SRXL2_EARLY_STARTUP_PIN), GPIO_MODE_INPUT)
+#define SRXL2_EARLY_YIELD() delay(1)
+#endif
+struct SRXL2StartupCapture
+{
+    uint32_t enteredUs = 0, clearedUs = 0, firstReadUs = 0, ackStartUs = 0, ackEndUs = 0, exitedUs = 0;
+    uint16_t fifoBytes = 0, discardedBytes = 0, receivedBytes = 0;
+    uint8_t bytes[128] = {};
+};
+static SRXL2StartupCapture startupCapture;
+static void listenForEarlyESC(Stream &input, Stream &output, uint32_t uid, SRXL2StartupCapture &capture)
+{
+    if (!capture.enteredUs) capture.enteredUs = micros();
+    // UART0 can retain ROM-era announcements. Discard them before assigning timestamps.
+    const int buffered = input.available();
+    for (int i = 0; i < buffered; ++i) { input.read(); ++capture.discardedBytes; }
+    SRXL2_EARLY_CLEAR_RX();
+    capture.clearedUs = micros();
+    SRXL2::Link early;
+    early.reset(uid, capture.clearedUs, true);
+    bool acknowledged = false;
+    while (uint32_t(micros() - capture.enteredUs) < 250000)
+    {
+        while (input.available() && uint32_t(micros() - capture.enteredUs) < 250000)
+        {
+            const uint8_t byte = input.read();
+            const uint32_t now = micros();
+            if (!capture.receivedBytes) capture.firstReadUs = now;
+            if (capture.receivedBytes < sizeof(capture.bytes)) capture.bytes[capture.receivedBytes] = byte;
+            ++capture.receivedBytes;
+            early.receive(byte, now);
+        }
+        const uint32_t now = micros();
+        if (!acknowledged)
+        {
+            SRXL2::Packet packet;
+            if (early.nextPacket(now, packet))
+            {
+                capture.ackStartUs = now;
+                SRXL2_EARLY_BEGIN_TX();
+                output.write(packet.bytes, packet.length);
+                output.flush(); // The last stop bit must finish before releasing the bus.
+                SRXL2_EARLY_RELEASE_TX();
+                capture.ackEndUs = micros();
+                early.transmitted(capture.ackEndUs);
+                acknowledged = true;
+            }
+        }
+        // ACK only. Normal setup owns the final broadcast and all control packets.
+        if (acknowledged && uint32_t(micros() - capture.ackEndUs) >= 20000) break;
+        SRXL2_EARLY_YIELD();
+    }
+    capture.exitedUs = micros();
+}
+#if defined(CONFIG_IDF_TARGET_ESP32)
+extern "C" void initVariant()
+{
+    startupCapture.enteredUs = micros();
+    startupCapture.fifoBytes = uart_ll_get_rxfifo_len(UART_LL_GET_HW(0));
+    Serial.setTxBufferSize(0);
+    Serial.begin(115200, SERIAL_8N1, SRXL2_EARLY_STARTUP_PIN, -1, false);
+    Serial.setRxFIFOFull(1);
+    pinMode(SRXL2_EARLY_STARTUP_PIN, INPUT_PULLUP); // Select GPIO IOMUX before routing UART0 TX through the matrix.
+    pinMatrixInAttach(SRXL2_EARLY_STARTUP_PIN, U0RXD_IN_IDX, false);
+    const uint64_t mac = ESP.getEfuseMac();
+    listenForEarlyESC(Serial, Serial, uint32_t(mac) ^ uint32_t(mac >> 32), startupCapture);
+    Serial.end();
+}
+#endif
+#endif
+
 void ICACHE_RAM_ATTR SerialSRXL2::onRFReset()
 {
     ++srxl2RFGeneration;
@@ -524,6 +603,26 @@ void SerialSRXL2::publishDiagnostics(bool wifiEntry)
     state["ch3_max"] = diagnostics.ch3Max;
     state["input_frames"] = diagnostics.frames;
     state["tx_ready"] = txReady;
+#if defined(SRXL2_EARLY_STARTUP_PIN)
+    state["early_startup_pin"] = SRXL2_EARLY_STARTUP_PIN;
+    state["early_startup_enter_us"] = startupCapture.enteredUs;
+    state["early_startup_clear_us"] = startupCapture.clearedUs;
+    state["early_startup_first_read_us"] = startupCapture.firstReadUs;
+    state["early_startup_ack_start_us"] = startupCapture.ackStartUs;
+    state["early_startup_ack_end_us"] = startupCapture.ackEndUs;
+    state["early_startup_exit_us"] = startupCapture.exitedUs;
+    state["early_startup_fifo_bytes"] = startupCapture.fifoBytes;
+    state["early_startup_discarded_bytes"] = startupCapture.discardedBytes;
+    state["early_startup_received_bytes"] = startupCapture.receivedBytes;
+    String earlyHex;
+    const char earlyDigits[] = "0123456789abcdef";
+    for (unsigned i = 0; i < min(unsigned(startupCapture.receivedBytes), unsigned(sizeof(startupCapture.bytes))); ++i)
+    {
+        earlyHex += earlyDigits[startupCapture.bytes[i] >> 4];
+        earlyHex += earlyDigits[startupCapture.bytes[i] & 15];
+    }
+    state["early_startup_rx_hex"] = earlyHex;
+#endif
     state["tx_packets"] = diagnostics.txPackets;
     state["driver_init_us"] = diagnostics.driverInitUs;
     state["first_tx_attempt_us"] = diagnostics.firstTxUs;

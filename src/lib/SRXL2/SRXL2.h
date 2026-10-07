@@ -18,7 +18,7 @@ uint16_t encodeThrottle(uint16_t value);
 class Link
 {
 public:
-    void reset(uint32_t uid, uint32_t nowUs);
+    void reset(uint32_t uid, uint32_t nowUs, bool startupAckOnly = false);
     void setControlPermission(bool permitted);
     void setThrottle(uint16_t crsfValue, uint32_t nowUs);
     void missedFrame();
@@ -36,6 +36,7 @@ private:
     uint16_t throttle = 0x8000;
     bool permitted = false, released = false, hasSample = false;
     bool txBusy = false, requestReply = false, waitingReply = false, helloPending = false;
+    bool startupAckOnly = false;
     bool monitorReplies = false;
     bool urgentControl = false;
     bool probePending = false;

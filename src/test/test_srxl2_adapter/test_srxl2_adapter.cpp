@@ -43,6 +43,17 @@ static bool installTxInterrupt(void (*handler)(void *), void *argument)
 }
 static std::string *immediateReplyInput;
 static std::string immediateReply;
+static std::string *startupInput;
+static std::string startupAnnouncement, startupReply;
+static uint32_t startupInjectUs;
+static uint32_t startupSecondInjectUs;
+static std::string startupSecondAnnouncement;
+static void startupYield()
+{
+    nowUs += 1000;
+    if (startupInput && nowUs == startupInjectUs) startupInput->append(startupAnnouncement);
+    if (startupInput && nowUs == startupSecondInjectUs) startupInput->append(startupSecondAnnouncement);
+}
 static void startBusTransmit() { busDriving = true; txDrained = false; }
 static void drainBusTransmit()
 {
@@ -64,6 +75,11 @@ static void releaseBusTransmit()
 // Substitute only the clock and GPIO boundary; execute the actual adapter/router.
 #define SRXL2_ADAPTER_TEST
 #define SRXL2_DIAGNOSTICS
+#define SRXL2_EARLY_STARTUP_PIN 3
+#define SRXL2_EARLY_CLEAR_RX() ((void)0)
+#define SRXL2_EARLY_BEGIN_TX() startBusTransmit()
+#define SRXL2_EARLY_RELEASE_TX() releaseBusTransmit()
+#define SRXL2_EARLY_YIELD() startupYield()
 #define SRXL2_DIAGNOSTIC_PUBLISH() (++diagnosticPublications)
 #define SRXL2_EDGE_COUNTER_INIT() true
 #define SRXL2_EDGE_COUNT() signalEdges
@@ -118,6 +134,12 @@ void setUp()
     txDoneInterrupt = nullptr;
     immediateReplyInput = nullptr;
     immediateReply.clear();
+    startupInput = nullptr;
+    startupAnnouncement.clear();
+    startupReply.clear();
+    startupInjectUs = 0;
+    startupSecondInjectUs = 0;
+    startupSecondAnnouncement.clear();
     for (auto &channel : ChannelData) channel = CRSF_CHANNEL_VALUE_UNSET;
     capture.addDevice(CRSF_ADDRESS_RADIO_TRANSMITTER);
     crsfRouter.addConnector(&capture);
@@ -127,6 +149,97 @@ void tearDown() { crsfRouter.removeConnector(&capture); }
 static const uint8_t hello[] = {0xA6,0x21,14,0x40,0x21,10,0,0,0x11,0x22,0x33,0x44,0xC9,0xE7};
 static const uint8_t esc[] = {0xA6,0x80,22,0x21,0x20,0,0x30,0x39,4,0xD2,1,0x5E,3,0xE8,0,0xFA,15,0x78,0x64,0x64,0x74,0x74};
 static const uint8_t battery[] = {0xA6,0x80,22,0x21,0x42,0,0,0xF6,0xB8,0x0B,0,0,0x39,0x30,1,0x0E,0xD0,0x0E,0,0,0x97,0x9C};
+
+class StartupTxStream : public BinaryStringStream
+{
+public:
+    using BinaryStringStream::BinaryStringStream;
+    void flush() override
+    {
+        nowUs += 1216;
+        txDrained = true;
+        if (startupInput) startupInput->append(startupReply);
+    }
+};
+
+void test_early_startup_ack_requires_a_fresh_announcement_and_releases_the_wire()
+{
+    const uint8_t announcement[] = {0xA6,0x21,14,0x40,0,10,0,0,0,0,0,1,0x38,0x4E};
+    for (uint32_t start : {50000u, 0xFFFFF000u, uint32_t(0u - 11000u)})
+    {
+        nowUs = start;
+        busDriving = txDrained = releasedBeforeDrain = false;
+        std::string in, out;
+        for (unsigned i = 0; i < 9; ++i) in.append(reinterpret_cast<const char *>(announcement), sizeof(announcement));
+        BinaryStringStream rx(in);
+        StartupTxStream tx(out);
+        startupInput = &in;
+        startupInjectUs = start + 10000;
+        startupAnnouncement.assign(reinterpret_cast<const char *>(announcement), sizeof(announcement));
+        startupReply.assign(reinterpret_cast<const char *>(hello), sizeof(hello));
+        SRXL2StartupCapture capture;
+        listenForEarlyESC(rx, tx, 0x12345678, capture);
+        TEST_ASSERT_EQUAL(126, capture.discardedBytes);
+        TEST_ASSERT_EQUAL_UINT32(start + 10000, capture.firstReadUs);
+        TEST_ASSERT_EQUAL_UINT32(start + 11000, capture.ackStartUs); // Two-character idle before ACK.
+        TEST_ASSERT_EQUAL_UINT32(start + 12216, capture.ackEndUs);
+        TEST_ASSERT_EQUAL_UINT32(start + 32216, capture.exitedUs);
+        TEST_ASSERT_EQUAL(14, out.size()); // ACK only; no final broadcast or control packets.
+        TEST_ASSERT_EQUAL_HEX8(0x40, uint8_t(out[4]));
+        TEST_ASSERT_EQUAL_HEX8(0, uint8_t(out[6]));
+        TEST_ASSERT_EQUAL_HEX8(3, uint8_t(out[7]));
+        TEST_ASSERT_EQUAL(28, capture.receivedBytes);
+        TEST_ASSERT_EQUAL_UINT8_ARRAY(hello, capture.bytes + 14, sizeof(hello));
+        TEST_ASSERT_FALSE(busDriving);
+        TEST_ASSERT_FALSE(releasedBeforeDrain);
+    }
+}
+
+void test_early_startup_does_not_ack_stale_corrupt_or_unaddressed_frames()
+{
+    const uint8_t announcement[] = {0xA6,0x21,14,0x40,0,10,0,0,0,0,0,1,0x38,0x4E};
+    nowUs = 50000;
+    std::string in(reinterpret_cast<const char *>(announcement), sizeof(announcement)), out;
+    BinaryStringStream rx(in);
+    StartupTxStream tx(out);
+    startupInput = &in;
+    startupInjectUs = 60000;
+    startupAnnouncement.assign(reinterpret_cast<const char *>(announcement), sizeof(announcement));
+    startupAnnouncement.back() ^= 1; // Corrupt CRC, then a valid addressed reply, then a partial announcement.
+    startupAnnouncement.append(reinterpret_cast<const char *>(hello), sizeof(hello));
+    startupAnnouncement.append(reinterpret_cast<const char *>(announcement), 7);
+    SRXL2StartupCapture capture;
+    listenForEarlyESC(rx, tx, 0x12345678, capture);
+    TEST_ASSERT_EQUAL(14, capture.discardedBytes);
+    TEST_ASSERT_TRUE(out.empty());
+    TEST_ASSERT_EQUAL(0, capture.ackStartUs);
+    TEST_ASSERT_EQUAL_UINT32(300000, capture.exitedUs);
+    TEST_ASSERT_FALSE(busDriving);
+}
+
+void test_early_startup_recovers_after_unsuitable_input_before_an_announcement()
+{
+    const uint8_t announcement[] = {0xA6,0x21,14,0x40,0,10,0,0,0,0,0,1,0x38,0x4E};
+    for (const std::string prefix : {std::string("\xA6\x21\x50", 3), std::string(reinterpret_cast<const char *>(hello), sizeof(hello))})
+    {
+        nowUs = 50000;
+        std::string in, out;
+        BinaryStringStream rx(in);
+        StartupTxStream tx(out);
+        startupInput = &in;
+        startupInjectUs = 60000;
+        startupAnnouncement = prefix;
+        startupSecondInjectUs = 100000;
+        startupSecondAnnouncement.assign(reinterpret_cast<const char *>(announcement), sizeof(announcement));
+        startupReply.clear();
+        SRXL2StartupCapture capture;
+        listenForEarlyESC(rx, tx, 0x12345678, capture);
+        TEST_ASSERT_EQUAL_UINT32(101000, capture.ackStartUs);
+        TEST_ASSERT_EQUAL(14, out.size());
+        TEST_ASSERT_EQUAL_HEX8(0x40, uint8_t(out[4]));
+        TEST_ASSERT_FALSE(busDriving);
+    }
+}
 
 void test_smart_startup_attaches_receive_without_driving_the_signal_pin()
 {
@@ -951,6 +1064,9 @@ int main()
 {
     UNITY_BEGIN();
     RUN_TEST(test_smart_startup_attaches_receive_without_driving_the_signal_pin);
+    RUN_TEST(test_early_startup_ack_requires_a_fresh_announcement_and_releases_the_wire);
+    RUN_TEST(test_early_startup_does_not_ack_stale_corrupt_or_unaddressed_frames);
+    RUN_TEST(test_early_startup_recovers_after_unsuitable_input_before_an_announcement);
     RUN_TEST(test_adapter_ch3_and_all_inhibition_paths);
     RUN_TEST(test_adapter_missing_frames_do_not_refresh_cached_throttle);
     RUN_TEST(test_adapter_missed_flag_sends_fade_until_sample_expires);

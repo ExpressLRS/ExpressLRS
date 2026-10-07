@@ -44,10 +44,11 @@ static void finish(Packet &p)
     p.bytes[p.length - 1] = crc;
 }
 
-void Link::reset(uint32_t deviceUid, uint32_t now)
+void Link::reset(uint32_t deviceUid, uint32_t now, bool acknowledgeOnly)
 {
     *this = Link();
     uid = deviceUid;
+    startupAckOnly = acknowledgeOnly;
     started = lastHello = lastBus = now;
 }
 
@@ -126,6 +127,7 @@ bool Link::nextPacket(uint32_t now, Packet &p)
         restart(now);
         phase = Acknowledge; // Explicit diagnostic handshake; no received ESC packet is invented.
     }
+    if (startupAckOnly && phase != Acknowledge) return false;
     p = {};
     broadcastTx = false;
     if (phase != Active)
@@ -225,11 +227,12 @@ void Link::processFrame(uint32_t now)
 {
     if (input[1] == 0x21 && input[2] == 14 && input[3] == 0x40)
     {
+        if (startupAckOnly && input[4] != 0) return;
         if (input[4] == 0 || input[4] == 0x21)
         {
             // Match Spektrum's startup master: acknowledge before the final broadcast.
             // Discovery data is already known, so a duplicate reply is optional.
-            const bool acknowledge = input[4] == 0 && (phase == Discover || phase == Acknowledge);
+            const bool acknowledge = input[4] == 0 && (startupAckOnly || phase == Discover || phase == Acknowledge);
             const bool keepWaiting = input[4] == 0 && phase == Broadcast && waitingReply;
             restart(now);
             phase = acknowledge ? Acknowledge : Broadcast;
