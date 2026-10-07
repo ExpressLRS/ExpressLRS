@@ -1,11 +1,11 @@
-"""Verify an ER6 build includes startup/telemetry without diagnostic hooks."""
+"""Verify a receiver build includes startup/telemetry without diagnostic hooks."""
 from pathlib import Path
 import subprocess
 import sys
 
 
-def check(elf, port=0):
-    nm = Path.home() / ".platformio/packages/toolchain-xtensa-esp32/bin/xtensa-esp32-elf-nm.exe"
+def check(elf, port=0, nm=None):
+    nm = nm or Path.home() / ".platformio/packages/toolchain-xtensa-esp32/bin/xtensa-esp32-elf-nm.exe"
     symbols = subprocess.check_output([str(nm), "-C", "--defined-only", str(elf)], text=True)
     startup = [line for line in symbols.splitlines() if line.endswith(" initVariant")]
     assert len(startup) == 1 and startup[0].split()[1] == "T", (
@@ -21,4 +21,5 @@ def check(elf, port=0):
 
 
 if __name__ == "__main__":
-    check(Path(sys.argv[1]), int(sys.argv[2]) if len(sys.argv) > 2 else 0)
+    check(Path(sys.argv[1]), int(sys.argv[2]) if len(sys.argv) > 2 else 0,
+          Path(sys.argv[3]) if len(sys.argv) > 3 else None)
