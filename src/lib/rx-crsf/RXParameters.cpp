@@ -1,7 +1,6 @@
 #include "targets.h"
 #if !defined(UNIT_TEST)
 #include "RXEndpoint.h"
-#include "SRXL2Config.h"
 #include "FHSS.h"
 #include "POWERMGNT.h"
 #include "config.h"
@@ -516,7 +515,6 @@ static void luaparamSetPower(propertiesCommon* item, uint8_t arg)
 void RXEndpoint::registerParameters()
 {
   registerParameter(&luaSerialProtocol, [](propertiesCommon* item, uint8_t arg){
-    if (arg == PROTOCOL_SRXL2 && !supportsSRXL2()) return;
     config.SetSerialProtocol((eSerialProtocol)arg);
     if (config.IsModified()) {
       deferExecutionMillis(100, [](){
