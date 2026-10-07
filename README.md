@@ -53,8 +53,6 @@ ExpressLRS has the following features:
 
 with many more features on the way!
 
-Spektrum Smart (SRXL2) can use the primary or secondary serial port on supported ESP32 receivers, with one Smart bus at a time. Connect the ESC signal to the selected port's TX pin and share ground; the separate RX wire is unused. For a PWM-mapped secondary port, assign that output as Serial2 TX. The driver uses 115200 baud and requires fresh CH3 neutral after startup or reconnection. Cold-start builds must use an early-listener profile matching the selected port and signal GPIO; qualify the receiver/ESC wiring before operation. Other serial protocols retain their normal port. Devices publishing the same legacy CRSF battery frame cannot be distinguished as separate battery sources. To roll back, select the previous protocol and restore its pin mapping before reinstalling older firmware.
-
 ## Supported Hardware
 
 ExpressLRS currently supports hardware from a wide range of manufacturers. In principle, the targets listed in the [ExpressLRS Configurator](https://github.com/ExpressLRS/ExpressLRS-Configurator/releases/) are tested and supported hardware.
