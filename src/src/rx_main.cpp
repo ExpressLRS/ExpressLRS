@@ -1272,34 +1272,6 @@ void DataUlReceiveComplete()
     DataUlReceiver.Unlock();
 }
 
-#if defined(PLATFORM_ESP32)
-static int8_t getSerial1Pin(int8_t pin, eServoOutputMode mode)
-{
-    if (pin == UNDEF_PIN)
-        for (uint8_t ch = 0; ch < GPIO_PIN_PWM_OUTPUTS_COUNT; ++ch)
-            if (config.GetPwmChannel(ch)->val.mode == mode) pin = GPIO_PIN_PWM_OUTPUTS[ch];
-    return pin;
-}
-
-int8_t getSerial1TxPin() { return getSerial1Pin(GPIO_PIN_SERIAL1_TX, somSerial1TX); }
-int8_t getSerial1RxPin() { return getSerial1Pin(GPIO_PIN_SERIAL1_RX, somSerial1RX); }
-
-int8_t getSRXL2Port()
-{
-    const int8_t primary = GPIO_PIN_RCSIGNAL_TX;
-    const int8_t secondary = getSerial1TxPin();
-    if (!firmwareOptions.is_airport && config.GetSerialProtocol() == PROTOCOL_SRXL2 && supportsSRXL2(0, primary))
-    {
-        if (config.GetSerial1Protocol() != PROTOCOL_SERIAL1_OFF && config.GetSerial1Protocol() != PROTOCOL_SERIAL1_SRXL2 &&
-            (primary == secondary || primary == getSerial1RxPin())) return -1;
-        return 0;
-    }
-    if (config.GetSerial1Protocol() == PROTOCOL_SERIAL1_SRXL2 && supportsSRXL2(1, secondary) &&
-        (OPT_CRSF_RCVR_NO_SERIAL || (secondary != GPIO_PIN_RCSIGNAL_TX && secondary != GPIO_PIN_RCSIGNAL_RX))) return 1;
-    return -1;
-}
-#endif
-
 static void setupSerial()
 {
     bool sbusSerialOutput = false;

@@ -2,7 +2,6 @@
 #include "SerialSRXL2.h"
 #include "CRSFRouter.h"
 #include "common.h"
-#include "rxtx_intf.h"
 #if defined(PLATFORM_ESP32)
 #include "config.h"
 #include "driver/gpio.h"
@@ -52,8 +51,7 @@
 
 #ifndef SRXL2_MODE_ACTIVE
 #if defined(TARGET_RX)
-#define SRXL2_MODE_ACTIVE() (getSRXL2Port() == port && \
-    (port == 0 ? GPIO_PIN_RCSIGNAL_TX : getSerial1TxPin()) == pin)
+#define SRXL2_MODE_ACTIVE() (config.GetSerialProtocol() == PROTOCOL_SRXL2 && !firmwareOptions.is_airport)
 #else
 #define SRXL2_MODE_ACTIVE() true
 #endif

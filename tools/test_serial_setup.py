@@ -9,83 +9,6 @@ import tempfile
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def check_selection(compiler, environment, directory):
-    source = (ROOT / 'src/src/rx_main.cpp').read_text()
-    helpers = re.search(r'^static int8_t getSerial1Pin\(.*?^#endif', source, re.M | re.S)
-    assert helpers, 'Secondary pin/Smart selection helpers missing'
-    common = (ROOT / 'src/include/common.h').read_text()
-    enums = '\n'.join(re.findall(r'enum e(?:Serial(?:1)?Protocol|ServoOutputMode)\s*:\s*uint8_t\s*\{.*?\};', common, re.S))
-    support = (ROOT / 'src/include/SRXL2Config.h').read_text().replace('#pragma once', '').replace('#include "common.h"', '').replace('#include "soc/soc_caps.h"', '')
-    boundary = r'''
-#include <cassert>
-#include <cstdint>
-#include <cstdio>
-#define TARGET_RX
-#define PLATFORM_ESP32
-#define CONFIG_IDF_TARGET_ESP32
-#define SOC_GPIO_VALID_OUTPUT_GPIO_MASK (0xFFFFFFFFULL & ~(1ULL << 6))
-#define UNDEF_PIN -1
-int8_t primaryTx = 1, primaryRx = 3, secondaryTx = -1, secondaryRx = -1;
-const int8_t pins[] = {14, 15};
-bool noSerialPins = false;
-#define GPIO_PIN_RCSIGNAL_TX primaryTx
-#define GPIO_PIN_RCSIGNAL_RX primaryRx
-#define GPIO_PIN_SERIAL1_TX secondaryTx
-#define GPIO_PIN_SERIAL1_RX secondaryRx
-#define GPIO_PIN_PWM_OUTPUTS pins
-#define GPIO_PIN_PWM_OUTPUTS_COUNT 2
-#define OPT_CRSF_RCVR_NO_SERIAL noSerialPins
-struct Options { bool is_airport = false; } firmwareOptions;
-'''
-    config = r'''
-struct Pwm { struct { eServoOutputMode mode = som50Hz; } val; };
-struct Config {
-    eSerialProtocol primary = PROTOCOL_CRSF;
-    eSerial1Protocol secondary = PROTOCOL_SERIAL1_SRXL2;
-    Pwm pwm[2];
-    eSerialProtocol GetSerialProtocol() const { return primary; }
-    eSerial1Protocol GetSerial1Protocol() const { return secondary; }
-    Pwm *GetPwmChannel(unsigned index) { return &pwm[index]; }
-} config;
-'''
-    probe = r'''
-int main() {
-    assert(getSerial1TxPin() == -1 && getSRXL2Port() == -1);
-    config.pwm[0].val.mode = somSerial1RX;
-    assert(getSerial1RxPin() == 14 && getSRXL2Port() == -1);
-    config.pwm[0].val.mode = somSerial1TX;
-    assert(getSerial1TxPin() == 14 && getSRXL2Port() == 1);
-    secondaryTx = 15;
-    assert(getSerial1TxPin() == 15 && getSRXL2Port() == 1);
-    secondaryTx = primaryRx;
-    assert(getSRXL2Port() == -1);
-    secondaryTx = 6; // output-disabled GPIO boundary
-    assert(getSRXL2Port() == -1);
-    secondaryTx = 14;
-    noSerialPins = true;
-    assert(getSRXL2Port() == 1);
-    noSerialPins = false;
-    firmwareOptions.is_airport = true;
-    assert(getSRXL2Port() == 1);
-    config.primary = PROTOCOL_SRXL2;
-    assert(getSRXL2Port() == 1); // AirPort keeps its existing primary precedence.
-    firmwareOptions.is_airport = false;
-    assert(getSRXL2Port() == 0); // Corrupt both-Smart settings still choose one bus.
-    config.secondary = PROTOCOL_SERIAL1_CRSF;
-    secondaryRx = primaryTx;
-    assert(getSRXL2Port() == -1);
-    secondaryRx = -1;
-    assert(getSRXL2Port() == 0);
-    std::puts("Secondary pin resolution, coexistence and one-Smart-bus selection passed");
-}
-'''
-    cpp = Path(directory) / 'selection.cpp'
-    executable = Path(directory) / 'selection.exe'
-    cpp.write_text(boundary + enums + '\n' + support + config + helpers[0].removesuffix('#endif') + probe)
-    subprocess.run([compiler, '-std=c++11', str(cpp), '-o', str(executable)], env=environment, check=True)
-    subprocess.run([str(executable)], env=environment, check=True)
-
-
 def check_teamrace(compiler, environment, directory):
     directory = Path(directory)
     mock_config = directory / "teamrace-config.h"
@@ -264,7 +187,6 @@ int main() {
                        env=environment, check=True)
         subprocess.run([str(executable)], env=environment, check=True)
         check_teamrace(compiler, environment, directory)
-        check_selection(compiler, environment, directory)
 
 
 if __name__ == "__main__":
