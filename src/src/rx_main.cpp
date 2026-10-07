@@ -1275,7 +1275,43 @@ static void setupSerial()
     bool mavlinkSerialOutput = false;
     bool hottTlmSerial = false;
 
-    if (OPT_CRSF_RCVR_NO_SERIAL)
+    // A pin shared with PWM belongs to UART only when explicitly mapped serial.
+    int8_t serialRxPin = GPIO_PIN_RCSIGNAL_RX;
+    int8_t serialTxPin = GPIO_PIN_RCSIGNAL_TX;
+#if defined(PLATFORM_ESP8266)
+    if (serialRxPin == UNDEF_PIN) serialRxPin = U0RXD_GPIO_NUM;
+    if (serialTxPin == UNDEF_PIN) serialTxPin = U0TXD_GPIO_NUM;
+#else
+    if (serialRxPin == UNDEF_PIN && serialTxPin == UNDEF_PIN)
+    {
+        serialRxPin = U0RXD_GPIO_NUM;
+        serialTxPin = U0TXD_GPIO_NUM;
+    }
+#endif
+#if defined(PLATFORM_ESP8266)
+    bool serialRxShared = false;
+#endif
+    pwmSerialDefined = false;
+    for (uint8_t ch = 0; ch < GPIO_PIN_PWM_OUTPUTS_COUNT; ++ch)
+    {
+        const bool mapped = config.GetPwmChannel(ch)->val.mode == somSerial;
+        const int8_t pin = GPIO_PIN_PWM_OUTPUTS[ch];
+        if (pin == serialRxPin)
+        {
+#if defined(PLATFORM_ESP8266)
+            serialRxShared = true;
+#endif
+            pwmSerialDefined |= mapped;
+            if (!mapped) serialRxPin = UNDEF_PIN;
+        }
+        if (pin == serialTxPin)
+        {
+            pwmSerialDefined |= mapped;
+            if (!mapped) serialTxPin = UNDEF_PIN;
+        }
+    }
+
+    if (OPT_CRSF_RCVR_NO_SERIAL || (serialRxPin == UNDEF_PIN && serialTxPin == UNDEF_PIN))
     {
         // For PWM receivers with no serial pins defined, only turn on the Serial port if logging is on
         #if defined(DEBUG_LOG) || defined(DEBUG_RCVR_LINKSTATS)
@@ -1329,6 +1365,11 @@ static void setupSerial()
     {
         serialBaud = 115200;
     }
+#if defined(PLATFORM_ESP8266)
+    // Keep dedicated UARTs transmit-only for output protocols, as before.
+    if (!serialRxShared && !firmwareOptions.is_airport && (sbusSerialOutput || sumdSerialOutput))
+        serialRxPin = UNDEF_PIN;
+#endif
     bool invert = config.GetSerialProtocol() == PROTOCOL_SBUS || config.GetSerialProtocol() == PROTOCOL_INVERTED_CRSF || config.GetSerialProtocol() == PROTOCOL_DJI_RS_PRO;
 
 #if defined(PLATFORM_ESP8266)
@@ -1343,13 +1384,8 @@ static void setupSerial()
         serialConfig = SERIAL_8N2;
     }
 
-    SerialMode mode = (sbusSerialOutput || sumdSerialOutput)  ? SERIAL_TX_ONLY : SERIAL_FULL;
-    if (config.GetSerialProtocol() == PROTOCOL_GPS)
-    {
-        // GPS on ESP8285 only requires the RX line (GPIO3 / CH3).
-        // Free GPIO1 (TX / CH2) for independent PWM motor ESC output.
-        mode = SERIAL_RX_ONLY;
-    }
+    const SerialMode mode = serialTxPin == UNDEF_PIN ? SERIAL_RX_ONLY
+        : serialRxPin == UNDEF_PIN ? SERIAL_TX_ONLY : SERIAL_FULL;
     Serial.begin(serialBaud, serialConfig, mode, -1, invert);
 #elif defined(PLATFORM_ESP32)
     uint32_t serialConfig = SERIAL_8N1;
@@ -1372,7 +1408,7 @@ static void setupSerial()
     #endif
     // ARDUINO_CORE_INVERT_FIX PT2 end
 
-    Serial.begin(serialBaud, serialConfig, GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX, invert);
+    Serial.begin(serialBaud, serialConfig, serialRxPin, serialTxPin, invert);
 #endif
 
     if (firmwareOptions.is_airport)
@@ -1397,9 +1433,7 @@ static void setupSerial()
     }
     else if (config.GetSerialProtocol() == PROTOCOL_GPS)
     {
-        // Serial(0) is always assigned in a way that it uses two pins, only Serial1 is allowed to not have both RX/TX
-        const int8_t gpsTxPin = (GPIO_PIN_RCSIGNAL_TX == UNDEF_PIN) ? U0TXD_GPIO_NUM : GPIO_PIN_RCSIGNAL_TX;
-        serialIO = new SerialGPS(SERIAL_PROTOCOL_RX, gpsTxPin);
+        serialIO = new SerialGPS(SERIAL_PROTOCOL_RX, serialTxPin);
     }
     else if (hottTlmSerial)
     {
@@ -2052,19 +2086,6 @@ void setup()
         // Init EEPROM and load config, checking powerup count
         setupConfigAndPocCheck();
         setupTarget();
-        // If serial is not already defined, then see if there is serial pin configured in the PWM configuration
-        if (OPT_HAS_SERVO_OUTPUT && GPIO_PIN_RCSIGNAL_RX == UNDEF_PIN && GPIO_PIN_RCSIGNAL_TX == UNDEF_PIN)
-        {
-            for (int i = 0 ; i < GPIO_PIN_PWM_OUTPUTS_COUNT ; i++)
-            {
-                eServoOutputMode pinMode = (eServoOutputMode)config.GetPwmChannel(i)->val.mode;
-                if (pinMode == somSerial)
-                {
-                    pwmSerialDefined = true;
-                    break;
-                }
-            }
-        }
         crsfRouter.addEndpoint(&crsfReceiver);
         crsfRouter.addConnector(&otaConnector);
         setupSerial();

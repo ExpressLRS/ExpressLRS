@@ -1,7 +1,14 @@
 import { promises as fs } from 'fs'
 import path from 'path'
+import zlib from 'zlib'
 
-import Zopfli from 'node-zopfli-es'
+let Zopfli = null
+try {
+  const zopfliModule = await import('node-zopfli-es')
+  Zopfli = zopfliModule.default || zopfliModule
+} catch (_) {
+  // Native node-zopfli-es binary unavailable (e.g. Windows without native addon)
+}
 
 // Build plugin: compress `dist/` assets and emit a firmware-consumable C
 // header.
@@ -119,7 +126,9 @@ export function viteEsp32HeaderPlugin(options = {}) {
         const webPath = '/' + rel
         const id = toCIdentifier(rel)
         const data = await fs.readFile(abs)
-        const compressed = Zopfli.gzipSync(data, { numiterations: 15 })
+        const compressed = Zopfli
+          ? Zopfli.gzipSync(data, { numiterations: 15 })
+          : zlib.gzipSync(data, { level: 9 })
         totalCompressedBytes += compressed.length
         const contentType = guessContentType(rel)
         const hex = toHexArray(compressed)

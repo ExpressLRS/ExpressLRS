@@ -537,6 +537,7 @@ static void GetConfiguration(AsyncWebServerRequest *request)
     {
         settings["has_serial_pins"] = true;
     }
+    settings["serial_directions"] = serialProtocolDirections(config.GetSerialProtocol(), firmwareOptions.is_airport);
     settings["has_gps"] = config.GetSerialProtocol() == PROTOCOL_GPS
     #if defined(PLATFORM_ESP32)
         || config.GetSerial1Protocol() == PROTOCOL_SERIAL1_GPS

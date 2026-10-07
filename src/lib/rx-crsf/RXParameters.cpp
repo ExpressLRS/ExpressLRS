@@ -417,17 +417,13 @@ static void configureSerialPin(uint8_t sibling, uint8_t oldMode, uint8_t newMode
       rx_config_pwm_t siblingPinConfig;
       siblingPinConfig.raw = config.GetPwmChannel(ch)->raw;
 
-      // If the new mode is serial, the sibling is also forced to serial
-      // unless GPS protocol is selected and sibling is the TX pin (GPIO1)
-      if (newMode == somSerial)
+      const uint8_t directions = serialProtocolDirections(config.GetSerialProtocol(), firmwareOptions.is_airport);
+      const uint8_t siblingDirection = sibling == U0TXD_GPIO_NUM ? SERIAL_PIN_TX : SERIAL_PIN_RX;
+      if (newMode == somSerial && (directions & siblingDirection))
       {
-        if (config.GetSerialProtocol() != PROTOCOL_GPS || sibling != 1)
-        {
-          siblingPinConfig.val.mode = somSerial;
-        }
+        siblingPinConfig.val.mode = somSerial;
       }
-      // If the new mode is not serial, and the sibling is serial, set the sibling to PWM (50Hz)
-      else if (siblingPinConfig.val.mode == somSerial)
+      else if (newMode != somSerial && directions == SERIAL_PIN_BOTH && siblingPinConfig.val.mode == somSerial)
       {
         siblingPinConfig.val.mode = som50Hz;
       }
@@ -454,14 +450,14 @@ static void luaparamMappingOutputMode(propertiesCommon *item, uint8_t arg)
   uint8_t oldMode = newPwmCh.val.mode;
   newPwmCh.val.mode = sanitizePwmMode(arg);
 
-  // Check if pin == 1/3 and do other pin adjustment accordingly
-  if (GPIO_PIN_PWM_OUTPUTS[ch] == 1)
+  // Pair the primary UART pins only in the directions required by the protocol.
+  if (GPIO_PIN_PWM_OUTPUTS[ch] == U0TXD_GPIO_NUM)
   {
-    configureSerialPin(3, oldMode, newPwmCh.val.mode);
+    configureSerialPin(U0RXD_GPIO_NUM, oldMode, newPwmCh.val.mode);
   }
-  else if (GPIO_PIN_PWM_OUTPUTS[ch] == 3)
+  else if (GPIO_PIN_PWM_OUTPUTS[ch] == U0RXD_GPIO_NUM)
   {
-    configureSerialPin(1, oldMode, newPwmCh.val.mode);
+    configureSerialPin(U0TXD_GPIO_NUM, oldMode, newPwmCh.val.mode);
   }
   config.SetPwmChannelRaw(ch, newPwmCh.raw);
 }
