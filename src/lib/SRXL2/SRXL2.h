@@ -27,6 +27,8 @@ public:
     bool nextPacket(uint32_t nowUs, Packet &packet);
     void transmitted(uint32_t nowUs);
     bool connected() const;
+    // Continue discovery when the startup transport already acknowledged a validated ESC.
+    void finishStartupDiscovery() { phase = Broadcast; }
     Telemetry telemetry(uint32_t nowUs) const;
 private:
     enum Phase { Discover, Acknowledge, Broadcast, Active };

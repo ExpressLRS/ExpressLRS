@@ -117,6 +117,7 @@ public:
 
 void setUp()
 {
+    startupCapture = SRXL2StartupCapture();
     nowUs = 0;
     afterClockRead = nullptr;
     diagnosticNeutralProbeUs.store(0);
@@ -267,6 +268,46 @@ void test_early_startup_recovers_after_unsuitable_input_before_an_announcement()
         TEST_ASSERT_EQUAL_HEX8(0x40, uint8_t(out[4]));
         TEST_ASSERT_FALSE(busDriving);
     }
+}
+
+static void send(SerialSRXL2 &driver, uint32_t time);
+static void assert_neutral(const std::string &out, uint8_t command);
+void test_normal_driver_finishes_acknowledged_startup_without_an_addressed_reply()
+{
+    const uint8_t announcement[] = {0xA6,0x21,14,0x40,0,10,0,0,0,0,0,1,0x38,0x4E};
+    nowUs = 50000;
+    std::string bootIn(reinterpret_cast<const char *>(announcement), sizeof(announcement)), bootOut;
+    BinaryStringStream bootRx(bootIn);
+    StartupTxStream bootTx(bootOut);
+    startupInput = &bootIn;
+    startupReply.clear(); // Spec/reference permits no duplicate addressed reply after an announcement.
+    listenForEarlyESC(bootRx, bootTx, 0x12345678, startupCapture);
+    TEST_ASSERT_EQUAL(14, bootOut.size());
+
+    connectionState = wifiUpdate;
+    nowUs = 200000;
+    std::string in, out;
+    BinaryStringStream rx(in), tx(out);
+    {
+        SerialSRXL2 wrongPin(&tx, &rx, 1);
+        send(wrongPin, 201000);
+        TEST_ASSERT_TRUE(out.empty()); // GPIO3's early ACK does not describe GPIO1's bus.
+    }
+    nowUs = 210000;
+    {
+        SerialSRXL2 driver(&tx, &rx, 3);
+        send(driver, 211000);
+        TEST_ASSERT_EQUAL(14, out.size());
+        TEST_ASSERT_EQUAL_HEX8(0xFF, uint8_t(out[4]));
+        send(driver, 212216);
+        send(driver, 232216);
+        assert_neutral(out, 1); // Discovery knowledge must not grant RF/throttle permission.
+    }
+    const size_t sent = out.size();
+    nowUs = 300000;
+    SerialSRXL2 replacement(&tx, &rx, 3);
+    send(replacement, 301000);
+    TEST_ASSERT_EQUAL(sent, out.size()); // The startup handoff is consumed only once.
 }
 
 void test_smart_startup_attaches_receive_without_driving_the_signal_pin()
@@ -1096,6 +1137,7 @@ int main()
     RUN_TEST(test_early_startup_does_not_ack_corrupt_or_nonannouncement_frames);
     RUN_TEST(test_early_startup_acknowledges_buffered_announcements_after_hardware_idle);
     RUN_TEST(test_early_startup_recovers_after_unsuitable_input_before_an_announcement);
+    RUN_TEST(test_normal_driver_finishes_acknowledged_startup_without_an_addressed_reply);
     RUN_TEST(test_adapter_ch3_and_all_inhibition_paths);
     RUN_TEST(test_adapter_missing_frames_do_not_refresh_cached_throttle);
     RUN_TEST(test_adapter_missed_flag_sends_fade_until_sample_expires);

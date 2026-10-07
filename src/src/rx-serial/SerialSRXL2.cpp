@@ -139,6 +139,7 @@ struct SRXL2StartupCapture
     uint64_t rtcTicks = 0;
     uint32_t rtcCalibration = 0;
     uint8_t resetReason = 0, cpuResetReason = 0;
+    bool handedOff = false;
     uint16_t fifoBytes = 0, bufferedBytes = 0, receivedBytes = 0;
     uint8_t buffered[128] = {}, bytes[128] = {};
 };
@@ -280,6 +281,15 @@ SerialSRXL2::SerialSRXL2(Stream *output, Stream *input, int8_t txPin)
 #endif
     const uint32_t initialized = micros();
     link.reset(uid, initialized);
+#if defined(SRXL2_DIAGNOSTICS) && defined(SRXL2_EARLY_STARTUP_PIN)
+    if (txReady && pin == SRXL2_EARLY_STARTUP_PIN && startupCapture.ackEndUs && !startupCapture.handedOff)
+    {
+        // An announcing ESC may suppress its duplicate addressed reply. Its validated
+        // startup announcement and completed ACK are enough to send the final broadcast.
+        link.finishStartupDiscovery();
+        startupCapture.handedOff = true;
+    }
+#endif
 #if defined(SRXL2_DIAGNOSTICS)
     diagnostics.driverInitUs = initialized;
     lastNeutralProbeRequestUs = diagnosticNeutralProbeUs.load(std::memory_order_relaxed);
@@ -634,6 +644,7 @@ void SerialSRXL2::publishDiagnostics(bool wifiEntry)
     state["early_startup_rtc_calibration"] = startupCapture.rtcCalibration;
     state["early_startup_reset_reason"] = startupCapture.resetReason;
     state["early_startup_cpu_reset_reason"] = startupCapture.cpuResetReason;
+    state["early_startup_handoff_consumed"] = startupCapture.handedOff;
     state["early_startup_first_read_us"] = startupCapture.firstReadUs;
     state["early_startup_ack_start_us"] = startupCapture.ackStartUs;
     state["early_startup_ack_end_us"] = startupCapture.ackEndUs;
