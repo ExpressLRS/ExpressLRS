@@ -3,9 +3,6 @@
 #include "CRSFRouter.h"
 #include "common.h"
 #include "rxtx_intf.h"
-#include <atomic>
-static std::atomic<bool> smartBatteryDetected{false};
-bool hasSRXL2BatteryTelemetry() { return smartBatteryDetected.load(std::memory_order_relaxed); }
 #if defined(PLATFORM_ESP32)
 #include "config.h"
 #include "driver/gpio.h"
@@ -260,7 +257,7 @@ SerialSRXL2::SerialSRXL2(Stream *output, Stream *input, int8_t txPin, uint8_t se
     lastPublished = micros();
     generation = srxl2RFGeneration;
     lastHardwareReceive = micros();
-    smartBatteryDetected.store(false, std::memory_order_relaxed);
+    crsfBatterySensorDetected = false;
 }
 
 SerialSRXL2::~SerialSRXL2()
@@ -279,27 +276,13 @@ SerialSRXL2::~SerialSRXL2()
 #if defined(PLATFORM_ESP32)
     gpio_set_direction(gpio_num_t(pin), GPIO_MODE_INPUT);
 #endif
-    smartBatteryDetected.store(false, std::memory_order_relaxed);
+    crsfBatterySensorDetected = false;
 }
 
 bool SerialSRXL2::controlAllowed() const
 {
-    return !stopping && SRXL2_MODE_ACTIVE() && !failsafe && connectionState == connected && connectionHasModelMatch && teamraceHasModelMatch &&
+    return SRXL2_MODE_ACTIVE() && !failsafe && connectionState == connected && connectionHasModelMatch && teamraceHasModelMatch &&
         ChannelData[2] != CRSF_CHANNEL_VALUE_UNSET;
-}
-
-bool SerialSRXL2::readyForShutdown(uint32_t now)
-{
-    if (!stopping)
-    {
-        stopping = true;
-        stopStarted = now;
-        stopPacketSent = !txReady || !link.connected();
-        link.setControlPermission(false);
-    }
-    completeTransmission(now);
-    // ponytail: final neutral gets 25 ms; a stuck RX line is then released as input.
-    return !transmitting && link.busIdle(now) && (stopPacketSent || uint32_t(now - stopStarted) >= 25000);
 }
 
 void SerialSRXL2::synchronizeGeneration()
@@ -373,12 +356,11 @@ void SerialSRXL2::sendQueuedData(uint32_t maxBytesToSend)
     completeTransmission(now);
     const bool receivePending = inputPort->available() > 0 || SRXL2_HARDWARE_RX_BUSY();
     if (receivePending) lastHardwareReceive = now;
-    if (txReady && !(stopping && stopPacketSent) && !transmitting && !receivePending && uint32_t(now - lastHardwareReceive) >= 174 && maxBytesToSend >= 16)
+    if (txReady && !transmitting && !receivePending && uint32_t(now - lastHardwareReceive) >= 174 && maxBytesToSend >= 16)
     {
         SRXL2::Packet packet{};
         if (link.nextPacket(now, packet))
         {
-            if (stopping && packet.bytes[1] == 0xCD && packet.bytes[3] == 1) stopPacketSent = true;
             SRXL2_BEGIN_TX();
             txComplete = false;
             transmitting = true;
@@ -409,7 +391,7 @@ void SerialSRXL2::publishTelemetry(uint32_t now)
     const SRXL2::Telemetry values = link.telemetry(now);
     const SRXL2::Reading &current = values.batteryCurrent.valid ? values.batteryCurrent : values.current;
     const bool battery = values.voltage.valid && current.valid && current.value >= 0 && current.value / 100 <= 32767;
-    smartBatteryDetected.store(battery, std::memory_order_relaxed);
+    crsfBatterySensorDetected = battery;
     if (uint32_t(now - lastPublished) < 100000) return;
 
     uint8_t frame[CRSF_MAX_PACKET_LEN] = {};

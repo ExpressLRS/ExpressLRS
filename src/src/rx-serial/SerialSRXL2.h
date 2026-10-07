@@ -12,9 +12,6 @@ public:
     SerialSRXL2(Stream *output, Stream *input, int8_t txPin, uint8_t serialPort = 0);
     ~SerialSRXL2() override;
     static void onRFReset();
-    uint8_t getPort() const { return port; }
-    int8_t getPin() const { return pin; }
-    bool readyForShutdown(uint32_t nowUs);
     uint32_t sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t *channels) override;
     void sendQueuedData(uint32_t maxBytesToSend) override;
 protected:
@@ -26,8 +23,6 @@ private:
     Stream *inputPort;
     bool transmitting = false;
     bool txReady = true;
-    bool stopping = false, stopPacketSent = false;
-    uint32_t stopStarted = 0;
     volatile bool txComplete = false;
     volatile uint32_t txEnded = 0;
 #if defined(CONFIG_IDF_TARGET_ESP32)

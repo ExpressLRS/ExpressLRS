@@ -544,9 +544,6 @@ static void GetConfiguration(AsyncWebServerRequest *request)
         || config.GetSerial1Protocol() == PROTOCOL_SERIAL1_GPS
     #endif
         ;
-#if defined(PLATFORM_ESP32)
-    settings["has_serial1_pins"] = GPIO_PIN_SERIAL1_TX != UNDEF_PIN || GPIO_PIN_SERIAL1_RX != UNDEF_PIN;
-#endif
     #endif
     settings["product_name"] = product_name;
     settings["lua_name"] = device_name;
@@ -708,53 +705,7 @@ static void JsonUidToConfig(JsonVariant &json)
 }
 static void UpdateConfiguration(AsyncWebServerRequest *request, JsonVariant &json)
 {
-  uint8_t protocol = json["serial-protocol"] | uint8_t(config.GetSerialProtocol());
-#if defined(PLATFORM_ESP32)
-  uint8_t protocol1 = json["serial1-protocol"] | uint8_t(config.GetSerial1Protocol());
-  const uint8_t oldProtocol = config.GetSerialProtocol(), oldProtocol1 = config.GetSerial1Protocol();
-  const int8_t oldTx = getSerial1TxPin(), oldRx = getSerial1RxPin();
-#else
-  uint8_t protocol1 = 0;
-#endif
-  if ((json["serial-protocol"].is<JsonVariant>() && !json["serial-protocol"].is<uint8_t>()) ||
-      (json["serial1-protocol"].is<JsonVariant>() && !json["serial1-protocol"].is<uint8_t>()) ||
-      !isValidSerialProtocolPair(protocol, protocol1))
-  {
-    request->send(400, "text/plain", "Select valid protocols and use Spektrum Smart on only one port");
-    return;
-  }
-  JsonArray pwm = json["pwm"].as<JsonArray>();
-  if (pwm.size() > GPIO_PIN_PWM_OUTPUTS_COUNT)
-  {
-    request->send(400, "text/plain", "Invalid PWM configuration");
-    return;
-  }
-#if defined(PLATFORM_ESP32)
-  uint32_t proposedPwm[PWM_MAX_CHANNELS];
-  for (unsigned ch = 0; ch < GPIO_PIN_PWM_OUTPUTS_COUNT; ++ch)
-  {
-    if (ch < pwm.size() && !pwm[ch].is<uint32_t>())
-    {
-      request->send(400, "text/plain", "Invalid PWM configuration");
-      return;
-    }
-    proposedPwm[ch] = ch < pwm.size() ? pwm[ch].as<uint32_t>() : config.GetPwmChannel(ch)->raw;
-    const unsigned mode = (proposedPwm[ch] >> 16) & 15;
-    if (OPT_PWM_OUT_ONLY && mode >= somSerial) proposedPwm[ch] &= ~(15UL << 16);
-  }
-  const int8_t smartPin = getSerial1TxPin(proposedPwm);
-  if (protocol == PROTOCOL_SRXL2 && protocol1 != PROTOCOL_SERIAL1_OFF &&
-      (GPIO_PIN_RCSIGNAL_TX == smartPin || GPIO_PIN_RCSIGNAL_TX == getSerial1RxPin(proposedPwm)))
-  {
-    request->send(400, "text/plain", "Smart signal conflicts with the secondary port");
-    return;
-  }
-  if (protocol1 == PROTOCOL_SERIAL1_SRXL2 && !isSecondarySmartPinUsable(proposedPwm))
-  {
-    request->send(400, "text/plain", "Secondary Smart requires a usable, unshared Serial2 TX pin");
-    return;
-  }
-#endif
+  uint8_t protocol = json["serial-protocol"] | 0;
   if (protocol == PROTOCOL_SRXL2 && !supportsSRXL2())
   {
     request->send(400, "text/plain", "Unsupported serial protocol");
@@ -763,6 +714,7 @@ static void UpdateConfiguration(AsyncWebServerRequest *request, JsonVariant &jso
   config.SetSerialProtocol((eSerialProtocol)protocol);
 
 #if defined(PLATFORM_ESP32)
+  uint8_t protocol1 = json["serial1-protocol"] | 0;
   config.SetSerial1Protocol((eSerial1Protocol)protocol1);
 #endif
 
@@ -779,6 +731,7 @@ static void UpdateConfiguration(AsyncWebServerRequest *request, JsonVariant &jso
   config.SetBindStorage((rx_config_bindstorage_t)(json["vbind"] | 0));
   JsonUidToConfig(json);
 
+  JsonArray pwm = json["pwm"].as<JsonArray>();
   for(uint32_t channel = 0 ; channel < pwm.size() ; channel++)
   {
     rx_config_pwm_t pwmChannel;
@@ -794,10 +747,6 @@ static void UpdateConfiguration(AsyncWebServerRequest *request, JsonVariant &jso
   }
 
   config.Commit();
-#if defined(PLATFORM_ESP32)
-  reconfigureSerialPorts(oldProtocol != protocol,
-      oldProtocol1 != protocol1 || oldTx != getSerial1TxPin() || oldRx != getSerial1RxPin());
-#endif
   request->send(200, "text/plain", "Configuration updated");
 }
 #endif

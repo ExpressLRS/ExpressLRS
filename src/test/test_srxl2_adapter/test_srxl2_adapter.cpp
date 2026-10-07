@@ -110,7 +110,6 @@ void setUp()
     startupState = SRXL2StartupState();
     nowUs = 0;
     connectionState = connected;
-    crsfBatterySensorDetected = false;
     connectionHasModelMatch = teamraceHasModelMatch = true;
     capture.frames.clear();
     uint8_t queuedSize, queued[CRSF_MAX_PACKET_LEN];
@@ -479,7 +478,7 @@ void test_adapter_real_crsf_payload_and_budget()
     const uint8_t wanted[] = {0,123,0,100,0,0,0,0};
     TEST_ASSERT_EQUAL(0x08, capture.frames[0][2]);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(wanted, capture.frames[0].data() + 3, 8);
-    TEST_ASSERT_TRUE(hasSRXL2BatteryTelemetry());
+    TEST_ASSERT_TRUE(crsfBatterySensorDetected);
     send(driver, 199999);
     TEST_ASSERT_EQUAL(1, capture.frames.size());
     input(driver, in, battery, sizeof(battery), 200000);
@@ -498,7 +497,7 @@ void test_adapter_real_crsf_payload_and_budget()
     }
     TEST_ASSERT_TRUE(found);
     send(driver, 2300000);
-    TEST_ASSERT_FALSE(hasSRXL2BatteryTelemetry());
+    TEST_ASSERT_FALSE(crsfBatterySensorDetected);
 }
 
 void test_esc_sensors_reach_the_real_elrs_downlink_queue()
@@ -551,7 +550,7 @@ void test_adapter_voltage_fallback_and_sentinel_suppression()
     TEST_ASSERT_EQUAL(1, capture.frames.size());
     TEST_ASSERT_EQUAL(0x0E, capture.frames[0][2]);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(wanted, capture.frames[0].data() + 3, 3);
-    TEST_ASSERT_FALSE(hasSRXL2BatteryTelemetry());
+    TEST_ASSERT_FALSE(crsfBatterySensorDetected);
 }
 
 void test_rf_resync_drops_stale_callback_without_changing_core_latches()
@@ -909,69 +908,6 @@ void test_secondary_preserves_neutral_and_all_inhibition_paths()
     }
 }
 
-void test_smart_expiry_and_destruction_preserve_other_battery_detection()
-{
-    crsfBatterySensorDetected = true;
-    std::string in, out;
-    BinaryStringStream rx(in), tx(out);
-    {
-        SerialSRXL2 driver(&tx, &rx, 14, 1);
-        TEST_ASSERT_TRUE(crsfBatterySensorDetected);
-        establish(driver, in, out);
-        send(driver, 2300000);
-        TEST_ASSERT_TRUE(crsfBatterySensorDetected);
-    }
-    TEST_ASSERT_TRUE(crsfBatterySensorDetected);
-}
-
-void test_shutdown_finishes_reply_grant_and_one_neutral_packet()
-{
-    std::string in, out;
-    BinaryStringStream rx(in), tx(out);
-    SerialSRXL2 driver(&tx, &rx, 14, 1);
-    establish(driver, in, out);
-    uint32_t channels[16] = {};
-    channels[2] = 1811;
-    nowUs = 63000;
-    deliver(driver, true, channels);
-    send(driver, 63000);
-    send(driver, 64500);
-    const size_t before = out.size();
-    TEST_ASSERT_FALSE(driver.readyForShutdown(65000));
-    send(driver, 84499);
-    TEST_ASSERT_EQUAL(before, out.size());
-    TEST_ASSERT_FALSE(driver.readyForShutdown(84499));
-    autoTxDone = false;
-    send(driver, 84500);
-    TEST_ASSERT_EQUAL(before + 16, out.size());
-    assert_neutral(out);
-    TEST_ASSERT_FALSE(driver.readyForShutdown(84500));
-    nowUs = 85890;
-    drainBusTransmit();
-    autoTxDone = true;
-    send(driver, 85890);
-    TEST_ASSERT_TRUE(driver.readyForShutdown(85890));
-    nowUs = 90000;
-    deliver(driver, true, channels);
-    send(driver, 100000);
-    TEST_ASSERT_EQUAL(before + 16, out.size());
-}
-
-void test_shutdown_can_abandon_a_stuck_receive_line_without_transmitting()
-{
-    std::string in, out;
-    BinaryStringStream rx(in), tx(out);
-    SerialSRXL2 driver(&tx, &rx, 14, 1);
-    establish(driver, in, out);
-    secondaryReceiving = true;
-    const size_t before = out.size();
-    TEST_ASSERT_FALSE(driver.readyForShutdown(60000));
-    send(driver, 84999);
-    TEST_ASSERT_FALSE(driver.readyForShutdown(84999));
-    TEST_ASSERT_TRUE(driver.readyForShutdown(85000));
-    TEST_ASSERT_EQUAL(before, out.size());
-}
-
 int main()
 {
     UNITY_BEGIN();
@@ -999,8 +935,5 @@ int main()
     RUN_TEST(test_secondary_preserves_neutral_and_all_inhibition_paths);
     RUN_TEST(test_secondary_startup_fifo_prefix_and_handoff_match_port_and_pin);
     RUN_TEST(test_secondary_startup_rejects_a_corrupt_fifo_prefix);
-    RUN_TEST(test_smart_expiry_and_destruction_preserve_other_battery_detection);
-    RUN_TEST(test_shutdown_finishes_reply_grant_and_one_neutral_packet);
-    RUN_TEST(test_shutdown_can_abandon_a_stuck_receive_line_without_transmitting);
     return UNITY_END();
 }

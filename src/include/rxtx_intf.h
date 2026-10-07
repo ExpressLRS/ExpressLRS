@@ -1,5 +1,3 @@
-#pragma once
-
 /***
  * This file defines the interface from device units to functions in
  * either rx_main or tx_main (or rxtx_common but exposed to other units)
@@ -28,11 +26,9 @@ void SetSyncSpam();
 #include "gpsTelemetry.h"
 uint8_t getLq();
 #if defined(PLATFORM_ESP32)
-int8_t getSerial1TxPin(const uint32_t *pwm = nullptr);
-int8_t getSerial1RxPin(const uint32_t *pwm = nullptr);
+int8_t getSerial1TxPin();
+int8_t getSerial1RxPin();
 int8_t getSRXL2Port();
-bool isSecondarySmartPinUsable(const uint32_t *pwm = nullptr);
-void reconfigureSerialPorts(bool primaryChanged, bool secondaryChanged);
 #endif
 // Fills out with a snapshot of the GPS driver state, or returns false if no GPS is running
 bool getGpsTelemetry(gps_telemetry_t &out);

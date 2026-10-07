@@ -77,7 +77,7 @@ static int event(devserial_ctx_t *ctx)
 
     ctx->lastConnectionState = connectionState;
 
-    return DURATION_IMMEDIATELY;
+    return DURATION_IGNORE;
 }
 
 static int event0()
@@ -301,7 +301,7 @@ device_t Serial0_device = {
     .start = start,
     .event = event0,
     .timeout = timeout0,
-    .subscribe = EVENT_CONNECTION_CHANGED | EVENT_CONFIG_MODEL_CHANGED | EVENT_CONFIG_SERIAL_CHANGE
+    .subscribe = EVENT_CONNECTION_CHANGED | EVENT_CONFIG_MODEL_CHANGED
 };
 
 #if defined(PLATFORM_ESP32)
@@ -310,7 +310,7 @@ device_t Serial1_device = {
     .start = start,
     .event = event1,
     .timeout = timeout1,
-    .subscribe = EVENT_CONNECTION_CHANGED | EVENT_CONFIG_MODEL_CHANGED | EVENT_CONFIG_SERIAL_CHANGE
+    .subscribe = EVENT_CONNECTION_CHANGED | EVENT_CONFIG_MODEL_CHANGED
 };
 #endif
 
