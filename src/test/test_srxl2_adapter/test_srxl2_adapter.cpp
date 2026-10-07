@@ -792,6 +792,64 @@ void test_adapter_preserves_delayed_genuine_reply_after_complete_echo()
     TEST_ASSERT_EQUAL_HEX8(0xFF, uint8_t(out[18]));
 }
 
+void test_secondary_startup_fifo_prefix_and_handoff_match_port_and_pin()
+{
+    const uint8_t announcement[] = {0xA6,0x21,14,0x40,0,10,0,0,0,0,0,1,0x38,0x4E};
+    nowUs = 50000;
+    uartReceiving = true;
+    std::string bootIn, bootOut;
+    BinaryStringStream bootRx(bootIn);
+    StartupTxStream bootTx(bootOut);
+    listenForEarlyESC(bootRx, bootTx, 0x12345678, startupState, 1, 14, announcement, sizeof(announcement));
+    TEST_ASSERT_EQUAL(14, bootOut.size());
+    TEST_ASSERT_EQUAL_UINT32(51000, bootTx.startedUs);
+    TEST_ASSERT_FALSE(busDriving);
+    connectionState = wifiUpdate;
+    uartReceiving = false;
+    std::string in, out;
+    BinaryStringStream rx(in), tx(out);
+    nowUs = 200000;
+    {
+        SerialSRXL2 wrongPort(&tx, &rx, 14, 0);
+        send(wrongPort, 201000);
+        TEST_ASSERT_TRUE(out.empty());
+    }
+    nowUs = 210000;
+    {
+        SerialSRXL2 wrongPin(&tx, &rx, 15, 1);
+        send(wrongPin, 211000);
+        TEST_ASSERT_TRUE(out.empty());
+    }
+    nowUs = 220000;
+    {
+        SerialSRXL2 driver(&tx, &rx, 14, 1);
+        send(driver, 221000);
+        TEST_ASSERT_EQUAL(14, out.size());
+        TEST_ASSERT_EQUAL_HEX8(0xFF, uint8_t(out[4]));
+        send(driver, 222216);
+        send(driver, 242216);
+        assert_neutral(out);
+    }
+    const size_t written = out.size();
+    nowUs = 300000;
+    SerialSRXL2 replacement(&tx, &rx, 14, 1);
+    send(replacement, 301000);
+    TEST_ASSERT_EQUAL(written, out.size());
+}
+
+void test_secondary_startup_rejects_a_corrupt_fifo_prefix()
+{
+    uint8_t corrupt[] = {0xA6,0x21,14,0x40,0,10,0,0,0,0,0,1,0x38,0x4F};
+    nowUs = 50000;
+    std::string in, out;
+    BinaryStringStream rx(in);
+    StartupTxStream tx(out);
+    listenForEarlyESC(rx, tx, 0x12345678, startupState, 1, 14, corrupt, sizeof(corrupt));
+    TEST_ASSERT_TRUE(out.empty());
+    TEST_ASSERT_EQUAL(0, startupState.ackEndUs);
+    TEST_ASSERT_EQUAL_UINT32(300000, nowUs);
+}
+
 void test_secondary_uses_its_uart_and_ignores_primary_receive_activity()
 {
     std::string in, out;
@@ -875,5 +933,7 @@ int main()
     RUN_TEST(test_adapter_preserves_delayed_genuine_reply_after_complete_echo);
     RUN_TEST(test_secondary_uses_its_uart_and_ignores_primary_receive_activity);
     RUN_TEST(test_secondary_preserves_neutral_and_all_inhibition_paths);
+    RUN_TEST(test_secondary_startup_fifo_prefix_and_handoff_match_port_and_pin);
+    RUN_TEST(test_secondary_startup_rejects_a_corrupt_fifo_prefix);
     return UNITY_END();
 }

@@ -9,8 +9,8 @@
 #include "hal/uart_ll.h"
 #include "esp32-hal-matrix.h"
 #include "soc/gpio_sig_map.h"
-#if defined(CONFIG_IDF_TARGET_ESP32)
 #include "driver/periph_ctrl.h"
+#if defined(CONFIG_IDF_TARGET_ESP32)
 #include "driver/uart.h"
 #include "esp_timer.h"
 #include "hal/gpio_ll.h"
@@ -62,27 +62,37 @@
 static volatile uint32_t srxl2RFGeneration = 0;
 
 #if defined(SRXL2_EARLY_STARTUP_PIN)
+#ifndef SRXL2_EARLY_STARTUP_PORT
+#define SRXL2_EARLY_STARTUP_PORT 0
+#endif
 #ifndef SRXL2_EARLY_BEGIN_TX
 #define SRXL2_EARLY_BEGIN_TX() do { \
-    gpio_set_level(gpio_num_t(SRXL2_EARLY_STARTUP_PIN), 1); \
-    gpio_set_direction(gpio_num_t(SRXL2_EARLY_STARTUP_PIN), GPIO_MODE_INPUT_OUTPUT); \
-    pinMatrixOutAttach(SRXL2_EARLY_STARTUP_PIN, U0TXD_OUT_IDX, false, false); \
+    gpio_set_level(gpio_num_t(pin), 1); \
+    gpio_set_direction(gpio_num_t(pin), GPIO_MODE_INPUT_OUTPUT); \
+    pinMatrixOutAttach(pin, port == 0 ? U0TXD_OUT_IDX : U1TXD_OUT_IDX, false, false); \
 } while (0)
-#define SRXL2_EARLY_RELEASE_TX() gpio_set_direction(gpio_num_t(SRXL2_EARLY_STARTUP_PIN), GPIO_MODE_INPUT)
+#define SRXL2_EARLY_RELEASE_TX() gpio_set_direction(gpio_num_t(pin), GPIO_MODE_INPUT)
 #define SRXL2_EARLY_YIELD() delay(1)
 #endif
 struct SRXL2StartupState
 {
     uint32_t enteredUs = 0, ackEndUs = 0;
+    uint8_t port = 0;
+    int8_t pin = -1;
     bool handedOff = false;
 };
 static SRXL2StartupState startupState;
-static void listenForEarlyESC(Stream &input, Stream &output, uint32_t uid, SRXL2StartupState &state)
+static void listenForEarlyESC(Stream &input, Stream &output, uint32_t uid, SRXL2StartupState &state,
+    uint8_t port = SRXL2_EARLY_STARTUP_PORT, int8_t pin = SRXL2_EARLY_STARTUP_PIN,
+    const uint8_t *prefix = nullptr, uint16_t prefixSize = 0)
 {
     if (!state.enteredUs) state.enteredUs = micros();
+    state.port = port;
+    state.pin = pin;
     SRXL2::Link early;
     early.reset(uid, micros(), true);
-    // Process UART0's queued startup announcements, without inventing wire-arrival timestamps.
+    for (unsigned i = 0; i < prefixSize; ++i) early.receive(prefix[i], micros());
+    // Queued bytes have no recorded wire-arrival timestamps.
     const int buffered = input.available();
     for (int i = 0; i < buffered; ++i)
     {
@@ -90,8 +100,6 @@ static void listenForEarlyESC(Stream &input, Stream &output, uint32_t uid, SRXL2
         early.receive(byte, micros());
     }
     uint32_t lastHardwareReceive = micros();
-    const int8_t pin = SRXL2_EARLY_STARTUP_PIN;
-    const uint8_t port = 0;
     (void)pin; // Native tests substitute the hardware boundary.
     bool wasBusy = false;
     bool acknowledged = false;
@@ -126,18 +134,53 @@ static void listenForEarlyESC(Stream &input, Stream &output, uint32_t uid, SRXL2
         SRXL2_EARLY_YIELD();
     }
 }
-#if defined(CONFIG_IDF_TARGET_ESP32)
+#if defined(CONFIG_IDF_TARGET_ESP32) || defined(CONFIG_IDF_TARGET_ESP32C3) || defined(CONFIG_IDF_TARGET_ESP32S3)
+static_assert(SRXL2_EARLY_STARTUP_PORT <= 1, "Early Smart port must be 0 or 1");
+static_assert(SRXL2_EARLY_STARTUP_PIN >= 0 && SRXL2_EARLY_STARTUP_PIN < 64 &&
+    ((SOC_GPIO_VALID_OUTPUT_GPIO_MASK >> SRXL2_EARLY_STARTUP_PIN) & 1), "Invalid early Smart signal pin");
+#if SRXL2_EARLY_STARTUP_PORT == 1
+#include "esp_private/startup_internal.h"
+// Capture on UART1 before Arduino or configuration loading; never drive the bus.
+ESP_SYSTEM_INIT_FN(srxl2EarlyReceive, BIT0)
+{
+    periph_module_enable(PERIPH_UART1_MODULE);
+    periph_module_reset(PERIPH_UART1_MODULE);
+    auto hw = UART_LL_GET_HW(1);
+    uart_ll_disable_intr_mask(hw, UART_LL_INTR_MASK);
+    uart_ll_clr_intsts_mask(hw, UART_LL_INTR_MASK);
+    uart_ll_set_sclk(hw, UART_SCLK_APB);
+    uart_ll_set_baudrate(hw, 115200);
+    uart_ll_set_data_bit_num(hw, UART_DATA_8_BITS);
+    uart_ll_set_parity(hw, UART_PARITY_DISABLE);
+    uart_ll_set_stop_bits(hw, UART_STOP_BITS_1);
+    uart_ll_set_hw_flow_ctrl(hw, UART_HW_FLOWCTRL_DISABLE, 0);
+    gpio_set_direction(gpio_num_t(SRXL2_EARLY_STARTUP_PIN), GPIO_MODE_INPUT);
+    gpio_set_pull_mode(gpio_num_t(SRXL2_EARLY_STARTUP_PIN), GPIO_PULLUP_ONLY);
+    pinMatrixInAttach(SRXL2_EARLY_STARTUP_PIN, U1RXD_IN_IDX, false);
+}
+#endif
 extern "C" void initVariant()
 {
     startupState.enteredUs = micros();
-    Serial.setTxBufferSize(0);
-    Serial.begin(115200, SERIAL_8N1, SRXL2_EARLY_STARTUP_PIN, -1, false);
-    Serial.setRxFIFOFull(1);
+    uint8_t prefix[128];
+    uint16_t prefixSize = 0;
+#if SRXL2_EARLY_STARTUP_PORT == 1
+    // Installing Arduino's driver may reset the FIFO. Preserve its actual bytes.
+    prefixSize = uart_ll_get_rxfifo_len(UART_LL_GET_HW(1));
+    if (prefixSize > sizeof(prefix)) prefixSize = sizeof(prefix);
+    uart_ll_read_rxfifo(UART_LL_GET_HW(1), prefix, prefixSize);
+#endif
+    auto &uart = SRXL2_EARLY_STARTUP_PORT == 0 ? Serial : Serial1;
+    uart.setTxBufferSize(0);
+    uart.begin(115200, SERIAL_8N1, SRXL2_EARLY_STARTUP_PIN, -1, false);
+    uart.setRxFIFOFull(1);
     pinMode(SRXL2_EARLY_STARTUP_PIN, INPUT_PULLUP); // Select GPIO IOMUX before routing UART0 TX through the matrix.
-    pinMatrixInAttach(SRXL2_EARLY_STARTUP_PIN, U0RXD_IN_IDX, false);
+    pinMatrixInAttach(SRXL2_EARLY_STARTUP_PIN,
+        SRXL2_EARLY_STARTUP_PORT == 0 ? U0RXD_IN_IDX : U1RXD_IN_IDX, false);
     const uint64_t mac = ESP.getEfuseMac();
-    listenForEarlyESC(Serial, Serial, uint32_t(mac) ^ uint32_t(mac >> 32), startupState);
-    Serial.end();
+    listenForEarlyESC(uart, uart, uint32_t(mac) ^ uint32_t(mac >> 32), startupState,
+        SRXL2_EARLY_STARTUP_PORT, SRXL2_EARLY_STARTUP_PIN, prefix, prefixSize);
+    uart.end();
 }
 #endif
 #endif
@@ -203,7 +246,7 @@ SerialSRXL2::SerialSRXL2(Stream *output, Stream *input, int8_t txPin, uint8_t se
 #endif
     link.reset(uid, micros());
 #if defined(SRXL2_EARLY_STARTUP_PIN)
-    if (txReady && port == 0 && pin == SRXL2_EARLY_STARTUP_PIN && startupState.ackEndUs && !startupState.handedOff)
+    if (txReady && port == startupState.port && pin == startupState.pin && startupState.ackEndUs && !startupState.handedOff)
     {
         // An announcing ESC may suppress its duplicate addressed reply. Its validated
         // startup announcement and completed ACK are enough to send the final broadcast.

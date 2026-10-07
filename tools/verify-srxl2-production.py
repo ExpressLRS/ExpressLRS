@@ -4,7 +4,7 @@ import subprocess
 import sys
 
 
-def check(elf):
+def check(elf, port=0):
     nm = Path.home() / ".platformio/packages/toolchain-xtensa-esp32/bin/xtensa-esp32-elf-nm.exe"
     symbols = subprocess.check_output([str(nm), "-C", "--defined-only", str(elf)], text=True)
     startup = [line for line in symbols.splitlines() if line.endswith(" initVariant")]
@@ -12,11 +12,13 @@ def check(elf):
         f"Production must run the early SRXL2 listener; got {startup}"
     )
     assert "SerialSRXL2::publishTelemetry(" in symbols
+    early_receive = '__esp_system_init_fn_srxl2EarlyReceive()' in symbols
+    assert early_receive == (port == 1), f'Unexpected early UART1 preparation for port {port}'
     for hook in ("requestSRXL2NeutralProbe(", "setSRXL2ProbeAddress(",
                  "getSRXL2LiveDiagnostics(", "initSmartEdgeCounter("):
         assert hook not in symbols, f"Diagnostic hook in production: {hook}"
-    print("Production: early startup and telemetry enabled; diagnostic hooks absent")
+    print(f"Production port {port}: early startup and telemetry enabled; diagnostic hooks absent")
 
 
 if __name__ == "__main__":
-    check(Path(sys.argv[1]))
+    check(Path(sys.argv[1]), int(sys.argv[2]) if len(sys.argv) > 2 else 0)
