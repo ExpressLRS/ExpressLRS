@@ -42,11 +42,6 @@
 #endif
 #if defined(TARGET_RX) && defined(PLATFORM_ESP32)
 #include "devVTXSPI.h"
-#if defined(SRXL2_DIAGNOSTICS)
-extern String getSRXL2LiveDiagnostics();
-extern bool setSRXL2ProbeAddress(unsigned address);
-extern bool requestSRXL2NeutralProbe();
-#endif
 #endif
 
 #include "WebContent.h"
@@ -1274,33 +1269,6 @@ static void startServices()
   server.on("/forget", WebUpdateForget);
   server.on("/connect", WebUpdateConnect);
   server.on("/config", HTTP_GET, GetConfiguration);
-#if defined(TARGET_RX) && defined(PLATFORM_ESP32) && defined(SRXL2_DIAGNOSTICS)
-  server.on("/srxl2", HTTP_GET, [](AsyncWebServerRequest *request) {
-    const String capture = getSRXL2LiveDiagnostics();
-    auto response = request->beginResponse(capture.length() ? 200 : 503,
-        "application/json", capture.length() ? capture : String("{\"error\":\"No Smart capture available\"}"));
-    response->addHeader("Cache-Control", "no-store");
-    request->send(response);
-  });
-  server.on("/srxl2", HTTP_POST, [](AsyncWebServerRequest *request) {
-    if (request->hasParam("neutral"))
-    {
-      const bool accepted = request->getParam("neutral")->value() == "1" && requestSRXL2NeutralProbe();
-      request->send(accepted ? 200 : 400, "application/json", accepted
-          ? "{\"neutral_probe_ms\":1000}"
-          : "{\"error\":\"Neutral probe requires Smart mode, Wi-Fi and neutral=1\"}");
-      return;
-    }
-    const String value = request->hasParam("address") ? request->getParam("address")->value() : String();
-    const int address = value.toInt();
-    if (String(address) != value || !setSRXL2ProbeAddress(address))
-    {
-      request->send(400, "application/json", "{\"error\":\"Wi-Fi probe requires an ESC address from 64 to 79\"}");
-      return;
-    }
-    request->send(200, "application/json", String("{\"address\":") + address + "}");
-  });
-#endif
   server.on("/access", WebUpdateAccessPoint);
   server.on("/firmware.bin", WebUpdateGetFirmware);
 

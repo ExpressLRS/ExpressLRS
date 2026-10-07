@@ -14,33 +14,6 @@ public:
     static void onRFReset();
     uint32_t sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t *channels) override;
     void sendQueuedData(uint32_t maxBytesToSend) override;
-#if defined(SRXL2_DIAGNOSTICS)
-    struct Diagnostics
-    {
-        uint32_t frames = 0, txPackets = 0, rxBytes = 0;
-        uint32_t driverInitUs = 0, firstTxUs = 0;
-        uint32_t firstRFFrameUs = 0, firstNormalTxUs = 0, lastTelemetryUs = 0;
-        uint8_t lastNormalTx[16] = {}, lastNormalTxLength = 0;
-        uint32_t normalTxPackets = 0, lastNormalTxStartedUs = 0, normalTxSpacingMinUs = 0xFFFFFFFFu;
-        uint32_t rfPacketIntervalUs = 0;
-        uint32_t firstRxUs = 0, rxBeforeFirstTx = 0;
-        uint16_t rxHeadSize = 0;
-        uint8_t rxHead[256] = {};
-        bool edgeCounterReady = false;
-        uint32_t rxWireEdges = 0, txExpectedEdges = 0;
-        volatile uint32_t txWireEdges = 0;
-        volatile uint32_t txDone = 0;
-        uint32_t txStartedUs = 0, txExpectedUs = 0;
-        volatile uint32_t txDurationMaxUs = 0, txDelayMaxUs = 0;
-        volatile uint32_t txDelayMinUs = 0xFFFFFFFFu, txDelayLongCount = 0;
-        volatile uint32_t gpioEnableAfterTx = 0, gpioMatrixAfterTx = 0;
-        uint32_t ch3 = 0xFFFF, ch3Min = 0xFFFF, ch3Max = 0;
-        bool rfConnected = false, allowed = false, modelMatch = false, teamMatch = false, failsafe = false;
-        uint8_t lastRfTx[16] = {}, lastRfTxLength = 0, rxTail[64] = {};
-    };
-    const Diagnostics &getDiagnostics() const { return diagnostics; }
-    void event() override;
-#endif
 protected:
     void processBytes(uint8_t *bytes, uint16_t size) override;
 private:
@@ -58,17 +31,8 @@ private:
     uint32_t lastPublished = 0;
     uint8_t nextSensor = 0;
     uint32_t generation = 0, lastHardwareReceive = 0;
-#if defined(SRXL2_DIAGNOSTICS)
-    Diagnostics diagnostics;
-    bool diagnosticPublished = false;
-    uint32_t lastDiagnosticUs = 0;
-    uint32_t lastNeutralProbeRequestUs = 0;
-    bool neutralProbeActive = false;
-    bool updateNeutralProbe();
-    void publishDiagnostics(bool wifiEntry);
-#endif
     bool controlAllowed() const;
-    bool synchronizeGeneration();
+    void synchronizeGeneration();
     void completeTransmission(uint32_t now);
     static void onTxDone(void *argument);
     void publishTelemetry(uint32_t now);

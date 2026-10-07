@@ -2,71 +2,17 @@
 #include "SerialSRXL2.h"
 #include "CRSFRouter.h"
 #include "common.h"
-#include <cstring>
-#if defined(SRXL2_DIAGNOSTICS)
-#include <atomic>
-static std::atomic<uint8_t> diagnosticProbeAddress{0x40};
-static std::atomic<uint32_t> diagnosticNeutralProbeUs{0};
-bool setSRXL2ProbeAddress(unsigned address)
-{
-    if (connectionState != wifiUpdate || address < 0x40 || address > 0x4F) return false;
-    diagnosticProbeAddress.store(uint8_t(address), std::memory_order_relaxed);
-    return true;
-}
-#endif
 #if defined(PLATFORM_ESP32)
 #include "config.h"
 #include "driver/gpio.h"
 #include "hal/uart_ll.h"
 #include "esp32-hal-matrix.h"
-#include "esp32-hal-uart.h"
 #include "soc/gpio_sig_map.h"
-#if defined(SRXL2_DIAGNOSTICS)
-#include <ArduinoJson.h>
-#include "freertos/semphr.h"
-// One cache per receiver boot; the web task can read it across driver replacement.
-static SemaphoreHandle_t diagnosticMutex = nullptr;
-static String liveDiagnosticJson;
-static std::atomic<uint32_t> receiveErrors[6]{};
-#endif
 #if defined(CONFIG_IDF_TARGET_ESP32)
 #include "driver/periph_ctrl.h"
 #include "driver/uart.h"
 #include "esp_timer.h"
-#if defined(SRXL2_DIAGNOSTICS) && defined(SRXL2_EARLY_STARTUP_PIN)
-#include "esp_private/esp_clk.h"
-#include "soc/rtc.h"
-#include "esp32/rom/rtc.h"
-#endif
 #include "hal/gpio_ll.h"
-#if defined(SRXL2_DIAGNOSTICS)
-#include "driver/pcnt.h"
-#include "soc/pcnt_struct.h"
-static bool initSmartEdgeCounter(int pin)
-{
-    // Unit 0 belongs to the fan tachometer. Unit 1 observes the Smart signal.
-    pcnt_config_t config{};
-    config.pulse_gpio_num = pin;
-    config.ctrl_gpio_num = PCNT_PIN_NOT_USED;
-    config.pos_mode = PCNT_COUNT_INC;
-    config.neg_mode = PCNT_COUNT_DIS;
-    config.lctrl_mode = config.hctrl_mode = PCNT_MODE_KEEP;
-    config.counter_h_lim = 32767;
-    config.counter_l_lim = -1;
-    config.unit = PCNT_UNIT_1;
-    config.channel = PCNT_CHANNEL_0;
-    if (pcnt_unit_config(&config) != ESP_OK) return false;
-    pcnt_counter_pause(PCNT_UNIT_1);
-    pcnt_counter_clear(PCNT_UNIT_1);
-    pcnt_filter_disable(PCNT_UNIT_1);
-    pcnt_counter_resume(PCNT_UNIT_1);
-    return true;
-}
-#define SRXL2_EDGE_COUNTER_INIT() initSmartEdgeCounter(pin)
-#define SRXL2_EDGE_COUNT() int16_t(PCNT.cnt_unit[PCNT_UNIT_1].cnt_val)
-// Direct registers keep TX_DONE IRAM-safe; this SDK's pcnt_ll.h is C-only.
-#define SRXL2_EDGE_CLEAR() do { PCNT.ctrl.val |= BIT(2 * PCNT_UNIT_1); PCNT.ctrl.val &= ~BIT(2 * PCNT_UNIT_1); } while (0)
-#endif
 #endif
 #endif
 
@@ -111,16 +57,6 @@ static bool initSmartEdgeCounter(int pin)
 #endif
 #endif
 
-#if defined(SRXL2_DIAGNOSTICS)
-bool requestSRXL2NeutralProbe()
-{
-    const uint32_t now = micros();
-    if (connectionState != wifiUpdate || !SRXL2_MODE_ACTIVE() || !now) return false;
-    diagnosticNeutralProbeUs.store(now, std::memory_order_relaxed);
-    return true;
-}
-#endif
-
 static volatile uint32_t srxl2RFGeneration = 0;
 
 #if defined(SRXL2_EARLY_STARTUP_PIN)
@@ -133,23 +69,15 @@ static volatile uint32_t srxl2RFGeneration = 0;
 #define SRXL2_EARLY_RELEASE_TX() gpio_set_direction(gpio_num_t(SRXL2_EARLY_STARTUP_PIN), GPIO_MODE_INPUT)
 #define SRXL2_EARLY_YIELD() delay(1)
 #endif
-struct SRXL2StartupCapture
+struct SRXL2StartupState
 {
     uint32_t enteredUs = 0, ackEndUs = 0;
     bool handedOff = false;
-#if defined(SRXL2_DIAGNOSTICS)
-    uint32_t readyUs = 0, firstReadUs = 0, ackStartUs = 0, exitedUs = 0;
-    uint64_t rtcTicks = 0;
-    uint32_t rtcCalibration = 0;
-    uint8_t resetReason = 0, cpuResetReason = 0;
-    uint16_t fifoBytes = 0, bufferedBytes = 0, receivedBytes = 0;
-    uint8_t buffered[128] = {}, bytes[128] = {};
-#endif
 };
-static SRXL2StartupCapture startupCapture;
-static void listenForEarlyESC(Stream &input, Stream &output, uint32_t uid, SRXL2StartupCapture &capture)
+static SRXL2StartupState startupState;
+static void listenForEarlyESC(Stream &input, Stream &output, uint32_t uid, SRXL2StartupState &state)
 {
-    if (!capture.enteredUs) capture.enteredUs = micros();
+    if (!state.enteredUs) state.enteredUs = micros();
     SRXL2::Link early;
     early.reset(uid, micros(), true);
     // Process UART0's queued startup announcements, without inventing wire-arrival timestamps.
@@ -157,31 +85,19 @@ static void listenForEarlyESC(Stream &input, Stream &output, uint32_t uid, SRXL2
     for (int i = 0; i < buffered; ++i)
     {
         const uint8_t byte = input.read();
-#if defined(SRXL2_DIAGNOSTICS)
-        if (capture.bufferedBytes < sizeof(capture.buffered)) capture.buffered[capture.bufferedBytes] = byte;
-        ++capture.bufferedBytes;
-#endif
         early.receive(byte, micros());
     }
-#if defined(SRXL2_DIAGNOSTICS)
-    capture.readyUs = micros();
-#endif
     uint32_t lastHardwareReceive = micros();
     const int8_t pin = SRXL2_EARLY_STARTUP_PIN;
     (void)pin; // Native tests substitute the hardware boundary.
     bool wasBusy = false;
     bool acknowledged = false;
-    while (uint32_t(micros() - capture.enteredUs) < 250000)
+    while (uint32_t(micros() - state.enteredUs) < 250000)
     {
-        while (input.available() && uint32_t(micros() - capture.enteredUs) < 250000)
+        while (input.available() && uint32_t(micros() - state.enteredUs) < 250000)
         {
             const uint8_t byte = input.read();
             const uint32_t now = micros();
-#if defined(SRXL2_DIAGNOSTICS)
-            if (!capture.receivedBytes) capture.firstReadUs = now;
-            if (capture.receivedBytes < sizeof(capture.bytes)) capture.bytes[capture.receivedBytes] = byte;
-            ++capture.receivedBytes;
-#endif
             early.receive(byte, now);
         }
         const uint32_t now = micros();
@@ -193,44 +109,31 @@ static void listenForEarlyESC(Stream &input, Stream &output, uint32_t uid, SRXL2
             SRXL2::Packet packet;
             if (early.nextPacket(now, packet))
             {
-#if defined(SRXL2_DIAGNOSTICS)
-                capture.ackStartUs = now;
-#endif
                 SRXL2_EARLY_BEGIN_TX();
                 output.write(packet.bytes, packet.length);
                 output.flush(); // The last stop bit must finish before releasing the bus.
                 SRXL2_EARLY_RELEASE_TX();
-                capture.ackEndUs = micros();
-                early.transmitted(capture.ackEndUs);
+                state.ackEndUs = micros();
+                early.transmitted(state.ackEndUs);
                 acknowledged = true;
             }
         }
         // ACK only. Normal setup owns the final broadcast and all control packets.
-        if (acknowledged && uint32_t(micros() - capture.ackEndUs) >= 20000) break;
+        if (acknowledged && uint32_t(micros() - state.ackEndUs) >= 20000) break;
         SRXL2_EARLY_YIELD();
     }
-#if defined(SRXL2_DIAGNOSTICS)
-    capture.exitedUs = micros();
-#endif
 }
 #if defined(CONFIG_IDF_TARGET_ESP32)
 extern "C" void initVariant()
 {
-    startupCapture.enteredUs = micros();
-#if defined(SRXL2_DIAGNOSTICS)
-    startupCapture.rtcTicks = rtc_time_get();
-    startupCapture.rtcCalibration = esp_clk_slowclk_cal_get();
-    startupCapture.resetReason = esp_reset_reason();
-    startupCapture.cpuResetReason = rtc_get_reset_reason(0);
-    startupCapture.fifoBytes = uart_ll_get_rxfifo_len(UART_LL_GET_HW(0));
-#endif
+    startupState.enteredUs = micros();
     Serial.setTxBufferSize(0);
     Serial.begin(115200, SERIAL_8N1, SRXL2_EARLY_STARTUP_PIN, -1, false);
     Serial.setRxFIFOFull(1);
     pinMode(SRXL2_EARLY_STARTUP_PIN, INPUT_PULLUP); // Select GPIO IOMUX before routing UART0 TX through the matrix.
     pinMatrixInAttach(SRXL2_EARLY_STARTUP_PIN, U0RXD_IN_IDX, false);
     const uint64_t mac = ESP.getEfuseMac();
-    listenForEarlyESC(Serial, Serial, uint32_t(mac) ^ uint32_t(mac >> 32), startupCapture);
+    listenForEarlyESC(Serial, Serial, uint32_t(mac) ^ uint32_t(mac >> 32), startupState);
     Serial.end();
 }
 #endif
@@ -294,31 +197,15 @@ SerialSRXL2::SerialSRXL2(Stream *output, Stream *input, int8_t txPin)
 #if defined(SRXL2_INSTALL_TX_IRQ)
     txReady = SRXL2_INSTALL_TX_IRQ(onTxDone, this);
 #endif
-    const uint32_t initialized = micros();
-    link.reset(uid, initialized);
+    link.reset(uid, micros());
 #if defined(SRXL2_EARLY_STARTUP_PIN)
-    if (txReady && pin == SRXL2_EARLY_STARTUP_PIN && startupCapture.ackEndUs && !startupCapture.handedOff)
+    if (txReady && pin == SRXL2_EARLY_STARTUP_PIN && startupState.ackEndUs && !startupState.handedOff)
     {
         // An announcing ESC may suppress its duplicate addressed reply. Its validated
         // startup announcement and completed ACK are enough to send the final broadcast.
         link.finishStartupDiscovery();
-        startupCapture.handedOff = true;
+        startupState.handedOff = true;
     }
-#endif
-#if defined(SRXL2_DIAGNOSTICS)
-    diagnostics.driverInitUs = initialized;
-    lastNeutralProbeRequestUs = diagnosticNeutralProbeUs.load(std::memory_order_relaxed);
-#if defined(PLATFORM_ESP32)
-    if (!diagnosticMutex) diagnosticMutex = xSemaphoreCreateMutex();
-    for (auto &count : receiveErrors) count.store(0, std::memory_order_relaxed);
-    Serial.onReceiveError([](hardwareSerial_error_t error) {
-        if (error > UART_NO_ERROR && error <= UART_PARITY_ERROR)
-            receiveErrors[error].fetch_add(1, std::memory_order_relaxed);
-    });
-#endif
-#if defined(SRXL2_EDGE_COUNTER_INIT)
-    diagnostics.edgeCounterReady = SRXL2_EDGE_COUNTER_INIT();
-#endif
 #endif
     lastPublished = micros();
     generation = srxl2RFGeneration;
@@ -328,12 +215,6 @@ SerialSRXL2::SerialSRXL2(Stream *output, Stream *input, int8_t txPin)
 
 SerialSRXL2::~SerialSRXL2()
 {
-#if defined(SRXL2_DIAGNOSTICS) && defined(PLATFORM_ESP32)
-    Serial.onReceiveError(nullptr);
-#if defined(CONFIG_IDF_TARGET_ESP32)
-    if (diagnostics.edgeCounterReady) pcnt_counter_pause(PCNT_UNIT_1);
-#endif
-#endif
 #if defined(CONFIG_IDF_TARGET_ESP32)
     if (txInterrupt)
     {
@@ -357,76 +238,24 @@ bool SerialSRXL2::controlAllowed() const
         ChannelData[2] != CRSF_CHANNEL_VALUE_UNSET;
 }
 
-bool SerialSRXL2::synchronizeGeneration()
+void SerialSRXL2::synchronizeGeneration()
 {
     const uint32_t current = srxl2RFGeneration;
-    if (generation == current) return true;
+    if (generation == current) return;
     generation = current;
     link.setControlPermission(false);
     skipNextFrame = true;
-    return false;
 }
-
-#if defined(SRXL2_DIAGNOSTICS)
-bool SerialSRXL2::updateNeutralProbe()
-{
-    const uint32_t requested = diagnosticNeutralProbeUs.load(std::memory_order_relaxed);
-    const uint32_t now = micros(); // Sample after the request; a concurrent Web timestamp cannot be in the future.
-    const bool valid = connectionState == wifiUpdate && SRXL2_MODE_ACTIVE() &&
-        requested && uint32_t(now - requested) < 1000000;
-    if (requested != lastNeutralProbeRequestUs)
-    {
-        lastNeutralProbeRequestUs = requested;
-        if (valid) { neutralProbeActive = true; link.requestNeutralProbe(true); }
-    }
-    if (neutralProbeActive && !valid)
-    {
-        neutralProbeActive = false;
-        link.requestNeutralProbe(false);
-        link.setControlPermission(false); // A synthetic center must never arm resumed RF control.
-    }
-    return neutralProbeActive;
-}
-#endif
 
 uint32_t SerialSRXL2::sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t *)
 {
     synchronizeGeneration();
-#if defined(SRXL2_DIAGNOSTICS)
-    if (updateNeutralProbe()) return 1;
-#endif
     // Upstream's shared snapshot replaces UNSET with minimum. Read only our
     // throttle from the raw channel state, without changing other protocols.
     noInterrupts();
     const uint32_t throttle = ChannelData[2];
     const bool allowed = controlAllowed();
     interrupts();
-#if defined(SRXL2_DIAGNOSTICS)
-    // Preserve the RF state when Lua switches into Wi-Fi without a reboot.
-    if (connectionState != wifiUpdate)
-    {
-        diagnostics.rfConnected = connectionState == connected;
-#if defined(PLATFORM_ESP32)
-        if (diagnostics.rfConnected && ExpressLRS_currAirRate_Modparams)
-            diagnostics.rfPacketIntervalUs = ExpressLRS_currAirRate_Modparams->interval;
-#endif
-        diagnostics.allowed = allowed;
-        diagnostics.modelMatch = connectionHasModelMatch;
-        diagnostics.teamMatch = teamraceHasModelMatch;
-        diagnostics.failsafe = failsafe;
-        diagnostics.ch3 = throttle;
-        if (frameAvailable)
-        {
-            if (!diagnostics.frames) diagnostics.firstRFFrameUs = micros();
-            ++diagnostics.frames;
-            if (throttle != CRSF_CHANNEL_VALUE_UNSET)
-            {
-                if (throttle < diagnostics.ch3Min) diagnostics.ch3Min = throttle;
-                if (throttle > diagnostics.ch3Max) diagnostics.ch3Max = throttle;
-            }
-        }
-    }
-#endif
     link.setControlPermission(allowed);
     if (frameAvailable && skipNextFrame) skipNextFrame = false;
     else if (allowed && frameAvailable) link.setThrottle(throttle, micros());
@@ -455,13 +284,6 @@ void ICACHE_RAM_ATTR SerialSRXL2::onTxDone(void *argument)
 {
     auto driver = static_cast<SerialSRXL2 *>(argument);
     SRXL2_RELEASE_TX(); // Release first: the ESC can start its reply immediately.
-#if defined(SRXL2_DIAGNOSTICS) && defined(SRXL2_EDGE_COUNT)
-    if (driver->diagnostics.edgeCounterReady)
-    {
-        driver->diagnostics.txWireEdges += SRXL2_EDGE_COUNT();
-        SRXL2_EDGE_CLEAR();
-    }
-#endif
 #if defined(CONFIG_IDF_TARGET_ESP32)
     uart_ll_disable_intr_mask(UART_LL_GET_HW(2), UART_INTR_TX_DONE);
     uart_ll_clr_intsts_mask(UART_LL_GET_HW(2), UART_INTR_TX_DONE);
@@ -470,39 +292,12 @@ void ICACHE_RAM_ATTR SerialSRXL2::onTxDone(void *argument)
     driver->txEnded = micros();
 #endif
     driver->txComplete = true;
-#if defined(SRXL2_DIAGNOSTICS)
-    auto &state = driver->diagnostics;
-    const uint32_t elapsed = driver->txEnded - state.txStartedUs;
-    if (elapsed > state.txDurationMaxUs) state.txDurationMaxUs = elapsed;
-    const uint32_t delay = elapsed > state.txExpectedUs ? elapsed - state.txExpectedUs : 0;
-    if (delay < state.txDelayMinUs) state.txDelayMinUs = delay;
-    if (delay > state.txDelayMaxUs) state.txDelayMaxUs = delay;
-    constexpr uint32_t ONE_BIT_US = 9; // Rounded up at 115200 baud; estimated excess includes ISR overhead.
-    if (delay >= ONE_BIT_US) ++state.txDelayLongCount;
-#if defined(CONFIG_IDF_TARGET_ESP32)
-    state.gpioEnableAfterTx = driver->pin < 32
-        ? (GPIO.enable >> driver->pin) & 1
-        : (GPIO.enable1.val >> (driver->pin - 32)) & 1;
-    state.gpioMatrixAfterTx = GPIO.func_out_sel_cfg[driver->pin].val;
-#endif
-    ++state.txDone;
-#endif
 }
 
 void SerialSRXL2::processBytes(uint8_t *bytes, uint16_t size)
 {
     const uint32_t now = micros();
     completeTransmission(now);
-#if defined(SRXL2_DIAGNOSTICS)
-    if (size && diagnostics.rxHeadSize == 0) diagnostics.firstRxUs = now;
-    if (diagnostics.txPackets == 0) diagnostics.rxBeforeFirstTx += size;
-    for (unsigned i = 0; i < size; ++i)
-    {
-        if (diagnostics.rxHeadSize < sizeof(diagnostics.rxHead))
-            diagnostics.rxHead[diagnostics.rxHeadSize++] = bytes[i];
-        diagnostics.rxTail[diagnostics.rxBytes++ % sizeof(diagnostics.rxTail)] = bytes[i];
-    }
-#endif
     for (unsigned i = 0; i < size; ++i) link.receive(bytes[i], now);
 }
 
@@ -510,13 +305,7 @@ void SerialSRXL2::sendQueuedData(uint32_t maxBytesToSend)
 {
     const uint32_t now = micros();
     synchronizeGeneration();
-#if defined(SRXL2_DIAGNOSTICS)
-    const bool probe = updateNeutralProbe();
-    link.setControlPermission(probe || controlAllowed());
-    if (probe) link.setThrottle(992, now); // Only neutral; no RF channel values enter this probe.
-#else
     link.setControlPermission(controlAllowed());
-#endif
     completeTransmission(now);
     const bool receivePending = inputPort->available() > 0 || SRXL2_HARDWARE_RX_BUSY();
     if (receivePending) lastHardwareReceive = now;
@@ -525,250 +314,25 @@ void SerialSRXL2::sendQueuedData(uint32_t maxBytesToSend)
         SRXL2::Packet packet{};
         if (link.nextPacket(now, packet))
         {
-#if defined(SRXL2_DIAGNOSTICS)
-            if (connectionState == wifiUpdate && !neutralProbeActive && packet.bytes[1] == 0x21 && packet.bytes[4] == 0x40)
-            {
-                packet.bytes[4] = diagnosticProbeAddress.load(std::memory_order_relaxed);
-                const uint16_t crc = SRXL2::crc16(packet.bytes, packet.length - 2);
-                packet.bytes[packet.length - 2] = crc >> 8;
-                packet.bytes[packet.length - 1] = crc;
-            }
-#endif
-#if defined(SRXL2_DIAGNOSTICS) && defined(SRXL2_EDGE_COUNT)
-            if (diagnostics.edgeCounterReady)
-            {
-                // ponytail: 32767 edges per listen interval; use a waveform capture
-                // if continuous noise prevents the normal 50 ms discovery polls.
-                diagnostics.rxWireEdges += SRXL2_EDGE_COUNT();
-                SRXL2_EDGE_CLEAR();
-            }
-#endif
             SRXL2_BEGIN_TX();
             txComplete = false;
             transmitting = true;
-#if defined(SRXL2_DIAGNOSTICS)
-            ++diagnostics.txPackets;
-            for (unsigned i = 0; i < packet.length; ++i)
-            {
-                const unsigned value = packet.bytes[i];
-                // Start bit is low; include the high stop bit after eight data bits.
-                diagnostics.txExpectedEdges += __builtin_popcount((value | 0x100) & ~(value << 1));
-            }
-            if (diagnostics.txPackets == 1) diagnostics.firstTxUs = now;
-            if (connectionState == connected)
-            {
-                diagnostics.lastRfTxLength = min(unsigned(packet.length), unsigned(sizeof(diagnostics.lastRfTx)));
-                std::memcpy(diagnostics.lastRfTx, packet.bytes, diagnostics.lastRfTxLength);
-            }
-            if (packet.bytes[1] == 0xCD && packet.bytes[3] == 0)
-            {
-                if (!diagnostics.firstNormalTxUs) diagnostics.firstNormalTxUs = now;
-                diagnostics.lastNormalTxLength = min(unsigned(packet.length), unsigned(sizeof(diagnostics.lastNormalTx)));
-                std::memcpy(diagnostics.lastNormalTx, packet.bytes, diagnostics.lastNormalTxLength);
-            }
-            // Estimated wire duration; completion timing also includes FIFO/ISR overhead.
-            diagnostics.txExpectedUs = (uint32_t(packet.length) * 10000000u + 115199u) / 115200u;
-#endif
 #if defined(CONFIG_IDF_TARGET_ESP32)
             // Only FIFO loading/IRQ arming is atomic; RF runs during transmission.
             // ponytail: current 14/16-byte packets fit the FIFO; add refill IRQs if they grow.
             noInterrupts();
             uart_ll_clr_intsts_mask(UART_LL_GET_HW(2), UART_INTR_TX_DONE);
-#if defined(SRXL2_DIAGNOSTICS)
-            diagnostics.txStartedUs = uint32_t(esp_timer_get_time());
-#endif
             uart_ll_write_txfifo(UART_LL_GET_HW(2), packet.bytes, packet.length);
             uart_ll_ena_intr_mask(UART_LL_GET_HW(2), UART_INTR_TX_DONE);
             interrupts();
 #else
-#if defined(SRXL2_DIAGNOSTICS)
-            diagnostics.txStartedUs = micros();
-#endif
             _outputPort->write(packet.bytes, packet.length);
-#endif
-#if defined(SRXL2_DIAGNOSTICS)
-            if (packet.bytes[1] == 0xCD && packet.bytes[3] == 0)
-            {
-                const uint32_t started = diagnostics.txStartedUs;
-                if (diagnostics.normalTxPackets)
-                {
-                    const uint32_t spacing = started - diagnostics.lastNormalTxStartedUs;
-                    if (spacing < diagnostics.normalTxSpacingMinUs) diagnostics.normalTxSpacingMinUs = spacing;
-                }
-                diagnostics.lastNormalTxStartedUs = started;
-                ++diagnostics.normalTxPackets;
-            }
 #endif
         }
     }
     publishTelemetry(now);
-#if defined(SRXL2_DIAGNOSTICS)
-    if (connectionState == wifiUpdate && uint32_t(now - lastDiagnosticUs) >= 1000000)
-        publishDiagnostics(false);
-#endif
 }
 
-#if defined(SRXL2_DIAGNOSTICS)
-void SerialSRXL2::event()
-{
-    if (connectionState != wifiUpdate || diagnosticPublished) return;
-    publishDiagnostics(true);
-    diagnosticPublished = true;
-}
-
-#if defined(PLATFORM_ESP32)
-String getSRXL2LiveDiagnostics()
-{
-    if (!diagnosticMutex) return String();
-    xSemaphoreTake(diagnosticMutex, portMAX_DELAY);
-    String result = liveDiagnosticJson;
-    xSemaphoreGive(diagnosticMutex);
-    return result;
-}
-#endif
-
-void SerialSRXL2::publishDiagnostics(bool wifiEntry)
-{
-    lastDiagnosticUs = micros();
-#if defined(SRXL2_DIAGNOSTIC_PUBLISH)
-    SRXL2_DIAGNOSTIC_PUBLISH();
-#elif defined(PLATFORM_ESP32)
-    JsonDocument doc;
-    auto state = doc.to<JsonObject>();
-    state["capture_us"] = lastDiagnosticUs;
-    state["wifi_active"] = connectionState == wifiUpdate;
-    state["control_allowed_now"] = controlAllowed();
-    state["probe_address"] = diagnosticProbeAddress.load(std::memory_order_relaxed);
-    state["neutral_probe_active"] = neutralProbeActive;
-    state["neutral_probe_requested_us"] = lastNeutralProbeRequestUs;
-    state["rf_connected_before_wifi"] = diagnostics.rfConnected;
-    state["control_allowed_before_wifi"] = diagnostics.allowed;
-    state["model_match"] = diagnostics.modelMatch;
-    state["team_match"] = diagnostics.teamMatch;
-    state["failsafe"] = diagnostics.failsafe;
-    state["ch3_raw"] = diagnostics.ch3;
-    state["ch3_min"] = diagnostics.ch3Min;
-    state["ch3_max"] = diagnostics.ch3Max;
-    state["input_frames"] = diagnostics.frames;
-    state["tx_ready"] = txReady;
-#if defined(SRXL2_EARLY_STARTUP_PIN)
-    state["early_startup_pin"] = SRXL2_EARLY_STARTUP_PIN;
-    state["early_startup_enter_us"] = startupCapture.enteredUs;
-    state["early_startup_ready_us"] = startupCapture.readyUs;
-    state["early_startup_rtc_ticks"] = startupCapture.rtcTicks;
-    state["early_startup_rtc_calibration"] = startupCapture.rtcCalibration;
-    state["early_startup_reset_reason"] = startupCapture.resetReason;
-    state["early_startup_cpu_reset_reason"] = startupCapture.cpuResetReason;
-    state["early_startup_handoff_consumed"] = startupCapture.handedOff;
-    state["early_startup_first_read_us"] = startupCapture.firstReadUs;
-    state["early_startup_ack_start_us"] = startupCapture.ackStartUs;
-    state["early_startup_ack_end_us"] = startupCapture.ackEndUs;
-    state["early_startup_exit_us"] = startupCapture.exitedUs;
-    state["early_startup_fifo_bytes"] = startupCapture.fifoBytes;
-    state["early_startup_buffered_bytes"] = startupCapture.bufferedBytes;
-    state["early_startup_received_bytes"] = startupCapture.receivedBytes;
-    String earlyHex;
-    const char earlyDigits[] = "0123456789abcdef";
-    for (unsigned i = 0; i < min(unsigned(startupCapture.receivedBytes), unsigned(sizeof(startupCapture.bytes))); ++i)
-    {
-        earlyHex += earlyDigits[startupCapture.bytes[i] >> 4];
-        earlyHex += earlyDigits[startupCapture.bytes[i] & 15];
-    }
-    state["early_startup_rx_hex"] = earlyHex;
-    String bufferedHex;
-    for (unsigned i = 0; i < min(unsigned(startupCapture.bufferedBytes), unsigned(sizeof(startupCapture.buffered))); ++i)
-    {
-        bufferedHex += earlyDigits[startupCapture.buffered[i] >> 4];
-        bufferedHex += earlyDigits[startupCapture.buffered[i] & 15];
-    }
-    state["early_startup_buffered_hex"] = bufferedHex;
-#endif
-    state["tx_packets"] = diagnostics.txPackets;
-    state["driver_init_us"] = diagnostics.driverInitUs;
-    state["first_tx_attempt_us"] = diagnostics.firstTxUs;
-    state["first_rx_callback_us"] = diagnostics.firstRxUs;
-    state["first_rf_frame_us"] = diagnostics.firstRFFrameUs;
-    state["first_normal_tx_attempt_us"] = diagnostics.firstNormalTxUs;
-    state["rf_packet_interval_us_before_wifi"] = diagnostics.rfPacketIntervalUs;
-    state["normal_tx_packets"] = diagnostics.normalTxPackets;
-    if (diagnostics.normalTxPackets > 1) state["normal_tx_spacing_min_us"] = diagnostics.normalTxSpacingMinUs;
-    state["last_esc_telemetry_us"] = diagnostics.lastTelemetryUs;
-    state["rx_before_first_tx"] = diagnostics.rxBeforeFirstTx;
-    state["tx_completions"] = uint32_t(diagnostics.txDone);
-    state["tx_duration_max_us"] = uint32_t(diagnostics.txDurationMaxUs);
-    if (diagnostics.txDone) state["tx_release_excess_min_us"] = uint32_t(diagnostics.txDelayMinUs);
-    state["tx_release_excess_max_us"] = uint32_t(diagnostics.txDelayMaxUs);
-    state["tx_release_excess_over_bit_count"] = uint32_t(diagnostics.txDelayLongCount);
-    state["rx_bytes"] = diagnostics.rxBytes;
-    state["edge_counter_ready"] = diagnostics.edgeCounterReady;
-    state["rx_wire_edges"] = diagnostics.rxWireEdges;
-    state["tx_wire_edges"] = uint32_t(diagnostics.txWireEdges);
-    state["tx_expected_edges"] = diagnostics.txExpectedEdges;
-    state["uart_break_errors"] = receiveErrors[UART_BREAK_ERROR].load(std::memory_order_relaxed);
-    state["uart_buffer_full_errors"] = receiveErrors[UART_BUFFER_FULL_ERROR].load(std::memory_order_relaxed);
-    state["uart_fifo_overflow_errors"] = receiveErrors[UART_FIFO_OVF_ERROR].load(std::memory_order_relaxed);
-    state["uart_frame_errors"] = receiveErrors[UART_FRAME_ERROR].load(std::memory_order_relaxed);
-    state["uart_parity_errors"] = receiveErrors[UART_PARITY_ERROR].load(std::memory_order_relaxed);
-    state["smart_connected"] = link.connected();
-    state["rx_busy"] = SRXL2_HARDWARE_RX_BUSY();
-    state["signal_level"] = gpio_get_level(gpio_num_t(pin));
-#if defined(CONFIG_IDF_TARGET_ESP32)
-    if (txReady) state["tx_fifo_free_bytes"] = uart_ll_get_txfifo_len(UART_LL_GET_HW(2));
-    state["gpio_output_enabled_after_tx"] = uint32_t(diagnostics.gpioEnableAfterTx);
-    state["gpio_matrix_after_tx"] = uint32_t(diagnostics.gpioMatrixAfterTx);
-    state["uart0_rx_matrix"] = GPIO.func_in_sel_cfg[U0RXD_IN_IDX].val;
-    state["uart0_rx_pin"] = uart_get_RxPin(0);
-    state["uart0_tx_pin"] = uart_get_TxPin(0);
-    state["gpio_iomux"] = REG_READ(GPIO_PIN_MUX_REG[pin]);
-#endif
-    const char hex[] = "0123456789abcdef";
-    String received, sent, firstReceived, normalSent;
-    for (unsigned i = 0; i < diagnostics.rxHeadSize; ++i)
-    {
-        const uint8_t byte = diagnostics.rxHead[i];
-        firstReceived += hex[byte >> 4]; firstReceived += hex[byte & 15];
-    }
-    const unsigned size = diagnostics.rxBytes < 64 ? diagnostics.rxBytes : 64;
-    const unsigned start = diagnostics.rxBytes < 64 ? 0 : diagnostics.rxBytes % 64;
-    for (unsigned i = 0; i < size; ++i)
-    {
-        const uint8_t byte = diagnostics.rxTail[(start + i) % 64];
-        received += hex[byte >> 4]; received += hex[byte & 15];
-    }
-    for (unsigned i = 0; i < diagnostics.lastRfTxLength; ++i)
-    {
-        const uint8_t byte = diagnostics.lastRfTx[i];
-        sent += hex[byte >> 4]; sent += hex[byte & 15];
-    }
-    state["last_rx_hex"] = received;
-    state["first_rx_hex"] = firstReceived;
-    state["last_rf_tx_hex"] = sent;
-    for (unsigned i = 0; i < diagnostics.lastNormalTxLength; ++i)
-    {
-        const uint8_t byte = diagnostics.lastNormalTx[i];
-        normalSent += hex[byte >> 4]; normalSent += hex[byte & 15];
-    }
-    state["last_normal_tx_hex"] = normalSent;
-    String result;
-    serializeJson(doc, result);
-    if (diagnosticMutex && xSemaphoreTake(diagnosticMutex, 0) == pdTRUE)
-    {
-        liveDiagnosticJson = result;
-        xSemaphoreGive(diagnosticMutex);
-    }
-    if (wifiEntry)
-    {
-        // Keep the original RF capture; live updates never modify saved options.
-        JsonDocument options;
-        if (deserializeJson(options, getOptions())) return;
-        options["srxl2-diagnostics"] = doc;
-        result.clear();
-        serializeJson(options, result);
-        setOptions(result);
-    }
-#endif
-}
-#endif
 
 static void putBE(uint8_t *bytes, uint32_t value, unsigned count)
 {
@@ -778,9 +342,6 @@ static void putBE(uint8_t *bytes, uint32_t value, unsigned count)
 void SerialSRXL2::publishTelemetry(uint32_t now)
 {
     const SRXL2::Telemetry values = link.telemetry(now);
-#if defined(SRXL2_DIAGNOSTICS)
-    if (values.receivedUs) diagnostics.lastTelemetryUs = values.receivedUs;
-#endif
     const SRXL2::Reading &current = values.batteryCurrent.valid ? values.batteryCurrent : values.current;
     const bool battery = values.voltage.valid && current.valid && current.value >= 0 && current.value / 100 <= 32767;
     crsfBatterySensorDetected = battery;

@@ -635,7 +635,7 @@ void test_esc_scaling_and_invalid_replacement()
     connect(link);
     feed(link, esc, sizeof(esc), 60000);
     auto values = link.telemetry(60000);
-    TEST_ASSERT_EQUAL(60000, values.receivedUs);
+    TEST_ASSERT_EQUAL(60000, values.rpm.updatedUs);
     TEST_ASSERT_EQUAL(123450, values.rpm.value);
     TEST_ASSERT_EQUAL(12340, values.voltage.value);
     TEST_ASSERT_EQUAL(10000, values.current.value);

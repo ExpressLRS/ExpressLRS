@@ -1,4 +1,5 @@
 #include <unity.h>
+#include <cstring>
 #include <string>
 #include <vector>
 #include "common.h"
@@ -15,23 +16,10 @@ CRSFRouter crsfRouter;
 static bool uartReceiving = false;
 static bool srxl2Selected = true;
 static uint32_t nowUs;
-static void (*afterClockRead)();
-static unsigned long testMicros()
-{
-    const uint32_t snapshot = nowUs;
-    if (afterClockRead)
-    {
-        auto callback = afterClockRead;
-        afterClockRead = nullptr;
-        callback();
-    }
-    return snapshot;
-}
+static unsigned long testMicros() { return nowUs; }
 static bool busDriving, txDrained, releasedBeforeDrain;
 static bool autoTxDone = true;
 static bool replyBlocked;
-static unsigned diagnosticPublications;
-static uint16_t signalEdges;
 static UartStartupSpy uartStartup;
 static constexpr uint32_t SERIAL_8N1 = 0x800001c;
 static void (*txDoneInterrupt)(void *);
@@ -77,17 +65,10 @@ static void releaseBusTransmit()
 
 // Substitute only the clock and GPIO boundary; execute the actual adapter/router.
 #define SRXL2_ADAPTER_TEST
-#if !defined(SRXL2_PRODUCTION_TEST)
-#define SRXL2_DIAGNOSTICS
-#endif
 #define SRXL2_EARLY_STARTUP_PIN 3
 #define SRXL2_EARLY_BEGIN_TX() startBusTransmit()
 #define SRXL2_EARLY_RELEASE_TX() releaseBusTransmit()
 #define SRXL2_EARLY_YIELD() startupYield()
-#define SRXL2_DIAGNOSTIC_PUBLISH() (++diagnosticPublications)
-#define SRXL2_EDGE_COUNTER_INIT() true
-#define SRXL2_EDGE_COUNT() signalEdges
-#define SRXL2_EDGE_CLEAR() (signalEdges = 0)
 #define SRXL2_HARDWARE_RX_BUSY() uartReceiving
 #define SRXL2_MODE_ACTIVE() srxl2Selected
 #define SRXL2_INSTALL_TX_IRQ(handler, argument) installTxInterrupt(handler, argument)
@@ -121,13 +102,8 @@ public:
 
 void setUp()
 {
-    startupCapture = SRXL2StartupCapture();
+    startupState = SRXL2StartupState();
     nowUs = 0;
-    afterClockRead = nullptr;
-#if defined(SRXL2_DIAGNOSTICS)
-    diagnosticNeutralProbeUs.store(0);
-    diagnosticProbeAddress.store(0x40);
-#endif
     connectionState = connected;
     connectionHasModelMatch = teamraceHasModelMatch = true;
     capture.frames.clear();
@@ -138,8 +114,6 @@ void setUp()
     busDriving = txDrained = releasedBeforeDrain = false;
     autoTxDone = true;
     replyBlocked = false;
-    diagnosticPublications = 0;
-    signalEdges = 0;
     uartStartup = UartStartupSpy();
     txDoneInterrupt = nullptr;
     immediateReplyInput = nullptr;
@@ -167,6 +141,12 @@ class StartupTxStream : public BinaryStringStream
 {
 public:
     using BinaryStringStream::BinaryStringStream;
+    uint32_t startedUs = 0;
+    size_t write(const uint8_t *bytes, size_t size) override
+    {
+        startedUs = nowUs;
+        return BinaryStringStream::write(bytes, size);
+    }
     void flush() override
     {
         nowUs += 1216;
@@ -175,7 +155,6 @@ public:
     }
 };
 
-#if defined(SRXL2_DIAGNOSTICS)
 void test_early_startup_ack_handles_a_fresh_announcement_and_releases_the_wire()
 {
     const uint8_t announcement[] = {0xA6,0x21,14,0x40,0,10,0,0,0,0,0,1,0x38,0x4E};
@@ -190,19 +169,16 @@ void test_early_startup_ack_handles_a_fresh_announcement_and_releases_the_wire()
         startupInjectUs = start + 10000;
         startupAnnouncement.assign(reinterpret_cast<const char *>(announcement), sizeof(announcement));
         startupReply.assign(reinterpret_cast<const char *>(hello), sizeof(hello));
-        SRXL2StartupCapture capture;
-        listenForEarlyESC(rx, tx, 0x12345678, capture);
-        TEST_ASSERT_EQUAL(0, capture.bufferedBytes);
-        TEST_ASSERT_EQUAL_UINT32(start + 10000, capture.firstReadUs);
-        TEST_ASSERT_EQUAL_UINT32(start + 11000, capture.ackStartUs); // Two-character idle before ACK.
-        TEST_ASSERT_EQUAL_UINT32(start + 12216, capture.ackEndUs);
-        TEST_ASSERT_EQUAL_UINT32(start + 32216, capture.exitedUs);
+        SRXL2StartupState state;
+        listenForEarlyESC(rx, tx, 0x12345678, state);
+        TEST_ASSERT_EQUAL_UINT32(start + 11000, tx.startedUs); // Two-character idle before ACK.
+        TEST_ASSERT_EQUAL_UINT32(start + 12216, state.ackEndUs);
+        TEST_ASSERT_EQUAL_UINT32(start + 32216, nowUs);
         TEST_ASSERT_EQUAL(14, out.size()); // ACK only; no final broadcast or control packets.
         TEST_ASSERT_EQUAL_HEX8(0x40, uint8_t(out[4]));
         TEST_ASSERT_EQUAL_HEX8(0, uint8_t(out[6]));
         TEST_ASSERT_EQUAL_HEX8(3, uint8_t(out[7]));
-        TEST_ASSERT_EQUAL(28, capture.receivedBytes);
-        TEST_ASSERT_EQUAL_UINT8_ARRAY(hello, capture.bytes + 14, sizeof(hello));
+        TEST_ASSERT_EQUAL(0, rx.available()); // Both the announcement and addressed reply were consumed.
         TEST_ASSERT_FALSE(busDriving);
         TEST_ASSERT_FALSE(releasedBeforeDrain);
     }
@@ -222,12 +198,11 @@ void test_early_startup_does_not_ack_corrupt_or_nonannouncement_frames()
     startupAnnouncement.back() ^= 1; // Corrupt CRC, then a valid addressed reply, then a partial announcement.
     startupAnnouncement.append(reinterpret_cast<const char *>(hello), sizeof(hello));
     startupAnnouncement.append(reinterpret_cast<const char *>(announcement), 7);
-    SRXL2StartupCapture capture;
-    listenForEarlyESC(rx, tx, 0x12345678, capture);
-    TEST_ASSERT_EQUAL(14, capture.bufferedBytes);
+    SRXL2StartupState state;
+    listenForEarlyESC(rx, tx, 0x12345678, state);
     TEST_ASSERT_TRUE(out.empty());
-    TEST_ASSERT_EQUAL(0, capture.ackStartUs);
-    TEST_ASSERT_EQUAL_UINT32(300000, capture.exitedUs);
+    TEST_ASSERT_EQUAL(0, state.ackEndUs);
+    TEST_ASSERT_EQUAL_UINT32(300000, nowUs);
     TEST_ASSERT_FALSE(busDriving);
 }
 
@@ -243,16 +218,12 @@ void test_early_startup_acknowledges_buffered_announcements_after_hardware_idle(
     startupReply.assign(reinterpret_cast<const char *>(hello), sizeof(hello));
     uartReceiving = true;
     startupRxBusyUntilUs = 53000;
-    SRXL2StartupCapture capture;
-    listenForEarlyESC(rx, tx, 0x12345678, capture);
+    SRXL2StartupState state;
+    listenForEarlyESC(rx, tx, 0x12345678, state);
     TEST_ASSERT_EQUAL(14, out.size());
-    TEST_ASSERT_EQUAL(126, capture.bufferedBytes);
-    for (unsigned i = 0; i < 9; ++i)
-        TEST_ASSERT_EQUAL_UINT8_ARRAY(announcement, capture.buffered + i * sizeof(announcement), sizeof(announcement));
-    TEST_ASSERT_EQUAL_UINT32(54000, capture.ackStartUs);
-    TEST_ASSERT_GREATER_THAN(capture.ackEndUs, capture.firstReadUs); // The reply is fresh, the queued announcements are not.
-    TEST_ASSERT_EQUAL(14, capture.receivedBytes);
-    TEST_ASSERT_EQUAL_UINT8_ARRAY(hello, capture.bytes, sizeof(hello));
+    TEST_ASSERT_EQUAL_UINT32(54000, tx.startedUs);
+    TEST_ASSERT_EQUAL_UINT32(55216, state.ackEndUs);
+    TEST_ASSERT_EQUAL(0, rx.available()); // Queued announcements and the fresh addressed reply were consumed.
     TEST_ASSERT_FALSE(busDriving);
     TEST_ASSERT_FALSE(releasedBeforeDrain);
 }
@@ -272,16 +243,14 @@ void test_early_startup_recovers_after_unsuitable_input_before_an_announcement()
         startupSecondInjectUs = 100000;
         startupSecondAnnouncement.assign(reinterpret_cast<const char *>(announcement), sizeof(announcement));
         startupReply.clear();
-        SRXL2StartupCapture capture;
-        listenForEarlyESC(rx, tx, 0x12345678, capture);
-        TEST_ASSERT_EQUAL_UINT32(101000, capture.ackStartUs);
+        SRXL2StartupState state;
+        listenForEarlyESC(rx, tx, 0x12345678, state);
+        TEST_ASSERT_EQUAL_UINT32(101000, tx.startedUs);
         TEST_ASSERT_EQUAL(14, out.size());
         TEST_ASSERT_EQUAL_HEX8(0x40, uint8_t(out[4]));
         TEST_ASSERT_FALSE(busDriving);
     }
 }
-
-#endif
 
 static void send(SerialSRXL2 &driver, uint32_t time);
 static void assert_neutral(const std::string &out, uint8_t command);
@@ -294,7 +263,7 @@ void test_normal_driver_finishes_acknowledged_startup_without_an_addressed_reply
     StartupTxStream bootTx(bootOut);
     startupInput = &bootIn;
     startupReply.clear(); // Spec/reference permits no duplicate addressed reply after an announcement.
-    listenForEarlyESC(bootRx, bootTx, 0x12345678, startupCapture);
+    listenForEarlyESC(bootRx, bootTx, 0x12345678, startupState);
     TEST_ASSERT_EQUAL(14, bootOut.size());
 
     connectionState = wifiUpdate;
@@ -388,7 +357,7 @@ static void assert_neutral(const std::string &out, uint8_t command = 1)
 
 void test_adapter_ch3_and_all_inhibition_paths()
 {
-    for (unsigned reason = 0; reason < 4; ++reason)
+    for (unsigned reason = 0; reason < 5; ++reason)
     {
         std::string in, out;
         BinaryStringStream rx(in), tx(out);
@@ -407,6 +376,7 @@ void test_adapter_ch3_and_all_inhibition_paths()
         if (reason == 1) teamraceHasModelMatch = false;
         if (reason == 2) driver.setFailsafe(true);
         if (reason == 3) connectionState = disconnected;
+        if (reason == 4) connectionState = wifiUpdate;
         send(driver, 73000);
         send(driver, 84500); // Complete the reserved telemetry reply window before safety TX.
         assert_neutral(out);
@@ -814,379 +784,14 @@ void test_adapter_preserves_delayed_genuine_reply_after_complete_echo()
     TEST_ASSERT_EQUAL_HEX8(0xFF, uint8_t(out[18]));
 }
 
-#if defined(SRXL2_DIAGNOSTICS)
-void test_diagnostics_publish_once_on_wifi_entry_without_transmitting()
-{
-    std::string in, out;
-    BinaryStringStream rx(in), tx(out);
-    SerialSRXL2 driver(&tx, &rx, 1);
-    establish(driver, in, out);
-    driver.event();
-    TEST_ASSERT_EQUAL(0, diagnosticPublications);
-    const size_t sent = out.size();
-    connectionState = wifiUpdate;
-    driver.event();
-    TEST_ASSERT_EQUAL(1, diagnosticPublications);
-    driver.event();
-    TEST_ASSERT_EQUAL(1, diagnosticPublications);
-    TEST_ASSERT_EQUAL(sent, out.size());
-}
-
-void test_wifi_live_capture_refreshes_while_motion_remains_inhibited()
-{
-    std::string in, out;
-    BinaryStringStream rx(in), tx(out);
-    SerialSRXL2 driver(&tx, &rx, 3);
-    establish(driver, in, out);
-    uint32_t channels[16] = {};
-    channels[2] = 1811;
-    nowUs = 63000;
-    deliver(driver, true, channels);
-    send(driver, 63000);
-    send(driver, 64500);
-    connectionState = wifiUpdate;
-    driver.event();
-    const unsigned entryPublications = diagnosticPublications;
-    send(driver, 73000);
-    send(driver, 84500);
-    assert_neutral(out);
-    input(driver, in, esc, sizeof(esc), 86500);
-    send(driver, 1064500);
-    assert_neutral(out);
-    TEST_ASSERT_EQUAL(entryPublications + 1, diagnosticPublications);
-    send(driver, 1064600);
-    TEST_ASSERT_EQUAL(entryPublications + 1, diagnosticPublications);
-    send(driver, 2064500);
-    TEST_ASSERT_EQUAL(entryPublications + 2, diagnosticPublications);
-}
-
-void test_edge_capture_separates_transmit_from_undecodable_reply_activity()
-{
-    std::string in, out;
-    BinaryStringStream rx(in), tx(out);
-    SerialSRXL2 driver(&tx, &rx, 3);
-    signalEdges = 7; // Digital activity before the first request, no UART bytes.
-    send(driver, 50000);
-    signalEdges = 36; // Rising edges independently counted in the startup vector.
-    send(driver, 51216);
-    const auto &state = driver.getDiagnostics();
-    TEST_ASSERT_TRUE(state.edgeCounterReady);
-    TEST_ASSERT_EQUAL(7, state.rxWireEdges);
-    TEST_ASSERT_EQUAL(36, state.txWireEdges);
-    TEST_ASSERT_EQUAL(36, state.txExpectedEdges);
-    signalEdges = 11; // A malformed reply is still visible to the pulse counter.
-    send(driver, 100000);
-    TEST_ASSERT_EQUAL(18, state.rxWireEdges);
-    TEST_ASSERT_EQUAL(36, state.txWireEdges);
-    TEST_ASSERT_EQUAL(0, state.rxBytes);
-}
-
-void test_wifi_probe_changes_only_the_discovery_destination()
-{
-    TEST_ASSERT_FALSE(setSRXL2ProbeAddress(0x41)); // No probe overrides in RF operation.
-    connectionState = wifiUpdate;
-    TEST_ASSERT_FALSE(setSRXL2ProbeAddress(0x3F));
-    TEST_ASSERT_FALSE(setSRXL2ProbeAddress(0x50));
-    TEST_ASSERT_TRUE(setSRXL2ProbeAddress(0x4F));
-    std::string in, out;
-    BinaryStringStream rx(in), tx(out);
-    SerialSRXL2 driver(&tx, &rx, 3);
-    send(driver, 50000);
-    const uint8_t expected[] = {0xA6,0x21,0x0E,0x21,0x4F,0x0A,0,3,0x78,0x56,0x34,0x12,0x2A,0x53};
-    TEST_ASSERT_EQUAL(sizeof(expected), out.size());
-    TEST_ASSERT_EQUAL_UINT8_ARRAY(expected, reinterpret_cast<const uint8_t *>(out.data()), sizeof(expected));
-    send(driver, 51216);
-    connectionState = connected;
-    send(driver, 100000);
-    TEST_ASSERT_EQUAL(28, out.size());
-    TEST_ASSERT_EQUAL_HEX8(0x40, uint8_t(out[18])); // Probe setting cannot affect RF operation.
-    connectionState = wifiUpdate;
-    TEST_ASSERT_TRUE(setSRXL2ProbeAddress(0x40));
-}
-
-void test_startup_capture_keeps_early_bytes_after_the_tail_is_overwritten()
-{
-    std::string in, out;
-    BinaryStringStream rx(in), tx(out);
-    SerialSRXL2 driver(&tx, &rx, 3);
-    uint8_t early[126], later[200];
-    std::memset(early, 0x55, sizeof(early));
-    std::memset(later, 0x5A, sizeof(later));
-    input(driver, in, early, sizeof(early), 12345);
-    while (rx.available()) driver.processSerialInput();
-    send(driver, 50000);
-    send(driver, 51216);
-    input(driver, in, later, sizeof(later), 60000);
-    while (rx.available()) driver.processSerialInput();
-    const auto &state = driver.getDiagnostics();
-    TEST_ASSERT_EQUAL(12345, state.firstRxUs);
-    TEST_ASSERT_EQUAL(126, state.rxBeforeFirstTx);
-    TEST_ASSERT_EQUAL(256, state.rxHeadSize);
-    TEST_ASSERT_EQUAL_UINT8_ARRAY(early, state.rxHead, sizeof(early));
-    for (unsigned i = sizeof(early); i < sizeof(state.rxHead); ++i)
-        TEST_ASSERT_EQUAL_HEX8(0x5A, state.rxHead[i]);
-    for (auto byte : state.rxTail) TEST_ASSERT_EQUAL_HEX8(0x5A, byte);
-}
-
-void test_wifi_neutral_probe_polls_without_rf_and_expires_across_timer_wrap()
-{
-    TEST_ASSERT_FALSE(requestSRXL2NeutralProbe());
-    for (uint32_t base : {50000u, 0xFFFF0000u})
-    {
-        connectionState = wifiUpdate;
-        TEST_ASSERT_TRUE(setSRXL2ProbeAddress(0x4F)); // This scan setting must not redirect the neutral probe.
-        nowUs = base;
-        std::string in, out;
-        BinaryStringStream rx(in), tx(out);
-        SerialSRXL2 driver(&tx, &rx, 3);
-        srxl2Selected = false;
-        TEST_ASSERT_FALSE(requestSRXL2NeutralProbe());
-        srxl2Selected = true;
-        nowUs = base + 1000;
-        TEST_ASSERT_TRUE(requestSRXL2NeutralProbe());
-        autoTxDone = false;
-        send(driver, base + 1000);
-        TEST_ASSERT_EQUAL(14, out.size());
-        TEST_ASSERT_EQUAL_HEX8(0x40, uint8_t(out[4]));
-        send(driver, base + 2200);
-        TEST_ASSERT_EQUAL(14, out.size()); // An undrained UART still owns the bus.
-        nowUs = base + 2216;
-        drainBusTransmit();
-        autoTxDone = true;
-        send(driver, base + 2216);
-        send(driver, base + 22215);
-        TEST_ASSERT_EQUAL(14, out.size()); // Respect the outstanding reply grant.
-        send(driver, base + 22216);
-        TEST_ASSERT_EQUAL(28, out.size());
-        TEST_ASSERT_EQUAL_HEX8(0xFF, uint8_t(out[18]));
-        send(driver, base + 23432);
-        send(driver, base + 43431);
-        TEST_ASSERT_EQUAL(28, out.size());
-        send(driver, base + 43432);
-        const uint8_t wanted[] = {0xA6,0xCD,16,0,0x40,100,0,0,1,0,0,0,0,0x80,0x90,0x9A};
-        TEST_ASSERT_EQUAL(44, out.size());
-        TEST_ASSERT_EQUAL_UINT8_ARRAY(wanted, reinterpret_cast<const uint8_t *>(out.data()) + 28, 16);
-        uint32_t channels[16] = {};
-        channels[2] = 1811; // RF callbacks and cached extremes cannot change the probe throttle.
-        for (uint32_t delta = 45432; delta < 1001000; delta += 2000)
-        {
-            nowUs = base + delta;
-            deliver(driver, true, channels);
-            send(driver, nowUs);
-        }
-        unsigned polls = 0, controls = 0;
-        for (size_t i = 28; i < out.size(); i += 16)
-        {
-            TEST_ASSERT_EQUAL_HEX8(0xCD, uint8_t(out[i + 1]));
-            TEST_ASSERT_EQUAL(16, uint8_t(out[i + 2]));
-            TEST_ASSERT_EQUAL(0, uint8_t(out[i + 3]));
-            TEST_ASSERT_EQUAL_HEX8(0x80, uint8_t(out[i + 13]));
-            TEST_ASSERT_EQUAL(0, uint8_t(out[i + 12]));
-            if (uint8_t(out[i + 4]) == 0x40) ++polls;
-            ++controls;
-        }
-        TEST_ASSERT_EQUAL(5, polls);
-        TEST_ASSERT_GREATER_THAN(40, controls);
-        send(driver, base + 1001000);
-        send(driver, base + 1003000);
-        assert_neutral(out);
-        TEST_ASSERT_EQUAL(0, uint8_t(out[out.size() - 12])); // Expiry stops telemetry polling.
-        input(driver, in, esc, sizeof(esc), base + 1003200);
-        send(driver, base + 1005000);
-        TEST_ASSERT_EQUAL(base + 1003200, driver.getDiagnostics().lastTelemetryUs);
-    }
-    TEST_ASSERT_TRUE(setSRXL2ProbeAddress(0x40));
-}
-
-void test_wifi_neutral_probe_accepts_a_request_between_clock_reads()
-{
-    connectionState = wifiUpdate;
-    nowUs = 50000;
-    std::string in, out;
-    BinaryStringStream rx(in), tx(out);
-    SerialSRXL2 driver(&tx, &rx, 3);
-    afterClockRead = []() {
-        ++nowUs; // Web accepts the command after the serial task took its clock snapshot.
-        TEST_ASSERT_TRUE(requestSRXL2NeutralProbe());
-    };
-    send(driver, 51000);
-    TEST_ASSERT_EQUAL(14, out.size());
-    TEST_ASSERT_EQUAL_HEX8(0x40, uint8_t(out[4]));
-}
-
-void test_leaving_wifi_probe_requires_real_rf_neutral_before_motion()
-{
-    connectionState = wifiUpdate;
-    nowUs = 50000;
-    std::string in, out;
-    BinaryStringStream rx(in), tx(out);
-    SerialSRXL2 driver(&tx, &rx, 3);
-    nowUs = 51000;
-    TEST_ASSERT_TRUE(requestSRXL2NeutralProbe());
-    send(driver, 51000);
-    send(driver, 52216);
-    send(driver, 72216);
-    send(driver, 73432);
-    send(driver, 93432);
-    send(driver, 94822);
-    input(driver, in, esc, sizeof(esc), 95000);
-    connectionState = connected; // Resume RF before the one-second probe expires.
-    uint32_t channels[16] = {};
-    channels[2] = 1811;
-    nowUs = 96000;
-    deliver(driver, true, channels);
-    nowUs = 97000;
-    deliver(driver, true, channels);
-    send(driver, 113432);
-    assert_neutral(out, 0);
-    send(driver, 114822);
-    input(driver, in, esc, sizeof(esc), 115000);
-    channels[2] = 992;
-    nowUs = 116000;
-    deliver(driver, true, channels);
-    channels[2] = 1811;
-    nowUs = 117000;
-    deliver(driver, true, channels);
-    send(driver, 133432);
-    TEST_ASSERT_EQUAL_HEX8(0x54, uint8_t(out[out.size() - 4]));
-    TEST_ASSERT_EQUAL_HEX8(0xD5, uint8_t(out[out.size() - 3]));
-}
-
-void test_wifi_neutral_probe_waits_for_an_outstanding_telemetry_grant()
-{
-    std::string in, out;
-    BinaryStringStream rx(in), tx(out);
-    SerialSRXL2 driver(&tx, &rx, 3);
-    establish(driver, in, out);
-    uint32_t channels[16] = {};
-    channels[2] = 1811;
-    nowUs = 63000;
-    deliver(driver, true, channels);
-    send(driver, 63000);
-    send(driver, 64500);
-    const size_t sent = out.size();
-    connectionState = wifiUpdate;
-    nowUs = 65000;
-    TEST_ASSERT_TRUE(requestSRXL2NeutralProbe());
-    send(driver, 65000);
-    send(driver, 84499);
-    TEST_ASSERT_EQUAL(sent, out.size());
-    send(driver, 84500);
-    TEST_ASSERT_EQUAL(sent + 14, out.size());
-    TEST_ASSERT_EQUAL_HEX8(0x21, uint8_t(out[sent + 1]));
-    TEST_ASSERT_EQUAL_HEX8(0x40, uint8_t(out[sent + 4]));
-}
-
-void test_diagnostics_keep_rf_commands_and_received_bytes_for_wifi_capture()
-{
-    std::string in, out;
-    BinaryStringStream rx(in), tx(out);
-    SerialSRXL2 driver(&tx, &rx, 1);
-    establish(driver, in, out);
-    const auto &state = driver.getDiagnostics();
-    TEST_ASSERT_EQUAL(2, state.frames);
-    TEST_ASSERT_EQUAL(53000, state.firstRFFrameUs);
-    TEST_ASSERT_EQUAL(3, state.txPackets);
-    TEST_ASSERT_EQUAL(3, state.txDone);
-    TEST_ASSERT_EQUAL(sizeof(hello) + sizeof(esc), state.rxBytes);
-    TEST_ASSERT_EQUAL(992, state.ch3);
-    TEST_ASSERT_EQUAL(1, state.lastRfTx[3]); // Neutral gate hadn't been released at TX.
-
-    uint32_t channels[16] = {};
-    channels[2] = 1811;
-    nowUs = 63000;
-    deliver(driver, true, channels);
-    send(driver, 63000);
-    TEST_ASSERT_TRUE(state.allowed);
-    TEST_ASSERT_EQUAL(992, state.ch3Min);
-    TEST_ASSERT_EQUAL(1811, state.ch3Max);
-    TEST_ASSERT_EQUAL(0, state.lastRfTx[3]);
-    TEST_ASSERT_EQUAL_HEX8(0x54, state.lastRfTx[12]);
-    TEST_ASSERT_EQUAL_HEX8(0xD5, state.lastRfTx[13]);
-    TEST_ASSERT_EQUAL(1, state.normalTxPackets);
-    TEST_ASSERT_EQUAL(63000, state.firstNormalTxUs);
-    TEST_ASSERT_EQUAL(16, state.lastNormalTxLength);
-    TEST_ASSERT_EQUAL_UINT8_ARRAY(state.lastRfTx, state.lastNormalTx, 16);
-    TEST_ASSERT_EQUAL(55000, state.lastTelemetryUs);
-
-    uint8_t bytes[80];
-    for (unsigned i = 0; i < sizeof(bytes); ++i) bytes[i] = i;
-    input(driver, in, bytes, sizeof(bytes), 65000);
-    driver.processSerialInput(); // The existing read limit is 64 bytes per call.
-    for (unsigned i = 0; i < 64; ++i)
-        TEST_ASSERT_EQUAL(i + 16, state.rxTail[(state.rxBytes % 64 + i) % 64]);
-    input(driver, in, esc, sizeof(esc), 66000);
-    nowUs = 83000;
-    deliver(driver, true, channels);
-    send(driver, 83000);
-    TEST_ASSERT_EQUAL(2, state.normalTxPackets);
-    TEST_ASSERT_EQUAL(20000, state.normalTxSpacingMinUs);
-    TEST_ASSERT_EQUAL(66000, state.lastTelemetryUs);
-    connectionState = wifiUpdate;
-    ChannelData[2] = CRSF_CHANNEL_VALUE_UNSET;
-    driver.sendRCFrame(false, false, channels);
-    driver.event();
-    TEST_ASSERT_TRUE(state.rfConnected);
-    TEST_ASSERT_TRUE(state.allowed);
-    TEST_ASSERT_EQUAL(1811, state.ch3);
-    TEST_ASSERT_EQUAL(1, diagnosticPublications);
-}
-
-void test_diagnostics_trace_first_handshake_before_the_rf_link_connects()
-{
-    connectionState = disconnected;
-    nowUs = 1000;
-    std::string in, out;
-    BinaryStringStream rx(in), tx(out);
-    SerialSRXL2 driver(&tx, &rx, 1);
-    const auto &state = driver.getDiagnostics();
-    TEST_ASSERT_EQUAL(1000, state.driverInitUs);
-    send(driver, 50999);
-    TEST_ASSERT_TRUE(out.empty());
-    send(driver, 51000);
-    TEST_ASSERT_EQUAL(14, out.size());
-    TEST_ASSERT_EQUAL(51000, state.firstTxUs);
-    send(driver, 52216); // Complete the 14-byte transmission before the next poll.
-    send(driver, 101000);
-    TEST_ASSERT_EQUAL(28, out.size());
-    TEST_ASSERT_EQUAL(51000, state.firstTxUs);
-}
-
-void test_diagnostics_measure_tx_completion_delay_without_changing_packets()
-{
-    std::string in, out;
-    BinaryStringStream rx(in), tx(out);
-    SerialSRXL2 driver(&tx, &rx, 1);
-    const auto &state = driver.getDiagnostics();
-    send(driver, 50000);
-    TEST_ASSERT_EQUAL(14, out.size());
-    send(driver, 51216); // 14 UART bytes at 115200 baud take 1216 us, rounded up.
-    TEST_ASSERT_EQUAL(1216, state.txDurationMaxUs);
-    TEST_ASSERT_EQUAL(0, state.txDelayMaxUs);
-    TEST_ASSERT_EQUAL(0, state.txDelayMinUs);
-    TEST_ASSERT_EQUAL(0, state.txDelayLongCount);
-    send(driver, 100000);
-    TEST_ASSERT_EQUAL(28, out.size());
-    send(driver, 102216); // Simulate the completion IRQ being delayed by 1000 us.
-    TEST_ASSERT_EQUAL(2216, state.txDurationMaxUs);
-    TEST_ASSERT_EQUAL(1000, state.txDelayMaxUs);
-    TEST_ASSERT_EQUAL(0, state.txDelayMinUs);
-    TEST_ASSERT_EQUAL(1, state.txDelayLongCount);
-    TEST_ASSERT_EQUAL(2, state.txDone);
-}
-
-#endif
-
 int main()
 {
     UNITY_BEGIN();
     RUN_TEST(test_smart_startup_attaches_receive_without_driving_the_signal_pin);
-#if defined(SRXL2_DIAGNOSTICS)
     RUN_TEST(test_early_startup_ack_handles_a_fresh_announcement_and_releases_the_wire);
     RUN_TEST(test_early_startup_does_not_ack_corrupt_or_nonannouncement_frames);
     RUN_TEST(test_early_startup_acknowledges_buffered_announcements_after_hardware_idle);
     RUN_TEST(test_early_startup_recovers_after_unsuitable_input_before_an_announcement);
-#endif
     RUN_TEST(test_normal_driver_finishes_acknowledged_startup_without_an_addressed_reply);
     RUN_TEST(test_adapter_ch3_and_all_inhibition_paths);
     RUN_TEST(test_adapter_missing_frames_do_not_refresh_cached_throttle);
@@ -1202,19 +807,5 @@ int main()
     RUN_TEST(test_tx_interrupt_releases_bus_while_main_loop_is_suspended);
     RUN_TEST(test_split_echo_and_buffered_reply_survive_delayed_tx_done_callback);
     RUN_TEST(test_adapter_preserves_delayed_genuine_reply_after_complete_echo);
-#if defined(SRXL2_DIAGNOSTICS)
-    RUN_TEST(test_diagnostics_publish_once_on_wifi_entry_without_transmitting);
-    RUN_TEST(test_wifi_live_capture_refreshes_while_motion_remains_inhibited);
-    RUN_TEST(test_edge_capture_separates_transmit_from_undecodable_reply_activity);
-    RUN_TEST(test_wifi_probe_changes_only_the_discovery_destination);
-    RUN_TEST(test_startup_capture_keeps_early_bytes_after_the_tail_is_overwritten);
-    RUN_TEST(test_wifi_neutral_probe_polls_without_rf_and_expires_across_timer_wrap);
-    RUN_TEST(test_leaving_wifi_probe_requires_real_rf_neutral_before_motion);
-    RUN_TEST(test_wifi_neutral_probe_waits_for_an_outstanding_telemetry_grant);
-    RUN_TEST(test_wifi_neutral_probe_accepts_a_request_between_clock_reads);
-    RUN_TEST(test_diagnostics_keep_rf_commands_and_received_bytes_for_wifi_capture);
-    RUN_TEST(test_diagnostics_trace_first_handshake_before_the_rf_link_connects);
-    RUN_TEST(test_diagnostics_measure_tx_completion_delay_without_changing_packets);
-#endif
     return UNITY_END();
 }

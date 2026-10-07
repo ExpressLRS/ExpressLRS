@@ -121,12 +121,6 @@ bool Link::nextPacket(uint32_t now, Packet &p)
     if (peerExpired) restart(now);
     if (inputSize && uint32_t(now - lastByte) >= 2500) inputSize = 0;
     if (inputSize || uint32_t(now - lastBus) < IDLE_US) return false;
-    if (probePending)
-    {
-        probePending = false;
-        restart(now);
-        phase = Acknowledge; // Explicit diagnostic handshake; no received ESC packet is invented.
-    }
     if (startupAckOnly && phase != Acknowledge) return false;
     p = {};
     broadcastTx = false;
@@ -245,7 +239,6 @@ void Link::processFrame(uint32_t now)
         if (input[3] == 0xFF) { restart(now); return; }
         if (phase != Active || input[3] != 0x21) return;
         lastReply = now;
-        data.receivedUs = now;
         waitingReply = false;
         decodeTelemetry(input + 4, now);
     }
