@@ -123,7 +123,7 @@ bool requestSRXL2NeutralProbe()
 
 static volatile uint32_t srxl2RFGeneration = 0;
 
-#if defined(SRXL2_DIAGNOSTICS) && defined(SRXL2_EARLY_STARTUP_PIN)
+#if defined(SRXL2_EARLY_STARTUP_PIN)
 #ifndef SRXL2_EARLY_BEGIN_TX
 #define SRXL2_EARLY_BEGIN_TX() do { \
     gpio_set_level(gpio_num_t(SRXL2_EARLY_STARTUP_PIN), 1); \
@@ -135,13 +135,16 @@ static volatile uint32_t srxl2RFGeneration = 0;
 #endif
 struct SRXL2StartupCapture
 {
-    uint32_t enteredUs = 0, readyUs = 0, firstReadUs = 0, ackStartUs = 0, ackEndUs = 0, exitedUs = 0;
+    uint32_t enteredUs = 0, ackEndUs = 0;
+    bool handedOff = false;
+#if defined(SRXL2_DIAGNOSTICS)
+    uint32_t readyUs = 0, firstReadUs = 0, ackStartUs = 0, exitedUs = 0;
     uint64_t rtcTicks = 0;
     uint32_t rtcCalibration = 0;
     uint8_t resetReason = 0, cpuResetReason = 0;
-    bool handedOff = false;
     uint16_t fifoBytes = 0, bufferedBytes = 0, receivedBytes = 0;
     uint8_t buffered[128] = {}, bytes[128] = {};
+#endif
 };
 static SRXL2StartupCapture startupCapture;
 static void listenForEarlyESC(Stream &input, Stream &output, uint32_t uid, SRXL2StartupCapture &capture)
@@ -154,12 +157,16 @@ static void listenForEarlyESC(Stream &input, Stream &output, uint32_t uid, SRXL2
     for (int i = 0; i < buffered; ++i)
     {
         const uint8_t byte = input.read();
+#if defined(SRXL2_DIAGNOSTICS)
         if (capture.bufferedBytes < sizeof(capture.buffered)) capture.buffered[capture.bufferedBytes] = byte;
         ++capture.bufferedBytes;
+#endif
         early.receive(byte, micros());
     }
+#if defined(SRXL2_DIAGNOSTICS)
     capture.readyUs = micros();
-    uint32_t lastHardwareReceive = capture.readyUs;
+#endif
+    uint32_t lastHardwareReceive = micros();
     const int8_t pin = SRXL2_EARLY_STARTUP_PIN;
     (void)pin; // Native tests substitute the hardware boundary.
     bool wasBusy = false;
@@ -170,9 +177,11 @@ static void listenForEarlyESC(Stream &input, Stream &output, uint32_t uid, SRXL2
         {
             const uint8_t byte = input.read();
             const uint32_t now = micros();
+#if defined(SRXL2_DIAGNOSTICS)
             if (!capture.receivedBytes) capture.firstReadUs = now;
             if (capture.receivedBytes < sizeof(capture.bytes)) capture.bytes[capture.receivedBytes] = byte;
             ++capture.receivedBytes;
+#endif
             early.receive(byte, now);
         }
         const uint32_t now = micros();
@@ -184,7 +193,9 @@ static void listenForEarlyESC(Stream &input, Stream &output, uint32_t uid, SRXL2
             SRXL2::Packet packet;
             if (early.nextPacket(now, packet))
             {
+#if defined(SRXL2_DIAGNOSTICS)
                 capture.ackStartUs = now;
+#endif
                 SRXL2_EARLY_BEGIN_TX();
                 output.write(packet.bytes, packet.length);
                 output.flush(); // The last stop bit must finish before releasing the bus.
@@ -198,17 +209,21 @@ static void listenForEarlyESC(Stream &input, Stream &output, uint32_t uid, SRXL2
         if (acknowledged && uint32_t(micros() - capture.ackEndUs) >= 20000) break;
         SRXL2_EARLY_YIELD();
     }
+#if defined(SRXL2_DIAGNOSTICS)
     capture.exitedUs = micros();
+#endif
 }
 #if defined(CONFIG_IDF_TARGET_ESP32)
 extern "C" void initVariant()
 {
     startupCapture.enteredUs = micros();
+#if defined(SRXL2_DIAGNOSTICS)
     startupCapture.rtcTicks = rtc_time_get();
     startupCapture.rtcCalibration = esp_clk_slowclk_cal_get();
     startupCapture.resetReason = esp_reset_reason();
     startupCapture.cpuResetReason = rtc_get_reset_reason(0);
     startupCapture.fifoBytes = uart_ll_get_rxfifo_len(UART_LL_GET_HW(0));
+#endif
     Serial.setTxBufferSize(0);
     Serial.begin(115200, SERIAL_8N1, SRXL2_EARLY_STARTUP_PIN, -1, false);
     Serial.setRxFIFOFull(1);
@@ -281,7 +296,7 @@ SerialSRXL2::SerialSRXL2(Stream *output, Stream *input, int8_t txPin)
 #endif
     const uint32_t initialized = micros();
     link.reset(uid, initialized);
-#if defined(SRXL2_DIAGNOSTICS) && defined(SRXL2_EARLY_STARTUP_PIN)
+#if defined(SRXL2_EARLY_STARTUP_PIN)
     if (txReady && pin == SRXL2_EARLY_STARTUP_PIN && startupCapture.ackEndUs && !startupCapture.handedOff)
     {
         // An announcing ESC may suppress its duplicate addressed reply. Its validated

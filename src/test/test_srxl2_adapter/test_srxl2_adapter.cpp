@@ -3,6 +3,7 @@
 #include <vector>
 #include "common.h"
 #include "CRSFRouter.h"
+#include "RXOTAConnector.h"
 #include "binary_serial.h"
 using std::min;
 
@@ -76,7 +77,9 @@ static void releaseBusTransmit()
 
 // Substitute only the clock and GPIO boundary; execute the actual adapter/router.
 #define SRXL2_ADAPTER_TEST
+#if !defined(SRXL2_PRODUCTION_TEST)
 #define SRXL2_DIAGNOSTICS
+#endif
 #define SRXL2_EARLY_STARTUP_PIN 3
 #define SRXL2_EARLY_BEGIN_TX() startBusTransmit()
 #define SRXL2_EARLY_RELEASE_TX() releaseBusTransmit()
@@ -104,12 +107,13 @@ static void releaseBusTransmit()
 #undef SRXL2_RELEASE_TX
 #include "../../src/rx-serial/SerialIO.cpp"
 
-class Capture : public CRSFConnector
+class Capture : public RXOTAConnector
 {
 public:
     std::vector<std::vector<uint8_t>> frames;
     void forwardMessage(const crsf_header_t *message) override
     {
+        RXOTAConnector::forwardMessage(message);
         auto p = reinterpret_cast<const uint8_t *>(message);
         frames.emplace_back(p, p + message->frame_size + 2);
     }
@@ -120,11 +124,15 @@ void setUp()
     startupCapture = SRXL2StartupCapture();
     nowUs = 0;
     afterClockRead = nullptr;
+#if defined(SRXL2_DIAGNOSTICS)
     diagnosticNeutralProbeUs.store(0);
     diagnosticProbeAddress.store(0x40);
+#endif
     connectionState = connected;
     connectionHasModelMatch = teamraceHasModelMatch = true;
     capture.frames.clear();
+    uint8_t queuedSize, queued[CRSF_MAX_PACKET_LEN];
+    while (capture.GetNextPayload(&queuedSize, queued)) {}
     uartReceiving = false;
     srxl2Selected = true;
     busDriving = txDrained = releasedBeforeDrain = false;
@@ -152,6 +160,8 @@ void tearDown() { crsfRouter.removeConnector(&capture); }
 static const uint8_t hello[] = {0xA6,0x21,14,0x40,0x21,10,0,0,0x11,0x22,0x33,0x44,0xC9,0xE7};
 static const uint8_t esc[] = {0xA6,0x80,22,0x21,0x20,0,0x30,0x39,4,0xD2,1,0x5E,3,0xE8,0,0xFA,15,0x78,0x64,0x64,0x74,0x74};
 static const uint8_t battery[] = {0xA6,0x80,22,0x21,0x42,0,0,0xF6,0xB8,0x0B,0,0,0x39,0x30,1,0x0E,0xD0,0x0E,0,0,0x97,0x9C};
+static const uint8_t cells[] = {0xA6,0x80,22,0x21,0x42,0,0x10,0x19,1,0x10,2,0x10,3,0x10,0xFF,0xFF,0,0,0xFF,0xFF,0x28,0xD3};
+static const uint8_t identity[] = {0xA6,0x80,22,0x21,0x42,0,0x80,1,3,1,1,0,0x11,0x22,0x33,0x44,0x55,0x66,0x77,0x88,0x4D,0x81};
 
 class StartupTxStream : public BinaryStringStream
 {
@@ -165,6 +175,7 @@ public:
     }
 };
 
+#if defined(SRXL2_DIAGNOSTICS)
 void test_early_startup_ack_handles_a_fresh_announcement_and_releases_the_wire()
 {
     const uint8_t announcement[] = {0xA6,0x21,14,0x40,0,10,0,0,0,0,0,1,0x38,0x4E};
@@ -269,6 +280,8 @@ void test_early_startup_recovers_after_unsuitable_input_before_an_announcement()
         TEST_ASSERT_FALSE(busDriving);
     }
 }
+
+#endif
 
 static void send(SerialSRXL2 &driver, uint32_t time);
 static void assert_neutral(const std::string &out, uint8_t command);
@@ -507,6 +520,38 @@ void test_adapter_real_crsf_payload_and_budget()
     TEST_ASSERT_TRUE(found);
     send(driver, 2300000);
     TEST_ASSERT_FALSE(crsfBatterySensorDetected);
+}
+
+void test_esc_sensors_reach_the_real_elrs_downlink_queue()
+{
+    std::string in, out;
+    BinaryStringStream rx(in), tx(out);
+    SerialSRXL2 driver(&tx, &rx, 3);
+    establish(driver, in, out);
+    input(driver, in, cells, sizeof(cells), 60000);
+    input(driver, in, battery, sizeof(battery), 70000);
+    input(driver, in, identity, sizeof(identity), 80000);
+    // Complete CRSF frames, including independently calculated DVB-S2 CRCs:
+    // 12.3 V/3.0 A/1234 mAh; 123450 electrical RPM; 35/25/-10 C; 6 V BEC; cells.
+    const uint8_t expected[][12] = {
+        {0xC8,0x0A,0x08,0x00,0x7B,0x00,0x1E,0x00,0x04,0xD2,0x00,0x63},
+        {0xC8,0x06,0x0C,0x00,0x01,0xE2,0x3A,0xA8},
+        {0xC8,0x05,0x0D,0x00,0x01,0x5E,0xBF},
+        {0xC8,0x05,0x0D,0x01,0x00,0xFA,0x82},
+        {0xC8,0x05,0x0D,0x02,0xFF,0x9C,0x12},
+        {0xC8,0x05,0x0E,0x81,0x17,0x70,0xBD},
+        {0xC8,0x09,0x0E,0x00,0x10,0x01,0x10,0x02,0x10,0x03,0x95},
+    };
+    const uint8_t lengths[] = {12,8,7,7,7,7,11};
+    uint8_t size = 0, queued[CRSF_MAX_PACKET_LEN];
+    for (unsigned sensor = 0; sensor < 7; ++sensor)
+    {
+        send(driver, 100000 + sensor * 100000);
+        TEST_ASSERT_TRUE(capture.GetNextPayload(&size, queued));
+        TEST_ASSERT_EQUAL(lengths[sensor], size);
+        TEST_ASSERT_EQUAL_UINT8_ARRAY(expected[sensor], queued, size);
+        TEST_ASSERT_FALSE(capture.GetNextPayload(&size, queued));
+    }
 }
 
 void test_adapter_voltage_fallback_and_sentinel_suppression()
@@ -769,6 +814,7 @@ void test_adapter_preserves_delayed_genuine_reply_after_complete_echo()
     TEST_ASSERT_EQUAL_HEX8(0xFF, uint8_t(out[18]));
 }
 
+#if defined(SRXL2_DIAGNOSTICS)
 void test_diagnostics_publish_once_on_wifi_entry_without_transmitting()
 {
     std::string in, out;
@@ -1129,20 +1175,25 @@ void test_diagnostics_measure_tx_completion_delay_without_changing_packets()
     TEST_ASSERT_EQUAL(2, state.txDone);
 }
 
+#endif
+
 int main()
 {
     UNITY_BEGIN();
     RUN_TEST(test_smart_startup_attaches_receive_without_driving_the_signal_pin);
+#if defined(SRXL2_DIAGNOSTICS)
     RUN_TEST(test_early_startup_ack_handles_a_fresh_announcement_and_releases_the_wire);
     RUN_TEST(test_early_startup_does_not_ack_corrupt_or_nonannouncement_frames);
     RUN_TEST(test_early_startup_acknowledges_buffered_announcements_after_hardware_idle);
     RUN_TEST(test_early_startup_recovers_after_unsuitable_input_before_an_announcement);
+#endif
     RUN_TEST(test_normal_driver_finishes_acknowledged_startup_without_an_addressed_reply);
     RUN_TEST(test_adapter_ch3_and_all_inhibition_paths);
     RUN_TEST(test_adapter_missing_frames_do_not_refresh_cached_throttle);
     RUN_TEST(test_adapter_missed_flag_sends_fade_until_sample_expires);
     RUN_TEST(test_missing_raw_ch3_is_not_an_extreme_throttle_snapshot);
     RUN_TEST(test_adapter_real_crsf_payload_and_budget);
+    RUN_TEST(test_esc_sensors_reach_the_real_elrs_downlink_queue);
     RUN_TEST(test_adapter_voltage_fallback_and_sentinel_suppression);
     RUN_TEST(test_rf_resync_drops_stale_callback_without_changing_core_latches);
     RUN_TEST(test_late_receive_hardware_and_partial_reply_block_transmit);
@@ -1151,6 +1202,7 @@ int main()
     RUN_TEST(test_tx_interrupt_releases_bus_while_main_loop_is_suspended);
     RUN_TEST(test_split_echo_and_buffered_reply_survive_delayed_tx_done_callback);
     RUN_TEST(test_adapter_preserves_delayed_genuine_reply_after_complete_echo);
+#if defined(SRXL2_DIAGNOSTICS)
     RUN_TEST(test_diagnostics_publish_once_on_wifi_entry_without_transmitting);
     RUN_TEST(test_wifi_live_capture_refreshes_while_motion_remains_inhibited);
     RUN_TEST(test_edge_capture_separates_transmit_from_undecodable_reply_activity);
@@ -1163,5 +1215,6 @@ int main()
     RUN_TEST(test_diagnostics_keep_rf_commands_and_received_bytes_for_wifi_capture);
     RUN_TEST(test_diagnostics_trace_first_handshake_before_the_rf_link_connects);
     RUN_TEST(test_diagnostics_measure_tx_completion_delay_without_changing_packets);
+#endif
     return UNITY_END();
 }
