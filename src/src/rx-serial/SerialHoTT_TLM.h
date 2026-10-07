@@ -280,7 +280,7 @@ public:
     uint32_t sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t *channelData) override { return DURATION_IMMEDIATELY; };
 
     int getMaxSerialReadSize() override;
-    void sendQueuedData(uint32_t maxBytesToSend) override;
+    void sendQueuedData(uint32_t maxBytesToSend) override { scheduleDevicePolling(millis()); }
 
 private:
 #if defined(PLATFORM_ESP32)
