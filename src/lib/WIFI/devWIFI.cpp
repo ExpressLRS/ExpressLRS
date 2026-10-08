@@ -499,7 +499,8 @@ static void GetConfiguration(AsyncWebServerRequest *request)
     cfg["serial-protocol"] = config.GetSerialProtocol();
     cfg["srxl2-supported"] = supportsSRXL2();
     #if defined(PLATFORM_ESP32)
-    if ((GPIO_PIN_SERIAL1_RX != UNDEF_PIN && GPIO_PIN_SERIAL1_TX != UNDEF_PIN) || GPIO_PIN_PWM_OUTPUTS_COUNT > 0)
+    settings["has_serial1_pins"] = GPIO_PIN_SERIAL1_TX != UNDEF_PIN;
+    if (GPIO_PIN_SERIAL1_TX != UNDEF_PIN || OPT_HAS_SERVO_OUTPUT)
     {
       cfg["serial1-protocol"] = config.GetSerial1Protocol();
     }
@@ -703,10 +704,19 @@ static void JsonUidToConfig(JsonVariant &json)
     memcpy(UID, newUid, UID_LEN);
   }
 }
+
 static void UpdateConfiguration(AsyncWebServerRequest *request, JsonVariant &json)
 {
-  uint8_t protocol = json["serial-protocol"] | 0;
-  if (protocol == PROTOCOL_SRXL2 && !supportsSRXL2())
+  int protocol = json["serial-protocol"] | 0;
+  int protocol1 = json["serial1-protocol"] | 0;
+  JsonArray pwm = json["pwm"].as<JsonArray>();
+  if (protocol < 0 || protocol > UINT8_MAX || protocol1 < 0 || protocol1 > UINT8_MAX ||
+      !isValidSRXL2Config(protocol, protocol1, firmwareOptions.is_airport,
+        [pwm](uint8_t ch) {
+          rx_config_pwm_t value;
+          value.raw = ch < pwm.size() ? pwm[ch].as<uint32_t>() : config.GetPwmChannel(ch)->raw;
+          return OPT_PWM_OUT_ONLY && value.val.mode >= somSerial ? som50Hz : uint8_t(value.val.mode);
+        }))
   {
     request->send(400, "text/plain", "Unsupported serial protocol");
     return;
@@ -714,7 +724,6 @@ static void UpdateConfiguration(AsyncWebServerRequest *request, JsonVariant &jso
   config.SetSerialProtocol((eSerialProtocol)protocol);
 
 #if defined(PLATFORM_ESP32)
-  uint8_t protocol1 = json["serial1-protocol"] | 0;
   config.SetSerial1Protocol((eSerial1Protocol)protocol1);
 #endif
 
@@ -731,7 +740,6 @@ static void UpdateConfiguration(AsyncWebServerRequest *request, JsonVariant &jso
   config.SetBindStorage((rx_config_bindstorage_t)(json["vbind"] | 0));
   JsonUidToConfig(json);
 
-  JsonArray pwm = json["pwm"].as<JsonArray>();
   for(uint32_t channel = 0 ; channel < pwm.size() ; channel++)
   {
     rx_config_pwm_t pwmChannel;

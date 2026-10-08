@@ -4,6 +4,7 @@
 #include "FHSS.h"
 #include "POWERMGNT.h"
 #include "config.h"
+#include "SRXL2Config.h"
 #include "deferred.h"
 #include "devServoOutput.h"
 #include "helpers.h"
@@ -43,7 +44,7 @@ static selectionParameter luaSerialProtocol = {
 static selectionParameter luaSerial1Protocol = {
     {"Protocol2", CRSF_TEXT_SELECTION},
     0, // value
-  "Off;CRSF;Inverted CRSF;SBUS;Inverted SBUS;SUMD;DJI RS Pro;HoTT Telemetry;Tramp;SmartAudio;DisplayPort;GPS;Scorpion",
+  "Off;CRSF;Inverted CRSF;SBUS;Inverted SBUS;SUMD;DJI RS Pro;HoTT Telemetry;Tramp;SmartAudio;DisplayPort;GPS;Scorpion;Spektrum Smart",
     STR_EMPTYSPACE
 };
 #endif
@@ -450,6 +451,13 @@ static void luaparamMappingOutputMode(propertiesCommon *item, uint8_t arg)
   uint8_t oldMode = newPwmCh.val.mode;
   newPwmCh.val.mode = sanitizePwmMode(arg);
 
+  uint8_t secondary = 0;
+#if defined(PLATFORM_ESP32)
+  secondary = config.GetSerial1Protocol();
+#endif
+  if (!isValidSRXL2PwmChange(ch, newPwmCh.val.mode, config.GetSerialProtocol(), secondary, firmwareOptions.is_airport,
+      [](uint8_t candidate) { return config.GetPwmChannel(candidate)->val.mode; })) return;
+
   // Check if pin == 1/3 and do other pin adjustment accordingly
   if (GPIO_PIN_PWM_OUTPUTS[ch] == 1)
   {
@@ -515,6 +523,13 @@ static void luaparamSetPower(propertiesCommon* item, uint8_t arg)
 void RXEndpoint::registerParameters()
 {
   registerParameter(&luaSerialProtocol, [](propertiesCommon* item, uint8_t arg){
+    uint8_t secondary = 0;
+#if defined(PLATFORM_ESP32)
+    secondary = config.GetSerial1Protocol();
+#endif
+    if (!isValidSRXL2Config(arg, secondary, firmwareOptions.is_airport,
+        [](uint8_t ch) { return config.GetPwmChannel(ch)->val.mode; }))
+      return;
     config.SetSerialProtocol((eSerialProtocol)arg);
     if (config.IsModified()) {
       deferExecutionMillis(100, [](){
@@ -527,6 +542,9 @@ void RXEndpoint::registerParameters()
   if (RX_HAS_SERIAL1)
   {
     registerParameter(&luaSerial1Protocol, [](propertiesCommon* item, uint8_t arg){
+      if (!isValidSRXL2Config(config.GetSerialProtocol(), arg, firmwareOptions.is_airport,
+          [](uint8_t ch) { return config.GetPwmChannel(ch)->val.mode; }))
+        return;
       config.SetSerial1Protocol((eSerial1Protocol)arg);
       if (config.IsModified()) {
         deferExecutionMillis(100, [](){

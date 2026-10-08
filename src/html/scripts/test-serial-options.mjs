@@ -21,10 +21,10 @@ const ast = parseSync(source, {configFile: false, babelrc: false, parserOpts: {p
 const panel = ast.program.body.find(node => node.type === 'ClassDeclaration')
 const method = name => panel.body.body.find(node => node.key?.name === name)
 let saved, alerts = 0
-const run = (name, state, event = {preventDefault() {}}) => {
+const run = (name, state, event = {preventDefault() {}}, elrs = {settings: {has_serial1_pins: true}}) => {
     const node = method(name)
     const fn = new Function('saveOptionsAndConfig', 'showAlert', 'elrsState', 'PWM_MODE_SERIAL2RX', 'PWM_MODE_SERIAL2TX', `return ({${source.slice(node.start, node.end)}}).${name}`)
-    return fn(value => { saved = value }, () => { ++alerts }, {settings: {has_serial1_pins: true}}, 14, 15).call(state, event)
+    return fn(value => { saved = value }, () => { ++alerts }, elrs, 14, 15).call(state, event)
 }
 const state = {serial1Protocol: 0, serial2Protocol: 0, isAirport: false, requestUpdate() {}}
 run('_updateSerial2', state, {target: {value: '13'}})
@@ -38,4 +38,22 @@ state.serial1Protocol = 11
 run('_saveSerial', state)
 assert.equal(saved, undefined, 'Both-Smart selection must be rejected before either HTTP request')
 assert.equal(alerts, 1)
+state.isAirport = true
+state.serial1Protocol = 12
+run('_saveSerial', state)
+assert.equal(saved.config['serial-protocol'], 0)
+assert.equal(saved.config['serial1-protocol'], 13)
+state.isAirport = false
+state.serial1Protocol = 0
+state.serial2Protocol = 1
+run('_saveSerial', state)
+assert.equal(saved.config['serial-protocol'], 0)
+assert.equal(saved.config['serial1-protocol'], 1, 'Both stock CRSF interfaces remain selectable')
+assert.equal(run('_hasSerial2', state, undefined, {
+    settings: {has_serial1_pins: true},
+    config: {'srxl2-supported': false, pwm: [{config: 0, features: 0}]}
+}), true, 'Fixed secondary TX-only capability is independent of primary support or PWM selection')
+assert.equal(run('_hasSerial2', state, undefined, {
+    settings: {}, config: {'serial1-protocol': 0, pwm: [{config: 15 << 16, features: 64}]}
+}), true, 'A selected PWM TX alone enables the secondary selector')
 console.log('Serial option rendering/protocol ID checks passed')

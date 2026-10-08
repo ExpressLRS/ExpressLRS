@@ -2,7 +2,10 @@
 #include <cstring>
 #include <string>
 #include <vector>
+#include "SX12xxDriverCommon.h" // Load the native hardware boundary first.
+#define PLATFORM_ESP32 // Include the real secondary enum without ESP-IDF hardware.
 #include "common.h"
+#undef PLATFORM_ESP32
 #include "CRSFRouter.h"
 #include "RXOTAConnector.h"
 #include "binary_serial.h"
@@ -15,8 +18,13 @@ uint32_t ChannelData[CRSF_NUM_CHANNELS] = {};
 CRSFRouter crsfRouter;
 static bool uartReceiving = false;
 static bool secondaryReceiving = false;
-static bool srxl2Selected = true;
-static bool secondarySelected = true;
+static struct {
+    eSerialProtocol primary = PROTOCOL_SRXL2;
+    eSerial1Protocol secondary = PROTOCOL_SERIAL1_OFF;
+    eSerialProtocol GetSerialProtocol() const { return primary; }
+    eSerial1Protocol GetSerial1Protocol() const { return secondary; }
+} config;
+static struct { bool is_airport = false; } firmwareOptions;
 static uint32_t nowUs;
 static unsigned long testMicros() { return nowUs; }
 static bool busDriving, txDrained, releasedBeforeDrain;
@@ -27,8 +35,10 @@ static UartStartupSpy uartStartup1;
 static constexpr uint32_t SERIAL_8N1 = 0x800001c;
 static void (*txDoneInterrupt)(void *);
 static void *txDoneArgument;
+static bool irqAllocationSucceeds = true;
 static bool installTxInterrupt(void (*handler)(void *), void *argument)
 {
+    if (!irqAllocationSucceeds) return false;
     txDoneInterrupt = handler;
     txDoneArgument = argument;
     return true;
@@ -73,7 +83,6 @@ static void releaseBusTransmit()
 #define SRXL2_EARLY_RELEASE_TX() releaseBusTransmit()
 #define SRXL2_EARLY_YIELD() startupYield()
 #define SRXL2_HARDWARE_RX_BUSY() (port == 0 ? uartReceiving : secondaryReceiving)
-#define SRXL2_MODE_ACTIVE() (port == 0 ? srxl2Selected : secondarySelected)
 #define SRXL2_INSTALL_TX_IRQ(handler, argument) installTxInterrupt(handler, argument)
 #define SRXL2_REMOVE_TX_IRQ() (txDoneInterrupt = nullptr)
 #define SRXL2_BEGIN_TX() startBusTransmit()
@@ -87,7 +96,6 @@ static void releaseBusTransmit()
 #undef Serial1
 #undef micros
 #undef SRXL2_HARDWARE_RX_BUSY
-#undef SRXL2_MODE_ACTIVE
 #undef SRXL2_BEGIN_TX
 #undef SRXL2_POLL_TX_IRQ
 #undef SRXL2_RELEASE_TX
@@ -116,8 +124,10 @@ void setUp()
     while (capture.GetNextPayload(&queuedSize, queued)) {}
     uartReceiving = false;
     secondaryReceiving = false;
-    srxl2Selected = true;
-    secondarySelected = true;
+    config.primary = PROTOCOL_SRXL2;
+    config.secondary = PROTOCOL_SERIAL1_OFF;
+    firmwareOptions.is_airport = false;
+    irqAllocationSucceeds = true;
     busDriving = txDrained = releasedBeforeDrain = false;
     autoTxDone = true;
     replyBlocked = false;
@@ -670,12 +680,12 @@ void test_live_driver_revokes_motion_when_another_protocol_is_selected()
 
     // Core can select MAVLink and defer replacing this object for 100 ms.
     // A complete RF resync can occur before our callback, with no SRXL2 hook.
-    srxl2Selected = false;
+    config.primary = PROTOCOL_CRSF;
     send(driver, 73000);
     send(driver, 84500);
     assert_neutral(out);
     send(driver, 86000);
-    srxl2Selected = true;
+    config.primary = PROTOCOL_SRXL2;
     nowUs = 90000;
     deliver(driver, true, channels);
     send(driver, 104500);
@@ -881,7 +891,9 @@ void test_secondary_preserves_neutral_and_all_inhibition_paths()
     {
         nowUs = 0;
         connectionState = connected;
-        connectionHasModelMatch = teamraceHasModelMatch = secondarySelected = true;
+        connectionHasModelMatch = teamraceHasModelMatch = true;
+        config.primary = PROTOCOL_CRSF;
+        config.secondary = PROTOCOL_SERIAL1_SRXL2;
         uartReceiving = true; // Busy CRSF UART0 must not delay the Smart bus.
         std::string in, out;
         BinaryStringStream rx(in), tx(out);
@@ -898,7 +910,7 @@ void test_secondary_preserves_neutral_and_all_inhibition_paths()
         if (reason == 1) teamraceHasModelMatch = false;
         if (reason == 2) driver.setFailsafe(true);
         if (reason == 3) connectionState = wifiUpdate;
-        if (reason == 4) secondarySelected = false;
+        if (reason == 4) config.secondary = PROTOCOL_SERIAL1_CRSF;
         if (reason == 5) ChannelData[2] = CRSF_CHANNEL_VALUE_UNSET;
         if (reason == 6) SerialSRXL2::onRFReset();
         send(driver, 73000);
@@ -906,6 +918,84 @@ void test_secondary_preserves_neutral_and_all_inhibition_paths()
         assert_neutral(out);
         TEST_ASSERT_EQUAL(0, uartStartup.begins);
     }
+}
+
+void test_rejected_owner_leaves_uart_irq_input_and_telemetry_with_first_owner()
+{
+    std::string in, out;
+    BinaryStringStream rx(in), tx(out);
+    {
+        SerialSRXL2 first(&tx, &rx, 1);
+        establish(first, in, out);
+        send(first, 100000);
+        TEST_ASSERT_TRUE(crsfBatterySensorDetected);
+        auto handler = txDoneInterrupt;
+        auto argument = txDoneArgument;
+        const size_t written = out.size();
+        in.append(reinterpret_cast<const char *>(hello), sizeof(hello));
+        {
+            SerialSRXL2 rejected(&tx, &rx, 14, 1);
+            TEST_ASSERT_EQUAL(0, uartStartup1.begins);
+            TEST_ASSERT_TRUE(crsfBatterySensorDetected);
+            rejected.processSerialInput();
+            TEST_ASSERT_EQUAL(sizeof(hello), rx.available());
+            send(rejected, 110000);
+            TEST_ASSERT_EQUAL(written, out.size());
+            TEST_ASSERT_TRUE(crsfBatterySensorDetected);
+        }
+        TEST_ASSERT_TRUE(txDoneInterrupt == handler && txDoneArgument == argument);
+        TEST_ASSERT_TRUE(crsfBatterySensorDetected);
+        first.processSerialInput();
+        TEST_ASSERT_EQUAL(0, rx.available());
+        send(first, 111000);
+        TEST_ASSERT_GREATER_THAN(written, out.size());
+    }
+    TEST_ASSERT_FALSE(crsfBatterySensorDetected);
+    TEST_ASSERT_TRUE(txDoneInterrupt == nullptr);
+    nowUs = 200000;
+    SerialSRXL2 replacement(&tx, &rx, 14, 1);
+    TEST_ASSERT_EQUAL(1, uartStartup1.begins);
+    const size_t written = out.size();
+    send(replacement, 250000);
+    TEST_ASSERT_EQUAL(written + 14, out.size());
+}
+
+void test_failed_irq_allocation_is_inert_and_releases_its_receive_uart()
+{
+    std::string in(reinterpret_cast<const char *>(hello), sizeof(hello)), out;
+    BinaryStringStream rx(in), tx(out);
+    crsfBatterySensorDetected = true;
+    irqAllocationSucceeds = false;
+    SerialSRXL2 failed(&tx, &rx, 1);
+    TEST_ASSERT_EQUAL(1, uartStartup.ends);
+    failed.processSerialInput();
+    send(failed, 50000);
+    TEST_ASSERT_EQUAL(sizeof(hello), rx.available());
+    TEST_ASSERT_TRUE(out.empty());
+    TEST_ASSERT_TRUE(crsfBatterySensorDetected);
+    irqAllocationSucceeds = true;
+    SerialSRXL2 replacement(&tx, &rx, 1);
+    replacement.processSerialInput();
+    TEST_ASSERT_EQUAL(0, rx.available());
+    send(replacement, 50174);
+    TEST_ASSERT_EQUAL(14, out.size());
+}
+
+void test_airport_masks_only_the_primary_control_permission()
+{
+    firmwareOptions.is_airport = true;
+    config.primary = PROTOCOL_CRSF;
+    config.secondary = PROTOCOL_SERIAL1_SRXL2;
+    std::string in, out;
+    BinaryStringStream rx(in), tx(out);
+    SerialSRXL2 driver(&tx, &rx, 14, 1);
+    establish(driver, in, out);
+    uint32_t channels[16] = {};
+    channels[2] = 1811;
+    nowUs = 63000;
+    deliver(driver, true, channels);
+    send(driver, 63000);
+    TEST_ASSERT_EQUAL_HEX8(0xD5, uint8_t(out[out.size() - 3]));
 }
 
 int main()
@@ -935,5 +1025,8 @@ int main()
     RUN_TEST(test_secondary_preserves_neutral_and_all_inhibition_paths);
     RUN_TEST(test_secondary_startup_fifo_prefix_and_handoff_match_port_and_pin);
     RUN_TEST(test_secondary_startup_rejects_a_corrupt_fifo_prefix);
+    RUN_TEST(test_airport_masks_only_the_primary_control_permission);
+    RUN_TEST(test_rejected_owner_leaves_uart_irq_input_and_telemetry_with_first_owner);
+    RUN_TEST(test_failed_irq_allocation_is_inert_and_releases_its_receive_uart);
     return UNITY_END();
 }

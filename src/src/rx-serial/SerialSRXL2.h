@@ -14,6 +14,7 @@ public:
     static void onRFReset();
     uint32_t sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t *channels) override;
     void sendQueuedData(uint32_t maxBytesToSend) override;
+    void processSerialInput() override;
 protected:
     void processBytes(uint8_t *bytes, uint16_t size) override;
 private:
@@ -22,7 +23,7 @@ private:
     uint8_t port;
     Stream *inputPort;
     bool transmitting = false;
-    bool txReady = true;
+    bool txReady = false;
     volatile bool txComplete = false;
     volatile uint32_t txEnded = 0;
 #if defined(CONFIG_IDF_TARGET_ESP32)

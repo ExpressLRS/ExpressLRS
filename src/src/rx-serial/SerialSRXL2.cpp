@@ -50,14 +50,11 @@
 #endif
 
 #ifndef SRXL2_MODE_ACTIVE
-#if defined(TARGET_RX)
-#define SRXL2_MODE_ACTIVE() (config.GetSerialProtocol() == PROTOCOL_SRXL2 && !firmwareOptions.is_airport)
-#else
-#define SRXL2_MODE_ACTIVE() true
-#endif
+#define SRXL2_MODE_ACTIVE() isSRXL2Selected(port, config.GetSerialProtocol(), config.GetSerial1Protocol(), firmwareOptions.is_airport)
 #endif
 
 static volatile uint32_t srxl2RFGeneration = 0;
+static SerialSRXL2 *srxl2Owner = nullptr;
 
 #if defined(SRXL2_EARLY_STARTUP_PIN)
 #ifndef SRXL2_EARLY_STARTUP_PORT
@@ -179,6 +176,10 @@ extern "C" void initVariant()
     listenForEarlyESC(uart, uart, uint32_t(mac) ^ uint32_t(mac >> 32), startupState,
         SRXL2_EARLY_STARTUP_PORT, SRXL2_EARLY_STARTUP_PIN, prefix, prefixSize);
     uart.end();
+    pinMode(SRXL2_EARLY_STARTUP_PIN, INPUT_PULLUP);
+#if SRXL2_EARLY_STARTUP_PORT == 1
+    periph_module_disable(PERIPH_UART1_MODULE); // Release the early capture's own reference.
+#endif
 }
 #endif
 #endif
@@ -191,12 +192,22 @@ void ICACHE_RAM_ATTR SerialSRXL2::onRFReset()
 SerialSRXL2::SerialSRXL2(Stream *output, Stream *input, int8_t txPin, uint8_t serialPort)
     : SerialIO(output, input), pin(txPin), port(serialPort), inputPort(input)
 {
+    if (srxl2Owner || port > 1 || pin < 0 || pin >= 64 || !output || !input) return;
+#if defined(PLATFORM_ESP32)
+    if (!supportsSRXL2(port, pin)) return;
+#endif
+#if defined(CONFIG_IDF_TARGET_ESP32)
+    if (uart_is_driver_installed(UART_NUM_2)) return;
+#endif
+    // Claim before touching either UART, its IRQ/clock, the signal, or telemetry.
+    srxl2Owner = this;
     // Receive on the shared signal immediately, without attaching an idle-high
     // UART TX output. The GPIO/UART transmitter below owns bus direction.
     auto &uart = port == 0 ? Serial : Serial1;
     uart.setTxBufferSize(0);
     uart.begin(115200, SERIAL_8N1, pin, -1, false);
     uart.setRxFIFOFull(1);
+    txReady = true;
     uint32_t uid = 0x12345678;
 #if defined(PLATFORM_ESP32)
     const uint64_t mac = ESP.getEfuseMac();
@@ -242,6 +253,15 @@ SerialSRXL2::SerialSRXL2(Stream *output, Stream *input, int8_t txPin, uint8_t se
 #if defined(SRXL2_INSTALL_TX_IRQ)
     txReady = SRXL2_INSTALL_TX_IRQ(onTxDone, this);
 #endif
+    if (!txReady)
+    {
+        uart.end();
+#if defined(PLATFORM_ESP32)
+        gpio_set_direction(gpio_num_t(pin), GPIO_MODE_INPUT);
+#endif
+        srxl2Owner = nullptr;
+        return;
+    }
     link.reset(uid, micros());
 #if defined(SRXL2_EARLY_STARTUP_PIN)
     if (txReady && port == startupState.port && pin == startupState.pin && startupState.ackEndUs && !startupState.handedOff)
@@ -260,6 +280,7 @@ SerialSRXL2::SerialSRXL2(Stream *output, Stream *input, int8_t txPin, uint8_t se
 
 SerialSRXL2::~SerialSRXL2()
 {
+    if (srxl2Owner != this) return;
 #if defined(CONFIG_IDF_TARGET_ESP32)
     if (txInterrupt)
     {
@@ -275,6 +296,12 @@ SerialSRXL2::~SerialSRXL2()
     gpio_set_direction(gpio_num_t(pin), GPIO_MODE_INPUT);
 #endif
     crsfBatterySensorDetected = false;
+    srxl2Owner = nullptr;
+}
+
+void SerialSRXL2::processSerialInput()
+{
+    if (srxl2Owner == this && txReady) SerialIO::processSerialInput();
 }
 
 bool SerialSRXL2::controlAllowed() const
@@ -294,6 +321,7 @@ void SerialSRXL2::synchronizeGeneration()
 
 uint32_t SerialSRXL2::sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t *)
 {
+    if (srxl2Owner != this || !txReady) return 1;
     synchronizeGeneration();
     // Upstream's shared snapshot replaces UNSET with minimum. Read only our
     // throttle from the raw channel state, without changing other protocols.
@@ -348,6 +376,7 @@ void SerialSRXL2::processBytes(uint8_t *bytes, uint16_t size)
 
 void SerialSRXL2::sendQueuedData(uint32_t maxBytesToSend)
 {
+    if (srxl2Owner != this || !txReady) return;
     const uint32_t now = micros();
     synchronizeGeneration();
     link.setControlPermission(controlAllowed());

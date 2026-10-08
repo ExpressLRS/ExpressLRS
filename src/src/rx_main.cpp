@@ -1278,9 +1278,14 @@ static void setupSerial()
 	bool sumdSerialOutput = false;
     bool mavlinkSerialOutput = false;
     bool hottTlmSerial = false;
-    const bool smartSerial = !firmwareOptions.is_airport && config.GetSerialProtocol() == PROTOCOL_SRXL2;
+    const bool smartSerial = isSRXL2Selected(0, config.GetSerialProtocol(), 0, firmwareOptions.is_airport);
 
-    if (smartSerial && !supportsSRXL2())
+    if (smartSerial && (!supportsSRXL2()
+#if defined(PLATFORM_ESP32)
+        || !isValidSRXL2Pin(0, config.GetSerialProtocol(), config.GetSerial1Protocol(), firmwareOptions.is_airport,
+            [](uint8_t ch) { return config.GetPwmChannel(ch)->val.mode; })
+#endif
+        ))
     {
         serialIO = new SerialNOOP();
         BackpackOrLogStrm = new NullStream();
@@ -1420,7 +1425,9 @@ static void setupSerial()
 #if defined(PLATFORM_ESP32)
     else if (smartSerial)
     {
-        serialIO = new SerialSRXL2(&SERIAL_PROTOCOL_TX, &SERIAL_PROTOCOL_RX, GPIO_PIN_RCSIGNAL_TX);
+        int8_t rxPin, txPin;
+        resolvePrimarySerialPins(rxPin, txPin, !OPT_CRSF_RCVR_NO_SERIAL);
+        serialIO = new SerialSRXL2(&SERIAL_PROTOCOL_TX, &SERIAL_PROTOCOL_RX, txPin, 0);
     }
 #endif
     else if (config.GetSerialProtocol() == PROTOCOL_SCORPION_TLM)
@@ -1467,27 +1474,9 @@ static void setupSerial1()
     //
     // init secondary serial and protocol
     //
-    int8_t serial1RXpin = GPIO_PIN_SERIAL1_RX;
-
-    if (serial1RXpin == UNDEF_PIN)
-    {
-        for (uint8_t ch = 0; ch < GPIO_PIN_PWM_OUTPUTS_COUNT; ch++)
-        {
-            if (config.GetPwmChannel(ch)->val.mode == somSerial1RX)
-                serial1RXpin = GPIO_PIN_PWM_OUTPUTS[ch];
-        }
-    }
-
-    int8_t serial1TXpin = GPIO_PIN_SERIAL1_TX;
-
-    if (serial1TXpin == UNDEF_PIN)
-    {
-        for (uint8_t ch = 0; ch < GPIO_PIN_PWM_OUTPUTS_COUNT; ch++)
-        {
-            if (config.GetPwmChannel(ch)->val.mode == somSerial1TX)
-                serial1TXpin = GPIO_PIN_PWM_OUTPUTS[ch];
-        }
-    }
+    int8_t serial1RXpin, serial1TXpin;
+    const auto modeAt = [](uint8_t ch) { return config.GetPwmChannel(ch)->val.mode; };
+    resolveSerial1Pins(serial1RXpin, serial1TXpin, modeAt);
 
     switch(config.GetSerial1Protocol())
     {
@@ -1542,6 +1531,11 @@ static void setupSerial1()
         case PROTOCOL_SERIAL1_SCORPION_TLM:
             Serial1.begin(38400, SERIAL_8N1, serial1RXpin, serial1TXpin, false);
             serial1IO = new SerialScorpion_TLM(SERIAL1_PROTOCOL_TX, SERIAL1_PROTOCOL_RX);
+            break;
+        case PROTOCOL_SERIAL1_SRXL2:
+            if (!isSRXL2Selected(0, config.GetSerialProtocol(), config.GetSerial1Protocol(), firmwareOptions.is_airport) &&
+                isValidSRXL2Pin(1, config.GetSerialProtocol(), config.GetSerial1Protocol(), firmwareOptions.is_airport, modeAt))
+                serial1IO = new SerialSRXL2(&SERIAL1_PROTOCOL_TX, &SERIAL1_PROTOCOL_RX, serial1TXpin, 1);
             break;
     }
 }
