@@ -1279,17 +1279,20 @@ static void setupSerial()
     int8_t serialRxPin = GPIO_PIN_RCSIGNAL_RX;
     int8_t serialTxPin = GPIO_PIN_RCSIGNAL_TX;
 #if defined(PLATFORM_ESP8266)
-    if (serialRxPin == UNDEF_PIN) serialRxPin = U0RXD_GPIO_NUM;
-    if (serialTxPin == UNDEF_PIN) serialTxPin = U0TXD_GPIO_NUM;
+    if (serialRxPin == UNDEF_PIN)
+    {
+        serialRxPin = U0RXD_GPIO_NUM;
+    }
+    if (serialTxPin == UNDEF_PIN)
+    {
+        serialTxPin = U0TXD_GPIO_NUM;
+    }
 #else
     if (serialRxPin == UNDEF_PIN && serialTxPin == UNDEF_PIN)
     {
         serialRxPin = U0RXD_GPIO_NUM;
         serialTxPin = U0TXD_GPIO_NUM;
     }
-#endif
-#if defined(PLATFORM_ESP8266)
-    bool serialRxShared = false;
 #endif
     pwmSerialDefined = false;
     for (uint8_t ch = 0; ch < GPIO_PIN_PWM_OUTPUTS_COUNT; ++ch)
@@ -1298,16 +1301,19 @@ static void setupSerial()
         const int8_t pin = GPIO_PIN_PWM_OUTPUTS[ch];
         if (pin == serialRxPin)
         {
-#if defined(PLATFORM_ESP8266)
-            serialRxShared = true;
-#endif
             pwmSerialDefined |= mapped;
-            if (!mapped) serialRxPin = UNDEF_PIN;
+            if (!mapped)
+            {
+                serialRxPin = UNDEF_PIN;
+            }
         }
         if (pin == serialTxPin)
         {
             pwmSerialDefined |= mapped;
-            if (!mapped) serialTxPin = UNDEF_PIN;
+            if (!mapped)
+            {
+                serialTxPin = UNDEF_PIN;
+            }
         }
     }
 
@@ -1367,8 +1373,22 @@ static void setupSerial()
     }
 #if defined(PLATFORM_ESP8266)
     // Keep dedicated UARTs transmit-only for output protocols, as before.
-    if (!serialRxShared && !firmwareOptions.is_airport && (sbusSerialOutput || sumdSerialOutput))
-        serialRxPin = UNDEF_PIN;
+    if (!firmwareOptions.is_airport && (sbusSerialOutput || sumdSerialOutput))
+    {
+        bool rxSharedWithPwm = false;
+        for (uint8_t ch = 0; ch < GPIO_PIN_PWM_OUTPUTS_COUNT; ++ch)
+        {
+            if (GPIO_PIN_PWM_OUTPUTS[ch] == U0RXD_GPIO_NUM)
+            {
+                rxSharedWithPwm = true;
+                break;
+            }
+        }
+        if (!rxSharedWithPwm)
+        {
+            serialRxPin = UNDEF_PIN;
+        }
+    }
 #endif
     bool invert = config.GetSerialProtocol() == PROTOCOL_SBUS || config.GetSerialProtocol() == PROTOCOL_INVERTED_CRSF || config.GetSerialProtocol() == PROTOCOL_DJI_RS_PRO;
 
