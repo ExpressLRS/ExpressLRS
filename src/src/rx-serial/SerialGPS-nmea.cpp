@@ -209,11 +209,14 @@ void SerialGPS::fieldParseVTG(SerialGPS *ctx, uint8_t fieldIdx, char *field)
 void SerialGPS::fieldParseRMC(SerialGPS *ctx, uint8_t fieldIdx, char *field)
 {
     const bool blank = (field[0] == '\0');
-    if (blank) return;
 
     switch (fieldIdx) {
         case 1: // Time: HHMMSS.ss
         {
+            if (blank)
+            {
+                return;
+            }
             uint32_t time_ms = parseDecimalToScaled(field, 1000);
             ctx->gpsData.millisecond = time_ms % 1000;
             time_ms /= 1000;
@@ -224,8 +227,30 @@ void SerialGPS::fieldParseRMC(SerialGPS *ctx, uint8_t fieldIdx, char *field)
             ctx->gpsData.hour = time_ms % 100;
             break;
         }
+        case 7: // Speed over ground: knots -> scaled km/h * 100 (matching VTG)
+        {
+            if (blank)
+            {
+                ctx->gpsData.speed = 0;
+            }
+            else
+            {
+                int32_t knots100 = parseDecimalToScaled(field, 100);
+                ctx->gpsData.speed = (uint32_t)((knots100 * 1852LL + 500) / 1000);
+            }
+            break;
+        }
+        case 8: // Track angle in degrees -> scaled by 100
+        {
+            ctx->gpsData.heading = (blank) ? 0 : parseDecimalToScaled(field, 100);
+            break;
+        }
         case 9: // Date: DDMMYY
         {
+            if (blank)
+            {
+                return;
+            }
             uint32_t date = atoi(field);
             ctx->gpsData.year = 2000 + date % 100;
             date /= 100;
