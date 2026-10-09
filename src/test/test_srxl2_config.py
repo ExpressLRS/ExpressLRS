@@ -270,7 +270,7 @@ static void checkVisibility() {
     assert(document["settings"]["has_serial1_pins"] == true); // Fixed TX-only, no primary capability gate.
     std::string options(luaSerial1Protocol.options);
     assert(std::count(options.begin(), options.end(), ';') == 13);
-    assert(options.substr(options.rfind(';') + 1) == "Spektrum Smart");
+    assert(options.substr(options.rfind(';') + 1) == "SRXL2");
     std::puts("Capability: TX-only secondary export and Lua Smart at ID 13 passed");
 }
 int main(int argc, char **argv) {

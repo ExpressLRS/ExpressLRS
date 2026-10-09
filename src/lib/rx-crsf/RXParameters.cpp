@@ -36,7 +36,7 @@ static char pwmModes[] = "50Hz;60Hz;100Hz;160Hz;333Hz;400Hz;10kHzDuty;On/Off;DSh
 static selectionParameter luaSerialProtocol = {
     {"Protocol", CRSF_TEXT_SELECTION},
     0, // value
-  "CRSF;Inverted CRSF;SBUS;Inverted SBUS;SUMD;DJI RS Pro;HoTT Telemetry;MAVLink;DisplayPort;GPS;Scorpion;Spektrum Smart",
+  "CRSF;Inverted CRSF;SBUS;Inverted SBUS;SUMD;DJI RS Pro;HoTT Telemetry;MAVLink;DisplayPort;GPS;Scorpion;SRXL2",
     STR_EMPTYSPACE
 };
 
@@ -44,7 +44,7 @@ static selectionParameter luaSerialProtocol = {
 static selectionParameter luaSerial1Protocol = {
     {"Protocol2", CRSF_TEXT_SELECTION},
     0, // value
-  "Off;CRSF;Inverted CRSF;SBUS;Inverted SBUS;SUMD;DJI RS Pro;HoTT Telemetry;Tramp;SmartAudio;DisplayPort;GPS;Scorpion;Spektrum Smart",
+  "Off;CRSF;Inverted CRSF;SBUS;Inverted SBUS;SUMD;DJI RS Pro;HoTT Telemetry;Tramp;SmartAudio;DisplayPort;GPS;Scorpion;SRXL2",
     STR_EMPTYSPACE
 };
 #endif

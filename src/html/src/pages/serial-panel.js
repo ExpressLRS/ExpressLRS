@@ -192,7 +192,7 @@ class SerialPanel extends LitElement {
     _saveSerial(e) {
         e.preventDefault()
         if (!this.isAirport && this.serial1Protocol === 11 && this.serial2Protocol === 13) {
-            showAlert('error', 'Serial Protocol', 'Use Spektrum Smart on only one serial port.')
+            showAlert('error', 'Serial Protocol', 'Use SRXL2 on only one serial port.')
             return
         }
         saveOptionsAndConfig({
