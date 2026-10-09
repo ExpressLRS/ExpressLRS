@@ -37,8 +37,7 @@ def check():
     callbacks = '\n'.join(block(lua, f'registerParameter(&{name},') + ');' for name in ['luaSerialProtocol', 'luaSerial1Protocol'])
     selections = '\n'.join(block(lua, f'static selectionParameter {name} =') + ';'
                            for name in ['luaSerialProtocol', 'luaSerial1Protocol'])
-    capability = re.search(r'if \([^\n]*\)\s*\{\s*cfg\["serial1-protocol"\].*?\}', wifi, re.S).group()
-    fixed_capability = re.search(r'^\s*settings\["has_serial1_pins"\].*?;', wifi, re.M)
+    capability = re.search(r'#if defined\(PLATFORM_ESP32\)\s*(settings\["has_serial1_pins"\].*?)#endif', wifi, re.S).group(1)
     boundary = r'''
 #include <cassert>
 #include <cstdint>
@@ -293,8 +292,7 @@ int main(int argc, char **argv) {
         cpp.write_text(boundary + enums + pwm + support + fake_config + selections
                        + block(wifi, 'static void JsonUidToConfig') + http + lua_helpers
                        + '\nstatic void registerProtocols() {\n' + callbacks + '\n}\n'
-                       + '\nstatic void exportSecondary(JsonObject cfg, JsonObject settings) {\n' + capability
-                       + (fixed_capability.group() if fixed_capability else '') + '\n}\n' + probe)
+                       + '\nstatic void exportSecondary(JsonObject cfg, JsonObject settings) {\n' + capability + '\n}\n' + probe)
         subprocess.run([compiler, '-std=c++17', '-mno-ms-bitfields', '-I' + str(includes), str(cpp), '-o', str(executable)],
                        env=environment, check=True)
         subprocess.run([str(executable), *sys.argv[1:]], env=environment, check=True)

@@ -1292,6 +1292,22 @@ static void setupSerial()
         return;
     }
 
+#if defined(PLATFORM_ESP32)
+    // SRXL2 owns UART startup so the stock Serial.begin must not drive its shared wire.
+    if (smartSerial)
+    {
+#if defined(ARDUINO_CORE_INVERT_FIX)
+        uart_set_line_inverse(0, UART_SIGNAL_INV_DISABLE);
+#endif
+        serialBaud = 115200;
+        int8_t rxPin, txPin;
+        resolvePrimarySerialPins(rxPin, txPin, !OPT_CRSF_RCVR_NO_SERIAL);
+        serialIO = new SerialSRXL2(&SERIAL_PROTOCOL_TX, &SERIAL_PROTOCOL_RX, txPin, 0);
+        BackpackOrLogStrm = new NullStream();
+        return;
+    }
+#endif
+
     if (OPT_CRSF_RCVR_NO_SERIAL)
     {
         // For PWM receivers with no serial pins defined, only turn on the Serial port if logging is on
@@ -1346,10 +1362,6 @@ static void setupSerial()
     {
         serialBaud = 115200;
     }
-    else if (smartSerial)
-    {
-        serialBaud = 115200;
-    }
     bool invert = config.GetSerialProtocol() == PROTOCOL_SBUS || config.GetSerialProtocol() == PROTOCOL_INVERTED_CRSF || config.GetSerialProtocol() == PROTOCOL_DJI_RS_PRO;
 
 #if defined(PLATFORM_ESP8266)
@@ -1387,9 +1399,7 @@ static void setupSerial()
     #endif
     // ARDUINO_CORE_INVERT_FIX PT2 end
 
-    // SRXL2 initializes its shared signal as RX-only in its own driver.
-    if (!smartSerial)
-        Serial.begin(serialBaud, serialConfig, GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX, invert);
+    Serial.begin(serialBaud, serialConfig, GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX, invert);
 #endif
 
     if (firmwareOptions.is_airport)
@@ -1422,14 +1432,6 @@ static void setupSerial()
     {
         serialIO = new SerialHoTT_TLM(SERIAL_PROTOCOL_TX, SERIAL_PROTOCOL_RX);
     }
-#if defined(PLATFORM_ESP32)
-    else if (smartSerial)
-    {
-        int8_t rxPin, txPin;
-        resolvePrimarySerialPins(rxPin, txPin, !OPT_CRSF_RCVR_NO_SERIAL);
-        serialIO = new SerialSRXL2(&SERIAL_PROTOCOL_TX, &SERIAL_PROTOCOL_RX, txPin, 0);
-    }
-#endif
     else if (config.GetSerialProtocol() == PROTOCOL_SCORPION_TLM)
     {
         serialIO = new SerialScorpion_TLM(SERIAL_PROTOCOL_TX, SERIAL_PROTOCOL_RX);
@@ -1440,19 +1442,12 @@ static void setupSerial()
     }
 
 #if defined(DEBUG_ENABLED)
-    if (smartSerial)
-    {
-        BackpackOrLogStrm = new NullStream();
-    }
-    else
-    {
 #if defined(PLATFORM_ESP32_S3) || defined(PLATFORM_ESP32_C3)
     USBSerial.begin(460800);
     BackpackOrLogStrm = &USBSerial;
 #else
     BackpackOrLogStrm = &Serial;
 #endif
-    }
 #else
     BackpackOrLogStrm = new NullStream();
 #endif
@@ -1474,9 +1469,29 @@ static void setupSerial1()
     //
     // init secondary serial and protocol
     //
-    int8_t serial1RXpin, serial1TXpin;
+    int8_t serial1RXpin = GPIO_PIN_SERIAL1_RX;
+
+    if (serial1RXpin == UNDEF_PIN)
+    {
+        for (uint8_t ch = 0; ch < GPIO_PIN_PWM_OUTPUTS_COUNT; ch++)
+        {
+            if (config.GetPwmChannel(ch)->val.mode == somSerial1RX)
+                serial1RXpin = GPIO_PIN_PWM_OUTPUTS[ch];
+        }
+    }
+
+    int8_t serial1TXpin = GPIO_PIN_SERIAL1_TX;
+
+    if (serial1TXpin == UNDEF_PIN)
+    {
+        for (uint8_t ch = 0; ch < GPIO_PIN_PWM_OUTPUTS_COUNT; ch++)
+        {
+            if (config.GetPwmChannel(ch)->val.mode == somSerial1TX)
+                serial1TXpin = GPIO_PIN_PWM_OUTPUTS[ch];
+        }
+    }
+
     const auto modeAt = [](uint8_t ch) { return config.GetPwmChannel(ch)->val.mode; };
-    resolveSerial1Pins(serial1RXpin, serial1TXpin, modeAt);
 
     switch(config.GetSerial1Protocol())
     {
