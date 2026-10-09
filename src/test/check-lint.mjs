@@ -1,13 +1,16 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
-import {transformSync} from '@babel/core';
-import {loadEnv} from 'vite';
-import {htmlFeatureBlocksPlugin} from '../build-plugins/feature-blocks-plugin.js';
+import {createRequire} from 'node:module';
+import {htmlFeatureBlocksPlugin} from '../html/build-plugins/feature-blocks-plugin.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const projectRoot = path.resolve(__dirname, '..');
+const projectRoot = path.resolve(__dirname, '../html');
+process.chdir(projectRoot);
+const require = createRequire(path.join(projectRoot, 'package.json'));
+const {ESLint} = require('eslint');
+const {loadEnv} = require('vite');
 const env = {
     ...loadEnv('production', projectRoot, ''),
     ...process.env
@@ -47,32 +50,30 @@ for (const root of rootsToCheck) {
     }
 }
 
-const failures = [];
+const eslint = new ESLint({
+    cwd: projectRoot
+});
+
+const results = [];
 for (const file of files.sort()) {
-    try {
-        const source = fs.readFileSync(file, 'utf8');
-        const transformed = featureBlocksPlugin.transform(source, file);
-        transformSync(transformed?.code ?? source, {
-            filename: file,
-            babelrc: false,
-            configFile: false,
-            sourceType: 'module',
-            ast: false,
-            code: false,
-            plugins: [['@babel/plugin-proposal-decorators', {version: '2023-11'}]]
-        });
-    } catch (error) {
-        failures.push({file, error});
-    }
+    const source = fs.readFileSync(file, 'utf8');
+    const transformed = featureBlocksPlugin.transform(source, file);
+    const code = transformed?.code ?? source;
+    const fileResults = await eslint.lintText(code, {filePath: file, warnIgnored: false});
+    results.push(...fileResults);
 }
 
-if (failures.length > 0) {
-    for (const {file, error} of failures) {
-        const relativePath = path.relative(projectRoot, file);
-        console.error(`Syntax check failed: ${relativePath}`);
-        console.error(error.message);
-    }
+const formatter = await eslint.loadFormatter('stylish');
+const output = formatter.format(results);
+if (output) {
+    process.stdout.write(output.endsWith('\n') ? output : `${output}\n`);
+}
+
+const errorCount = results.reduce((sum, result) => sum + result.errorCount + result.fatalErrorCount, 0);
+const warningCount = results.reduce((sum, result) => sum + result.warningCount, 0);
+
+if (errorCount > 0) {
     process.exit(1);
 }
 
-console.log(`Syntax check passed for ${files.length} files.`);
+console.log(`Lint check passed for ${files.length} files with ${warningCount} warning${warningCount === 1 ? '' : 's'}.`);

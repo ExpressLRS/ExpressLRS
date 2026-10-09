@@ -77,10 +77,10 @@ jobs:
 
     - name: Run PlatformIO Tests
       run: |
-        cd src
-        platformio pkg install --platform native
-        platformio pkg update
-        PLATFORMIO_BUILD_FLAGS="-DRegulatory_Domain_ISM_2400" pio test -e native
+        cd src/test
+        platformio pkg install --project-dir .. --platform native
+        platformio pkg update --project-dir ..
+        PLATFORMIO_BUILD_FLAGS="-DRegulatory_Domain_ISM_2400" pio test --project-dir .. -e native
 
   targets:
     needs:

@@ -1,6 +1,6 @@
 #include <unity.h>
 #include "common.h"
-#include "../test_srxl2_adapter/binary_serial.h"
+#include "../test_srxl2/binary_serial.h"
 
 void setUp() {}
 void tearDown() {}

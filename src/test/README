@@ -1,11 +1,72 @@
+Project tests and verification tools live here. Run the commands below from
+src/test. Firmware build and upload scripts remain in src/python.
 
-This directory is intended for PIO Unit Testing and project tests.
+Native C++ tests
+---------------
+Install PlatformIO and a native C++ compiler (g++ on PATH). On Linux/macOS:
 
-Unit Testing is a software testing method by which individual units of
-source code, sets of one or more MCU program modules together with associated
-control data, usage procedures, and operating procedures, are tested to
-determine whether they are fit for use. Unit testing finds problems early
-in the development cycle.
+    export PYTHONPATH="$(pwd)/../python/external/esptool"
+    export PLATFORMIO_BUILD_FLAGS="-DRegulatory_Domain_ISM_2400"
+    pio test --project-dir .. -e native
 
-More information about PIO Unit Testing:
-- https://docs.platformio.org/page/plus/unit-testing.html
+On Windows PowerShell, use a current MinGW compiler and the packed-bitfield flag:
+
+    $env:PYTHONPATH = (Resolve-Path ../python/external/esptool).Path
+    $env:PLATFORMIO_BUILD_FLAGS = '-DRegulatory_Domain_ISM_2400 -mno-ms-bitfields'
+    pio test --project-dir .. -e native
+
+If the compiler is installed in this checkout's src/.pio/tools/mingw64/bin,
+add it to the current process's PATH before running PlatformIO:
+
+    $env:PATH = "$(Resolve-Path ../.pio/tools/mingw64/bin);$env:PATH"
+
+Run both SRXL2 protocol and receiver-adapter tests together with:
+
+    pio test --project-dir .. -e native -f test_srxl2
+
+Python regression checks
+------------------------
+These scripts resolve repository paths relative to their own location:
+
+    python test_serial_setup.py
+    python test_srxl2_config.py
+    python test_srxl2_platforms.py
+    python -m unittest discover -s . -p 'test_*.py' -v
+
+The first three checks compile and execute C++ probes. They use the checkout's
+MinGW compiler when available, otherwise g++ on PATH. The configuration check
+also needs ArduinoJson from an existing ESP32 receiver build in src/.pio/libdeps;
+the platform check needs the installed Arduino ESP32 SDK in PLATFORMIO_CORE_DIR
+(default: ~/.platformio). Image-provenance tests need src/hardware and use
+synthetic firmware containers.
+
+Frontend checks
+---------------
+Install the dependencies from src/html/package-lock.json with
+`npm ci --prefix ../html`, then run:
+
+    node test-serial-options.mjs
+    node check-syntax.mjs
+    node check-lint.mjs
+
+The scripts resolve sources, configuration, and dependencies in src/html,
+independently of the current directory. The same checks are available through
+`npm --prefix ../html test`, `npm --prefix ../html run check:syntax`, and
+`npm --prefix ../html run check:lint`.
+
+Firmware and hardware tools
+---------------------------
+    python verify-er6-image.py /path/to/firmware.bin
+    python verify-srxl2-production.py /path/to/firmware.elf [port] [nm-path]
+    python power_sweep.py --help
+
+The ER6 verifier requires a clean checkout matching the image's embedded source
+revision and the pinned src/hardware revision. The production verifier defaults
+to UART0 and the Windows ESP32 nm executable under ~/.platformio; pass port 1
+for UART1 and the appropriate nm executable for other targets or operating systems.
+The voltage sweep requires pyserial, the KoradSerial library
+(https://github.com/starforgelabs/py-korad-serial), and connected receiver/power-supply
+hardware. Its --help command runs without those hardware dependencies.
+
+PlatformIO unit-testing documentation:
+https://docs.platformio.org/page/plus/unit-testing.html

@@ -1,8 +1,11 @@
 import assert from 'node:assert/strict'
-import {SERIAL_OPTIONS1, SERIAL_OPTIONS2} from '../src/utils/globals.js'
-import {_renderOptions} from '../src/utils/libs.js'
+import {SERIAL_OPTIONS1, SERIAL_OPTIONS2} from '../html/src/utils/globals.js'
+import {_renderOptions} from '../html/src/utils/libs.js'
 import {readFileSync} from 'node:fs'
-import {parseSync} from '@babel/core'
+import {createRequire} from 'node:module'
+
+const require = createRequire(new URL('../html/package.json', import.meta.url))
+const {parseSync} = require('@babel/core')
 
 const options = _renderOptions(SERIAL_OPTIONS1, 11)
 assert.deepEqual(options[11].values, ['11', true, 'Spektrum Smart'])
@@ -16,7 +19,7 @@ assert.equal(SERIAL_OPTIONS1.length - 1, 12)
 assert.equal(SERIAL_OPTIONS2[12], 'Scorpion Telemetry')
 assert.equal(SERIAL_OPTIONS2[13], 'Spektrum Smart')
 assert.deepEqual(_renderOptions(SERIAL_OPTIONS2, 13)[13].values, ['13', true, 'Spektrum Smart'])
-const source = readFileSync(new URL('../src/pages/serial-panel.js', import.meta.url), 'utf8')
+const source = readFileSync(new URL('../html/src/pages/serial-panel.js', import.meta.url), 'utf8')
 const ast = parseSync(source, {configFile: false, babelrc: false, parserOpts: {plugins: ['decorators', 'decoratorAutoAccessors']}})
 const panel = ast.program.body.find(node => node.type === 'ClassDeclaration')
 const method = name => panel.body.body.find(node => node.key?.name === name)

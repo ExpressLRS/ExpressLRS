@@ -6,7 +6,7 @@ import shutil
 import subprocess
 import tempfile
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 STOCK = "15c78990e7eac43c110fd43cd9823ec70fa8220d"
 
 

@@ -7,7 +7,7 @@ import subprocess
 import tempfile
 import re
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 
 def check_early_teardown(compiler, environment, directory):

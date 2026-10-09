@@ -1038,9 +1038,9 @@ void test_failed_receive_startup_is_inert_and_preserves_handoff_for_replacement(
     }
 }
 
-int main()
+void run_adapter_tests()
 {
-    UNITY_BEGIN();
+    UnitySetTestFile(__FILE__);
     RUN_TEST(test_smart_startup_attaches_receive_without_driving_the_signal_pin);
     RUN_TEST(test_early_startup_ack_handles_a_fresh_announcement_and_releases_the_wire);
     RUN_TEST(test_early_startup_does_not_ack_corrupt_or_nonannouncement_frames);
@@ -1069,5 +1069,4 @@ int main()
     RUN_TEST(test_rejected_owner_leaves_uart_irq_input_and_telemetry_with_first_owner);
     RUN_TEST(test_failed_irq_allocation_is_inert_and_releases_its_receive_uart);
     RUN_TEST(test_failed_receive_startup_is_inert_and_preserves_handoff_for_replacement);
-    return UNITY_END();
 }
