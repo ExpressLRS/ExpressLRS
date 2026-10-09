@@ -459,7 +459,7 @@ void SerialHoTT_TLM::sendCRSFcells(uint32_t now, HoTTDevices device)
         crsfCells.p.cell[2] = htobe16(eam.cellL[2] * HOTT_CELL_SCALE);
         crsfCells.p.cell[3] = htobe16(eam.cellL[3] * HOTT_CELL_SCALE);
         crsfCells.p.cell[4] = htobe16(eam.cellL[4] * HOTT_CELL_SCALE);
-        crsfCells.p.cell[4] = htobe16(eam.cellL[5] * HOTT_CELL_SCALE);
+        crsfCells.p.cell[5] = htobe16(eam.cellL[5] * HOTT_CELL_SCALE);
         crsfCells.p.cell[6] = htobe16(eam.cellL[6] * HOTT_CELL_SCALE);
 
         crsfCells.p.cell[7] = htobe16(eam.cellH[0] * HOTT_CELL_SCALE);
