@@ -277,7 +277,9 @@ bool hardware_init(EspFlashStream &strmFlash)
     return true;
 }
 
-int hardware_pin(nameType name)
+// The GPIO_PIN_* macros call this from ISRs (radio HAL, RFAMP), which must not reach flash
+// while it is being written, so it lives in IRAM
+int ICACHE_RAM_ATTR hardware_pin(nameType name)
 {
     return hardware[name].int_value;
 }
