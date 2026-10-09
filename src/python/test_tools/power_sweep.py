@@ -8,9 +8,11 @@
 #   $ADC,926
 #   ...
 
-# Requires pyserial and the KoradSerial library for power supply control.
+# Uses the KoradSerial library for power supply control, just dump this in the library directory
 # https://github.com/starforgelabs/py-korad-serial
+from koradserial import KoradSerial
 import time
+import serial
 import argparse
 
 class MedianAvg:
@@ -64,9 +66,6 @@ def doVoltageSample(ser, voltage):
                 pass
 
 def runSweep(args):
-    from koradserial import KoradSerial
-    import serial
-
     with serial.Serial(args.rport, baudrate=args.rbaud, timeout=0.010) as rcvr:
         with KoradSerial(args.kport) as pwr:
             try:
