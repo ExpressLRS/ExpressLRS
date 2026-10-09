@@ -206,6 +206,12 @@ SerialSRXL2::SerialSRXL2(Stream *output, Stream *input, int8_t txPin, uint8_t se
     auto &uart = port == 0 ? Serial : Serial1;
     uart.setTxBufferSize(0);
     uart.begin(115200, SERIAL_8N1, pin, -1, false);
+    if (!uart)
+    {
+        uart.end();
+        srxl2Owner = nullptr;
+        return;
+    }
     uart.setRxFIFOFull(1);
     txReady = true;
     uint32_t uid = 0x12345678;

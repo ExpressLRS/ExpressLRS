@@ -998,6 +998,46 @@ void test_airport_masks_only_the_primary_control_permission()
     TEST_ASSERT_EQUAL_HEX8(0xD5, uint8_t(out[out.size() - 3]));
 }
 
+void test_failed_receive_startup_is_inert_and_preserves_handoff_for_replacement()
+{
+    for (uint8_t port : {0, 1})
+    {
+        const int8_t pin = port == 0 ? 3 : 14;
+        auto &uart = port == 0 ? uartStartup : uartStartup1;
+        config.primary = port == 0 ? PROTOCOL_SRXL2 : PROTOCOL_CRSF;
+        config.secondary = port == 1 ? PROTOCOL_SERIAL1_SRXL2 : PROTOCOL_SERIAL1_OFF;
+        startupState = SRXL2StartupState();
+        startupState.port = port;
+        startupState.pin = pin;
+        startupState.ackEndUs = 1000;
+        nowUs = 2000;
+        crsfBatterySensorDetected = true;
+        uart.beginSucceeds = false;
+        std::string in(reinterpret_cast<const char *>(hello), sizeof(hello)), out;
+        BinaryStringStream rx(in), tx(out);
+        SerialSRXL2 failed(&tx, &rx, pin, port);
+        failed.processSerialInput();
+        send(failed, 50000);
+        TEST_ASSERT_EQUAL(sizeof(hello), rx.available());
+        TEST_ASSERT_TRUE(out.empty());
+        TEST_ASSERT_TRUE(txDoneInterrupt == nullptr);
+        TEST_ASSERT_EQUAL(1, uart.ends);
+        TEST_ASSERT_TRUE(crsfBatterySensorDetected);
+        TEST_ASSERT_FALSE(startupState.handedOff);
+
+        uart.beginSucceeds = true;
+        nowUs = 55000;
+        SerialSRXL2 replacement(&tx, &rx, pin, port);
+        TEST_ASSERT_TRUE(startupState.handedOff);
+        TEST_ASSERT_TRUE(txDoneInterrupt != nullptr);
+        replacement.processSerialInput();
+        TEST_ASSERT_EQUAL(0, rx.available());
+        send(replacement, 55174);
+        TEST_ASSERT_EQUAL(14, out.size());
+        send(replacement, 56390);
+    }
+}
+
 int main()
 {
     UNITY_BEGIN();
@@ -1028,5 +1068,6 @@ int main()
     RUN_TEST(test_airport_masks_only_the_primary_control_permission);
     RUN_TEST(test_rejected_owner_leaves_uart_irq_input_and_telemetry_with_first_owner);
     RUN_TEST(test_failed_irq_allocation_is_inert_and_releases_its_receive_uart);
+    RUN_TEST(test_failed_receive_startup_is_inert_and_preserves_handoff_for_replacement);
     return UNITY_END();
 }
