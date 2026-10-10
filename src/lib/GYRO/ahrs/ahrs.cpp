@@ -16,8 +16,8 @@
 
 #define SPIN_RATE_LIMIT 20             // Max 20 deg/sec
 #define ATTITUDE_RESET_QUIET_TIME 250  // 250ms - gyro quiet period after after ACC out of range
-#define ATTITUDE_RESET_GYRO_LIMIT 15   // 15 deg/sec - gyro limit for quiet period
-#define ATTITUDE_RESET_KP_GAIN 10.0    // dcmKpGain value to use during attitude reset
+#define ATTITUDE_RESET_GYRO_LIMIT 300  // 120 deg/sec - gyro limit for quiet period
+#define ATTITUDE_RESET_KP_GAIN 5.0    // dcmKpGain multiplier to use during attitude reset
 #define ATTITUDE_RESET_ACTIVE_TIME 500 // 500ms - Time to wait for attitude to converge at high gain
 
 #define invSqrt(x) (1.0f / sqrtf(x))
@@ -283,7 +283,7 @@ static float imuCalcKpGain(bool useAcc, const VectorFloat gyro, bool *quartilion
         else
         {
             // Still in Attitude Reset
-            ret = 10.0; // To converge faster
+            ret = ATTITUDE_RESET_KP_GAIN; // To converge faster
         }
     }
 #endif
