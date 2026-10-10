@@ -79,6 +79,12 @@ void SerialSmartAudio::sendQueuedData(uint32_t maxBytesToSend)
 
 void SerialSmartAudio::forwardMessage(const crsf_header_t *message)
 {
+    // Only act on MSP wrapped in CRSF. Every other frame from the FC (attitude, GPS, ...)
+    // also lands here via the router broadcast and must not be parsed as a VTX command.
+    if (message->type != CRSF_FRAMETYPE_MSP_WRITE)
+    {
+        return;
+    }
     auto data = (uint8_t *)message;
     // What we're handed here is MSP wrapped in CRSF, so our offsets are thrown off
     uint8_t innerLength = data[6];
