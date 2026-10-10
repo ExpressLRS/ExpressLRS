@@ -49,10 +49,9 @@ static bool initialize()
 
         if (driver == nullptr && OPT_HAS_GYRO_SC7U22)
         {
-            driver = new IMU_SC7U22();
-            if (driver->initialize()) {
-                DBGLN("devGyro.init(): Detected SC7U22 Gyro");
-            } else {
+            driver = new IMU_SC7U22_I2C();
+            if (!driver->initialize()) {
+                delete driver;
                 driver = nullptr;
             }
         }
@@ -76,6 +75,15 @@ static bool initialize()
             driver = new IMU_LSM6DXX_SPI();
             if (!driver->initialize())
             {
+                delete driver;
+                driver = nullptr;
+            }
+        }
+
+        if (driver == nullptr && OPT_HAS_GYRO_SC7U22)
+        {
+            driver = new IMU_SC7U22_SPI();
+            if (!driver->initialize()) {
                 delete driver;
                 driver = nullptr;
             }
