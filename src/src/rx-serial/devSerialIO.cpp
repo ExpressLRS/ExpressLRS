@@ -13,6 +13,7 @@
 extern SerialIO *serialIO;
 #if defined(PLATFORM_ESP32)
 extern SerialIO *serial1IO;
+extern SerialIO *serial2IO;
 #endif
 
 enum teamraceOutputInhibitState_e {
@@ -34,6 +35,7 @@ typedef struct devserial_ctx_s {
 static devserial_ctx_t serial0;
 #if defined(PLATFORM_ESP32)
 static devserial_ctx_t serial1;
+static devserial_ctx_t serial2;
 #endif
 
 void ICACHE_RAM_ATTR crsfRCFrameAvailable()
@@ -41,7 +43,8 @@ void ICACHE_RAM_ATTR crsfRCFrameAvailable()
     serial0.frameAvailable = true;
 #if defined(PLATFORM_ESP32)
     serial1.frameAvailable = true;
-#endif
+    serial2.frameAvailable = true;
+#endif    
 }
 
 void ICACHE_RAM_ATTR crsfRCFrameMissed()
@@ -49,7 +52,8 @@ void ICACHE_RAM_ATTR crsfRCFrameMissed()
     serial0.frameMissed = true;
 #if defined(PLATFORM_ESP32)
     serial1.frameMissed = true;
-#endif
+    serial2.frameMissed = true;
+#endif    
 }
 
 static int start()
@@ -59,8 +63,9 @@ static int start()
 #if defined(PLATFORM_ESP32)
     serial1.io = &serial1IO;
     serial1.lastConnectionState = disconnected;
+    serial2.io = &serial2IO;
+    serial2.lastConnectionState = disconnected;
 #endif
-
     return DURATION_IMMEDIATELY;
 }
 
@@ -89,6 +94,10 @@ static int event0()
 static int event1()
 {
     return event(&serial1);
+}
+static int event2()
+{
+    return event(&serial2);
 }
 #endif
 
@@ -263,7 +272,17 @@ void sendImmediateRC()
 
         (*(serial1.io))->sendRCFrame(sendChannels, missed, ChannelData);
     }
-#endif
+    if (*(serial2.io) != nullptr && (*(serial2.io))->sendImmediateRC() && connectionState != serialUpdate)
+    {
+        const bool missed = serial2.frameMissed;
+        serial2.frameMissed = false;
+
+        // Verify the new channel data should be sent on
+        const bool sendChannels = confirmFrameAvailable(&serial2);
+
+        (*(serial2.io))->sendRCFrame(sendChannels, missed, ChannelData);
+    }
+#endif    
 }
 
 void handleSerialIO()
@@ -280,7 +299,12 @@ void handleSerialIO()
         (*(serial1.io))->processSerialInput();
         (*(serial1.io))->sendQueuedData((*(serial1.io))->getMaxSerialWriteSize());
     }
-#endif
+    if (*(serial2.io) != nullptr)
+    {
+        (*(serial2.io))->processSerialInput();
+        (*(serial2.io))->sendQueuedData((*(serial2.io))->getMaxSerialWriteSize());
+    }
+#endif    
 }
 
 static int timeout0()
@@ -292,6 +316,10 @@ static int timeout0()
 static int timeout1()
 {
   return timeout(&serial1);
+}
+static int timeout2()
+{
+  return timeout(&serial2);
 }
 #endif
 
@@ -309,6 +337,13 @@ device_t Serial1_device = {
     .start = start,
     .event = event1,
     .timeout = timeout1,
+    .subscribe = EVENT_CONNECTION_CHANGED | EVENT_CONFIG_MODEL_CHANGED
+};
+device_t Serial2_device = {
+    .initialize = nullptr,
+    .start = start,
+    .event = event2,
+    .timeout = timeout2,
     .subscribe = EVENT_CONNECTION_CHANGED | EVENT_CONFIG_MODEL_CHANGED
 };
 #endif
