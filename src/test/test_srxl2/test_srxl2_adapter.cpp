@@ -1104,11 +1104,15 @@ void test_fast_adapter_changes_rate_after_final_stop_bit_on_either_port()
         TEST_ASSERT_EQUAL(30, out.size());
         TEST_ASSERT_EQUAL_HEX8(0x40, uint8_t(out[18])); // Safe fast-mode health poll.
         assert_neutral(out);
+        TEST_ASSERT_FALSE(crsfBatterySensorDetected); // The old-rate batch supplied no measurements.
         immediateReplyInput = &in;
         immediateReply.assign(reinterpret_cast<const char *>(esc), sizeof(esc));
         send(driver, 30400);
         immediateReplyInput = nullptr;
         driver.processSerialInput(); // A genuine same-rate immediate reply must survive.
+        nowUs = 30600;
+        driver.sendQueuedData(0);
+        TEST_ASSERT_TRUE(crsfBatterySensorDetected);
         TEST_ASSERT_EQUAL(1, uart.updates);
         TEST_ASSERT_FALSE(replyBlocked);
     }
