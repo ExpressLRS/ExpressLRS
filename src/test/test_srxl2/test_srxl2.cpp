@@ -525,6 +525,42 @@ void test_fast_announcement_capability_survives_ack_and_startup_handoff()
     }
 }
 
+void test_early_addressed_reply_only_downgrades_after_valid_announcement()
+{
+    for (uint8_t flag : {uint8_t(0), uint8_t(2), uint8_t(0x81)})
+    {
+        SRXL2::Link early;
+        early.reset(0x12345678, 0, true, true);
+        feed(early, hello, sizeof(hello), 31000);
+        TEST_ASSERT_EQUAL(1, early.commonBaudMask()); // Addressed traffic alone is not startup discovery evidence.
+        SRXL2::Packet packet{};
+        TEST_ASSERT_FALSE(early.nextPacket(31200, packet));
+        feed(early, announce400, sizeof(announce400), 31400);
+        TEST_ASSERT_TRUE(early.nextPacket(31600, packet));
+        TEST_ASSERT_EQUAL(1, packet.bytes[6]);
+        early.transmitted(32800);
+        uint8_t reply[sizeof(hello)];
+        std::memcpy(reply, hello, sizeof(reply));
+        reply[6] = flag;
+        updateCrc(reply, sizeof(reply));
+        feed(early, reply, sizeof(reply), 33000);
+        TEST_ASSERT_EQUAL(0, early.commonBaudMask());
+        feed(early, hello400, sizeof(hello400), 33100);
+        TEST_ASSERT_EQUAL(0, early.commonBaudMask());
+        TEST_ASSERT_FALSE(early.nextPacket(33274, packet));
+        TEST_ASSERT_FALSE(early.nextPacket(52800, packet)); // No second ACK or early final broadcast.
+        SRXL2::Link running;
+        running.reset(0x12345678, 53000, false, true);
+        running.finishStartupDiscovery(early.commonBaudMask());
+        TEST_ASSERT_TRUE(running.nextPacket(53200, packet));
+        TEST_ASSERT_EQUAL_HEX8(0xFF, packet.bytes[4]);
+        TEST_ASSERT_EQUAL(0, packet.bytes[6]);
+        running.transmitted(54416);
+        TEST_ASSERT_TRUE(running.connected());
+        TEST_ASSERT_EQUAL_UINT32(115200, running.baudRate());
+    }
+}
+
 void test_crc_and_nominal_throttle()
 {
     uint8_t text[] = "123456789";
@@ -1311,6 +1347,7 @@ int main()
     RUN_TEST(test_capability_intersection_ignores_invalid_frames_and_cannot_be_raised);
     RUN_TEST(test_fast_final_selection_is_frozen_against_buffered_duplicate);
     RUN_TEST(test_fast_announcement_capability_survives_ack_and_startup_handoff);
+    RUN_TEST(test_early_addressed_reply_only_downgrades_after_valid_announcement);
     RUN_TEST(test_crc_and_nominal_throttle);
     RUN_TEST(test_handshake_vectors_and_tx_ownership);
     RUN_TEST(test_captured_firma_announcements_finalize_discovery_at_115200);

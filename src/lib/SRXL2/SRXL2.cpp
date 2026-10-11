@@ -286,7 +286,12 @@ void Link::processFrame(uint32_t now)
     if (phase == Recover) return;
     if (input[1] == 0x21 && input[2] == 14 && input[3] == 0x40)
     {
-        if (startupAckOnly && input[4] != 0) return;
+        if (startupAckOnly && input[4] != 0)
+        {
+            if (input[4] == 0x21 && (phase == Acknowledge || phase == Broadcast))
+                commonMask &= input[6] == 1 ? 1 : 0;
+            return;
+        }
         if (input[4] == 0 || input[4] == 0x21)
         {
             // Buffered duplicates cannot revise a final packet already owned by TX.
