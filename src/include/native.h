@@ -57,6 +57,7 @@ public:
     // Print methods
     virtual size_t write(uint8_t c) = 0;
     virtual size_t write(const uint8_t *s, size_t l) = 0;
+    virtual int availableForWrite() {return 256;}
 
     int print(const char *s) {return 0;}
     int print(uint8_t s) {return 0;}
@@ -66,6 +67,11 @@ public:
     int println(uint8_t s) {return 0;}
     int println(uint8_t s, int radix) {return 0;}
 };
+
+// Serial discards what is written to it. Tests that need to see it can set a sink,
+// e.g. `nativeSerialSink() = mySink;`
+typedef void (*nativeSerialSink_t)(const uint8_t *data, size_t len);
+inline nativeSerialSink_t &nativeSerialSink() { static nativeSerialSink_t sink = nullptr; return sink; }
 
 class HardwareSerial: public Stream {
 public:
@@ -81,8 +87,8 @@ public:
     int availableForWrite() {return 256;}
 
     // Print methods
-    size_t write(uint8_t c) {return 1;}
-    size_t write(const uint8_t *s, size_t l) {return l;}
+    size_t write(uint8_t c) {return write(&c, 1);}
+    size_t write(const uint8_t *s, size_t l) {if (nativeSerialSink()) nativeSerialSink()(s, l); return l;}
 
     int print(const char *s) {return 0;}
     int print(uint8_t s) {return 0;}
@@ -98,7 +104,14 @@ static HardwareSerial Serial;
 inline void interrupts() {}
 inline void noInterrupts() {}
 
+// micros() reads the wall clock. Tests that need to control time can replace it,
+// e.g. `nativeMicrosSource() = myMicros;`
+typedef unsigned long (*nativeMicrosSource_t)();
+inline nativeMicrosSource_t &nativeMicrosSource() { static nativeMicrosSource_t source = nullptr; return source; }
+
 inline unsigned long micros() {
+    if (nativeMicrosSource())
+        return nativeMicrosSource()();
     struct timeval tv;
     gettimeofday(&tv,NULL);
     return tv.tv_sec*(uint64_t)1000000+tv.tv_usec;
