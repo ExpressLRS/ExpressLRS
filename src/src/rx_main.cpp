@@ -163,6 +163,9 @@ RXtimerState_e RXtimerState;
 uint32_t GotConnectionMillis = 0;
 const uint32_t ConsiderConnGoodMillis = 1000; // minimum time before we can consider a connection to be 'good'
 bool doStartTimer = false;
+// Set while the config is being written to flash. On ESP8266 the flash is unmapped
+// during the sector erase, so the ISRs must not reach any code in IROM while it is set
+static volatile bool commitInProgress = false;
 
 ///////////////////////////////////////////////
 
@@ -763,6 +766,12 @@ static void ICACHE_RAM_ATTR updateDiversity()
 
 void ICACHE_RAM_ATTR HWtimerCallbackTock()
 {
+    // The timer should already be stopped for a commit, but bail if not as the tock reaches IROM code
+    if (commitInProgress)
+    {
+        return;
+    }
+
     PFDloop.intEvent(micros()); // our internal osc just fired
 
     if (ExpressLRS_currAirRate_Modparams->numOfSends > 1 && !(OtaNonce % ExpressLRS_currAirRate_Modparams->numOfSends))
@@ -1210,6 +1219,12 @@ bool ICACHE_RAM_ATTR ProcessRFPacket(SX12xxDriverCommon::rx_status const status)
 
 bool ICACHE_RAM_ATTR RXdoneISR(SX12xxDriverCommon::rx_status const status)
 {
+    // Must be checked first, nothing past here is safe to run while the flash is unmapped
+    if (commitInProgress)
+    {
+        return false;
+    }
+
     if (LQCalc.currentIsSet() && connectionState == connected)
     {
         return false; // Already received a packet, do not run ProcessRFPacket() again.
@@ -1542,6 +1557,14 @@ void reconfigureSerial()
     setupSerial();
 }
 
+static uint32_t CommitConfig()
+{
+    commitInProgress = true;
+    uint32_t changes = config.Commit();
+    commitInProgress = false;
+    return changes;
+}
+
 static void setupConfigAndPocCheck()
 {
     eeprom.Begin();
@@ -1552,7 +1575,7 @@ static void setupConfigAndPocCheck()
     if (config.GetIsBound() && config.GetPowerOnCounter() < 3)
     {
         config.SetPowerOnCounter(config.GetPowerOnCounter() + 1);
-        config.Commit();
+        CommitConfig();
     }
 
     // Set a deferred function to clear the power on counter if the RX has been running for more than 2s
@@ -1560,7 +1583,7 @@ static void setupConfigAndPocCheck()
         if (connectionState != connected && config.GetPowerOnCounter() != 0)
         {
             config.SetPowerOnCounter(0);
-            config.Commit();
+            CommitConfig();
         }
     });
 }
@@ -1701,7 +1724,7 @@ static void EnterBindingMode()
     // Any method of entering bind resets a loan
     // Model can be reloaned immediately by binding now
     config.ReturnLoan();
-    config.Commit();
+    CommitConfig();
 
     // Binding uses 50Hz, and InvertIQ
     OtaCrcInitializer = OTA_VERSION_ID;
@@ -1732,7 +1755,7 @@ static void ExitBindingMode()
     // Prevent any new packets from coming in
     Radio.SetTxIdleMode();
     // Write the values to eeprom
-    config.Commit();
+    CommitConfig();
 
     OtaUpdateCrcInitFromUid();
     FHSSrandomiseFHSSsequence(OtaGetUidSeed());
@@ -1813,7 +1836,7 @@ static void updateBindingMode(unsigned long now)
             {
                 DBGLN("Model was on loan, becoming inert");
                 config.ReturnLoan();
-                config.Commit(); // prevents CheckConfigChangePending() re-enabling radio
+                CommitConfig(); // prevents CheckConfigChangePending() re-enabling radio
                 Radio.End();
                 // Enter a completely invalid state for a receiver, to prevent wifi or radio enabling
                 setConnectionState(noCrossfire);
@@ -1822,7 +1845,7 @@ static void updateBindingMode(unsigned long now)
             // if the InitRate config item was changed by LostConnection
             // save the config before entering bind, as the modified config
             // will immediately boot it out of bind mode
-            config.Commit();
+            CommitConfig();
         }
         EnterBindingMode();
     }
@@ -1843,7 +1866,7 @@ void EnterBindingModeSafely()
     {
         // Force 3-plug binding mode
         config.SetPowerOnCounter(3);
-        config.Commit();
+        CommitConfig();
         ESP.restart();
         // Unreachable
     }
@@ -1965,7 +1988,7 @@ static void CheckConfigChangePending()
     if (config.IsModified() && !InBindingMode && connectionState < NO_CONFIG_SAVE_STATES)
     {
         LostConnection(false);
-        uint32_t changes = config.Commit();
+        uint32_t changes = CommitConfig();
         devicesTriggerEvent(changes);
         LbtEnableIfRequired();
         Radio.RXnb();
