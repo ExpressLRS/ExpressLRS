@@ -363,6 +363,35 @@ void test_unapplied_fast_reply_cannot_mark_attempt_successful()
     TEST_ASSERT_EQUAL(0, packet.bytes[6]);
 }
 
+void test_new_fast_final_attempt_cannot_reuse_previous_session_success()
+{
+    SRXL2::Link link;
+    connectFast(link);
+    feed(link, esc, sizeof(esc), 55000); // The first fast session succeeded.
+    uint8_t broadcastReply[sizeof(esc)];
+    std::memcpy(broadcastReply, esc, sizeof(broadcastReply));
+    broadcastReply[3] = 0xFF;
+    updateCrc(broadcastReply, sizeof(broadcastReply));
+    feed(link, broadcastReply, sizeof(broadcastReply), 56000);
+    link.poll(82800);
+    TEST_ASSERT_EQUAL_UINT32(115200, link.baudRate());
+    link.baudApplied(82800);
+    feed(link, hello400, sizeof(hello400), 83000);
+    SRXL2::Packet packet{};
+    TEST_ASSERT_TRUE(link.nextPacket(83174, packet));
+    TEST_ASSERT_EQUAL(1, packet.bytes[6]); // Success permits a second fast attempt.
+    feed(link, announce400, sizeof(announce400), 83200); // The second attempt has not received a fast reply.
+    link.transmitted(84390);
+    link.baudApplied(84390);
+    TEST_ASSERT_FALSE(link.connected());
+    link.poll(134390);
+    TEST_ASSERT_EQUAL_UINT32(115200, link.baudRate());
+    link.baudApplied(134390);
+    feed(link, hello400, sizeof(hello400), 134590);
+    TEST_ASSERT_TRUE(link.nextPacket(134764, packet));
+    TEST_ASSERT_EQUAL(0, packet.bytes[6]);
+}
+
 void test_fast_negotiation_waits_for_final_tx_and_baud_application()
 {
     SRXL2::Link link;
@@ -1276,6 +1305,7 @@ int main()
     RUN_TEST(test_fast_rehandshake_requires_quiet_recovery_and_latches_unsuccessful_attempt);
     RUN_TEST(test_fresh_announcement_during_fast_final_tx_finishes_before_recovery);
     RUN_TEST(test_unapplied_fast_reply_cannot_mark_attempt_successful);
+    RUN_TEST(test_new_fast_final_attempt_cannot_reuse_previous_session_success);
     RUN_TEST(test_fast_negotiation_waits_for_final_tx_and_baud_application);
     RUN_TEST(test_baud_selection_requires_local_support_and_exact_peer_flag);
     RUN_TEST(test_capability_intersection_ignores_invalid_frames_and_cannot_be_raised);

@@ -191,7 +191,7 @@ bool Link::nextPacket(uint32_t now, Packet &p)
         for (unsigned i = 0; i < 4; ++i) p.bytes[8 + i] = uid >> (8 * i);
         requestReply = phase != Broadcast;
         broadcastTx = phase == Broadcast;
-        if (broadcastTx) selectedMask = flag;
+        if (broadcastTx) { selectedMask = flag; fastSuccessful = false; }
         lastHello = now;
         helloPending = false;
     }
