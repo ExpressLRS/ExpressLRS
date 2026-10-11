@@ -5,6 +5,9 @@
 
 // Complete wire fixtures, CRCs independently calculated with Python crc_hqx.
 static const uint8_t hello[] = {0xA6,0x21,0x0E,0x40,0x21,0x0A,0,0,0x11,0x22,0x33,0x44,0xC9,0xE7};
+static const uint8_t hello400[] = {0xA6,0x21,0x0E,0x40,0x21,0x0A,1,0,0x11,0x22,0x33,0x44,0x8C,0x47};
+static const uint8_t announce400[] = {0xA6,0x21,0x0E,0x40,0,0x0A,1,0,0,0,0,1,0x7D,0xEE};
+static const uint8_t broadcast400[] = {0xA6,0x21,0x0E,0x21,0xFF,0x0A,1,3,0x78,0x56,0x34,0x12,0xD4,0xAE};
 static const uint8_t esc[] = {0xA6,0x80,0x16,0x21,0x20,0,0x30,0x39,0x04,0xD2,0x01,0x5E,0x03,0xE8,0,0xFA,0x0F,0x78,0x64,0x64,0x74,0x74};
 static const uint8_t unavailable[] = {0xA6,0x80,0x16,0x21,0x20,0,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0x61,0x9A};
 static const uint8_t battery[] = {0xA6,0x80,0x16,0x21,0x42,0,0,0xF6,0xB8,0x0B,0,0,0x39,0x30,0x01,0x0E,0xD0,0x0E,0,0,0x97,0x9C};
@@ -32,6 +35,146 @@ static void connect(SRXL2::Link &link, uint32_t offset = 0)
 static uint16_t channel(const SRXL2::Packet &packet)
 {
     return packet.bytes[12] | (uint16_t(packet.bytes[13]) << 8);
+}
+
+static void updateCrc(uint8_t *bytes, uint8_t size)
+{
+    const uint16_t crc = SRXL2::crc16(bytes, size - 2);
+    bytes[size - 2] = crc >> 8;
+    bytes[size - 1] = crc;
+}
+
+void test_fast_negotiation_waits_for_final_tx_and_baud_application()
+{
+    SRXL2::Link link;
+    link.reset(0x12345678, 0, false, true);
+    SRXL2::Packet packet{};
+    const uint8_t request400[] = {0xA6,0x21,14,0x21,0x40,10,1,3,0x78,0x56,0x34,0x12,0xB6,0x31};
+    TEST_ASSERT_TRUE(link.nextPacket(50000, packet));
+    TEST_ASSERT_EQUAL_UINT8_ARRAY(request400, packet.bytes, sizeof(request400));
+    link.transmitted(51216);
+    feed(link, hello400, sizeof(hello400), 51400);
+    TEST_ASSERT_TRUE(link.nextPacket(51574, packet));
+    TEST_ASSERT_EQUAL_HEX8(0xFF, packet.bytes[4]);
+    TEST_ASSERT_EQUAL_HEX8(1, packet.bytes[6]);
+    TEST_ASSERT_EQUAL_UINT8_ARRAY(broadcast400, packet.bytes, sizeof(broadcast400));
+    TEST_ASSERT_EQUAL_UINT32(115200, link.baudRate());
+    const uint32_t finalEndUs = 52790;
+    link.transmitted(finalEndUs);
+    TEST_ASSERT_EQUAL_UINT32(400000, link.baudRate());
+    TEST_ASSERT_FALSE(link.connected());
+    link.setControlPermission(true);
+    link.setThrottle(992, finalEndUs + 1000); // An unapplied rate cannot accept the arming neutral.
+    TEST_ASSERT_FALSE(link.nextPacket(finalEndUs + 20000, packet));
+    link.baudApplied(finalEndUs);
+    TEST_ASSERT_TRUE(link.connected());
+    link.setThrottle(1811, finalEndUs + 20000);
+    TEST_ASSERT_TRUE(link.nextPacket(finalEndUs + 20000, packet));
+    TEST_ASSERT_EQUAL_HEX16(0x8000, channel(packet));
+}
+
+void test_baud_selection_requires_local_support_and_exact_peer_flag()
+{
+    for (bool local : {false, true})
+    {
+        for (uint8_t flag : {uint8_t(0), uint8_t(1), uint8_t(2), uint8_t(0x81)})
+        {
+            SRXL2::Link link;
+            link.reset(0x12345678, 0, false, local);
+            uint8_t reply[sizeof(hello)];
+            std::memcpy(reply, hello, sizeof(reply));
+            reply[6] = flag;
+            updateCrc(reply, sizeof(reply));
+            feed(link, reply, sizeof(reply), 31400);
+            SRXL2::Packet packet{};
+            TEST_ASSERT_TRUE(link.nextPacket(31600, packet));
+            const uint8_t expected = local && flag == 1 ? 1 : 0;
+            TEST_ASSERT_EQUAL(expected, link.commonBaudMask());
+            TEST_ASSERT_EQUAL(expected, packet.bytes[6]);
+            link.transmitted(32800);
+            TEST_ASSERT_EQUAL_UINT32(expected ? 400000 : 115200, link.baudRate());
+            TEST_ASSERT_EQUAL(!expected, link.connected());
+        }
+    }
+}
+
+void test_capability_intersection_ignores_invalid_frames_and_cannot_be_raised()
+{
+    for (unsigned invalid = 0; invalid < 4; ++invalid)
+    {
+        SRXL2::Link link;
+        link.reset(0x12345678, 0, false, true);
+        feed(link, hello400, sizeof(hello400), 31000);
+        uint8_t bad[sizeof(hello)];
+        std::memcpy(bad, hello, sizeof(bad));
+        if (invalid == 0) bad[13] ^= 1;
+        else if (invalid == 1) { bad[2] = 13; updateCrc(bad, 13); }
+        else { bad[invalid == 2 ? 3 : 4] = 0x22; updateCrc(bad, sizeof(bad)); }
+        feed(link, bad, sizeof(bad), 31100);
+        TEST_ASSERT_EQUAL(1, link.commonBaudMask());
+        SRXL2::Packet packet{};
+        TEST_ASSERT_TRUE(link.nextPacket(34000, packet));
+        TEST_ASSERT_EQUAL(1, packet.bytes[6]);
+    }
+    SRXL2::Link link;
+    link.reset(0x12345678, 0, false, true);
+    feed(link, hello400, sizeof(hello400), 31000);
+    feed(link, hello, sizeof(hello), 31100);
+    feed(link, hello400, sizeof(hello400), 31200);
+    TEST_ASSERT_EQUAL(0, link.commonBaudMask());
+    SRXL2::Packet packet{};
+    TEST_ASSERT_TRUE(link.nextPacket(31400, packet));
+    TEST_ASSERT_EQUAL(0, packet.bytes[6]);
+    link.transmitted(32616);
+    TEST_ASSERT_EQUAL_UINT32(115200, link.baudRate());
+    TEST_ASSERT_TRUE(link.connected());
+}
+
+void test_fast_final_selection_is_frozen_against_buffered_duplicate()
+{
+    SRXL2::Link link;
+    link.reset(0x12345678, 0, false, true);
+    feed(link, hello400, sizeof(hello400), 31400);
+    SRXL2::Packet packet{};
+    TEST_ASSERT_TRUE(link.nextPacket(31600, packet));
+    feed(link, hello, sizeof(hello), 31700);
+    TEST_ASSERT_EQUAL_UINT32(115200, link.baudRate());
+    TEST_ASSERT_FALSE(link.nextPacket(32000, packet));
+    link.transmitted(32800);
+    TEST_ASSERT_EQUAL_UINT32(400000, link.baudRate());
+    link.baudApplied(32800);
+    TEST_ASSERT_TRUE(link.connected());
+}
+
+void test_fast_announcement_capability_survives_ack_and_startup_handoff()
+{
+    for (bool duplicate : {false, true})
+    {
+        SRXL2::Link early;
+        early.reset(0x12345678, 0, true, true);
+        feed(early, announce400, sizeof(announce400), 31400);
+        SRXL2::Packet packet{};
+        TEST_ASSERT_TRUE(early.nextPacket(31600, packet));
+        TEST_ASSERT_EQUAL(0x40, packet.bytes[4]);
+        TEST_ASSERT_EQUAL(1, packet.bytes[6]);
+        early.transmitted(32800);
+        if (duplicate) feed(early, hello400, sizeof(hello400), 33000);
+        TEST_ASSERT_FALSE(early.nextPacket(53000, packet));
+        SRXL2::Link running;
+        running.reset(0x12345678, 33000, false, true);
+        running.finishStartupDiscovery(early.commonBaudMask());
+        TEST_ASSERT_TRUE(running.nextPacket(33200, packet));
+        TEST_ASSERT_EQUAL_UINT8_ARRAY(broadcast400, packet.bytes, sizeof(broadcast400));
+    }
+    for (uint8_t mask : {uint8_t(0), uint8_t(2), uint8_t(0x81)})
+    {
+        SRXL2::Link link;
+        link.reset(0x12345678, 0, false, true);
+        link.finishStartupDiscovery(mask);
+        SRXL2::Packet packet{};
+        TEST_ASSERT_TRUE(link.nextPacket(200, packet));
+        TEST_ASSERT_EQUAL(0, packet.bytes[6]);
+    }
 }
 
 void test_crc_and_nominal_throttle()
@@ -805,6 +948,11 @@ void test_expired_optional_measurements_do_not_revive_after_full_wrap()
 int main()
 {
     UNITY_BEGIN();
+    RUN_TEST(test_fast_negotiation_waits_for_final_tx_and_baud_application);
+    RUN_TEST(test_baud_selection_requires_local_support_and_exact_peer_flag);
+    RUN_TEST(test_capability_intersection_ignores_invalid_frames_and_cannot_be_raised);
+    RUN_TEST(test_fast_final_selection_is_frozen_against_buffered_duplicate);
+    RUN_TEST(test_fast_announcement_capability_survives_ack_and_startup_handoff);
     RUN_TEST(test_crc_and_nominal_throttle);
     RUN_TEST(test_handshake_vectors_and_tx_ownership);
     RUN_TEST(test_captured_firma_announcements_finalize_discovery_at_115200);

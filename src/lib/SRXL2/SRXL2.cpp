@@ -44,16 +44,32 @@ static void finish(Packet &p)
     p.bytes[p.length - 1] = crc;
 }
 
-void Link::reset(uint32_t deviceUid, uint32_t now, bool acknowledgeOnly)
+void Link::reset(uint32_t deviceUid, uint32_t now, bool acknowledgeOnly, bool supports400k)
 {
     *this = Link();
     uid = deviceUid;
     startupAckOnly = acknowledgeOnly;
+    localMask = commonMask = supports400k ? 1 : 0;
     started = lastHello = lastBus = now;
+}
+
+void Link::finishStartupDiscovery(uint8_t mask)
+{
+    commonMask &= mask == 1 ? 1 : 0;
+    phase = Broadcast;
+}
+
+void Link::baudApplied(uint32_t now)
+{
+    if (requestedBaud == appliedBaud) return;
+    appliedBaud = requestedBaud;
+    inputSize = 0;
+    lastBus = now;
 }
 
 void Link::restart(uint32_t now)
 {
+    if (phase == Active) commonMask = localMask;
     phase = Discover;
     released = hasSample = waitingReply = cellCountKnown = monitorReplies = false;
     data = {};
@@ -74,7 +90,7 @@ void Link::setControlPermission(bool allowed)
 
 void Link::setThrottle(uint16_t value, uint32_t now)
 {
-    if (!permitted || phase != Active) return;
+    if (!permitted || !connected()) return;
     if (hasSample && uint32_t(now - lastSample) >= SAMPLE_US)
     {
         released = monitorReplies = false;
@@ -92,7 +108,7 @@ void Link::setThrottle(uint16_t value, uint32_t now)
     else throttle = released ? encodeThrottle(value) : 0x8000;
 }
 
-bool Link::connected() const { return phase == Active; }
+bool Link::connected() const { return phase == Active && requestedBaud == appliedBaud; }
 
 void Link::missedFrame()
 {
@@ -102,6 +118,7 @@ void Link::missedFrame()
 
 bool Link::nextPacket(uint32_t now, Packet &p)
 {
+    if (requestedBaud != appliedBaud) return false;
     const bool sampleExpired = hasSample && uint32_t(now - lastSample) >= SAMPLE_US;
     if (sampleExpired) monitorReplies = false;
     const bool peerExpired = phase == Active && monitorReplies && uint32_t(now - lastReply) >= STALE_US;
@@ -129,11 +146,13 @@ bool Link::nextPacket(uint32_t now, Packet &p)
         if (phase == Discover && !helloPending &&
             (uint32_t(now - started) < DISCOVERY_US || uint32_t(now - lastHello) < DISCOVERY_US)) return false;
         p.length = 14;
-        const uint8_t header[] = {0xA6,0x21,14,0x21, uint8_t(phase == Broadcast ? 0xFF : 0x40),10,0,3};
+        const uint8_t flag = phase == Discover ? localMask : commonMask;
+        const uint8_t header[] = {0xA6,0x21,14,0x21, uint8_t(phase == Broadcast ? 0xFF : 0x40),10,flag,3};
         std::memcpy(p.bytes, header, sizeof(header));
         for (unsigned i = 0; i < 4; ++i) p.bytes[8 + i] = uid >> (8 * i);
         requestReply = phase != Broadcast;
         broadcastTx = phase == Broadcast;
+        if (broadcastTx) selectedMask = flag;
         lastHello = now;
         helloPending = false;
     }
@@ -180,6 +199,7 @@ void Link::transmitted(uint32_t now)
     if (phase == Acknowledge) phase = Broadcast;
     if (broadcastTx)
     {
+        requestedBaud = selectedMask ? 400000 : 115200;
         phase = Active;
         controlPending = true;
         fadePending = false;
@@ -224,11 +244,14 @@ void Link::processFrame(uint32_t now)
         if (startupAckOnly && input[4] != 0) return;
         if (input[4] == 0 || input[4] == 0x21)
         {
+            // Buffered duplicates cannot revise a final packet already owned by TX.
+            if (broadcastTx && txBusy) return;
             // Match Spektrum's startup master: acknowledge before the final broadcast.
             // Discovery data is already known, so a duplicate reply is optional.
             const bool acknowledge = input[4] == 0 && (startupAckOnly || phase == Discover || phase == Acknowledge);
             const bool keepWaiting = input[4] == 0 && phase == Broadcast && waitingReply;
             restart(now);
+            commonMask &= input[6] == 1 ? 1 : 0;
             phase = acknowledge ? Acknowledge : Broadcast;
             waitingReply = keepWaiting;
             lastReply = now;

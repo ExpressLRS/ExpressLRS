@@ -17,7 +17,7 @@ uint16_t encodeThrottle(uint16_t value);
 class Link
 {
 public:
-    void reset(uint32_t uid, uint32_t nowUs, bool startupAckOnly = false);
+    void reset(uint32_t uid, uint32_t nowUs, bool startupAckOnly = false, bool supports400k = false);
     void setControlPermission(bool permitted);
     void setThrottle(uint16_t crsfValue, uint32_t nowUs);
     void missedFrame();
@@ -26,7 +26,10 @@ public:
     void transmitted(uint32_t nowUs);
     bool connected() const;
     // Continue discovery when the startup transport already acknowledged a validated ESC.
-    void finishStartupDiscovery() { phase = Broadcast; }
+    void finishStartupDiscovery(uint8_t commonBaudMask = 0);
+    uint8_t commonBaudMask() const { return commonMask; }
+    uint32_t baudRate() const { return requestedBaud; }
+    void baudApplied(uint32_t nowUs);
     Telemetry telemetry(uint32_t nowUs) const;
 private:
     enum Phase { Discover, Acknowledge, Broadcast, Active };
@@ -40,6 +43,8 @@ private:
     bool monitorReplies = false;
     bool urgentControl = false;
     bool broadcastTx = false, cellCountKnown = false, controlPending = false, fadePending = false;
+    uint8_t localMask = 0, commonMask = 0, selectedMask = 0;
+    uint32_t requestedBaud = 115200, appliedBaud = 115200;
     uint8_t input[80] = {}, inputSize = 0;
     mutable Telemetry data{}; // expiry is cached; a counter wrap must not revive it
     void restart(uint32_t nowUs);
