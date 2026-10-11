@@ -1,6 +1,7 @@
 #include "targets.h"
 #include "common.h"
 #include "devLED.h"
+#include "devWIFI.h"
 
 #if defined(TARGET_TX)
 #include "POWERMGNT.h"
@@ -126,7 +127,7 @@ static int event()
             return flashLED(GPIO_PIN_LED_RED, GPIO_LED_RED_INVERTED, LEDSEQ_BINDING, sizeof(LEDSEQ_BINDING));
         }
     #endif
-    switch (connectionState)
+    switch (wifiModeActive && connectionState < FAILURE_STATES ? wifiUpdate : connectionState)
     {
     case connected:
         if (hasRGBLeds)
