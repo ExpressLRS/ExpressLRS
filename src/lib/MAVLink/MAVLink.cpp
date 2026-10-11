@@ -227,7 +227,7 @@ void convert_mavlink_to_crsf_telem(crsf_addr_e destination, uint8_t *CRSFinBuffe
                     crsffm.p.flight_mode[len + 1] = '\0';
                     len++;
                 }
-                crsfRouter.SetHeaderAndCrc((crsf_header_t *)&crsffm, CRSF_FRAMETYPE_FLIGHT_MODE, CRSF_FRAME_SIZE(sizeof(len+1)));
+                crsfRouter.SetHeaderAndCrc((crsf_header_t *)&crsffm, CRSF_FRAMETYPE_FLIGHT_MODE, CRSF_FRAME_SIZE(len + 1));
                 crsfRouter.deliverMessageTo(destination, &crsffm.h);
 
                 /**
