@@ -22,6 +22,7 @@
 #include "rx-serial/SerialSUMD.h"
 #include "rx-serial/SerialAirPort.h"
 #include "rx-serial/SerialHoTT_TLM.h"
+#include "rx-serial/SerialSRXL2.h"
 #include "rx-serial/SerialScorpion_TLM.h"
 #include "rx-serial/SerialMavlink.h"
 #include "rx-serial/SerialTramp.h"
@@ -844,6 +845,9 @@ void ICACHE_RAM_ATTR TentativeConnection(unsigned long now)
     PFDloop.reset();
     setConnectionState(tentative);
     connectionHasModelMatch = false;
+#if defined(PLATFORM_ESP32)
+    SerialSRXL2::onRFReset();
+#endif
     ChannelDataReset();
     OtaResetChannelDataComplete();
     RXtimerState = tim_disconnected;
@@ -1274,6 +1278,35 @@ static void setupSerial()
 	bool sumdSerialOutput = false;
     bool mavlinkSerialOutput = false;
     bool hottTlmSerial = false;
+    const bool smartSerial = isSRXL2Selected(0, config.GetSerialProtocol(), 0, firmwareOptions.is_airport);
+
+    if (smartSerial && (!supportsSRXL2()
+#if defined(PLATFORM_ESP32)
+        || !isValidSRXL2Pin(0, config.GetSerialProtocol(), config.GetSerial1Protocol(), firmwareOptions.is_airport,
+            [](uint8_t ch) { return config.GetPwmChannel(ch)->val.mode; })
+#endif
+        ))
+    {
+        serialIO = new SerialNOOP();
+        BackpackOrLogStrm = new NullStream();
+        return;
+    }
+
+#if defined(PLATFORM_ESP32)
+    // SRXL2 owns UART startup so the stock Serial.begin must not drive its shared wire.
+    if (smartSerial)
+    {
+#if defined(ARDUINO_CORE_INVERT_FIX)
+        uart_set_line_inverse(0, UART_SIGNAL_INV_DISABLE);
+#endif
+        serialBaud = 115200;
+        int8_t rxPin, txPin;
+        resolvePrimarySerialPins(rxPin, txPin, !OPT_CRSF_RCVR_NO_SERIAL);
+        serialIO = new SerialSRXL2(&SERIAL_PROTOCOL_TX, &SERIAL_PROTOCOL_RX, txPin, 0);
+        BackpackOrLogStrm = new NullStream();
+        return;
+    }
+#endif
 
     if (OPT_CRSF_RCVR_NO_SERIAL)
     {
@@ -1458,6 +1491,8 @@ static void setupSerial1()
         }
     }
 
+    const auto modeAt = [](uint8_t ch) { return config.GetPwmChannel(ch)->val.mode; };
+
     switch(config.GetSerial1Protocol())
     {
         case PROTOCOL_SERIAL1_OFF:
@@ -1511,6 +1546,11 @@ static void setupSerial1()
         case PROTOCOL_SERIAL1_SCORPION_TLM:
             Serial1.begin(38400, SERIAL_8N1, serial1RXpin, serial1TXpin, false);
             serial1IO = new SerialScorpion_TLM(SERIAL1_PROTOCOL_TX, SERIAL1_PROTOCOL_RX);
+            break;
+        case PROTOCOL_SERIAL1_SRXL2:
+            if (!isSRXL2Selected(0, config.GetSerialProtocol(), config.GetSerial1Protocol(), firmwareOptions.is_airport) &&
+                isValidSRXL2Pin(1, config.GetSerialProtocol(), config.GetSerial1Protocol(), firmwareOptions.is_airport, modeAt))
+                serial1IO = new SerialSRXL2(&SERIAL1_PROTOCOL_TX, &SERIAL1_PROTOCOL_RX, serial1TXpin, 1);
             break;
     }
 }

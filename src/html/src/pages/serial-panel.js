@@ -4,6 +4,7 @@ import {_renderOptions} from "../utils/libs.js"
 import {elrsState, saveOptionsAndConfig} from "../utils/state.js"
 import {PWM_MODE_SERIAL, PWM_MODE_SERIAL2RX, PWM_MODE_SERIAL2TX} from "./connections-panel.js"
 import {SERIAL_OPTIONS1, SERIAL_OPTIONS2} from "../utils/globals.js"
+import {showAlert} from "../utils/feedback.js"
 
 @customElement('serial-panel')
 class SerialPanel extends LitElement {
@@ -132,6 +133,7 @@ class SerialPanel extends LitElement {
     }
 
     _hasSerial2() {
+        if (elrsState.settings.has_serial1_pins) return true
         if (!elrsState.config['pwm']) {
             return elrsState.config['serial1-protocol'] !== undefined
         }
@@ -189,6 +191,10 @@ class SerialPanel extends LitElement {
 
     _saveSerial(e) {
         e.preventDefault()
+        if (!this.isAirport && this.serial1Protocol === 11 && this.serial2Protocol === 13) {
+            showAlert('error', 'Serial Protocol', 'Use SRXL2 on only one serial port.')
+            return
+        }
         saveOptionsAndConfig({
                 options: {
                     'is-airport': this.isAirport,
