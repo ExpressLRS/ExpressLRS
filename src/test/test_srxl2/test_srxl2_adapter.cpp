@@ -1141,7 +1141,7 @@ void test_early_fast_capability_survives_handoff_without_duplicate_reply()
 {
     for (uint8_t port : {0, 1})
     {
-      for (bool slowDuplicate : {false, true})
+      for (uint8_t downgrade : {0, 1, 2})
       {
         selectSmartPort(port);
         nowUs = 50000;
@@ -1149,7 +1149,8 @@ void test_early_fast_capability_survives_handoff_without_duplicate_reply()
         BinaryStringStream bootRx(bootIn);
         StartupTxStream bootTx(bootOut);
         startupInput = &bootIn;
-        startupReply = slowDuplicate ? std::string(reinterpret_cast<const char *>(announceSlow), sizeof(announceSlow)) : std::string();
+        startupReply = downgrade == 1 ? std::string(reinterpret_cast<const char *>(announceSlow), sizeof(announceSlow)) :
+            downgrade == 2 ? std::string(reinterpret_cast<const char *>(hello), sizeof(hello)) : std::string();
         const int8_t signal = port ? 14 : 3;
         listenForEarlyESC(bootRx, bootTx, 0x12345678, startupState, port, signal);
         TEST_ASSERT_EQUAL(14, bootOut.size());
@@ -1162,9 +1163,9 @@ void test_early_fast_capability_survives_handoff_without_duplicate_reply()
         send(driver, 201000);
         TEST_ASSERT_EQUAL(14, out.size());
         TEST_ASSERT_EQUAL_HEX8(0xFF, uint8_t(out[4]));
-        TEST_ASSERT_EQUAL(slowDuplicate ? 0 : 1, uint8_t(out[6]));
+        TEST_ASSERT_EQUAL(downgrade ? 0 : 1, uint8_t(out[6]));
         send(driver, 202216);
-        TEST_ASSERT_EQUAL(slowDuplicate ? 115200 : 400000, (port ? uartStartup1 : uartStartup).baud);
+        TEST_ASSERT_EQUAL(downgrade ? 115200 : 400000, (port ? uartStartup1 : uartStartup).baud);
       }
     }
 }
@@ -1238,8 +1239,77 @@ void test_fast_adapter_recovers_with_inhibition_noise_and_zero_budget()
     }
 }
 
+void test_master_recreation_starts_slow_and_requires_new_neutral()
+{
+    for (uint8_t port : {0, 1})
+    {
+        selectSmartPort(port);
+        connectionState = connected;
+        connectionHasModelMatch = teamraceHasModelMatch = true;
+        uint32_t channels[16] = {};
+        channels[2] = 992;
+        std::string firstIn, firstOut;
+        BinaryStringStream firstRx(firstIn), firstTx(firstOut);
+        auto &uart = port ? uartStartup1 : uartStartup;
+        const int8_t signal = port ? 14 : 3;
+        {
+            SerialSRXL2 driver(&firstTx, &firstRx, signal, port);
+            input(driver, firstIn, hello400, sizeof(hello400), 1400);
+            send(driver, 1600);
+            send(driver, 2816);
+            nowUs = 3000;
+            deliver(driver, true, channels);
+            nowUs = 3200;
+            deliver(driver, true, channels);
+            channels[2] = 1811;
+            nowUs = 5000;
+            deliver(driver, true, channels);
+            send(driver, 23000);
+            TEST_ASSERT_EQUAL_HEX8(0x54, uint8_t(firstOut[firstOut.size() - 4]));
+            TEST_ASSERT_EQUAL_HEX8(0xD5, uint8_t(firstOut[firstOut.size() - 3]));
+            send(driver, 23400);
+        }
+        nowUs = 30000;
+        std::string in, out;
+        BinaryStringStream rx(in), tx(out);
+        SerialSRXL2 replacement(&tx, &rx, signal, port);
+        TEST_ASSERT_EQUAL(115200, uart.baud);
+        send(replacement, 50000);
+        TEST_ASSERT_TRUE(out.empty()); // Peer is still at 400k; fresh startup has no evidence.
+        // Simulate the peer returning to 115200 after 50 ms without the old master.
+        input(replacement, in, announce400, sizeof(announce400), 73400);
+        send(replacement, 73574);
+        TEST_ASSERT_EQUAL(14, out.size());
+        TEST_ASSERT_EQUAL_HEX8(0x40, uint8_t(out[4]));
+        TEST_ASSERT_EQUAL(115200, uart.baud);
+        send(replacement, 74790);
+        input(replacement, in, hello400, sizeof(hello400), 74964);
+        send(replacement, 75138);
+        send(replacement, 76354);
+        TEST_ASSERT_EQUAL(400000, uart.baud);
+        nowUs = 78000;
+        deliver(replacement, true, channels);
+        nowUs = 78100;
+        deliver(replacement, true, channels);
+        send(replacement, 96354);
+        assert_neutral(out, 0); // The previous driver's neutral release was not inherited.
+        send(replacement, 96754);
+        input(replacement, in, esc, sizeof(esc), 96928);
+        channels[2] = 992;
+        nowUs = 98000;
+        deliver(replacement, true, channels);
+        channels[2] = 1811;
+        nowUs = 100000;
+        deliver(replacement, true, channels);
+        send(replacement, 116354);
+        TEST_ASSERT_EQUAL_HEX8(0x54, uint8_t(out[out.size() - 4]));
+        TEST_ASSERT_EQUAL_HEX8(0xD5, uint8_t(out[out.size() - 3]));
+    }
+}
+
 void run_adapter_tests()
 {
+    RUN_TEST(test_master_recreation_starts_slow_and_requires_new_neutral);
     RUN_TEST(test_fast_adapter_changes_rate_after_final_stop_bit_on_either_port);
     RUN_TEST(test_default_adapter_does_not_change_rate_or_flush_immediate_reply);
     RUN_TEST(test_early_fast_capability_survives_handoff_without_duplicate_reply);
