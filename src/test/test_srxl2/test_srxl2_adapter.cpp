@@ -28,6 +28,13 @@ static struct { bool is_airport = false; } firmwareOptions;
 static uint32_t nowUs;
 static unsigned long testMicros() { return nowUs; }
 static bool busDriving, txDrained, releasedBeforeDrain;
+static uint32_t txBaud = 115200;
+static bool unsafeBaudChange;
+static void changeTxBaud(uint32_t rate)
+{
+    unsafeBaudChange |= busDriving || !txDrained;
+    txBaud = rate;
+}
 static bool autoTxDone = true;
 static bool replyBlocked;
 static UartStartupSpy uartStartup;
@@ -88,6 +95,7 @@ static void releaseBusTransmit()
 #define SRXL2_BEGIN_TX() startBusTransmit()
 #define SRXL2_POLL_TX_IRQ() do { if (autoTxDone) drainBusTransmit(); } while (0)
 #define SRXL2_RELEASE_TX() releaseBusTransmit()
+#define SRXL2_SET_TX_BAUD(rate) changeTxBaud(rate)
 #define micros testMicros
 #define Serial uartStartup
 #define Serial1 uartStartup1
@@ -115,6 +123,7 @@ public:
 
 void setUp()
 {
+    srxl2Owner = nullptr; // Unity aborts a failing assertion without C++ stack unwinding.
     startupState = SRXL2StartupState();
     nowUs = 0;
     connectionState = connected;
@@ -129,6 +138,8 @@ void setUp()
     firmwareOptions.is_airport = false;
     irqAllocationSucceeds = true;
     busDriving = txDrained = releasedBeforeDrain = false;
+    txBaud = 115200;
+    unsafeBaudChange = false;
     autoTxDone = true;
     replyBlocked = false;
     uartStartup = UartStartupSpy();
@@ -1038,8 +1049,203 @@ void test_failed_receive_startup_is_inert_and_preserves_handoff_for_replacement(
     }
 }
 
+static const uint8_t hello400[] = {0xA6,0x21,14,0x40,0x21,10,1,0,0x11,0x22,0x33,0x44,0x8C,0x47};
+static const uint8_t announce400[] = {0xA6,0x21,14,0x40,0,10,1,0,0x11,0x22,0x33,0x44,0xB0,0xFC};
+static const uint8_t announceSlow[] = {0xA6,0x21,14,0x40,0,10,0,0,0x11,0x22,0x33,0x44,0xF5,0x5C};
+
+static void selectSmartPort(uint8_t port)
+{
+    config.primary = port ? PROTOCOL_CRSF : PROTOCOL_SRXL2;
+    config.secondary = port ? PROTOCOL_SERIAL1_SRXL2 : PROTOCOL_SERIAL1_OFF;
+    uartStartup = uartStartup1 = UartStartupSpy();
+    startupState = SRXL2StartupState();
+    nowUs = 0;
+    txBaud = 115200;
+    unsafeBaudChange = false;
+}
+
+void test_fast_adapter_changes_rate_after_final_stop_bit_on_either_port()
+{
+    for (uint8_t port : {0, 1})
+    {
+        selectSmartPort(port);
+        std::string in, out;
+        BinaryStringStream rx(in), tx(out);
+        SerialSRXL2 driver(&tx, &rx, port ? 14 : 3, port);
+        auto &uart = port ? uartStartup1 : uartStartup;
+        auto &other = port ? uartStartup : uartStartup1;
+        input(driver, in, hello400, sizeof(hello400), 1400);
+        autoTxDone = false;
+        send(driver, 1600);
+        TEST_ASSERT_EQUAL(14, out.size());
+        TEST_ASSERT_EQUAL_HEX8(0xFF, uint8_t(out[4]));
+        TEST_ASSERT_EQUAL_HEX8(1, uint8_t(out[6]));
+        send(driver, 2800);
+        TEST_ASSERT_EQUAL(115200, uart.baud);
+        TEST_ASSERT_EQUAL(0, uart.updates);
+        nowUs = 2816;
+        drainBusTransmit();
+        TEST_ASSERT_FALSE(busDriving);
+        TEST_ASSERT_EQUAL(115200, uart.baud); // ISR only releases; task applies the rate.
+        in.append(out); // Complete old-rate echo, already buffered before the callback.
+        in.append(reinterpret_cast<const char *>(esc), sizeof(esc));
+        nowUs = 7000;
+        driver.processSerialInput();
+        TEST_ASSERT_EQUAL(400000, uart.baud);
+        TEST_ASSERT_EQUAL(400000, txBaud);
+        TEST_ASSERT_EQUAL(1, uart.updates);
+        TEST_ASSERT_EQUAL(0, other.updates);
+        TEST_ASSERT_FALSE(unsafeBaudChange);
+        TEST_ASSERT_EQUAL(1, uart.begins);
+        TEST_ASSERT_EQUAL(0, uart.ends);
+        TEST_ASSERT_EQUAL(0, rx.available());
+        autoTxDone = true;
+        send(driver, 30000);
+        TEST_ASSERT_EQUAL(30, out.size());
+        TEST_ASSERT_EQUAL_HEX8(0x40, uint8_t(out[18])); // Safe fast-mode health poll.
+        assert_neutral(out);
+        immediateReplyInput = &in;
+        immediateReply.assign(reinterpret_cast<const char *>(esc), sizeof(esc));
+        send(driver, 30400);
+        immediateReplyInput = nullptr;
+        driver.processSerialInput(); // A genuine same-rate immediate reply must survive.
+        TEST_ASSERT_EQUAL(1, uart.updates);
+        TEST_ASSERT_FALSE(replyBlocked);
+    }
+}
+
+void test_default_adapter_does_not_change_rate_or_flush_immediate_reply()
+{
+    for (uint8_t port : {0, 1})
+    {
+        selectSmartPort(port);
+        std::string in, out;
+        BinaryStringStream rx(in), tx(out);
+        SerialSRXL2 driver(&tx, &rx, port ? 14 : 3, port);
+        input(driver, in, hello, sizeof(hello), 1400);
+        send(driver, 1600);
+        immediateReplyInput = &in;
+        immediateReply.assign(reinterpret_cast<const char *>(hello), sizeof(hello));
+        send(driver, 2816);
+        immediateReplyInput = nullptr;
+        driver.processSerialInput();
+        TEST_ASSERT_EQUAL(115200, (port ? uartStartup1 : uartStartup).baud);
+        TEST_ASSERT_EQUAL(0, uartStartup.updates + uartStartup1.updates);
+        send(driver, 3000);
+        TEST_ASSERT_EQUAL(28, out.size()); // Preserved default-rate re-finalization.
+        TEST_ASSERT_EQUAL_HEX8(0, uint8_t(out[20]));
+    }
+}
+
+void test_early_fast_capability_survives_handoff_without_duplicate_reply()
+{
+    for (uint8_t port : {0, 1})
+    {
+      for (bool slowDuplicate : {false, true})
+      {
+        selectSmartPort(port);
+        nowUs = 50000;
+        std::string bootIn(reinterpret_cast<const char *>(announce400), sizeof(announce400)), bootOut;
+        BinaryStringStream bootRx(bootIn);
+        StartupTxStream bootTx(bootOut);
+        startupInput = &bootIn;
+        startupReply = slowDuplicate ? std::string(reinterpret_cast<const char *>(announceSlow), sizeof(announceSlow)) : std::string();
+        const int8_t signal = port ? 14 : 3;
+        listenForEarlyESC(bootRx, bootTx, 0x12345678, startupState, port, signal);
+        TEST_ASSERT_EQUAL(14, bootOut.size());
+        TEST_ASSERT_EQUAL_HEX8(1, uint8_t(bootOut[6]));
+        startupInput = nullptr;
+        nowUs = 200000;
+        std::string in, out;
+        BinaryStringStream rx(in), tx(out);
+        SerialSRXL2 driver(&tx, &rx, signal, port);
+        send(driver, 201000);
+        TEST_ASSERT_EQUAL(14, out.size());
+        TEST_ASSERT_EQUAL_HEX8(0xFF, uint8_t(out[4]));
+        TEST_ASSERT_EQUAL(slowDuplicate ? 0 : 1, uint8_t(out[6]));
+        send(driver, 202216);
+        TEST_ASSERT_EQUAL(slowDuplicate ? 115200 : 400000, (port ? uartStartup1 : uartStartup).baud);
+      }
+    }
+}
+
+void test_buffered_fast_reply_is_consumed_before_health_timeout()
+{
+    selectSmartPort(0);
+    std::string in, out;
+    BinaryStringStream rx(in), tx(out);
+    SerialSRXL2 driver(&tx, &rx, 3);
+    input(driver, in, hello400, sizeof(hello400), 1400);
+    send(driver, 1600);
+    send(driver, 2816);
+    input(driver, in, esc, sizeof(esc), 2002816);
+    send(driver, 2052816);
+    TEST_ASSERT_EQUAL(400000, uartStartup.baud);
+    TEST_ASSERT_EQUAL(1, uartStartup.updates);
+}
+
+void test_fast_adapter_recovers_with_inhibition_noise_and_zero_budget()
+{
+    for (uint8_t port : {0, 1})
+    {
+      for (unsigned reason = 0; reason < 6; ++reason)
+      {
+        selectSmartPort(port);
+        autoTxDone = true;
+        connectionState = connected;
+        connectionHasModelMatch = teamraceHasModelMatch = true;
+        ChannelData[2] = 992;
+        std::string in, out;
+        BinaryStringStream rx(in), tx(out);
+        SerialSRXL2 driver(&tx, &rx, port ? 14 : 3, port);
+        input(driver, in, hello400, sizeof(hello400), 1400);
+        send(driver, 1600);
+        send(driver, 2816);
+        TEST_ASSERT_EQUAL(400000, (port ? uartStartup1 : uartStartup).baud);
+        input(driver, in, esc, sizeof(esc), 55000);
+        if (reason == 0) connectionState = disconnected;
+        if (reason == 1) connectionHasModelMatch = false;
+        if (reason == 2) teamraceHasModelMatch = false;
+        if (reason == 3) ChannelData[2] = CRSF_CHANNEL_VALUE_UNSET;
+        if (reason == 4) driver.setFailsafe(true);
+        if (reason == 5) SerialSRXL2::onRFReset();
+        send(driver, 2040000);
+        assert_neutral(out);
+        send(driver, 2040400);
+        const size_t sent = out.size();
+        const uint8_t fragment[] = {0xA6,0x80,22};
+        input(driver, in, fragment, sizeof(fragment), 2054900);
+        in.append("noise");
+        uartReceiving = secondaryReceiving = true;
+        nowUs = 2055000;
+        driver.sendQueuedData(0);
+        TEST_ASSERT_EQUAL(400000, (port ? uartStartup1 : uartStartup).baud);
+        nowUs = 2090400;
+        driver.sendQueuedData(0);
+        TEST_ASSERT_EQUAL(115200, (port ? uartStartup1 : uartStartup).baud);
+        TEST_ASSERT_EQUAL(sent, out.size());
+        TEST_ASSERT_EQUAL(0, rx.available());
+        TEST_ASSERT_FALSE(busDriving);
+        uartReceiving = secondaryReceiving = false;
+        input(driver, in, hello400, sizeof(hello400), 2090600);
+        send(driver, 2090800);
+        TEST_ASSERT_EQUAL_HEX8(0xFF, uint8_t(out[out.size() - 10]));
+        TEST_ASSERT_EQUAL_HEX8(0, uint8_t(out[out.size() - 8])); // Failed fast mode remains disabled.
+        send(driver, 2092016);
+        connectionState = connected;
+        connectionHasModelMatch = teamraceHasModelMatch = true;
+      }
+    }
+}
+
 void run_adapter_tests()
 {
+    RUN_TEST(test_fast_adapter_changes_rate_after_final_stop_bit_on_either_port);
+    RUN_TEST(test_default_adapter_does_not_change_rate_or_flush_immediate_reply);
+    RUN_TEST(test_early_fast_capability_survives_handoff_without_duplicate_reply);
+    RUN_TEST(test_fast_adapter_recovers_with_inhibition_noise_and_zero_budget);
+    RUN_TEST(test_buffered_fast_reply_is_consumed_before_health_timeout);
+
     UnitySetTestFile(__FILE__);
     RUN_TEST(test_smart_startup_attaches_receive_without_driving_the_signal_pin);
     RUN_TEST(test_early_startup_ack_handles_a_fresh_announcement_and_releases_the_wire);

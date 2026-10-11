@@ -33,9 +33,11 @@ private:
     uint32_t lastPublished = 0;
     uint8_t nextSensor = 0;
     uint32_t generation = 0, lastHardwareReceive = 0;
+    uint32_t appliedBaud = 115200;
     bool controlAllowed() const;
     void synchronizeGeneration();
     void completeTransmission(uint32_t now);
+    void synchronizeBaud(uint32_t now);
     static void onTxDone(void *argument);
     void publishTelemetry(uint32_t now);
 };

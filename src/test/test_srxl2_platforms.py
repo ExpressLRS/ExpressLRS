@@ -10,6 +10,84 @@ import re
 ROOT = Path(__file__).resolve().parents[2]
 
 
+def check_baud_changes(compiler, environment, directory):
+    source = (ROOT / "src/src/rx-serial/SerialSRXL2.cpp").read_text()
+    change = re.search(r'void SerialSRXL2::synchronizeBaud\(uint32_t now\)\s*\{.*?^\}', source, re.M | re.S)
+    assert change, "The adapter must apply protocol-requested baud changes"
+    boundary = r'''
+#include <cassert>
+#include <cstdint>
+struct Uart {
+    uint32_t baud = 115200;
+    unsigned updates = 0;
+    void updateBaudRate(unsigned long rate) { baud = rate; ++updates; }
+} Serial, Serial1;
+struct Link {
+    uint32_t rate = 115200, confirmedAt = 0;
+    unsigned confirms = 0;
+    uint32_t baudRate() const { return rate; }
+    void baudApplied(uint32_t now) { confirmedAt = now; ++confirms; }
+};
+uint32_t txRates[3] = {115200, 115200, 115200};
+unsigned txUpdates = 0, flushes[2] = {};
+using uart_port_t = int;
+enum { ESP_OK = 0 };
+#define UART_LL_GET_HW(port) (port)
+void uart_ll_set_baudrate(int port, uint32_t rate) { assert(port == 2); txRates[port] = rate; ++txUpdates; }
+int uart_flush_input(uart_port_t port) { ++flushes[port]; return ESP_OK; }
+class SerialSRXL2 {
+public:
+    Link link;
+    unsigned port = 0;
+    bool transmitting = false;
+    uint32_t appliedBaud = 115200, lastHardwareReceive = 0;
+    void synchronizeBaud(uint32_t now);
+};
+'''
+    probe = r'''
+int main() {
+    for (unsigned port : {0u, 1u}) {
+        Serial = Uart(); Serial1 = Uart();
+        txUpdates = flushes[0] = flushes[1] = 0;
+        SerialSRXL2 driver;
+        driver.port = port;
+        driver.synchronizeBaud(1);
+        assert(!Serial.updates && !Serial1.updates && !txUpdates && !driver.link.confirms);
+        driver.link.rate = 400000;
+        driver.transmitting = true;
+        driver.synchronizeBaud(2);
+        assert(driver.appliedBaud == 115200 && !driver.link.confirms);
+        driver.transmitting = false;
+        driver.synchronizeBaud(3);
+        Uart &selected = port ? Serial1 : Serial;
+        Uart &other = port ? Serial : Serial1;
+        assert(selected.baud == 400000 && selected.updates == 1 && !other.updates);
+        assert(driver.appliedBaud == 400000 && driver.link.confirms == 1 && driver.link.confirmedAt == 3);
+        assert(flushes[port] == 1 && !flushes[1 - port]);
+#if defined(CONFIG_IDF_TARGET_ESP32)
+        assert(txUpdates == 1 && txRates[2] == 400000);
+#else
+        assert(!txUpdates);
+#endif
+        driver.synchronizeBaud(4);
+        assert(selected.updates == 1 && driver.link.confirms == 1 && flushes[port] == 1);
+        driver.link.rate = 115200;
+        driver.synchronizeBaud(5);
+        assert(selected.baud == 115200 && selected.updates == 2 && !other.updates);
+        assert(driver.appliedBaud == 115200 && driver.link.confirms == 2 && flushes[port] == 2);
+    }
+}
+'''
+    cpp = Path(directory) / 'baud.cpp'
+    executable = Path(directory) / 'baud.exe'
+    cpp.write_text(boundary + '#include <initializer_list>\n' + change.group() + probe)
+    for mcu in ('ESP32', 'ESP32C3', 'ESP32S3'):
+        subprocess.run([compiler, '-std=c++11', '-DPLATFORM_ESP32', '-DCONFIG_IDF_TARGET_' + mcu,
+                        str(cpp), '-o', str(executable)], env=environment, check=True)
+        subprocess.run([str(executable)], env=environment, check=True)
+        print(f'{mcu}: runtime baud transitions preserve the other UART and wait for TX completion', flush=True)
+
+
 def check_early_teardown(compiler, environment, directory):
     source = (ROOT / "src/src/rx-serial/SerialSRXL2.cpp").read_text()
     prepare = re.search(r'ESP_SYSTEM_INIT_FN\(srxl2EarlyReceive, BIT0\)\s*\{.*?^\}', source, re.M | re.S).group()
@@ -310,6 +388,7 @@ int main() {
         run(busy + "int main() { assert(SRXL2_HARDWARE_RX_BUSY()); }",
             ["-DPLATFORM_ESP32", "-DCONFIG_IDF_TARGET_ESP32C6"])
         check_early_teardown(compiler, environment, directory)
+        check_baud_changes(compiler, environment, directory)
     print("Unsupported SoCs, transmitters, and missing serial pins remain disabled")
 
 

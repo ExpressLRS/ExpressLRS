@@ -9,8 +9,8 @@
 #include "esp32-hal-matrix.h"
 #include "soc/gpio_sig_map.h"
 #include "driver/periph_ctrl.h"
-#if defined(CONFIG_IDF_TARGET_ESP32)
 #include "driver/uart.h"
+#if defined(CONFIG_IDF_TARGET_ESP32)
 #include "esp_timer.h"
 #include "hal/gpio_ll.h"
 #endif
@@ -72,7 +72,7 @@ static SerialSRXL2 *srxl2Owner = nullptr;
 struct SRXL2StartupState
 {
     uint32_t enteredUs = 0, ackEndUs = 0;
-    uint8_t port = 0;
+    uint8_t port = 0, commonBaudMask = 0;
     int8_t pin = -1;
     bool handedOff = false;
 };
@@ -85,7 +85,7 @@ static void listenForEarlyESC(Stream &input, Stream &output, uint32_t uid, SRXL2
     state.port = port;
     state.pin = pin;
     SRXL2::Link early;
-    early.reset(uid, micros(), true);
+    early.reset(uid, micros(), true, true);
     for (unsigned i = 0; i < prefixSize; ++i) early.receive(prefix[i], micros());
     // Queued bytes have no recorded wire-arrival timestamps.
     const int buffered = input.available();
@@ -128,6 +128,7 @@ static void listenForEarlyESC(Stream &input, Stream &output, uint32_t uid, SRXL2
         if (acknowledged && uint32_t(micros() - state.ackEndUs) >= 20000) break;
         SRXL2_EARLY_YIELD();
     }
+    if (acknowledged) state.commonBaudMask = early.commonBaudMask();
 }
 #if defined(CONFIG_IDF_TARGET_ESP32) || defined(CONFIG_IDF_TARGET_ESP32C3) || defined(CONFIG_IDF_TARGET_ESP32S3)
 static_assert(SRXL2_EARLY_STARTUP_PORT <= 1, "Early Smart port must be 0 or 1");
@@ -268,13 +269,13 @@ SerialSRXL2::SerialSRXL2(Stream *output, Stream *input, int8_t txPin, uint8_t se
         srxl2Owner = nullptr;
         return;
     }
-    link.reset(uid, micros());
+    link.reset(uid, micros(), false, true);
 #if defined(SRXL2_EARLY_STARTUP_PIN)
     if (txReady && port == startupState.port && pin == startupState.pin && startupState.ackEndUs && !startupState.handedOff)
     {
         // An announcing ESC may suppress its duplicate addressed reply. Its validated
         // startup announcement and completed ACK are enough to send the final broadcast.
-        link.finishStartupDiscovery();
+        link.finishStartupDiscovery(startupState.commonBaudMask);
         startupState.handedOff = true;
     }
 #endif
@@ -373,11 +374,37 @@ void ICACHE_RAM_ATTR SerialSRXL2::onTxDone(void *argument)
     driver->txComplete = true;
 }
 
+void SerialSRXL2::synchronizeBaud(uint32_t now)
+{
+    const uint32_t rate = link.baudRate();
+    if (transmitting || rate == appliedBaud) return;
+    auto &uart = port == 0 ? Serial : Serial1;
+    uart.updateBaudRate(rate);
+#if defined(CONFIG_IDF_TARGET_ESP32)
+    uart_ll_set_baudrate(UART_LL_GET_HW(2), rate);
+#elif defined(SRXL2_SET_TX_BAUD)
+    SRXL2_SET_TX_BAUD(rate);
+#endif
+#if defined(PLATFORM_ESP32)
+    uart_flush_input(uart_port_t(port));
+#else
+    while (inputPort->available()) inputPort->read();
+#endif
+    appliedBaud = rate;
+    link.baudApplied(now);
+    lastHardwareReceive = now;
+}
+
 void SerialSRXL2::processBytes(uint8_t *bytes, uint16_t size)
 {
     const uint32_t now = micros();
+    const uint32_t previousBaud = appliedBaud;
     completeTransmission(now);
+    synchronizeBaud(now);
+    if (appliedBaud != previousBaud) return; // This batch was read at the previous rate.
     for (unsigned i = 0; i < size; ++i) link.receive(bytes[i], now);
+    link.poll(now);
+    synchronizeBaud(now);
 }
 
 void SerialSRXL2::sendQueuedData(uint32_t maxBytesToSend)
@@ -387,6 +414,8 @@ void SerialSRXL2::sendQueuedData(uint32_t maxBytesToSend)
     synchronizeGeneration();
     link.setControlPermission(controlAllowed());
     completeTransmission(now);
+    link.poll(now);
+    synchronizeBaud(now);
     const bool receivePending = inputPort->available() > 0 || SRXL2_HARDWARE_RX_BUSY();
     if (receivePending) lastHardwareReceive = now;
     if (txReady && !transmitting && !receivePending && uint32_t(now - lastHardwareReceive) >= 174 && maxBytesToSend >= 16)
