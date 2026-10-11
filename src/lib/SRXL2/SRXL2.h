@@ -23,6 +23,7 @@ public:
     void missedFrame();
     void receive(uint8_t byte, uint32_t nowUs);
     bool nextPacket(uint32_t nowUs, Packet &packet);
+    void poll(uint32_t nowUs);
     void transmitted(uint32_t nowUs);
     bool connected() const;
     // Continue discovery when the startup transport already acknowledged a validated ESC.
@@ -32,7 +33,7 @@ public:
     void baudApplied(uint32_t nowUs);
     Telemetry telemetry(uint32_t nowUs) const;
 private:
-    enum Phase { Discover, Acknowledge, Broadcast, Active };
+    enum Phase { Discover, Acknowledge, Broadcast, Active, Recover };
     Phase phase = Discover;
     uint32_t uid = 0, started = 0, lastHello = 0, lastBus = 0, lastByte = 0;
     uint32_t lastControl = 0, lastRequest = 0, lastReply = 0, lastSample = 0, txEnded = 0;
@@ -45,6 +46,8 @@ private:
     bool broadcastTx = false, cellCountKnown = false, controlPending = false, fadePending = false;
     uint8_t localMask = 0, commonMask = 0, selectedMask = 0;
     uint32_t requestedBaud = 115200, appliedBaud = 115200;
+    uint32_t fastReply = 0;
+    bool failedFast = false, fastSuccessful = false;
     uint8_t input[80] = {}, inputSize = 0;
     mutable Telemetry data{}; // expiry is cached; a counter wrap must not revive it
     void restart(uint32_t nowUs);

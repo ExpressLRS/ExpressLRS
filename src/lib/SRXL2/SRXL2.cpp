@@ -61,21 +61,39 @@ void Link::finishStartupDiscovery(uint8_t mask)
 
 void Link::baudApplied(uint32_t now)
 {
-    if (requestedBaud == appliedBaud) return;
-    appliedBaud = requestedBaud;
-    inputSize = 0;
-    lastBus = now;
+    if (requestedBaud != appliedBaud)
+    {
+        appliedBaud = requestedBaud;
+        inputSize = 0;
+        lastBus = now;
+        if (appliedBaud == 400000 && phase == Active)
+        {
+            fastReply = now;
+            fastSuccessful = false;
+        }
+    }
+    if (phase == Recover && appliedBaud == 115200 && requestedBaud == 115200)
+    {
+        commonMask = failedFast ? 0 : localMask;
+        phase = Discover;
+        restart(now);
+    }
 }
 
 void Link::restart(uint32_t now)
 {
-    if (phase == Active) commonMask = localMask;
-    phase = Discover;
+    if (phase == Recover) return;
+    const bool fast = requestedBaud == 400000 || appliedBaud == 400000 ||
+        (txBusy && broadcastTx && selectedMask == 1);
+    if (fast) failedFast |= !fastSuccessful;
+    else if (phase == Active) commonMask = failedFast ? 0 : localMask;
+    phase = fast ? Recover : Discover;
     released = hasSample = waitingReply = cellCountKnown = monitorReplies = false;
     data = {};
     throttle = 0x8000;
     fadePending = false;
     urgentControl = false;
+    controlPending = false;
     // The bus has already been initialized; only first boot needs the 50 ms listen.
     started = lastHello = now - DISCOVERY_US;
     helloPending = true;
@@ -112,13 +130,12 @@ bool Link::connected() const { return phase == Active && requestedBaud == applie
 
 void Link::missedFrame()
 {
-    if (phase != Active || controlPending) return;
+    if (!connected() || controlPending) return;
     controlPending = fadePending = true;
 }
 
-bool Link::nextPacket(uint32_t now, Packet &p)
+void Link::poll(uint32_t now)
 {
-    if (requestedBaud != appliedBaud) return false;
     const bool sampleExpired = hasSample && uint32_t(now - lastSample) >= SAMPLE_US;
     if (sampleExpired) monitorReplies = false;
     const bool peerExpired = phase == Active && monitorReplies && uint32_t(now - lastReply) >= STALE_US;
@@ -129,14 +146,36 @@ bool Link::nextPacket(uint32_t now, Packet &p)
         controlPending = urgentControl = true;
         fadePending = false;
     }
-    if (txBusy) return false;
+    const bool fastExpired = connected() && appliedBaud == 400000 && uint32_t(now - fastReply) >= STALE_US;
+    if (fastExpired || (peerExpired && appliedBaud == 400000))
+    {
+        failedFast = true;
+        restart(now);
+    }
+    if (phase == Recover)
+    {
+        // Silence is measured from the final outgoing stop bit, including a delayed TX_DONE.
+        if (!txBusy && uint32_t(now - txEnded) >= DISCOVERY_US)
+        {
+            requestedBaud = 115200;
+            if (appliedBaud == 115200) baudApplied(now);
+        }
+        return;
+    }
+    if (peerExpired && !txBusy && (!waitingReply || uint32_t(now - txEnded) >= RESPONSE_US)) restart(now);
+    if (!txBusy && (!waitingReply || uint32_t(now - txEnded) >= RESPONSE_US) &&
+        inputSize && uint32_t(now - lastByte) >= 2500) inputSize = 0;
+}
+
+bool Link::nextPacket(uint32_t now, Packet &p)
+{
+    poll(now);
+    if (requestedBaud != appliedBaud || phase == Recover || txBusy) return false;
     if (waitingReply)
     {
         if (uint32_t(now - txEnded) < RESPONSE_US) return false;
         waitingReply = false;
     }
-    if (peerExpired) restart(now);
-    if (inputSize && uint32_t(now - lastByte) >= 2500) inputSize = 0;
     if (inputSize || uint32_t(now - lastBus) < IDLE_US) return false;
     if (startupAckOnly && phase != Acknowledge) return false;
     p = {};
@@ -146,7 +185,7 @@ bool Link::nextPacket(uint32_t now, Packet &p)
         if (phase == Discover && !helloPending &&
             (uint32_t(now - started) < DISCOVERY_US || uint32_t(now - lastHello) < DISCOVERY_US)) return false;
         p.length = 14;
-        const uint8_t flag = phase == Discover ? localMask : commonMask;
+        const uint8_t flag = phase == Discover ? uint8_t(failedFast ? 0 : localMask) : commonMask;
         const uint8_t header[] = {0xA6,0x21,14,0x21, uint8_t(phase == Broadcast ? 0xFF : 0x40),10,flag,3};
         std::memcpy(p.bytes, header, sizeof(header));
         for (unsigned i = 0; i < 4; ++i) p.bytes[8 + i] = uid >> (8 * i);
@@ -165,7 +204,8 @@ bool Link::nextPacket(uint32_t now, Packet &p)
         if (!urgentNeutral && uint32_t(now - lastControl) < interval) return false;
         const bool fade = !safe && (fadePending || !controlPending);
         controlPending = fadePending = urgentControl = false;
-        requestReply = !failsafe && (!monitorReplies || uint32_t(now - lastRequest) >= REQUEST_US);
+        requestReply = appliedBaud == 400000 ? uint32_t(now - lastRequest) >= REQUEST_US :
+            !failsafe && (!monitorReplies || uint32_t(now - lastRequest) >= REQUEST_US);
         if (failsafe) monitorReplies = false;
         else if (requestReply && !monitorReplies)
         {
@@ -195,17 +235,21 @@ void Link::transmitted(uint32_t now)
     if (!txBusy) return;
     txBusy = false;
     txEnded = lastBus = now;
-    waitingReply = requestReply;
+    waitingReply = requestReply && phase != Recover;
     if (phase == Acknowledge) phase = Broadcast;
     if (broadcastTx)
     {
         requestedBaud = selectedMask ? 400000 : 115200;
-        phase = Active;
-        controlPending = true;
-        fadePending = false;
-        lastControl = now;
-        urgentControl = false;
-        lastRequest = now - REQUEST_US;
+        broadcastTx = false;
+        if (phase != Recover)
+        {
+            phase = Active;
+            controlPending = true;
+            fadePending = false;
+            lastControl = now;
+            urgentControl = false;
+            lastRequest = now - REQUEST_US;
+        }
     }
 }
 
@@ -239,13 +283,19 @@ void Link::receive(uint8_t byte, uint32_t now)
 
 void Link::processFrame(uint32_t now)
 {
+    if (phase == Recover) return;
     if (input[1] == 0x21 && input[2] == 14 && input[3] == 0x40)
     {
         if (startupAckOnly && input[4] != 0) return;
         if (input[4] == 0 || input[4] == 0x21)
         {
             // Buffered duplicates cannot revise a final packet already owned by TX.
-            if (broadcastTx && txBusy) return;
+            if ((broadcastTx && txBusy) || requestedBaud != appliedBaud)
+            {
+                if (input[4] == 0 && (selectedMask == 1 || requestedBaud == 400000)) restart(now);
+                return;
+            }
+            if (appliedBaud == 400000) { restart(now); return; }
             // Match Spektrum's startup master: acknowledge before the final broadcast.
             // Discovery data is already known, so a duplicate reply is optional.
             const bool acknowledge = input[4] == 0 && (startupAckOnly || phase == Discover || phase == Acknowledge);
@@ -260,9 +310,10 @@ void Link::processFrame(uint32_t now)
     else if (input[1] == 0x80 && input[2] == 22)
     {
         if (input[3] == 0xFF) { restart(now); return; }
-        if (phase != Active || input[3] != 0x21) return;
+        if (!connected() || input[3] != 0x21) return;
         lastReply = now;
         waitingReply = false;
+        if (appliedBaud == 400000) { fastReply = now; fastSuccessful = true; }
         decodeTelemetry(input + 4, now);
     }
 }

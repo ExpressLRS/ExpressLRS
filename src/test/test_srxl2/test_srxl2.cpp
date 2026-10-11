@@ -44,6 +44,325 @@ static void updateCrc(uint8_t *bytes, uint8_t size)
     bytes[size - 1] = crc;
 }
 
+static void connectFast(SRXL2::Link &link, uint32_t offset = 0)
+{
+    link.reset(0x12345678, offset, false, true);
+    feed(link, hello400, sizeof(hello400), offset + 31400);
+    SRXL2::Packet packet{};
+    TEST_ASSERT_TRUE(link.nextPacket(offset + 31600, packet));
+    link.transmitted(offset + 32800);
+    link.baudApplied(offset + 32800);
+    TEST_ASSERT_TRUE(link.connected());
+}
+
+void test_fast_link_polls_safely_without_rf()
+{
+    SRXL2::Link link;
+    connectFast(link);
+    SRXL2::Packet packet{};
+    for (unsigned i = 0; i < 6; ++i)
+    {
+        const uint32_t now = 52800 + i * 200000;
+        link.setControlPermission(i % 2 == 1);
+        TEST_ASSERT_TRUE(link.nextPacket(now, packet));
+        TEST_ASSERT_EQUAL_HEX8(0x01, packet.bytes[3]);
+        TEST_ASSERT_EQUAL_HEX16(0x8000, channel(packet));
+        TEST_ASSERT_EQUAL_HEX8(0x40, packet.bytes[4]);
+        link.transmitted(now + 400);
+        TEST_ASSERT_FALSE(link.nextPacket(now + 10000, packet));
+        TEST_ASSERT_TRUE(link.nextPacket(now + 20400, packet));
+        TEST_ASSERT_EQUAL(0, packet.bytes[4]); // Ordinary failsafe frames do not shorten the 200 ms poll interval.
+        TEST_ASSERT_EQUAL_HEX16(0x8000, channel(packet));
+        link.transmitted(now + 20800);
+    }
+    link.setControlPermission(true);
+    link.poll(2032800); // Permission changes and polls do not extend fast health.
+    TEST_ASSERT_FALSE(link.connected());
+}
+
+void test_fast_timeout_returns_to_default_after_master_silence()
+{
+    for (uint32_t offset : {0u, 0xFFFF0000u})
+    {
+        SRXL2::Link link;
+        connectFast(link, offset);
+        SRXL2::Packet packet{};
+        TEST_ASSERT_TRUE(link.nextPacket(offset + 2032700, packet));
+        TEST_ASSERT_FALSE(link.nextPacket(offset + 2032800, packet));
+        TEST_ASSERT_FALSE(link.connected());
+        TEST_ASSERT_EQUAL_UINT32(400000, link.baudRate());
+        link.poll(offset + 2082800); // TX still owns the last stop bit.
+        TEST_ASSERT_EQUAL_UINT32(400000, link.baudRate());
+        const uint32_t stop = offset + 2083100;
+        link.transmitted(stop);
+        feed(link, hello400, sizeof(hello400), stop + 1000);
+        link.receive(0xA6, stop + 49999); // Even busy partial RX cannot prevent fallback housekeeping.
+        link.poll(stop + 49999);
+        TEST_ASSERT_EQUAL_UINT32(400000, link.baudRate());
+        link.receive(0x80, stop + 50000);
+        link.poll(stop + 50000);
+        TEST_ASSERT_EQUAL_UINT32(115200, link.baudRate());
+        TEST_ASSERT_FALSE(link.nextPacket(stop + 51000, packet));
+        link.baudApplied(stop + 51000);
+        TEST_ASSERT_FALSE(link.nextPacket(stop + 51173, packet));
+        TEST_ASSERT_TRUE(link.nextPacket(stop + 51174, packet));
+        TEST_ASSERT_EQUAL_HEX8(0x21, packet.bytes[1]);
+        TEST_ASSERT_EQUAL(0, packet.bytes[6]);
+        link.transmitted(stop + 52390);
+        feed(link, hello400, sizeof(hello400), stop + 52590);
+        TEST_ASSERT_TRUE(link.nextPacket(stop + 52764, packet));
+        TEST_ASSERT_EQUAL_HEX8(0xFF, packet.bytes[4]);
+        TEST_ASSERT_EQUAL(0, packet.bytes[6]);
+    }
+}
+
+void test_fast_health_accepts_unavailable_replies_but_ignores_echo_and_noise()
+{
+    for (uint32_t offset : {0u, 0xFFFF0000u})
+    {
+        SRXL2::Link healthy;
+        connectFast(healthy, offset);
+        feed(healthy, unavailable, sizeof(unavailable), offset + 1900000);
+        healthy.poll(offset + 2032800);
+        TEST_ASSERT_TRUE(healthy.connected());
+        TEST_ASSERT_EQUAL_UINT32(400000, healthy.baudRate());
+        healthy.poll(offset + 3899999);
+        TEST_ASSERT_TRUE(healthy.connected());
+        healthy.poll(offset + 3900000);
+        TEST_ASSERT_FALSE(healthy.connected());
+
+        SRXL2::Link broken;
+        connectFast(broken, offset);
+        feed(broken, broadcast400, sizeof(broadcast400), offset + 1900000);
+        uint8_t wrong[sizeof(esc)];
+        std::memcpy(wrong, esc, sizeof(wrong));
+        wrong[3] = 0x22;
+        updateCrc(wrong, sizeof(wrong));
+        feed(broken, wrong, sizeof(wrong), offset + 1910000);
+        std::memcpy(wrong, esc, sizeof(wrong));
+        wrong[21] ^= 1;
+        feed(broken, wrong, sizeof(wrong), offset + 1920000);
+        const uint8_t noise[] = {0, 0xA6, 0x80, 0xFF, 0xA6, 0x80, 4, 0};
+        feed(broken, noise, sizeof(noise), offset + 2032799);
+        broken.poll(offset + 2032799);
+        TEST_ASSERT_TRUE(broken.connected());
+        broken.poll(offset + 2032800);
+        TEST_ASSERT_FALSE(broken.connected());
+        TEST_ASSERT_EQUAL_UINT32(115200, broken.baudRate());
+    }
+}
+
+void test_fast_peer_expiry_with_continuous_rf_recovers_after_tx_or_reply_grant()
+{
+    for (bool duringTx : {false, true})
+    {
+        SRXL2::Link link;
+        connectFast(link);
+        link.setControlPermission(true);
+        link.setThrottle(992, 52800);
+        SRXL2::Packet packet{};
+        TEST_ASSERT_TRUE(link.nextPacket(52800, packet));
+        link.transmitted(53200);
+        feed(link, esc, sizeof(esc), 55000);
+        for (uint32_t now = 102800; now < 2028000; now += 50000)
+        {
+            link.setThrottle(1811, now);
+            TEST_ASSERT_TRUE(link.nextPacket(now, packet));
+            TEST_ASSERT_EQUAL_HEX16(0xD554, channel(packet));
+            link.transmitted(now + 400);
+        }
+        const uint32_t send = duringTx ? 2054900 : 2054000;
+        link.setThrottle(1811, send);
+        TEST_ASSERT_TRUE(link.nextPacket(send, packet));
+        TEST_ASSERT_EQUAL_HEX8(0x40, packet.bytes[4]);
+        const uint32_t stop = send + 400;
+        if (!duringTx) link.transmitted(stop);
+        TEST_ASSERT_FALSE(link.nextPacket(2055000, packet));
+        TEST_ASSERT_FALSE(link.connected());
+        TEST_ASSERT_FALSE(link.telemetry(2055000).voltage.valid);
+        TEST_ASSERT_EQUAL_UINT32(400000, link.baudRate());
+        if (duringTx) link.transmitted(stop);
+        TEST_ASSERT_FALSE(link.nextPacket(stop + 49999, packet));
+        TEST_ASSERT_EQUAL_UINT32(400000, link.baudRate());
+        link.poll(stop + 50000);
+        TEST_ASSERT_EQUAL_UINT32(115200, link.baudRate());
+        TEST_ASSERT_FALSE(link.nextPacket(stop + 51000, packet));
+        link.baudApplied(stop + 51000);
+        feed(link, hello400, sizeof(hello400), stop + 51200);
+        TEST_ASSERT_TRUE(link.nextPacket(stop + 51374, packet));
+        TEST_ASSERT_EQUAL(0, packet.bytes[6]);
+        link.transmitted(stop + 52590);
+        link.setThrottle(1811, stop + 53000);
+        TEST_ASSERT_TRUE(link.nextPacket(stop + 72590, packet));
+        TEST_ASSERT_EQUAL_HEX16(0x8000, channel(packet));
+    }
+}
+
+void test_fast_expiry_and_permission_loss_preserve_tx_and_reply_ownership()
+{
+    for (bool expiry : {false, true})
+    {
+        SRXL2::Link link;
+        connectFast(link);
+        link.setControlPermission(true);
+        link.setThrottle(992, 52800);
+        SRXL2::Packet packet{};
+        TEST_ASSERT_TRUE(link.nextPacket(52800, packet));
+        link.setThrottle(1811, 53000);
+        const uint32_t revoke = expiry ? 153000 : 53100;
+        if (!expiry) link.setControlPermission(false);
+        link.poll(revoke);
+        TEST_ASSERT_FALSE(link.nextPacket(revoke, packet));
+        const uint32_t stop = revoke + 400;
+        link.transmitted(stop);
+        TEST_ASSERT_FALSE(link.nextPacket(stop + 19999, packet));
+        TEST_ASSERT_TRUE(link.nextPacket(stop + 20000, packet));
+        TEST_ASSERT_EQUAL(1, packet.bytes[3]);
+        TEST_ASSERT_EQUAL_HEX16(0x8000, channel(packet));
+        link.transmitted(stop + 20400);
+        link.setControlPermission(true);
+        link.setThrottle(1811, stop + 21000);
+        TEST_ASSERT_TRUE(link.nextPacket(stop + 40000, packet));
+        TEST_ASSERT_EQUAL_HEX16(0x8000, channel(packet));
+    }
+}
+
+void test_fast_sample_and_permission_expiry_during_reply_grant()
+{
+    for (bool expiry : {false, true})
+    {
+        SRXL2::Link link;
+        connectFast(link);
+        link.setControlPermission(true);
+        link.setThrottle(992, 52800);
+        SRXL2::Packet packet{};
+        TEST_ASSERT_TRUE(link.nextPacket(52800, packet));
+        link.transmitted(53200);
+        feed(link, esc, sizeof(esc), 55000);
+        link.setThrottle(992, 153500);
+        link.setThrottle(1811, 153501);
+        TEST_ASSERT_TRUE(link.nextPacket(252800, packet));
+        TEST_ASSERT_EQUAL_HEX16(0xD554, channel(packet));
+        TEST_ASSERT_EQUAL_HEX8(0x40, packet.bytes[4]);
+        link.transmitted(253200);
+        if (!expiry) link.setControlPermission(false);
+        link.poll(253501);
+        link.setControlPermission(true);
+        link.setThrottle(1811, 253502);
+        TEST_ASSERT_FALSE(link.nextPacket(273199, packet));
+        TEST_ASSERT_TRUE(link.nextPacket(273200, packet));
+        TEST_ASSERT_EQUAL_HEX16(0x8000, channel(packet));
+    }
+}
+
+void test_fast_rehandshake_requires_quiet_recovery_and_latches_unsuccessful_attempt()
+{
+    for (bool successful : {false, true})
+    {
+        for (unsigned trigger = 0; trigger < 3; ++trigger)
+        {
+            SRXL2::Link link;
+            connectFast(link);
+            link.setControlPermission(true);
+            link.setThrottle(992, 52800);
+            SRXL2::Packet packet{};
+            TEST_ASSERT_TRUE(link.nextPacket(52800, packet));
+            link.transmitted(53200);
+            if (successful) feed(link, esc, sizeof(esc), 55000);
+            link.setThrottle(1811, 74000);
+            TEST_ASSERT_TRUE(link.nextPacket(74000, packet));
+            link.transmitted(74400);
+            uint8_t broadcastReply[sizeof(esc)];
+            std::memcpy(broadcastReply, esc, sizeof(broadcastReply));
+            broadcastReply[3] = 0xFF;
+            updateCrc(broadcastReply, sizeof(broadcastReply));
+            if (trigger == 0) feed(link, announce400, sizeof(announce400), 75000);
+            else if (trigger == 1) feed(link, hello400, sizeof(hello400), 75000);
+            else feed(link, broadcastReply, sizeof(broadcastReply), 75000);
+            TEST_ASSERT_FALSE(link.connected());
+            TEST_ASSERT_FALSE(link.telemetry(75000).voltage.valid);
+            TEST_ASSERT_FALSE(link.nextPacket(124399, packet));
+            TEST_ASSERT_EQUAL_UINT32(400000, link.baudRate());
+            link.poll(124400);
+            TEST_ASSERT_EQUAL_UINT32(115200, link.baudRate());
+            TEST_ASSERT_FALSE(link.nextPacket(124600, packet));
+            link.baudApplied(124600);
+            feed(link, hello400, sizeof(hello400), 124800);
+            TEST_ASSERT_TRUE(link.nextPacket(124974, packet));
+            TEST_ASSERT_EQUAL(successful ? 1 : 0, packet.bytes[6]);
+            link.transmitted(126190);
+            if (successful) link.baudApplied(126190);
+            link.setThrottle(1811, 146190);
+            TEST_ASSERT_TRUE(link.nextPacket(146190, packet));
+            TEST_ASSERT_EQUAL_HEX16(0x8000, channel(packet));
+            link.transmitted(146590);
+            if (!successful)
+            {
+                // More resets from the peer cannot undo the failed-fast latch.
+                for (unsigned i = 0; i < 2; ++i)
+                {
+                    const uint32_t now = 170000 + i * 25000;
+                    feed(link, hello400, sizeof(hello400), now);
+                    TEST_ASSERT_TRUE(link.nextPacket(now + 174, packet));
+                    TEST_ASSERT_EQUAL(0, packet.bytes[6]);
+                    link.transmitted(now + 1390);
+                }
+                link.reset(0x12345678, 220000, false, true);
+                feed(link, hello400, sizeof(hello400), 251400);
+                TEST_ASSERT_TRUE(link.nextPacket(251600, packet));
+                TEST_ASSERT_EQUAL(1, packet.bytes[6]);
+            }
+        }
+    }
+}
+
+void test_fresh_announcement_during_fast_final_tx_finishes_before_recovery()
+{
+    SRXL2::Link link;
+    link.reset(0x12345678, 0, false, true);
+    feed(link, hello400, sizeof(hello400), 31400);
+    SRXL2::Packet packet{};
+    TEST_ASSERT_TRUE(link.nextPacket(31600, packet));
+    feed(link, announce400, sizeof(announce400), 31700);
+    TEST_ASSERT_FALSE(link.nextPacket(32000, packet));
+    TEST_ASSERT_EQUAL_UINT32(115200, link.baudRate());
+    link.transmitted(32800);
+    TEST_ASSERT_EQUAL_UINT32(400000, link.baudRate());
+    link.baudApplied(32800);
+    TEST_ASSERT_FALSE(link.connected());
+    link.poll(82799);
+    TEST_ASSERT_EQUAL_UINT32(400000, link.baudRate());
+    link.poll(82800);
+    TEST_ASSERT_EQUAL_UINT32(115200, link.baudRate());
+    link.baudApplied(82800);
+    feed(link, hello400, sizeof(hello400), 83000);
+    TEST_ASSERT_TRUE(link.nextPacket(83174, packet));
+    TEST_ASSERT_EQUAL(0, packet.bytes[6]);
+}
+
+void test_unapplied_fast_reply_cannot_mark_attempt_successful()
+{
+    SRXL2::Link link;
+    link.reset(0x12345678, 0, false, true);
+    feed(link, hello400, sizeof(hello400), 31400);
+    SRXL2::Packet packet{};
+    TEST_ASSERT_TRUE(link.nextPacket(31600, packet));
+    link.transmitted(32800);
+    feed(link, esc, sizeof(esc), 33000);
+    feed(link, hello, sizeof(hello), 33100); // A buffered addressed duplicate cannot restart pending fast mode.
+    TEST_ASSERT_EQUAL_UINT32(400000, link.baudRate());
+    link.baudApplied(40000);
+    TEST_ASSERT_TRUE(link.connected());
+    TEST_ASSERT_FALSE(link.telemetry(40000).voltage.valid);
+    feed(link, announce400, sizeof(announce400), 41000);
+    link.poll(82800);
+    TEST_ASSERT_EQUAL_UINT32(115200, link.baudRate());
+    link.baudApplied(82800);
+    feed(link, hello400, sizeof(hello400), 83000);
+    TEST_ASSERT_TRUE(link.nextPacket(83174, packet));
+    TEST_ASSERT_EQUAL(0, packet.bytes[6]);
+}
+
 void test_fast_negotiation_waits_for_final_tx_and_baud_application()
 {
     SRXL2::Link link;
@@ -948,6 +1267,15 @@ void test_expired_optional_measurements_do_not_revive_after_full_wrap()
 int main()
 {
     UNITY_BEGIN();
+    RUN_TEST(test_fast_link_polls_safely_without_rf);
+    RUN_TEST(test_fast_timeout_returns_to_default_after_master_silence);
+    RUN_TEST(test_fast_health_accepts_unavailable_replies_but_ignores_echo_and_noise);
+    RUN_TEST(test_fast_peer_expiry_with_continuous_rf_recovers_after_tx_or_reply_grant);
+    RUN_TEST(test_fast_expiry_and_permission_loss_preserve_tx_and_reply_ownership);
+    RUN_TEST(test_fast_sample_and_permission_expiry_during_reply_grant);
+    RUN_TEST(test_fast_rehandshake_requires_quiet_recovery_and_latches_unsuccessful_attempt);
+    RUN_TEST(test_fresh_announcement_during_fast_final_tx_finishes_before_recovery);
+    RUN_TEST(test_unapplied_fast_reply_cannot_mark_attempt_successful);
     RUN_TEST(test_fast_negotiation_waits_for_final_tx_and_baud_application);
     RUN_TEST(test_baud_selection_requires_local_support_and_exact_peer_flag);
     RUN_TEST(test_capability_intersection_ignores_invalid_frames_and_cannot_be_raised);
