@@ -18,17 +18,25 @@
 #include "LR2021Driver.h"
 #endif
 
+// Preserve the CE sub-GHz cap on dual-band radios. Other builds keep their
+// existing hardware-defined maximum until a domain specifies a tighter limit.
+#if defined(Regulatory_Domain_EU_CE_2400) && (defined(RADIO_LR1121) || defined(RADIO_LR2021))
+constexpr PowerLevels_e SUBGHZ_MAX_POWER = PWR_25mW;
+#else
+constexpr PowerLevels_e SUBGHZ_MAX_POWER = PWR_2000mW;
+#endif
+
 const fhss_config_t domains[] = {
-    {"AU915",  FREQ_HZ_TO_REG_VAL(915500000), FREQ_HZ_TO_REG_VAL(926900000), 20, 921000000},
-    {"FCC915", FREQ_HZ_TO_REG_VAL(903500000), FREQ_HZ_TO_REG_VAL(926900000), 40, 915000000},
-    {"EU868",  FREQ_HZ_TO_REG_VAL(863275000), FREQ_HZ_TO_REG_VAL(869575000), 13, 868000000},
-    {"IN866",  FREQ_HZ_TO_REG_VAL(865375000), FREQ_HZ_TO_REG_VAL(866950000), 4, 866000000},
-    {"AU433",  FREQ_HZ_TO_REG_VAL(433420000), FREQ_HZ_TO_REG_VAL(434420000), 3, 434000000},
-    {"EU433",  FREQ_HZ_TO_REG_VAL(433100000), FREQ_HZ_TO_REG_VAL(434450000), 3, 434000000},
-    {"US433",  FREQ_HZ_TO_REG_VAL(433250000), FREQ_HZ_TO_REG_VAL(438000000), 8, 434000000},
-    {"US433W",  FREQ_HZ_TO_REG_VAL(423500000), FREQ_HZ_TO_REG_VAL(438000000), 20, 434000000},
+    {"AU915",  FREQ_HZ_TO_REG_VAL(915500000), FREQ_HZ_TO_REG_VAL(926900000), 20, 921000000, SUBGHZ_MAX_POWER},
+    {"FCC915", FREQ_HZ_TO_REG_VAL(903500000), FREQ_HZ_TO_REG_VAL(926900000), 40, 915000000, SUBGHZ_MAX_POWER},
+    {"EU868",  FREQ_HZ_TO_REG_VAL(863275000), FREQ_HZ_TO_REG_VAL(869575000), 13, 868000000, SUBGHZ_MAX_POWER},
+    {"IN866",  FREQ_HZ_TO_REG_VAL(865375000), FREQ_HZ_TO_REG_VAL(866950000), 4, 866000000, SUBGHZ_MAX_POWER},
+    {"AU433",  FREQ_HZ_TO_REG_VAL(433420000), FREQ_HZ_TO_REG_VAL(434420000), 3, 434000000, SUBGHZ_MAX_POWER},
+    {"EU433",  FREQ_HZ_TO_REG_VAL(433100000), FREQ_HZ_TO_REG_VAL(434450000), 3, 434000000, SUBGHZ_MAX_POWER},
+    {"US433",  FREQ_HZ_TO_REG_VAL(433250000), FREQ_HZ_TO_REG_VAL(438000000), 8, 434000000, SUBGHZ_MAX_POWER},
+    {"US433W",  FREQ_HZ_TO_REG_VAL(423500000), FREQ_HZ_TO_REG_VAL(438000000), 20, 434000000, SUBGHZ_MAX_POWER},
     // Thailand NBTC 920-925 MHz: 8 FHSS channels, 600 kHz spacing
-    {"TH920",  FREQ_HZ_TO_REG_VAL(920500000), FREQ_HZ_TO_REG_VAL(924700000), 8, 922600000},
+    {"TH920",  FREQ_HZ_TO_REG_VAL(920500000), FREQ_HZ_TO_REG_VAL(924700000), 8, 922600000, SUBGHZ_MAX_POWER},
 };
 
 #if defined(RADIO_LR1121) || defined(RADIO_LR2021)
@@ -39,7 +47,13 @@ const fhss_config_t domainsDualBand[] = {
     #else
         "ISM2G4",
     #endif
-    FREQ_HZ_TO_REG_VAL(2400400000), FREQ_HZ_TO_REG_VAL(2479400000), 80, 2440000000}
+    FREQ_HZ_TO_REG_VAL(2400400000), FREQ_HZ_TO_REG_VAL(2479400000), 80, 2440000000,
+    #if defined(Regulatory_Domain_EU_CE_2400)
+        PWR_100mW
+    #else
+        PWR_2000mW
+    #endif
+    }
 };
 #endif
 
@@ -53,12 +67,32 @@ const fhss_config_t domains[] = {
     #elif defined(Regulatory_Domain_ISM_2400)
         "ISM2G4",
     #endif
-    FREQ_HZ_TO_REG_VAL(2400400000), FREQ_HZ_TO_REG_VAL(2479400000), 80, 2440000000}
+    FREQ_HZ_TO_REG_VAL(2400400000), FREQ_HZ_TO_REG_VAL(2479400000), 80, 2440000000,
+    #if defined(Regulatory_Domain_EU_CE_2400)
+        PWR_100mW
+    #else
+        PWR_2000mW
+    #endif
+    }
 };
 #endif
 
 // Our table of FHSS frequencies. Define a regulatory domain to select the correct set for your location and radio
 const fhss_config_t *FHSSconfig;
+
+const fhss_config_t &FHSSgetPrimaryConfig()
+{
+    return domains[firmwareOptions.domain];
+}
+
+const fhss_config_t &FHSSgetSecondaryConfig()
+{
+#if defined(RADIO_LR1121) || defined(RADIO_LR2021)
+    return domainsDualBand[0];
+#else
+    return FHSSgetPrimaryConfig();
+#endif
+}
 
 // Actual sequence of hops as indexes into the frequency list
 uint8_t FHSSsequence[FHSS_SEQUENCE_LEN];

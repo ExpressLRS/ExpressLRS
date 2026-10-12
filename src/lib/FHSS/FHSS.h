@@ -2,6 +2,7 @@
 
 #include "targets.h"
 #include "random.h"
+#include "PowerLevels.h"
 
 #if defined(RADIO_SX127X)
 #define FreqCorrectionMax ((int32_t)(100000/FREQ_STEP))
@@ -30,6 +31,7 @@ typedef struct {
     uint32_t    freq_stop;
     uint32_t    freq_count;
     uint32_t    freq_center;
+    PowerLevels_e max_power;
 } fhss_config_t;
 
 extern volatile uint8_t FHSSptr;
@@ -67,6 +69,10 @@ constexpr uint16_t secondaryBandCount = 0;
 
 // version/domain string
 extern char version_domain[];
+
+// Domain metadata is available before the hopping sequence is initialized.
+const fhss_config_t &FHSSgetPrimaryConfig();
+const fhss_config_t &FHSSgetSecondaryConfig();
 
 // create and randomise an FHSS sequence
 void FHSSrandomiseFHSSsequence(uint32_t seed);

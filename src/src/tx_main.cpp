@@ -464,6 +464,7 @@ void SetRFLinkRate(uint8_t index) // Set speed of RF link
 #if defined(RADIO_LR1121) || defined(RADIO_LR2021)
   FHSSusePrimaryFreqBand = !RadioBandMod::isB2G4(ModParams->radio_type);
   FHSSuseDualBand = RadioBandMod::isBDUAL(ModParams->radio_type);
+  POWERMGNT::reapplyPower(); // Apply the active domain cap before Radio.Config().
 #endif
 
   Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, FHSSgetInitialFreq(),

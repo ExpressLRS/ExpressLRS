@@ -1,6 +1,8 @@
 #include "POWERMGNT.h"
 #include "logging.h"
 #include "targets.h"
+#include "FHSS.h"
+#include "PowerLimits.h"
 
 #include "OTA.h"
 
@@ -78,7 +80,7 @@ PowerLevels_e PowerLevelContainer::CurrentPower = PWR_COUNT; // default "undefin
 PowerLevels_e POWERMGNT::FanEnableThreshold = PWR_250mW;
 int8_t POWERMGNT::CurrentSX1280Power = 0;
 
-extern bool isUsingPrimaryFreqBand();
+PowerRequest POWERMGNT::RequestedPower;
 
 #if defined(PLATFORM_ESP32)
 nvs_handle POWERMGNT::handle = 0;
@@ -152,6 +154,7 @@ uint8_t POWERMGNT::getPowerIndBm()
 void POWERMGNT::init()
 {
     PowerLevelContainer::CurrentPower = PWR_COUNT;
+    RequestedPower.reset();
     setDefaultPower();
 }
 
@@ -173,20 +176,29 @@ void POWERMGNT::setDefaultPower()
     setPower(getDefaultPower());
 }
 
+PowerLevels_e POWERMGNT::getMaxPower()
+{
+    const PowerLevels_e primaryMax = FHSSgetPrimaryConfig().max_power;
+    const PowerLevels_e secondaryMax = FHSSgetSecondaryConfig().max_power;
+    return selectablePowerLimit(MaxPower, primaryMax, secondaryMax);
+}
+
+void POWERMGNT::reapplyPower()
+{
+    if (RequestedPower.initialized())
+    {
+        setPower(RequestedPower.value());
+    }
+}
+
 void POWERMGNT::setPower(PowerLevels_e Power)
 {
-    Power = constrain(Power, getMinPower(), getMaxPower());
+    RequestedPower.set(Power, getMinPower(), getMaxPower());
+    const PowerLevels_e domainMax = activePowerLimit(FHSSgetPrimaryConfig().max_power,
+        FHSSgetSecondaryConfig().max_power, FHSSusePrimaryFreqBand, FHSSuseDualBand);
+    Power = RequestedPower.output(getMinPower(), MaxPower, domainMax);
     if (Power == CurrentPower)
         return;
-    CurrentPower = Power;
-
-    // When using SubHGz with CE, limit to a max of 25mW.
-    #if defined(Regulatory_Domain_EU_CE_2400) && (defined(RADIO_LR1121) || defined(RADIO_LR2021))
-    if (Power > PWR_25mW && isUsingPrimaryFreqBand())
-    {
-        Power = (MinPower > PWR_25mW) ? getMinPower() : PWR_25mW;
-    }
-    #endif
 
     const uint8_t powerIdx = Power - getMinPower();
     if (POWER_OUTPUT_DACWRITE)

@@ -1,25 +1,12 @@
 #pragma once
 
 #include "options.h"
+#include "PowerLimits.h"
 
 #if defined(PLATFORM_ESP32)
 #include <nvs_flash.h>
 #include <nvs.h>
 #endif
-
-typedef enum
-{
-    PWR_10mW = 0,
-    PWR_25mW = 1,
-    PWR_50mW = 2,
-    PWR_100mW = 3,
-    PWR_250mW = 4,
-    PWR_500mW = 5,
-    PWR_1000mW = 6,
-    PWR_2000mW = 7,
-    PWR_COUNT = 8,
-    PWR_MATCH_TX = PWR_COUNT,
-} PowerLevels_e;
 
 uint8_t powerToCrsfPower(PowerLevels_e Power);
 PowerLevels_e crsfPowerToPower(uint8_t crsfpower);
@@ -38,6 +25,7 @@ class POWERMGNT : public PowerLevelContainer
 {
 
 private:
+    static PowerRequest RequestedPower;
     static int8_t CurrentSX1280Power;
     static PowerLevels_e FanEnableThreshold;
 #if defined(PLATFORM_ESP32)
@@ -47,11 +35,14 @@ private:
 
 public:
     /**
-     * @brief Set the power level, constrained to MinPower..MaxPower
+     * @brief Set power within hardware limits and the active domain's output cap
      *
      * @param Power the power level to set
      */
     static void setPower(PowerLevels_e Power);
+
+    // Re-evaluate the last request after selecting a different RF band.
+    static void reapplyPower();
 
     /**
      * @brief Increment to the next higher power level, capped at MaxPower
@@ -82,21 +73,11 @@ public:
     static PowerLevels_e getMinPower() { return MinPower; }
 
     /**
-     * @brief Get the MaxPower level supported by this device.
+     * @brief Get the selectable maximum across this device's configured domains.
      *
      * @return PowerLevels_e the maximum power level supported
      */
-    static PowerLevels_e getMaxPower() {
-        PowerLevels_e power;
-        power = MaxPower;
-        #if defined(Regulatory_Domain_EU_CE_2400)
-            if (power > PWR_100mW)
-            {
-                power = PWR_100mW;
-            }
-        #endif
-        return power;
-    }
+    static PowerLevels_e getMaxPower();
 
     /**
      * @brief Get the Default power level for this device
