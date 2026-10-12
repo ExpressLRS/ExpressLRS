@@ -28,6 +28,8 @@ See [regulatory domain power limits](docs/regulatory-power-limits.md) for firmwa
 power caps, dual-band behavior, and hardware limitations.
 See [FHSS channel exclusions](docs/fhss-channel-exclusions.md) for split-band
 channel selection and Gemini behavior.
+See [Brazil BR915](docs/brazil-regulatory-domain.md) for configuration, the
+29-channel grid, power limits, and validation required before release.
 
 ## About
 

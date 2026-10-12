@@ -13,7 +13,9 @@
 #include <sys/time.h>
 
 #define DEVICE_NAME "testing"
+#if !defined(RADIO_SX127X) && !defined(RADIO_SX128X) && !defined(RADIO_LR1121) && !defined(RADIO_LR2021)
 #define RADIO_SX128X 1
+#endif
 
 // fake pin definitions to satisfy the SX1280 library
 #define GPIO_PIN_BUSY UNDEF_PIN

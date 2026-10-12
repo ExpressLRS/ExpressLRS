@@ -15,7 +15,7 @@
 #endif
 #define FreqCorrectionMin (-FreqCorrectionMax)
 
-#if defined(RADIO_LR1121) || defined(RADIO_LR2021) || defined(UNIT_TEST)
+#if defined(RADIO_LR1121) || defined(RADIO_LR2021) || (defined(UNIT_TEST) && !defined(RADIO_SX127X))
 #define FREQ_HZ_TO_REG_VAL(freq) (freq)
 #define FREQ_SPREAD_SCALE 1
 #else

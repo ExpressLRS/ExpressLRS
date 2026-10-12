@@ -81,6 +81,8 @@ jobs:
         platformio pkg install --platform native
         platformio pkg update
         PLATFORMIO_BUILD_FLAGS="-DRegulatory_Domain_ISM_2400" pio test -e native
+        pio test -e native_br915 -e native_br915_sx127x -e native_br915_ce
+        python -m unittest discover -s python -p test_domain_config.py
 
   targets:
     needs:

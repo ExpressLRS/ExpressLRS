@@ -51,9 +51,9 @@ Each FHSS domain definition carries a `max_power` value from the existing power
 level enumeration. Frequency selection remains in FHSS; power management
 combines the domain limit with hardware limits and the active band selection.
 
-This infrastructure does not add a Brazil domain or change existing hopping
-frequencies, channel counts, domain IDs, or over-the-air packet formats. A Brazil
-domain and channel exclusions are separate changes.
+The [Brazil BR915 domain](brazil-regulatory-domain.md) uses a 250 mW sub-GHz
+ceiling with channel exclusions. CE builds retain their stricter 25 mW limit.
+Existing domain IDs and over-the-air packet formats retain their meanings.
 
 For Lua power controls, see the
 [ExpressLRS Lua guide](https://www.expresslrs.org/quick-start/transmitters/lua-howto/).

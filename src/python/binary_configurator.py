@@ -27,6 +27,7 @@ class RegulatoryDomain(Enum):
     au_915 = 'au_915'
     fcc_915 = 'fcc_915'
     th_920 = 'th_920'
+    br_915 = 'br_915'
 
     def __str__(self):
         return self.value
@@ -69,6 +70,8 @@ def domain_number(domain):
         return 7
     elif domain == RegulatoryDomain.th_920:
         return 8
+    elif domain == RegulatoryDomain.br_915:
+        return 9
 
 def patch_unified(args, options):
     json_flags = {}
@@ -203,7 +206,7 @@ def main():
     parser.add_argument('--tlm-report', type=int, const=240, nargs='?', action='store', help='The interval (in milliseconds) between telemetry packets')
     parser.add_argument('--fan-min-runtime', type=int, const=30, nargs='?', action='store', help='The minimum amount of time the fan should run for (in seconds) if it turns on')
     # Regulatory domain
-    parser.add_argument('--domain', type=RegulatoryDomain, choices=list(RegulatoryDomain), default=None, help='For SX127X based devices, which regulatory domain is being used')
+    parser.add_argument('--domain', type=RegulatoryDomain, choices=list(RegulatoryDomain), default=None, help='For sub-GHz-capable devices, which regulatory domain is being used')
     # Unified target
     parser.add_argument('--target', type=str, help='Unified target JSON path')
     # Flashing options
