@@ -26,6 +26,8 @@ For general information on the project please refer to our guides on the [websit
 
 See [regulatory domain power limits](docs/regulatory-power-limits.md) for firmware
 power caps, dual-band behavior, and hardware limitations.
+See [FHSS channel exclusions](docs/fhss-channel-exclusions.md) for split-band
+channel selection and Gemini behavior.
 
 ## About
 

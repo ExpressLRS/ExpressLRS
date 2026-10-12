@@ -24,6 +24,12 @@
 #endif
 
 #define FHSS_SEQUENCE_LEN 256
+#define FHSS_MAX_FREQ_COUNT 80
+
+struct fhss_exclusion_t {
+    uint8_t first;
+    uint8_t last; // inclusive indexes into the original regular grid
+};
 
 typedef struct {
     const char  *domain;
@@ -32,6 +38,8 @@ typedef struct {
     uint32_t    freq_count;
     uint32_t    freq_center;
     PowerLevels_e max_power;
+    const fhss_exclusion_t *exclusions;
+    uint8_t exclusion_count;
 } fhss_config_t;
 
 extern volatile uint8_t FHSSptr;
@@ -44,6 +52,8 @@ extern uint32_t freq_spread;
 extern uint8_t FHSSsequence[];
 extern uint_fast8_t sync_channel;
 extern const fhss_config_t *FHSSconfig;
+extern uint8_t FHSSchannelMap[FHSS_MAX_FREQ_COUNT];
+extern uint32_t primaryFreqCount;
 
 // DualBand Variables
 #if defined(RADIO_LR1121) || defined(RADIO_LR2021) || defined(UNIT_TEST)
@@ -54,6 +64,8 @@ extern uint32_t freq_spread_DualBand;
 extern uint8_t FHSSsequence_DualBand[];
 extern uint_fast8_t sync_channel_DualBand;
 extern const fhss_config_t *FHSSconfigDualBand;
+extern uint8_t FHSSchannelMap_DualBand[FHSS_MAX_FREQ_COUNT];
+extern uint32_t secondaryFreqCount;
 #else
 // Single band radios never leave the primary band. The constants let the
 // compiler drop the dual band branches below, and the aliases keep those
@@ -65,6 +77,8 @@ constexpr uint16_t secondaryBandCount = 0;
 [[maybe_unused]] static uint8_t *const FHSSsequence_DualBand = FHSSsequence;
 [[maybe_unused]] static uint_fast8_t &sync_channel_DualBand = sync_channel;
 [[maybe_unused]] static const fhss_config_t *&FHSSconfigDualBand = FHSSconfig;
+[[maybe_unused]] static uint8_t *const FHSSchannelMap_DualBand = FHSSchannelMap;
+[[maybe_unused]] static uint32_t &secondaryFreqCount = primaryFreqCount;
 #endif
 
 // version/domain string
@@ -73,6 +87,18 @@ extern char version_domain[];
 // Domain metadata is available before the hopping sequence is initialized.
 const fhss_config_t &FHSSgetPrimaryConfig();
 const fhss_config_t &FHSSgetSecondaryConfig();
+
+// Return the retained count, or zero for invalid metadata. Lookup maps compact
+// sequence indexes to original grid indexes; exclusions are processed at startup.
+uint32_t FHSSinitialiseBand(const fhss_config_t &config, uint8_t *channelMap,
+                           uint_fast8_t &syncChannel, uint32_t &spread);
+
+static inline uint32_t FHSSchannelFrequency(const fhss_config_t &config,
+    const uint8_t *channelMap, uint8_t channel, uint32_t spread)
+{
+    const uint8_t gridChannel = config.exclusion_count ? channelMap[channel] : channel;
+    return config.freq_start + spread * gridChannel / FREQ_SPREAD_SCALE;
+}
 
 // create and randomise an FHSS sequence
 void FHSSrandomiseFHSSsequence(uint32_t seed);
@@ -98,11 +124,11 @@ static inline uint32_t FHSSgetChannelCount(void)
 {
     if (FHSSusePrimaryFreqBand)
     {
-        return FHSSconfig->freq_count;
+        return primaryFreqCount;
     }
     else
     {
-        return FHSSconfigDualBand->freq_count;
+        return secondaryFreqCount;
     }
 }
 
@@ -137,11 +163,11 @@ static inline uint32_t FHSSgetInitialFreq()
 {
     if (FHSSusePrimaryFreqBand)
     {
-        return FHSSconfig->freq_start + (sync_channel * freq_spread / FREQ_SPREAD_SCALE) - FreqCorrection;
+        return FHSSchannelFrequency(*FHSSconfig, FHSSchannelMap, sync_channel, freq_spread) - FreqCorrection;
     }
     else
     {
-        return FHSSconfigDualBand->freq_start + (sync_channel_DualBand * freq_spread_DualBand / FREQ_SPREAD_SCALE);
+        return FHSSchannelFrequency(*FHSSconfigDualBand, FHSSchannelMap_DualBand, sync_channel_DualBand, freq_spread_DualBand);
     }
 }
 
@@ -177,11 +203,11 @@ static inline uint32_t FHSSgetNextFreq()
 
     if (FHSSusePrimaryFreqBand)
     {
-        return FHSSconfig->freq_start + (freq_spread * FHSSsequence[FHSSptr] / FREQ_SPREAD_SCALE) - FreqCorrection;
+        return FHSSchannelFrequency(*FHSSconfig, FHSSchannelMap, FHSSsequence[FHSSptr], freq_spread) - FreqCorrection;
     }
     else
     {
-        return FHSSconfigDualBand->freq_start + (freq_spread_DualBand * FHSSsequence_DualBand[FHSSptr] / FREQ_SPREAD_SCALE);
+        return FHSSchannelFrequency(*FHSSconfigDualBand, FHSSchannelMap_DualBand, FHSSsequence_DualBand[FHSSptr], freq_spread_DualBand);
     }
 }
 
@@ -197,7 +223,7 @@ static inline const char *FHSSgetRegulatoryDomain()
     }
 }
 
-// Get frequency offset by half of the domain frequency range
+// Offset by half of the retained channel list for same-band Gemini
 static inline uint32_t FHSSGeminiFreq(uint8_t FHSSsequenceIdx)
 {
     uint32_t freq;
@@ -206,11 +232,11 @@ static inline uint32_t FHSSGeminiFreq(uint8_t FHSSsequenceIdx)
 
     if (FHSSusePrimaryFreqBand)
     {
-        freq = FHSSconfig->freq_start + (freq_spread * offSetIdx / FREQ_SPREAD_SCALE) - FreqCorrection_2;
+        freq = FHSSchannelFrequency(*FHSSconfig, FHSSchannelMap, offSetIdx, freq_spread) - FreqCorrection_2;
     }
     else
     {
-        freq = FHSSconfigDualBand->freq_start + (freq_spread_DualBand * offSetIdx / FREQ_SPREAD_SCALE);
+        freq = FHSSchannelFrequency(*FHSSconfigDualBand, FHSSchannelMap_DualBand, offSetIdx, freq_spread_DualBand);
     }
 
     return freq;
@@ -221,7 +247,7 @@ static inline uint32_t FHSSgetGeminiFreq()
     if (FHSSuseDualBand)
     {
         // When using Dual Band there is no need to calculate an offset frequency. Unlike Gemini with 2 frequencies in the same band.
-        return FHSSconfigDualBand->freq_start + (FHSSsequence_DualBand[FHSSptr] * freq_spread_DualBand / FREQ_SPREAD_SCALE);
+        return FHSSchannelFrequency(*FHSSconfigDualBand, FHSSchannelMap_DualBand, FHSSsequence_DualBand[FHSSptr], freq_spread_DualBand);
     }
     else
     {
@@ -240,7 +266,7 @@ static inline uint32_t FHSSgetInitialGeminiFreq()
 {
     if (FHSSuseDualBand)
     {
-        return FHSSconfigDualBand->freq_start + (sync_channel_DualBand * freq_spread_DualBand / FREQ_SPREAD_SCALE);
+        return FHSSchannelFrequency(*FHSSconfigDualBand, FHSSchannelMap_DualBand, sync_channel_DualBand, freq_spread_DualBand);
     }
     else
     {

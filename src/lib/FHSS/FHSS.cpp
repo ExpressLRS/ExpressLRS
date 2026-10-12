@@ -2,6 +2,7 @@
 #include "logging.h"
 #include "options.h"
 #include <string.h>
+#include <stdlib.h>
 
 #if defined(UNIT_TEST)
 #define POWER_OUTPUT_VALUES_COUNT 4
@@ -27,16 +28,16 @@ constexpr PowerLevels_e SUBGHZ_MAX_POWER = PWR_2000mW;
 #endif
 
 const fhss_config_t domains[] = {
-    {"AU915",  FREQ_HZ_TO_REG_VAL(915500000), FREQ_HZ_TO_REG_VAL(926900000), 20, 921000000, SUBGHZ_MAX_POWER},
-    {"FCC915", FREQ_HZ_TO_REG_VAL(903500000), FREQ_HZ_TO_REG_VAL(926900000), 40, 915000000, SUBGHZ_MAX_POWER},
-    {"EU868",  FREQ_HZ_TO_REG_VAL(863275000), FREQ_HZ_TO_REG_VAL(869575000), 13, 868000000, SUBGHZ_MAX_POWER},
-    {"IN866",  FREQ_HZ_TO_REG_VAL(865375000), FREQ_HZ_TO_REG_VAL(866950000), 4, 866000000, SUBGHZ_MAX_POWER},
-    {"AU433",  FREQ_HZ_TO_REG_VAL(433420000), FREQ_HZ_TO_REG_VAL(434420000), 3, 434000000, SUBGHZ_MAX_POWER},
-    {"EU433",  FREQ_HZ_TO_REG_VAL(433100000), FREQ_HZ_TO_REG_VAL(434450000), 3, 434000000, SUBGHZ_MAX_POWER},
-    {"US433",  FREQ_HZ_TO_REG_VAL(433250000), FREQ_HZ_TO_REG_VAL(438000000), 8, 434000000, SUBGHZ_MAX_POWER},
-    {"US433W",  FREQ_HZ_TO_REG_VAL(423500000), FREQ_HZ_TO_REG_VAL(438000000), 20, 434000000, SUBGHZ_MAX_POWER},
+    {"AU915",  FREQ_HZ_TO_REG_VAL(915500000), FREQ_HZ_TO_REG_VAL(926900000), 20, 921000000, SUBGHZ_MAX_POWER, nullptr, 0},
+    {"FCC915", FREQ_HZ_TO_REG_VAL(903500000), FREQ_HZ_TO_REG_VAL(926900000), 40, 915000000, SUBGHZ_MAX_POWER, nullptr, 0},
+    {"EU868",  FREQ_HZ_TO_REG_VAL(863275000), FREQ_HZ_TO_REG_VAL(869575000), 13, 868000000, SUBGHZ_MAX_POWER, nullptr, 0},
+    {"IN866",  FREQ_HZ_TO_REG_VAL(865375000), FREQ_HZ_TO_REG_VAL(866950000), 4, 866000000, SUBGHZ_MAX_POWER, nullptr, 0},
+    {"AU433",  FREQ_HZ_TO_REG_VAL(433420000), FREQ_HZ_TO_REG_VAL(434420000), 3, 434000000, SUBGHZ_MAX_POWER, nullptr, 0},
+    {"EU433",  FREQ_HZ_TO_REG_VAL(433100000), FREQ_HZ_TO_REG_VAL(434450000), 3, 434000000, SUBGHZ_MAX_POWER, nullptr, 0},
+    {"US433",  FREQ_HZ_TO_REG_VAL(433250000), FREQ_HZ_TO_REG_VAL(438000000), 8, 434000000, SUBGHZ_MAX_POWER, nullptr, 0},
+    {"US433W",  FREQ_HZ_TO_REG_VAL(423500000), FREQ_HZ_TO_REG_VAL(438000000), 20, 434000000, SUBGHZ_MAX_POWER, nullptr, 0},
     // Thailand NBTC 920-925 MHz: 8 FHSS channels, 600 kHz spacing
-    {"TH920",  FREQ_HZ_TO_REG_VAL(920500000), FREQ_HZ_TO_REG_VAL(924700000), 8, 922600000, SUBGHZ_MAX_POWER},
+    {"TH920",  FREQ_HZ_TO_REG_VAL(920500000), FREQ_HZ_TO_REG_VAL(924700000), 8, 922600000, SUBGHZ_MAX_POWER, nullptr, 0},
 };
 
 #if defined(RADIO_LR1121) || defined(RADIO_LR2021)
@@ -49,10 +50,11 @@ const fhss_config_t domainsDualBand[] = {
     #endif
     FREQ_HZ_TO_REG_VAL(2400400000), FREQ_HZ_TO_REG_VAL(2479400000), 80, 2440000000,
     #if defined(Regulatory_Domain_EU_CE_2400)
-        PWR_100mW
+        PWR_100mW,
     #else
-        PWR_2000mW
+        PWR_2000mW,
     #endif
+    nullptr, 0
     }
 };
 #endif
@@ -69,10 +71,11 @@ const fhss_config_t domains[] = {
     #endif
     FREQ_HZ_TO_REG_VAL(2400400000), FREQ_HZ_TO_REG_VAL(2479400000), 80, 2440000000,
     #if defined(Regulatory_Domain_EU_CE_2400)
-        PWR_100mW
+        PWR_100mW,
     #else
-        PWR_2000mW
+        PWR_2000mW,
     #endif
+    nullptr, 0
     }
 };
 #endif
@@ -111,6 +114,8 @@ int32_t FreqCorrection_2;
 uint32_t freq_spread;
 
 uint16_t primaryBandCount;
+uint32_t primaryFreqCount;
+uint8_t FHSSchannelMap[FHSS_MAX_FREQ_COUNT];
 
 #if defined(RADIO_LR1121) || defined(RADIO_LR2021) || defined(UNIT_TEST)
 // Variables for Dual Band radios
@@ -121,6 +126,8 @@ uint32_t freq_spread_DualBand;
 bool FHSSusePrimaryFreqBand = true;
 bool FHSSuseDualBand = false;
 uint16_t secondaryBandCount;
+uint32_t secondaryFreqCount;
+uint8_t FHSSchannelMap_DualBand[FHSS_MAX_FREQ_COUNT];
 #endif
 
 constexpr uint8_t VERSION_DOMAIN_MAXLEN = 26 + 1;   // max. number of characters (plus '\0') the Lua script can display
@@ -128,29 +135,71 @@ constexpr uint8_t VERSION_DOMAIN_MAXLEN = 26 + 1;   // max. number of characters
 char version_domain[VERSION_DOMAIN_MAXLEN] {};
 
 
+uint32_t FHSSinitialiseBand(const fhss_config_t &config, uint8_t *channelMap,
+                           uint_fast8_t &syncChannel, uint32_t &spread)
+{
+    if (config.freq_count < 2 || config.freq_count > FHSS_MAX_FREQ_COUNT ||
+        (config.exclusion_count && !config.exclusions))
+    {
+        return 0;
+    }
+    for (uint8_t i = 0; i < config.exclusion_count; ++i)
+    {
+        const fhss_exclusion_t &range = config.exclusions[i];
+        if (range.first > range.last || range.last >= config.freq_count)
+            return 0;
+    }
+
+    uint32_t count = 0;
+    for (uint32_t channel = 0; channel < config.freq_count; ++channel)
+    {
+        bool excluded = false;
+        for (uint8_t i = 0; i < config.exclusion_count; ++i)
+        {
+            const fhss_exclusion_t &range = config.exclusions[i];
+            if (channel >= range.first && channel <= range.last)
+            {
+                excluded = true;
+                break;
+            }
+        }
+        if (!excluded)
+            channelMap[count++] = channel;
+    }
+    if (count < 2)
+        return 0;
+    syncChannel = count / 2;
+    // Keep the original grid spacing, not the spacing of a compressed range.
+    spread = (config.freq_stop - config.freq_start) * FREQ_SPREAD_SCALE / (config.freq_count - 1);
+    return count;
+}
+
 void FHSSrandomiseFHSSsequence(const uint32_t seed)
 {
     // the hop pointer indexes sequences that are about to be replaced
     FHSSptr = 0;
 
     FHSSconfig = &domains[firmwareOptions.domain];
-    sync_channel = FHSSconfig->freq_count / 2;
-    freq_spread = (FHSSconfig->freq_stop - FHSSconfig->freq_start) * FREQ_SPREAD_SCALE / (FHSSconfig->freq_count - 1);
+    primaryFreqCount = FHSSinitialiseBand(*FHSSconfig, FHSSchannelMap, sync_channel, freq_spread);
+    if (!primaryFreqCount)
+        abort(); // Invalid domain metadata must never enable excluded frequencies.
 
     DBGLN("Primary Domain %s, %u channels, sync=%u",
-        FHSSconfig->domain, FHSSconfig->freq_count, sync_channel);
+        FHSSconfig->domain, primaryFreqCount, sync_channel);
 
-    primaryBandCount = FHSSrandomiseFHSSsequenceBuild(seed, FHSSconfig->freq_count, sync_channel, FHSSsequence);
+    primaryBandCount = FHSSrandomiseFHSSsequenceBuild(seed, primaryFreqCount, sync_channel, FHSSsequence);
 
 #if defined(RADIO_LR1121) || defined(RADIO_LR2021)
     FHSSconfigDualBand = &domainsDualBand[0];
-    sync_channel_DualBand = FHSSconfigDualBand->freq_count / 2;
-    freq_spread_DualBand = (FHSSconfigDualBand->freq_stop - FHSSconfigDualBand->freq_start) * FREQ_SPREAD_SCALE / (FHSSconfigDualBand->freq_count - 1);
+    secondaryFreqCount = FHSSinitialiseBand(*FHSSconfigDualBand, FHSSchannelMap_DualBand,
+        sync_channel_DualBand, freq_spread_DualBand);
+    if (!secondaryFreqCount)
+        abort();
 
     DBGLN("Dual Domain %s, %u channels, sync=%u",
-        FHSSconfigDualBand->domain, FHSSconfigDualBand->freq_count, sync_channel_DualBand);
+        FHSSconfigDualBand->domain, secondaryFreqCount, sync_channel_DualBand);
 
-    secondaryBandCount = FHSSrandomiseFHSSsequenceBuild(seed, FHSSconfigDualBand->freq_count, sync_channel_DualBand, FHSSsequence_DualBand);
+    secondaryBandCount = FHSSrandomiseFHSSsequenceBuild(seed, secondaryFreqCount, sync_channel_DualBand, FHSSsequence_DualBand);
 #endif
 
     // add frequency and regulatory domain to the string used by the Lua script
