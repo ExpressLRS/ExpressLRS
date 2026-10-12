@@ -845,6 +845,12 @@ RxConfig::RxConfig()
 
 void RxConfig::Load()
 {
+    LoadEeprom();
+    LoadQuickSave();
+}
+
+void RxConfig::LoadEeprom()
+{
     m_modified = 0;
     m_eeprom->Get(0, m_config);
 
@@ -1150,6 +1156,170 @@ RxConfig::GetPowerOnCounter() const
         }
     }
     return realPowerOnCounter;
+}
+#endif
+
+/*
+ * Quick save of the connected rate (and the power on counter reset that goes with connecting).
+ * A full Commit() rewrites the whole config, which needs the link dropped first, so connecting on a
+ * new rate would cost a reconnect. Instead a small record is appended without any erase, and folded
+ * into the config at the next boot, when nothing is connected.
+ * - ESP8266: one byte per entry, the rate, in the empty sector after the power on counter
+ * - ESP32: a single u8 NVS key holding the rate, in its own namespace
+ */
+static uint8_t quickSavedRate = 0xFF; // rate already saved, so nothing to write if it hasn't changed
+static uint8_t quickSaveRate;
+
+#if defined(PLATFORM_ESP8266)
+static constexpr uint32_t QUICK_LOG_START = 16; // after the power on counter bytes
+static constexpr uint8_t QUICK_LOG_EMPTY = 0xFF;
+static uint32_t quickLogOffset = QUICK_LOG_START;
+
+void RxConfig::LoadQuickSave()
+{
+    // Count the power on counter bytes, then find the last record and the end of the log
+    uint8_t chunk[64];
+    ESP.flashRead(EMPTY_SECTOR * SPI_FLASH_SEC_SIZE, chunk, QUICK_LOG_START);
+    int counter = QUICK_LOG_START;
+    for (uint32_t i = 0; i < QUICK_LOG_START; i++)
+    {
+        if (chunk[i] != 0)
+        {
+            counter = i;
+            break;
+        }
+    }
+
+    // Entries run up to the first erased byte. A value that isn't a rate can only come from a write
+    // cut short by power loss, so ignore it
+    int lastRate = -1;
+    quickLogOffset = SPI_FLASH_SEC_SIZE;
+    for (uint32_t offset = QUICK_LOG_START; offset < SPI_FLASH_SEC_SIZE && quickLogOffset == SPI_FLASH_SEC_SIZE; offset += sizeof(chunk))
+    {
+        ESP.flashRead(EMPTY_SECTOR * SPI_FLASH_SEC_SIZE + offset, chunk, sizeof(chunk));
+        for (uint32_t i = 0; i < sizeof(chunk); i++)
+        {
+            if (chunk[i] == QUICK_LOG_EMPTY)
+            {
+                quickLogOffset = offset + i;
+                break;
+            }
+            if (chunk[i] < RATE_MAX)
+                lastRate = chunk[i];
+        }
+    }
+    realPowerOnCounter = counter;
+
+    if (lastRate >= 0)
+    {
+        // Connected last time: the power on counter was reset, and this is the rate to start on
+        DBGLN("Quick save: connected on rate %u", lastRate);
+        if (m_config.rateInitialIdx != lastRate)
+        {
+            m_config.rateInitialIdx = lastRate;
+            m_modified |= EVENT_CONFIG_MODEL_CHANGED;
+        }
+        ESP.flashEraseSector(EMPTY_SECTOR);
+        erase_power_on_count = false;
+        realPowerOnCounter = 0;
+        quickLogOffset = QUICK_LOG_START;
+        Commit();
+    }
+    quickSavedRate = m_config.rateInitialIdx;
+}
+
+void RxConfig::CommitQuickSave()
+{
+    m_quickSavePending = false;
+    if (quickLogOffset >= SPI_FLASH_SEC_SIZE)
+    {
+        // Log full, which shouldn't happen as it's cleared every boot. Fall back to a full commit
+        m_modified |= EVENT_CONFIG_MODEL_CHANGED;
+        return;
+    }
+    const uint8_t rate = quickSaveRate;
+    // A few us to program one byte (the core rewrites its word, leaving the others unchanged).
+    // Keep the radio ISRs out while the flash cache is disabled
+    noInterrupts();
+    ESP.flashWrite(EMPTY_SECTOR * SPI_FLASH_SEC_SIZE + quickLogOffset, &rate, 1);
+    interrupts();
+    ++quickLogOffset;
+    quickSavedRate = rate;
+}
+
+void ICACHE_RAM_ATTR RxConfig::SetConnectedRate(uint8_t rateIdx)
+{
+    m_config.rateInitialIdx = rateIdx;
+    // An unknown counter (-1) might be set, so save to be sure
+    if (rateIdx != quickSavedRate || realPowerOnCounter != 0)
+    {
+        realPowerOnCounter = 0;
+        quickSaveRate = rateIdx;
+        m_quickSavePending = true;
+    }
+}
+
+#else
+#include <nvs.h>
+static constexpr const char *QUICK_NVS_NAMESPACE = "rxquick";
+static constexpr const char *QUICK_NVS_KEY = "conn";
+
+void RxConfig::LoadQuickSave()
+{
+    nvs_handle handle;
+    if (nvs_open(QUICK_NVS_NAMESPACE, NVS_READWRITE, &handle) == ESP_OK)
+    {
+        uint8_t rate;
+        if (nvs_get_u8(handle, QUICK_NVS_KEY, &rate) == ESP_OK)
+        {
+            // Connected last time: the power on counter was reset, and this is the rate to start on
+            DBGLN("Quick save: connected on rate %u", rate);
+            if (m_config.rateInitialIdx != rate)
+            {
+                m_config.rateInitialIdx = rate;
+                m_modified |= EVENT_CONFIG_MODEL_CHANGED;
+            }
+            if (m_config.powerOnCounter != 0)
+            {
+                m_config.powerOnCounter = 0;
+                m_modified |= EVENT_CONFIG_POWER_COUNT_CHANGED;
+            }
+            nvs_erase_key(handle, QUICK_NVS_KEY);
+            nvs_commit(handle);
+            Commit();
+        }
+        nvs_close(handle);
+    }
+    quickSavedRate = m_config.rateInitialIdx;
+}
+
+void RxConfig::CommitQuickSave()
+{
+    m_quickSavePending = false;
+    const uint8_t rate = quickSaveRate;
+    nvs_handle handle;
+    if (nvs_open(QUICK_NVS_NAMESPACE, NVS_READWRITE, &handle) != ESP_OK)
+    {
+        // Fall back to a full commit
+        m_modified |= EVENT_CONFIG_MODEL_CHANGED | EVENT_CONFIG_POWER_COUNT_CHANGED;
+        return;
+    }
+    // One 32 byte NVS entry, no rewrite of the config blob
+    nvs_set_u8(handle, QUICK_NVS_KEY, rate);
+    nvs_commit(handle);
+    nvs_close(handle);
+    quickSavedRate = rate;
+}
+
+void ICACHE_RAM_ATTR RxConfig::SetConnectedRate(uint8_t rateIdx)
+{
+    if (rateIdx != quickSavedRate || m_config.powerOnCounter != 0)
+    {
+        quickSaveRate = rateIdx;
+        m_quickSavePending = true;
+    }
+    m_config.rateInitialIdx = rateIdx;
+    m_config.powerOnCounter = 0;
 }
 #endif
 

@@ -847,13 +847,9 @@ void ICACHE_RAM_ATTR TentativeConnection(unsigned long now)
     SnrMean.reset();
     rxConnectTentative(now);
 
-    // Use this rate as the initial rate next time if we connected on it
-    config.SetRateInitialIdx(ExpressLRS_nextAirRateIndex);
-    // And stop counting toward binding mode
-    if (config.GetPowerOnCounter() != 0)
-    {
-        config.SetPowerOnCounter(0);
-    }
+    // Use this rate as the initial rate next time if we connected on it, and stop counting toward
+    // binding mode. Saved by a quick append rather than a full commit, which would drop the link
+    config.SetConnectedRate(ExpressLRS_nextAirRateIndex);
 
     // The caller MUST call hwTimer::resume(). It is not done here because
     // the timer ISR will fire immediately and preempt any other code
@@ -1907,6 +1903,12 @@ static void updateSwitchMode()
 
 static void CheckConfigChangePending()
 {
+    // Small append to flash, so it doesn't need the link dropped like a full commit does
+    if (config.HasQuickSave())
+    {
+        config.CommitQuickSave();
+    }
+
     if (config.IsModified() && !InBindingMode && connectionState < NO_CONFIG_SAVE_STATES)
     {
         LostConnection(false);
