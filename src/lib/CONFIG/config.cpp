@@ -1328,7 +1328,7 @@ RxConfig::SetStorageProvider(ELRS_EEPROM *eeprom)
 void
 RxConfig::SetPwmChannel(uint8_t ch, uint16_t failsafe, uint8_t inputCh, bool inverted, uint8_t mode, uint8_t stretched)
 {
-    if (ch > PWM_MAX_CHANNELS)
+    if (ch >= PWM_MAX_CHANNELS)
         return;
 
     rx_config_pwm_t *pwm = &m_config.pwmChannels[ch];
@@ -1348,7 +1348,7 @@ RxConfig::SetPwmChannel(uint8_t ch, uint16_t failsafe, uint8_t inputCh, bool inv
 void
 RxConfig::SetPwmChannelRaw(uint8_t ch, uint32_t raw)
 {
-    if (ch > PWM_MAX_CHANNELS)
+    if (ch >= PWM_MAX_CHANNELS)
         return;
 
     rx_config_pwm_t *pwm = &m_config.pwmChannels[ch];
