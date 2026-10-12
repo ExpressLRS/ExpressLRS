@@ -51,15 +51,7 @@
 
 extern char backpackVersion[];
 
-#if defined(Regulatory_Domain_EU_CE_2400)
-#if defined(RADIO_LR1121) || defined(RADIO_LR2021)
-char strPowerLevels[] = "10/10;25/25;25/50;25/100;25/250;25/500;25/1000;25/2000;MatchTX ";
-#else
 char strPowerLevels[] = "10;25;50;100;250;500;1000;2000;MatchTX ";
-#endif
-#else
-char strPowerLevels[] = "10;25;50;100;250;500;1000;2000;MatchTX ";
-#endif
 static char pwrFolderDynamicName[] = "TX Power (1000 Dynamic)";
 static char vtxFolderDynamicName[] = "VTX Admin (OFF:C:1 Aux11 )";
 static char modelMatchUnit[] = " (ID: 00)";
@@ -134,13 +126,10 @@ static selectionParameter luaFanThreshold = {
 };
 
 #if defined(Regulatory_Domain_EU_CE_2400)
+static char domainPowerLimits[48];
 static stringParameter luaCELimit = {
-#if defined(RADIO_LR1121) || defined(RADIO_LR2021)
-    {"25/100mW 868M/2G4 CE LIMIT", CRSF_INFO},
-#else
-    {"100mW 2G4 CE LIMIT", CRSF_INFO},
-#endif
-    STR_EMPTYSPACE
+    {"Domain power limits", CRSF_INFO},
+    domainPowerLimits
 };
 #endif
 
@@ -897,6 +886,14 @@ void TXModuleEndpoint::registerParameters()
   }
 #if defined(Regulatory_Domain_EU_CE_2400)
   if (HAS_RADIO) {
+#if defined(RADIO_LR1121) || defined(RADIO_LR2021)
+    snprintf(domainPowerLimits, sizeof(domainPowerLimits), "%s:%umW / %s:%umW",
+      FHSSgetPrimaryConfig().domain, powerLevelMilliwatts(FHSSgetPrimaryConfig().max_power),
+      FHSSgetSecondaryConfig().domain, powerLevelMilliwatts(FHSSgetSecondaryConfig().max_power));
+#else
+    snprintf(domainPowerLimits, sizeof(domainPowerLimits), "%s:%umW",
+      FHSSgetPrimaryConfig().domain, powerLevelMilliwatts(FHSSgetPrimaryConfig().max_power));
+#endif
     registerParameter(&luaCELimit, NULL, luaPowerFolder.common.id);
   }
 #endif

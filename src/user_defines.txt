@@ -26,7 +26,7 @@
 #-DRegulatory_Domain_US_433_WIDE
 #-DRegulatory_Domain_FCC_915
 #-DRegulatory_Domain_TH_920
-# Brazil split-band domain: 29 retained channels, maximum 250mW (25mW in dual-band CE builds).
+# Brazil split-band domain: 29 retained channels, maximum 250mW for the sub-GHz band.
 #-DRegulatory_Domain_BR_915
 #-DRegulatory_Domain_ISM_2400
 #-DRegulatory_Domain_EU_CE_2400

@@ -4,14 +4,27 @@ The maximum power you can select is constrained by the hardware and the
 regulatory domains included in the firmware. The actual output may be lower
 when the active RF band has a tighter limit.
 
-## Existing CE behavior
+## Domain-scoped CE limits
 
 | Firmware and active mode | Maximum selectable power | Output limit |
 | --- | --- | --- |
 | CE_LBT on a single-band 2.4 GHz radio | 100 mW | 100 mW |
-| CE on LR1121/LR2021, 2.4 GHz only | 100 mW | 100 mW |
-| CE on LR1121/LR2021, sub-GHz only | 100 mW | 25 mW |
-| CE on LR1121/LR2021, simultaneous sub-GHz and 2.4 GHz | 100 mW | 25 mW on both bands |
+| EU868/EU433 + CE_LBT on LR1121/LR2021, 2.4 GHz only | 100 mW | 100 mW |
+| EU868/EU433 + CE_LBT on LR1121/LR2021, sub-GHz only | 100 mW | 25 mW |
+| EU868/EU433 + CE_LBT on LR1121/LR2021, simultaneous dual-band | 100 mW | 25 mW on both bands |
+| BR915 + CE_LBT, sub-GHz only | 250 mW | 250 mW |
+| BR915 + CE_LBT, 2.4 GHz only | 250 mW | 100 mW |
+| BR915 + CE_LBT, simultaneous dual-band | 250 mW | 100 mW on both bands |
+
+The `Regulatory_Domain_EU_CE_2400` flag scopes its power policy to EU domains:
+CE_LBT is capped at 100 mW, and EU868/EU433 are capped at 25 mW on dual-band
+radios in CE builds. FCC915, AU915, TH920 and other non-EU sub-GHz domains keep
+their own limits. In particular, BR915 retains 250 mW. This intentionally
+corrects the previous blanket 25 mW restriction on non-EU sub-GHz domains.
+
+Lua power choices show the shared requested level. The CE information field
+reports the selected domains' limits, rather than assuming every sub-GHz domain
+is capped at 25 mW.
 
 Hardware with a lower maximum remains limited to that maximum. The shared
 output setting in simultaneous dual-band mode uses the tighter of the two
@@ -31,7 +44,7 @@ maximum, then by the active band's output limit.
 
 The most recent power request is retained separately from the applied output.
 When a dual-band radio changes its active bands, it re-evaluates that request
-before configuring the radio. For example, a 100 mW request in CE firmware
+before configuring the radio. For example, a 100 mW request with EU868/EU433 and CE_LBT
 produces 25 mW in sub-GHz mode and can produce 100 mW again in 2.4 GHz mode.
 For dynamic power, this restores the most recent request, not necessarily the
 configured Max Power ceiling. Band changes no longer require a subsequent
@@ -52,7 +65,8 @@ level enumeration. Frequency selection remains in FHSS; power management
 combines the domain limit with hardware limits and the active band selection.
 
 The [Brazil BR915 domain](brazil-regulatory-domain.md) uses a 250 mW sub-GHz
-ceiling with channel exclusions. CE builds retain their stricter 25 mW limit.
+ceiling with channel exclusions. Pairing BR915 with CE_LBT leaves sub-GHz at
+250 mW and limits simultaneous dual-band output to the tighter 100 mW cap.
 Existing domain IDs and over-the-air packet formats retain their meanings.
 
 For Lua power controls, see the

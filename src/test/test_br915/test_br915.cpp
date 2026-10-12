@@ -98,18 +98,21 @@ void test_brazil_sequence_is_repeatable_and_balanced()
 
 void test_brazil_domain_power_and_dual_band()
 {
-#if defined(Regulatory_Domain_EU_CE_2400)
-    const PowerLevels_e cap = PWR_25mW;
-#else
     const PowerLevels_e cap = PWR_250mW;
-#endif
     TEST_ASSERT_EQUAL(cap, FHSSgetPrimaryConfig().max_power);
     PowerRequest request;
     request.set(PWR_2000mW, PWR_10mW, selectablePowerLimit(PWR_2000mW,
         FHSSgetPrimaryConfig().max_power, FHSSgetSecondaryConfig().max_power));
     const PowerLevels_e limit = activePowerLimit(FHSSgetPrimaryConfig().max_power,
         FHSSgetSecondaryConfig().max_power, true, true);
+#if defined(Regulatory_Domain_EU_CE_2400)
+    TEST_ASSERT_EQUAL(PWR_100mW, request.output(PWR_10mW, PWR_2000mW, limit));
+    TEST_ASSERT_EQUAL(PWR_100mW, FHSSgetSecondaryConfig().max_power);
+#else
     TEST_ASSERT_EQUAL(cap, request.output(PWR_10mW, PWR_2000mW, limit));
+#endif
+    TEST_ASSERT_EQUAL(PWR_250mW, request.output(PWR_10mW, PWR_2000mW,
+        activePowerLimit(cap, FHSSgetSecondaryConfig().max_power, true, false)));
 #if defined(RADIO_LR1121) || defined(RADIO_LR2021)
     FHSSuseDualBand = true;
     TEST_ASSERT_EQUAL(232, FHSSgetSequenceCount());
@@ -123,6 +126,26 @@ void test_brazil_domain_power_and_dual_band()
     FHSSusePrimaryFreqBand = false;
     TEST_ASSERT_EQUAL(80, FHSSgetChannelCount());
 #endif
+}
+
+void test_ce_flag_only_limits_european_domains()
+{
+    const unsigned european[] = {2, 5};
+    for (unsigned domain : european)
+    {
+        firmwareOptions.domain = domain;
+#if defined(Regulatory_Domain_EU_CE_2400)
+        TEST_ASSERT_EQUAL(PWR_25mW, FHSSgetPrimaryConfig().max_power);
+#else
+        TEST_ASSERT_EQUAL(PWR_2000mW, FHSSgetPrimaryConfig().max_power);
+#endif
+    }
+    const unsigned other[] = {0, 1, 3, 4, 6, 7, 8};
+    for (unsigned domain : other)
+    {
+        firmwareOptions.domain = domain;
+        TEST_ASSERT_EQUAL(PWR_2000mW, FHSSgetPrimaryConfig().max_power);
+    }
 }
 
 void test_existing_domain_ids_are_preserved()
@@ -144,5 +167,6 @@ int main(int, char **)
     RUN_TEST(test_brazil_sequence_is_repeatable_and_balanced);
     RUN_TEST(test_brazil_domain_power_and_dual_band);
     RUN_TEST(test_existing_domain_ids_are_preserved);
+    RUN_TEST(test_ce_flag_only_limits_european_domains);
     return UNITY_END();
 }

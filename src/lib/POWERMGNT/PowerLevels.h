@@ -13,3 +13,9 @@ typedef enum
     PWR_COUNT = 8,
     PWR_MATCH_TX = PWR_COUNT,
 } PowerLevels_e;
+
+inline unsigned powerLevelMilliwatts(PowerLevels_e power)
+{
+    static constexpr unsigned values[] = {10, 25, 50, 100, 250, 500, 1000, 2000};
+    return power >= PWR_10mW && power < PWR_COUNT ? values[power] : 0;
+}

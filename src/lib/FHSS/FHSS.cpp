@@ -19,30 +19,30 @@
 #include "LR2021Driver.h"
 #endif
 
-// Preserve the CE sub-GHz cap on dual-band radios. Other builds keep their
-// existing hardware-defined maximum until a domain specifies a tighter limit.
+// The CE flag limits European sub-GHz domains on dual-band radios only.
+// Non-European domains retain their own power policies.
 #if defined(Regulatory_Domain_EU_CE_2400) && (defined(RADIO_LR1121) || defined(RADIO_LR2021))
-constexpr PowerLevels_e SUBGHZ_MAX_POWER = PWR_25mW;
+constexpr PowerLevels_e EU_SUBGHZ_MAX_POWER = PWR_25mW;
 #else
-constexpr PowerLevels_e SUBGHZ_MAX_POWER = PWR_2000mW;
+constexpr PowerLevels_e EU_SUBGHZ_MAX_POWER = PWR_2000mW;
 #endif
 
 // 42 channels at 600kHz spacing, with the cellular gap removed.
 const fhss_exclusion_t br915Exclusions[] = {{9, 21}};
 
 const fhss_config_t domains[] = {
-    {"AU915",  FREQ_HZ_TO_REG_VAL(915500000), FREQ_HZ_TO_REG_VAL(926900000), 20, 921000000, SUBGHZ_MAX_POWER, nullptr, 0},
-    {"FCC915", FREQ_HZ_TO_REG_VAL(903500000), FREQ_HZ_TO_REG_VAL(926900000), 40, 915000000, SUBGHZ_MAX_POWER, nullptr, 0},
-    {"EU868",  FREQ_HZ_TO_REG_VAL(863275000), FREQ_HZ_TO_REG_VAL(869575000), 13, 868000000, SUBGHZ_MAX_POWER, nullptr, 0},
-    {"IN866",  FREQ_HZ_TO_REG_VAL(865375000), FREQ_HZ_TO_REG_VAL(866950000), 4, 866000000, SUBGHZ_MAX_POWER, nullptr, 0},
-    {"AU433",  FREQ_HZ_TO_REG_VAL(433420000), FREQ_HZ_TO_REG_VAL(434420000), 3, 434000000, SUBGHZ_MAX_POWER, nullptr, 0},
-    {"EU433",  FREQ_HZ_TO_REG_VAL(433100000), FREQ_HZ_TO_REG_VAL(434450000), 3, 434000000, SUBGHZ_MAX_POWER, nullptr, 0},
-    {"US433",  FREQ_HZ_TO_REG_VAL(433250000), FREQ_HZ_TO_REG_VAL(438000000), 8, 434000000, SUBGHZ_MAX_POWER, nullptr, 0},
-    {"US433W",  FREQ_HZ_TO_REG_VAL(423500000), FREQ_HZ_TO_REG_VAL(438000000), 20, 434000000, SUBGHZ_MAX_POWER, nullptr, 0},
+    {"AU915",  FREQ_HZ_TO_REG_VAL(915500000), FREQ_HZ_TO_REG_VAL(926900000), 20, 921000000, PWR_2000mW, nullptr, 0},
+    {"FCC915", FREQ_HZ_TO_REG_VAL(903500000), FREQ_HZ_TO_REG_VAL(926900000), 40, 915000000, PWR_2000mW, nullptr, 0},
+    {"EU868",  FREQ_HZ_TO_REG_VAL(863275000), FREQ_HZ_TO_REG_VAL(869575000), 13, 868000000, EU_SUBGHZ_MAX_POWER, nullptr, 0},
+    {"IN866",  FREQ_HZ_TO_REG_VAL(865375000), FREQ_HZ_TO_REG_VAL(866950000), 4, 866000000, PWR_2000mW, nullptr, 0},
+    {"AU433",  FREQ_HZ_TO_REG_VAL(433420000), FREQ_HZ_TO_REG_VAL(434420000), 3, 434000000, PWR_2000mW, nullptr, 0},
+    {"EU433",  FREQ_HZ_TO_REG_VAL(433100000), FREQ_HZ_TO_REG_VAL(434450000), 3, 434000000, EU_SUBGHZ_MAX_POWER, nullptr, 0},
+    {"US433",  FREQ_HZ_TO_REG_VAL(433250000), FREQ_HZ_TO_REG_VAL(438000000), 8, 434000000, PWR_2000mW, nullptr, 0},
+    {"US433W",  FREQ_HZ_TO_REG_VAL(423500000), FREQ_HZ_TO_REG_VAL(438000000), 20, 434000000, PWR_2000mW, nullptr, 0},
     // Thailand NBTC 920-925 MHz: 8 FHSS channels, 600 kHz spacing
-    {"TH920",  FREQ_HZ_TO_REG_VAL(920500000), FREQ_HZ_TO_REG_VAL(924700000), 8, 922600000, SUBGHZ_MAX_POWER, nullptr, 0},
+    {"TH920",  FREQ_HZ_TO_REG_VAL(920500000), FREQ_HZ_TO_REG_VAL(924700000), 8, 922600000, PWR_2000mW, nullptr, 0},
     {"BR915", FREQ_HZ_TO_REG_VAL(902350000), FREQ_HZ_TO_REG_VAL(926950000), 42, 922150000,
-        SUBGHZ_MAX_POWER < PWR_250mW ? SUBGHZ_MAX_POWER : PWR_250mW, br915Exclusions, 1},
+        PWR_250mW, br915Exclusions, 1},
 };
 
 #if defined(RADIO_LR1121) || defined(RADIO_LR2021)

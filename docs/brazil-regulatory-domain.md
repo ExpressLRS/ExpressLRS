@@ -43,13 +43,13 @@ edge margin beyond that envelope.
 
 The BR915 sub-GHz output setting is capped at 250 mW, or the hardware maximum
 if lower. Static power, dynamic power and RX telemetry share that enforcement.
-On CE LR1121/LR2021 builds, the existing 25 mW sub-GHz ceiling remains stricter
-and takes precedence.
+The CE flag does not lower BR915 to 25 mW: that ceiling applies only to EU868
+and EU433. BR915 remains at 250 mW in sub-GHz-only operation.
 
 For simultaneous sub-GHz/2.4 GHz operation, the shared output setting uses the
-tighter domain limit: BR915 normally limits it to 250 mW on both bands, or
-25 mW in a CE build. In 2.4 GHz-only operation, the 2.4 GHz domain's limit
-applies. A dual-band device may therefore offer selectable power above 250 mW;
+tighter domain limit: BR915 with ISM2G4 limits it to 250 mW on both bands;
+BR915 with CE_LBT limits it to 100 mW on both bands. In 2.4 GHz-only operation,
+the 2.4 GHz domain's limit applies. A dual-band device may therefore offer selectable power above 250 mW;
 the sub-GHz output remains capped when BR915 is active.
 
 The existing hardware-minimum fallback still applies. Hardware whose minimum
