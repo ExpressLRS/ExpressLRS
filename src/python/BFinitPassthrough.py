@@ -161,7 +161,6 @@ def init_passthrough(source, target, env) -> int:
         baud = bf_passthrough_init(env['UPLOAD_PORT'], baud)
     except PassthroughEnabled as err:
         dbg_print(str(err))
-        return ElrsUploadResult.ErrorGeneral
     env.Replace(UPLOAD_SPEED=baud)
     return reset_to_bootloader(env['UPLOAD_PORT'], baud, env['PIOENV'], source[0])
 
