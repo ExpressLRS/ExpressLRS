@@ -38,6 +38,7 @@
 #include "devWIFI.h"
 #include "RXEndpoint.h"
 #include "RXOTAConnector.h"
+#include "rx-connect/rx_connect.h"
 #include "rx-serial/devSerialIO.h"
 
 #include <LittleFS.h>
@@ -154,7 +155,6 @@ LPF LPF_UplinkRSSI0(5);  // track rssi per antenna
 LPF LPF_UplinkRSSI1(5);
 MeanAccumulator<int32_t, int8_t, -16> SnrMean;
 
-static uint8_t scanIndex;
 uint8_t ExpressLRS_nextAirRateIndex;
 int8_t SwitchModePending;
 
@@ -182,13 +182,6 @@ static bool lastPacketCrcError;
 #endif
 ///////////////////////////////////////////////////////////////
 
-/// Variables for Sync Behaviour ////
-uint32_t cycleInterval; // in ms
-uint32_t RFmodeLastCycled = 0;
-#define RFmodeCycleMultiplierSlow 10
-uint8_t RFmodeCycleMultiplier;
-bool LockRFmode = false;
-///////////////////////////////////////
 
 #if defined(DEBUG_BF_LINK_STATS)
 // Debug vars
@@ -361,8 +354,7 @@ void SetRFLinkRate(uint8_t index, bool bindMode) // Set speed of RF link
     DataUlReceiver.setMaxPackageIndex(ELRS_MSP_MAX_PACKAGES);
     DataDlSender.setMaxPackageIndex(OtaIsFullRes ? ELRS8_DATA_DL_MAX_PACKAGES : ELRS4_DATA_DL_MAX_PACKAGES);
 
-    // Wait for (11/10) 110% of time it takes to cycle through all freqs in FHSS table (in ms)
-    cycleInterval = ((uint32_t)11U * FHSSgetChannelCount() * ModParams->FHSShopInterval * interval) / (10U * 1000U);
+    rxConnectRateChanged(index, interval);
 
     ExpressLRS_currAirRate_Modparams = ModParams;
     ExpressLRS_currAirRate_RFperfParams = RFperf;
@@ -809,6 +801,7 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
 void LostConnection(bool resumeRx)
 {
     DBGLN("lost conn fc=%d fo=%d", FreqCorrection, hwTimer::getFreqOffset());
+    const bool wasConnected = connectionState == connected;
 
     setConnectionState(disconnected); //set lost connection
     RXtimerState = tim_disconnected;
@@ -831,6 +824,7 @@ void LostConnection(bool resumeRx)
             hwTimer::stop();
         }
         SetRFLinkRate(ExpressLRS_nextAirRateIndex, false); // also sets to initialFreq
+        rxConnectLost(wasConnected, ExpressLRS_nextAirRateIndex);
         // If not resumRx, Radio will be left in SX127x_OPMODE_STANDBY / SX1280_MODE_STDBY_XOSC
         if (resumeRx)
         {
@@ -851,7 +845,7 @@ void ICACHE_RAM_ATTR TentativeConnection(unsigned long now)
     PfdPrevRawOffset = 0;
     LPF_Offset.init(0);
     SnrMean.reset();
-    RFmodeLastCycled = now; // give another 3 sec for lock to occur
+    rxConnectTentative(now);
 
     // Use this rate as the initial rate next time if we connected on it
     config.SetRateInitialIdx(ExpressLRS_nextAirRateIndex);
@@ -872,7 +866,7 @@ void GotConnection(unsigned long now)
         return; // Already connected
     }
 
-    LockRFmode = firmwareOptions.lock_on_first_connection;
+    rxConnectConnected();
 
     setConnectionState(connected); //we got a packet, therefore no lost connection
     RXtimerState = tim_tentative;
@@ -1197,9 +1191,7 @@ bool ICACHE_RAM_ATTR ProcessRFPacket(SX12xxDriverCommon::rx_status const status)
 
     // Received a packet, that's the definition of LQ
     LQCalc.add();
-    // Extend sync duration since we've received a packet at this rate
-    // but do not extend it indefinitely
-    RFmodeCycleMultiplier = RFmodeCycleMultiplierSlow;
+    rxConnectPacketReceived();
 
 #if defined(DEBUG_RX_SCOREBOARD)
     if (otaPktPtr->std.type != PACKET_TYPE_SYNC) DBGW(connectionHasModelMatch ? 'R' : 'r');
@@ -1624,19 +1616,7 @@ static void setupRadio()
     Radio.RXdoneCallback = &RXdoneISR;
     Radio.TXdoneCallback = &TXdoneISR;
 
-    scanIndex = config.GetRateInitialIdx();
-    for (int i=0 ; i<RATE_MAX ; i++)
-    {
-        if (isSupportedRFRate(scanIndex))
-        {
-            break;
-        }
-        scanIndex = (scanIndex + 1) % RATE_MAX;
-    }
-    SetRFLinkRate(scanIndex, false);
-    // Start slow on the selected rate to give it the best chance
-    // to connect before beginning rate cycling
-    RFmodeCycleMultiplier = RFmodeCycleMultiplierSlow / 2;
+    rxConnectBegin();
 }
 
 static void updateTelemetryBurst()
@@ -1650,39 +1630,6 @@ static void updateTelemetryBurst()
 
     // Notify the sender to adjust its expected throughput
     DataDlSender.UpdateTelemetryRate(hz, ExpressLRS_currTlmDenom, telemetryBurstMax);
-}
-
-/* If not connected will rotate through the RF modes looking for sync
- * and blink LED
- */
-static void cycleRfMode(unsigned long now)
-{
-    if (connectionState == connected || connectionState == wifiUpdate || InBindingMode)
-        return;
-
-    // Actually cycle the RF mode if not LOCK_ON_FIRST_CONNECTION
-    if (LockRFmode == false && (now - RFmodeLastCycled) > (cycleInterval * RFmodeCycleMultiplier))
-    {
-        RFmodeLastCycled = now;
-        LastSyncPacket = now;           // reset this variable
-        // Display the current air rate to the user as an indicator something is happening
-        SetRFLinkRate(scanIndex % RATE_MAX, false); // switch between rates
-        LQCalc.reset100();
-        LQCalcDVDA.reset100();
-        scanIndex++;
-        Radio.RXnb();
-        DBGLN("%u", ExpressLRS_currAirRate_Modparams->interval);
-
-        // Skip unsupported modes for hardware with only a single LR1121 or with a single RF path
-        while (!isSupportedRFRate(scanIndex % RATE_MAX))
-        {
-            DBGLN("Skip %u", get_elrs_airRateConfig(scanIndex % RATE_MAX)->interval);
-            scanIndex++;
-        }
-
-        // Switch to FAST_SYNC if not already in it (won't be if was just connected)
-        RFmodeCycleMultiplier = 1;
-    } // if time to switch RF mode
 }
 
 static void EnterBindingMode()
@@ -1739,10 +1686,8 @@ static void ExitBindingMode()
 
     webserverPreventAutoStart = true;
 
-    // Force RF cycling to start at the beginning immediately
-    scanIndex = RATE_MAX;
-    RFmodeLastCycled = 0;
-    LockRFmode = false;
+    // Force a new rate scan pass to start immediately
+    rxConnectRestartScan();
     LostConnection(false);
 
     // Do this last as LostConnection() will wait for a tock that never comes
@@ -2091,7 +2036,7 @@ void setup()
 
     // setup() eats up some of this time, which can cause the first mode connection to fail.
     // Resetting the time here give the first mode a better chance of connection.
-    RFmodeLastCycled = millis();
+    rxConnectRestartDwell(millis());
 }
 
 #if defined(PLATFORM_ESP32_C3)
@@ -2127,18 +2072,18 @@ void loop()
         DBGLN("Req air rate change %u->%u", ExpressLRS_currAirRate_Modparams->index, ExpressLRS_nextAirRateIndex);
         LostConnection(true);
         LastSyncPacket = now;           // reset this variable to stop rf mode switching and add extra time
-        RFmodeLastCycled = now;         // reset this variable to stop rf mode switching and add extra time
+        rxConnectRestartDwell(now);     // reset this variable to stop rf mode switching and add extra time
     }
 
     if (connectionState == tentative && (now - LastSyncPacket > ExpressLRS_currAirRate_RFperfParams->RxLockTimeoutMs))
     {
         DBGLN("Bad sync, aborting");
         LostConnection(true);
-        RFmodeLastCycled = now;
+        rxConnectRestartDwell(now);
         LastSyncPacket = now;
     }
 
-    cycleRfMode(now);
+    rxConnectUpdate(now);
 
     uint32_t localLastValidPacket = LastValidPacket; // Required to prevent race condition due to LastValidPacket getting updated from ISR
     if ((connectionState == connected) && ((int32_t)ExpressLRS_currAirRate_RFperfParams->DisconnectTimeoutMs < (int32_t)(now - localLastValidPacket))) // check if we lost conn.
