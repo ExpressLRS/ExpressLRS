@@ -293,7 +293,7 @@ void CRSFEndpoint::registerParameter(void *definition, const parameterHandlerCal
 
 void CRSFEndpoint::parameterUpdateReq(const crsf_addr_e origin, const uint8_t parameterType, const uint8_t parameterIndex, void *payload)
 {
-    propertiesCommon *parameter = paramDefinitions[parameterIndex];
+    propertiesCommon *parameter = parameterIndex < MAX_CRSF_PARAMETERS ? paramDefinitions[parameterIndex] : nullptr;
     requestOrigin = origin;
     uint8_t parameterArg = *((uint8_t *)payload);
 
