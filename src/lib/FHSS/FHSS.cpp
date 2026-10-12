@@ -59,18 +59,15 @@ const fhss_config_t domains[] = {
 
 // Our table of FHSS frequencies. Define a regulatory domain to select the correct set for your location and radio
 const fhss_config_t *FHSSconfig;
-const fhss_config_t *FHSSconfigDualBand;
 
 // Actual sequence of hops as indexes into the frequency list
 uint8_t FHSSsequence[FHSS_SEQUENCE_LEN];
-uint8_t FHSSsequence_DualBand[FHSS_SEQUENCE_LEN];
 
 // Which entry in the sequence we currently are on
 uint8_t volatile FHSSptr;
 
 // Channel for sync packets and initial connection establishment
 uint_fast8_t sync_channel;
-uint_fast8_t sync_channel_DualBand;
 
 // Offset from the predefined frequency determined by AFC on Team900 (register units)
 int32_t FreqCorrection;
@@ -78,14 +75,19 @@ int32_t FreqCorrection_2;
 
 // Frequency hop separation
 uint32_t freq_spread;
-uint32_t freq_spread_DualBand;
-
-// Variable for Dual Band radios
-bool FHSSusePrimaryFreqBand = true;
-bool FHSSuseDualBand = false;
 
 uint16_t primaryBandCount;
+
+#if defined(RADIO_LR1121) || defined(RADIO_LR2021) || defined(UNIT_TEST)
+// Variables for Dual Band radios
+const fhss_config_t *FHSSconfigDualBand;
+uint8_t FHSSsequence_DualBand[FHSS_SEQUENCE_LEN];
+uint_fast8_t sync_channel_DualBand;
+uint32_t freq_spread_DualBand;
+bool FHSSusePrimaryFreqBand = true;
+bool FHSSuseDualBand = false;
 uint16_t secondaryBandCount;
+#endif
 
 constexpr uint8_t VERSION_DOMAIN_MAXLEN = 26 + 1;   // max. number of characters (plus '\0') the Lua script can display
                                                     // on color LCD radios w/o being overwritten by the commit info

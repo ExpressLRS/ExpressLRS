@@ -12,13 +12,14 @@
 #include "deferred.h"
 #include "msptypes.h"
 
-#define STR_LUA_ALLAUX         "AUX1;AUX2;AUX3;AUX4;AUX5;AUX6;AUX7;AUX8;AUX9;AUX10"
+#define STR_LUA_ALLAUX         "AUX1;AUX2;AUX3;AUX4;AUX5;AUX6;AUX7;AUX8;AUX9;AUX10;AUX11;AUX12"
 
 #define STR_LUA_ALLAUX_UPDOWN  "AUX1" LUASYM_ARROW_UP ";AUX1" LUASYM_ARROW_DN ";AUX2" LUASYM_ARROW_UP ";AUX2" LUASYM_ARROW_DN \
                                ";AUX3" LUASYM_ARROW_UP ";AUX3" LUASYM_ARROW_DN ";AUX4" LUASYM_ARROW_UP ";AUX4" LUASYM_ARROW_DN \
                                ";AUX5" LUASYM_ARROW_UP ";AUX5" LUASYM_ARROW_DN ";AUX6" LUASYM_ARROW_UP ";AUX6" LUASYM_ARROW_DN \
                                ";AUX7" LUASYM_ARROW_UP ";AUX7" LUASYM_ARROW_DN ";AUX8" LUASYM_ARROW_UP ";AUX8" LUASYM_ARROW_DN \
-                               ";AUX9" LUASYM_ARROW_UP ";AUX9" LUASYM_ARROW_DN ";AUX10" LUASYM_ARROW_UP ";AUX10" LUASYM_ARROW_DN
+                               ";AUX9" LUASYM_ARROW_UP ";AUX9" LUASYM_ARROW_DN ";AUX10" LUASYM_ARROW_UP ";AUX10" LUASYM_ARROW_DN \
+                               ";AUX11" LUASYM_ARROW_UP ";AUX11" LUASYM_ARROW_DN ";AUX12" LUASYM_ARROW_UP ";AUX12" LUASYM_ARROW_DN
 
 #if defined(RADIO_SX127X)
 #define STR_LUA_PACKETRATES \
@@ -73,7 +74,7 @@ static constexpr char switchmodeOpts8chMav[] = ";16ch Rate/2;";
 static constexpr char antennamodeOpts[] = "Gemini;Ant 1;Ant 2;Switch";
 static constexpr char antennamodeOptsDualBand[] = "Gemini;;;";
 static constexpr char linkModeOpts[] = "Normal;MAVLink";
-static constexpr char luastrDvrAux[] = "Off;" STR_LUA_ALLAUX_UPDOWN;
+static constexpr char luastrDvrAux[] = "Off;" STR_LUA_ALLAUX_UPDOWN ";Armed;!Armed";
 static constexpr char luastrDvrDelay[] = "0s;5s;15s;30s;45s;1min;2min";
 static constexpr char luastrHeadTrackingEnable[] = "Off;On;" STR_LUA_ALLAUX_UPDOWN;
 static constexpr char luastrHeadTrackingStart[] = "EdgeTX;" STR_LUA_ALLAUX;

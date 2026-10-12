@@ -119,7 +119,7 @@ void SerialMavlink::sendQueuedData(uint32_t maxBytesToSend)
     mavlinkOutputBuffer.popBytes(apBuf, size);
     mavlinkOutputBuffer.unlock();
 
-    for (uint8_t i = 0; i < size; ++i)
+    for (uint16_t i = 0; i < size; ++i)
     {
         uint8_t c = apBuf[i];
 
