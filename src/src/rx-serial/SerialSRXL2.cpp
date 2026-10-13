@@ -446,9 +446,9 @@ void SerialSRXL2::synchronizeBaud(uint32_t now)
 
 void SerialSRXL2::processBytes(uint8_t *bytes, uint16_t size)
 {
-    const uint32_t now = micros();
     const uint32_t previousBaud = appliedBaud;
-    completeTransmission(now);
+    completeTransmission(micros());
+    const uint32_t now = micros(); // TX_DONE may have arrived after the earlier clock read.
     const bool reset = link.transportResetNeeded();
     synchronizeBaud(now);
     if (reset || appliedBaud != previousBaud || link.transportResetNeeded()) return;
@@ -460,10 +460,10 @@ void SerialSRXL2::processBytes(uint8_t *bytes, uint16_t size)
 void SerialSRXL2::sendQueuedData(uint32_t maxBytesToSend)
 {
     if (srxl2Owner != this || !txReady) return;
-    const uint32_t now = micros();
     synchronizeGeneration();
     link.setControlPermission(controlAllowed());
-    completeTransmission(now);
+    completeTransmission(micros());
+    const uint32_t now = micros(); // Scheduler time must not precede the completed stop bit.
     link.poll(now);
     synchronizeBaud(now);
     if (link.transportResetNeeded()) { publishTelemetry(now); return; }

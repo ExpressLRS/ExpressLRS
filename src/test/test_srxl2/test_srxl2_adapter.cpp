@@ -43,6 +43,7 @@ static void changeTxBaud(uint32_t rate)
     txBaud = rate;
 }
 static bool autoTxDone = true;
+static uint32_t txInterruptDelayUs;
 static bool replyBlocked;
 static UartStartupSpy uartStartup;
 static UartStartupSpy uartStartup1;
@@ -77,6 +78,7 @@ static void drainBusTransmit()
 {
     if (!busDriving) return;
     txDrained = true;
+    nowUs += txInterruptDelayUs;
     if (txDoneInterrupt) txDoneInterrupt(txDoneArgument);
     if (immediateReplyInput)
     {
@@ -150,6 +152,7 @@ void setUp()
     unsafeBaudChange = false;
     transportResets[0] = transportResets[1] = 0;
     autoTxDone = true;
+    txInterruptDelayUs = 0;
     replyBlocked = false;
     uartStartup = UartStartupSpy();
     uartStartup1 = UartStartupSpy();
@@ -1322,6 +1325,54 @@ void test_master_recreation_starts_slow_and_requires_new_neutral()
     }
 }
 
+void test_tx_done_after_clock_snapshot_does_not_reset_healthy_startup()
+{
+    for (uint8_t port : {0, 1})
+    for (bool fast : {false, true})
+    for (bool readCallback : {false, true})
+    for (uint32_t offset : {0u, 0xFFFFF500u})
+    {
+        selectSmartPort(port);
+        nowUs = offset;
+        std::string in, out;
+        BinaryStringStream rx(in), tx(out);
+        SerialSRXL2 driver(&tx, &rx, port ? 14 : 3, port);
+        input(driver, in, fast ? hello400 : hello, sizeof(hello), offset + 1400);
+        send(driver, offset + 1600);
+        TEST_ASSERT_EQUAL(14, out.size());
+        auto &uart = port ? uartStartup1 : uartStartup;
+        const unsigned begins = uart.begins;
+        const unsigned resets = transportResets[port];
+        // TX_DONE can preempt the callback after its initial micros() read.
+        txInterruptDelayUs = 1;
+        if (readCallback)
+        {
+            nowUs = offset + 2816;
+            driver.processSerialInput();
+        }
+        else send(driver, offset + 2816);
+        txInterruptDelayUs = 0;
+        TEST_ASSERT_EQUAL(begins, uart.begins);
+        TEST_ASSERT_EQUAL(resets, transportResets[port]);
+        TEST_ASSERT_EQUAL_UINT32(fast ? 400000 : 115200, txBaud);
+        input(driver, in, esc, sizeof(esc), offset + 3000);
+        uint32_t channels[16] = {};
+        channels[2] = 992;
+        nowUs = offset + 4000;
+        deliver(driver, true, channels);
+        deliver(driver, true, channels);
+        channels[2] = 1811;
+        nowUs = offset + 5000;
+        deliver(driver, true, channels);
+        send(driver, offset + 23000);
+        TEST_ASSERT_EQUAL(30, out.size());
+        TEST_ASSERT_EQUAL(0, uint8_t(out[out.size() - 13]));
+        TEST_ASSERT_EQUAL_HEX8(0x54, uint8_t(out[out.size() - 4]));
+        TEST_ASSERT_EQUAL_HEX8(0xD5, uint8_t(out[out.size() - 3]));
+        send(driver, offset + 24400);
+    }
+}
+
 void test_stalled_transmit_recovers_on_either_port_and_requires_neutral()
 {
     for (uint8_t port : {0, 1})
@@ -1480,6 +1531,7 @@ void test_recovery_does_not_drive_an_externally_busy_bus()
 
 void run_adapter_tests()
 {
+    RUN_TEST(test_tx_done_after_clock_snapshot_does_not_reset_healthy_startup);
     RUN_TEST(test_stalled_transmit_recovers_on_either_port_and_requires_neutral);
     RUN_TEST(test_failed_uart_restart_is_retried_without_driving_the_bus);
     RUN_TEST(test_transmit_watchdog_and_uart_restart_survive_clock_wrap);
