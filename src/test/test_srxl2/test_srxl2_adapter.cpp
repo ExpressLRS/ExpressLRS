@@ -295,6 +295,7 @@ void test_early_startup_recovers_after_unsuitable_input_before_an_announcement()
 
 static void send(SerialSRXL2 &driver, uint32_t time);
 static void assert_neutral(const std::string &out, uint8_t command);
+static void deliver(SerialSRXL2 &driver, bool available, uint32_t *channels);
 void test_normal_driver_finishes_acknowledged_startup_without_an_addressed_reply()
 {
     const uint8_t announcement[] = {0xA6,0x21,14,0x40,0,10,0,0,0,0,0,1,0x38,0x4E};
@@ -323,13 +324,32 @@ void test_normal_driver_finishes_acknowledged_startup_without_an_addressed_reply
         TEST_ASSERT_EQUAL(14, out.size());
         TEST_ASSERT_EQUAL_HEX8(0xFF, uint8_t(out[4]));
         send(driver, 212216);
-        send(driver, 232216);
-        assert_neutral(out, 1); // Discovery knowledge must not grant RF/throttle permission.
+        const unsigned begins = uartStartup.begins;
+        const unsigned resets = transportResets[0];
+        for (uint32_t now = 232216; now < 3232216; now += 40000)
+        {
+            send(driver, now);
+            assert_neutral(out, 1); // Discovery knowledge must not grant RF/throttle permission.
+            TEST_ASSERT_EQUAL(0, uint8_t(out[out.size() - 12]));
+            send(driver, now + 1390);
+        }
+        TEST_ASSERT_EQUAL(begins, uartStartup.begins);
+        TEST_ASSERT_EQUAL(resets, transportResets[0]);
+        connectionState = connected;
+        uint32_t channels[16] = {};
+        channels[2] = 992;
+        nowUs = 3252216;
+        deliver(driver, true, channels);
+        deliver(driver, true, channels);
+        send(driver, 3252216);
+        assert_neutral(out, 0);
+        TEST_ASSERT_EQUAL_HEX8(0x40, uint8_t(out[out.size() - 12]));
+        send(driver, 3253606);
     }
     const size_t sent = out.size();
-    nowUs = 300000;
+    nowUs = 3300000;
     SerialSRXL2 replacement(&tx, &rx, 3);
-    send(replacement, 301000);
+    send(replacement, 3301000);
     TEST_ASSERT_EQUAL(sent, out.size()); // The startup handoff is consumed only once.
 }
 
@@ -1114,10 +1134,15 @@ void test_fast_adapter_changes_rate_after_final_stop_bit_on_either_port()
         TEST_ASSERT_EQUAL(0, uart.ends);
         TEST_ASSERT_EQUAL(0, rx.available());
         autoTxDone = true;
+        uint32_t channels[16] = {};
+        channels[2] = 992;
+        nowUs = 8000;
+        deliver(driver, true, channels);
+        deliver(driver, true, channels);
         send(driver, 30000);
         TEST_ASSERT_EQUAL(30, out.size());
-        TEST_ASSERT_EQUAL_HEX8(0x40, uint8_t(out[18])); // Safe fast-mode health poll.
-        assert_neutral(out);
+        TEST_ASSERT_EQUAL_HEX8(0x40, uint8_t(out[18]));
+        assert_neutral(out, 0);
         TEST_ASSERT_FALSE(crsfBatterySensorDetected); // The old-rate batch supplied no measurements.
         immediateReplyInput = &in;
         immediateReply.assign(reinterpret_cast<const char *>(esc), sizeof(esc));
@@ -1203,7 +1228,7 @@ void test_buffered_fast_reply_is_consumed_before_health_timeout()
     TEST_ASSERT_EQUAL(1, uartStartup.updates);
 }
 
-void test_fast_adapter_recovers_with_inhibition_noise_and_zero_budget()
+void test_fast_adapter_preserves_link_through_inhibition_and_rearms_safely()
 {
     for (uint8_t port : {0, 1})
     {
@@ -1221,6 +1246,13 @@ void test_fast_adapter_recovers_with_inhibition_noise_and_zero_budget()
         send(driver, 1600);
         send(driver, 2816);
         TEST_ASSERT_EQUAL(400000, (port ? uartStartup1 : uartStartup).baud);
+        uint32_t channels[16] = {};
+        channels[2] = 992;
+        nowUs = 5000;
+        deliver(driver, true, channels);
+        deliver(driver, true, channels);
+        send(driver, 23000);
+        send(driver, 23400);
         input(driver, in, esc, sizeof(esc), 55000);
         if (reason == 0) connectionState = disconnected;
         if (reason == 1) connectionHasModelMatch = false;
@@ -1228,31 +1260,46 @@ void test_fast_adapter_recovers_with_inhibition_noise_and_zero_budget()
         if (reason == 3) ChannelData[2] = CRSF_CHANNEL_VALUE_UNSET;
         if (reason == 4) driver.setFailsafe(true);
         if (reason == 5) SerialSRXL2::onRFReset();
-        send(driver, 2040000);
-        assert_neutral(out);
-        send(driver, 2040400);
+        auto &uart = port ? uartStartup1 : uartStartup;
+        const unsigned begins = uart.begins;
+        const unsigned resets = transportResets[port];
+        for (uint32_t now = 56000; now < 5056000; now += 40000)
+        {
+            send(driver, now);
+            assert_neutral(out);
+            TEST_ASSERT_EQUAL(0, uint8_t(out[out.size() - 12]));
+            send(driver, now + 400);
+        }
         const size_t sent = out.size();
-        const uint8_t fragment[] = {0xA6,0x80,22};
-        input(driver, in, fragment, sizeof(fragment), 2054900);
-        in.append("noise");
-        uartReceiving = secondaryReceiving = true;
-        nowUs = 2055000;
+        nowUs = 5056000;
         driver.sendQueuedData(0);
-        TEST_ASSERT_EQUAL(400000, (port ? uartStartup1 : uartStartup).baud);
-        nowUs = 2090400;
-        driver.sendQueuedData(0);
-        TEST_ASSERT_EQUAL(115200, (port ? uartStartup1 : uartStartup).baud);
+        TEST_ASSERT_EQUAL(400000, uart.baud);
+        TEST_ASSERT_EQUAL(begins, uart.begins);
+        TEST_ASSERT_EQUAL(resets, transportResets[port]);
         TEST_ASSERT_EQUAL(sent, out.size());
-        TEST_ASSERT_EQUAL(0, rx.available());
         TEST_ASSERT_FALSE(busDriving);
-        uartReceiving = secondaryReceiving = false;
-        input(driver, in, hello400, sizeof(hello400), 2090600);
-        send(driver, 2090800);
-        TEST_ASSERT_EQUAL_HEX8(0xFF, uint8_t(out[out.size() - 10]));
-        TEST_ASSERT_EQUAL_HEX8(0, uint8_t(out[out.size() - 8])); // Failed fast mode remains disabled.
-        send(driver, 2092016);
         connectionState = connected;
         connectionHasModelMatch = teamraceHasModelMatch = true;
+        driver.setFailsafe(false);
+        channels[2] = 1811;
+        nowUs = 5076000;
+        deliver(driver, true, channels);
+        deliver(driver, true, channels);
+        send(driver, 5076000);
+        assert_neutral(out, 0);
+        TEST_ASSERT_EQUAL_HEX8(0x40, uint8_t(out[out.size() - 12]));
+        send(driver, 5076400);
+        input(driver, in, esc, sizeof(esc), 5076600);
+        channels[2] = 992;
+        nowUs = 5077000;
+        deliver(driver, true, channels);
+        channels[2] = 1811;
+        nowUs = 5078000;
+        deliver(driver, true, channels);
+        send(driver, 5096000);
+        TEST_ASSERT_EQUAL_HEX8(0x54, uint8_t(out[out.size() - 4]));
+        TEST_ASSERT_EQUAL_HEX8(0xD5, uint8_t(out[out.size() - 3]));
+        send(driver, 5096400);
       }
     }
 }
@@ -1511,21 +1558,30 @@ void test_recovery_does_not_drive_an_externally_busy_bus()
         BinaryStringStream rx(in), tx(out);
         SerialSRXL2 driver(&tx, &rx, port ? 14 : 3, port);
         establish(driver, in, out);
+        send(driver, 73000);
+        send(driver, 74400);
+        uint32_t channels[16] = {};
+        channels[2] = 992;
+        for (uint32_t now = 103000; now < 2073000; now += 50000)
+        {
+            nowUs = now;
+            deliver(driver, true, channels);
+        }
         auto &uart = port ? uartStartup1 : uartStartup;
         const unsigned begins = uart.begins;
         auto &busy = port ? secondaryReceiving : uartReceiving;
         busy = true;
         const size_t sent = out.size();
-        send(driver, 2055000);
+        send(driver, 2073000);
         TEST_ASSERT_EQUAL(begins + 1, uart.begins);
-        send(driver, 2055200);
+        send(driver, 2073200);
         TEST_ASSERT_EQUAL(sent, out.size());
         TEST_ASSERT_FALSE(busDriving);
         busy = false;
-        send(driver, 2055400);
+        send(driver, 2073400);
         TEST_ASSERT_EQUAL(sent + 14, out.size());
         TEST_ASSERT_EQUAL_HEX8(0x21, uint8_t(out[sent + 1]));
-        send(driver, 2056616);
+        send(driver, 2074616);
     }
 }
 
@@ -1540,7 +1596,7 @@ void run_adapter_tests()
     RUN_TEST(test_fast_adapter_changes_rate_after_final_stop_bit_on_either_port);
     RUN_TEST(test_default_adapter_does_not_change_rate_or_flush_immediate_reply);
     RUN_TEST(test_early_fast_capability_survives_handoff_without_duplicate_reply);
-    RUN_TEST(test_fast_adapter_recovers_with_inhibition_noise_and_zero_budget);
+    RUN_TEST(test_fast_adapter_preserves_link_through_inhibition_and_rearms_safely);
     RUN_TEST(test_buffered_fast_reply_is_consumed_before_health_timeout);
 
     UnitySetTestFile(__FILE__);

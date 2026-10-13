@@ -42,6 +42,7 @@ private:
     uint16_t throttle = 0x8000;
     bool permitted = false, released = false, hasSample = false;
     bool txBusy = false, requestReply = false, waitingReply = false, helloPending = false;
+    bool monitorReplies = false;
     bool startupAckOnly = false;
     bool resetTransportPending = false;
     bool urgentControl = false;

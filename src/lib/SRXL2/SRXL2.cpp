@@ -93,7 +93,7 @@ void Link::restart(uint32_t now)
     if (fast) failedFast |= !fastSuccessful;
     else if (phase == Active) commonMask = failedFast ? 0 : localMask;
     phase = Recover;
-    released = hasSample = waitingReply = cellCountKnown = resetTransportPending = false;
+    released = hasSample = waitingReply = cellCountKnown = resetTransportPending = monitorReplies = false;
     data = {};
     throttle = 0x8000;
     fadePending = false;
@@ -108,7 +108,7 @@ void Link::setControlPermission(bool allowed)
 {
     if (permitted && !allowed) { controlPending = urgentControl = true; fadePending = false; }
     permitted = allowed;
-    if (!allowed) { released = hasSample = false; throttle = 0x8000; }
+    if (!allowed) { released = hasSample = monitorReplies = false; throttle = 0x8000; }
 }
 
 void Link::setThrottle(uint16_t value, uint32_t now)
@@ -117,7 +117,7 @@ void Link::setThrottle(uint16_t value, uint32_t now)
     if (!hasSample || uint32_t(now - lastSample) >= SAMPLE_US) lastRequest = now - REQUEST_US;
     if (hasSample && uint32_t(now - lastSample) >= SAMPLE_US)
     {
-        released = false;
+        released = monitorReplies = false;
         urgentControl = true;
     }
     lastSample = now;
@@ -143,7 +143,8 @@ void Link::missedFrame()
 void Link::poll(uint32_t now)
 {
     const bool sampleExpired = hasSample && uint32_t(now - lastSample) >= SAMPLE_US;
-    const bool peerExpired = connected() && uint32_t(now - lastReply) >= STALE_US;
+    if (sampleExpired) monitorReplies = false;
+    const bool peerExpired = connected() && monitorReplies && uint32_t(now - lastReply) >= STALE_US;
     if (sampleExpired || peerExpired)
     {
         released = hasSample = false;
@@ -209,7 +210,13 @@ bool Link::nextPacket(uint32_t now, Packet &p)
         if (!urgentNeutral && uint32_t(now - lastControl) < interval) return false;
         const bool fade = !safe && (fadePending || !controlPending);
         controlPending = fadePending = urgentControl = false;
-        requestReply = uint32_t(now - lastRequest) >= REQUEST_US;
+        requestReply = !failsafe && (!monitorReplies || uint32_t(now - lastRequest) >= REQUEST_US);
+        if (requestReply && !monitorReplies)
+        {
+            // Failsafe replies are optional; start health monitoring with a normal poll.
+            monitorReplies = true;
+            lastReply = now;
+        }
         p.length = fade ? 14 : 16;
         const uint8_t header[] = {0xA6,0xCD,p.length,uint8_t(failsafe ? 1 : 0),uint8_t(requestReply ? 0x40 : 0),uint8_t(failsafe ? 0 : 100),0,0,uint8_t(fade ? 0 : 1),0,0,0};
         std::memcpy(p.bytes, header, sizeof(header));
