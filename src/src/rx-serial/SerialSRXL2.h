@@ -34,6 +34,8 @@ private:
     uint8_t nextSensor = 0;
     uint32_t generation = 0, lastHardwareReceive = 0;
     uint32_t appliedBaud = 115200;
+    uint32_t txStarted = 0, lastTransportReset = 0;
+    bool beginUART(uint32_t baud);
     bool controlAllowed() const;
     void synchronizeGeneration();
     void completeTransmission(uint32_t now);

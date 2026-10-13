@@ -190,6 +190,52 @@ void ICACHE_RAM_ATTR SerialSRXL2::onRFReset()
     ++srxl2RFGeneration;
 }
 
+#if defined(CONFIG_IDF_TARGET_ESP32)
+static void resetSmartTxUart(uint32_t baud)
+{
+    // ESP32's FIFO reset helper is a no-op for UART2; reset its peripheral instead.
+    periph_module_reset(PERIPH_UART2_MODULE);
+    auto hw = UART_LL_GET_HW(2);
+    uart_ll_disable_intr_mask(hw, UART_LL_INTR_MASK);
+    uart_ll_clr_intsts_mask(hw, UART_LL_INTR_MASK);
+    uart_ll_set_sclk(hw, UART_SCLK_APB);
+    uart_ll_set_baudrate(hw, baud);
+    uart_ll_set_data_bit_num(hw, UART_DATA_8_BITS);
+    uart_ll_set_parity(hw, UART_PARITY_DISABLE);
+    uart_ll_set_stop_bits(hw, UART_STOP_BITS_1);
+    uart_ll_set_tx_idle_num(hw, 0);
+    uart_ll_set_hw_flow_ctrl(hw, UART_HW_FLOWCTRL_DISABLE, 0);
+}
+#endif
+
+bool SerialSRXL2::beginUART(uint32_t baud)
+{
+    auto &uart = port == 0 ? Serial : Serial1;
+    uart.setTxBufferSize(0);
+    uart.begin(baud, SERIAL_8N1, pin, -1, false);
+    if (!uart) { uart.end(); return false; }
+    uart.setRxFIFOFull(1);
+#if defined(PLATFORM_ESP32)
+    gpio_config_t pins{};
+    pins.pin_bit_mask = uint64_t(1) << pin;
+#if defined(CONFIG_IDF_TARGET_ESP32)
+    pins.mode = GPIO_MODE_INPUT;
+#else
+    gpio_set_level(gpio_num_t(pin), 1);
+    pins.mode = GPIO_MODE_INPUT_OUTPUT_OD;
+#endif
+    pins.pull_up_en = GPIO_PULLUP_ENABLE;
+    pins.pull_down_en = GPIO_PULLDOWN_DISABLE;
+    pins.intr_type = GPIO_INTR_DISABLE;
+    gpio_config(&pins);
+    pinMatrixInAttach(pin, port == 0 ? U0RXD_IN_IDX : U1RXD_IN_IDX, false);
+#if !defined(CONFIG_IDF_TARGET_ESP32)
+    pinMatrixOutAttach(pin, port == 0 ? U0TXD_OUT_IDX : U1TXD_OUT_IDX, false, false);
+#endif
+#endif
+    return true;
+}
+
 SerialSRXL2::SerialSRXL2(Stream *output, Stream *input, int8_t txPin, uint8_t serialPort)
     : SerialIO(output, input), pin(txPin), port(serialPort), inputPort(input)
 {
@@ -204,33 +250,16 @@ SerialSRXL2::SerialSRXL2(Stream *output, Stream *input, int8_t txPin, uint8_t se
     srxl2Owner = this;
     // Receive on the shared signal immediately, without attaching an idle-high
     // UART TX output. The GPIO/UART transmitter below owns bus direction.
-    auto &uart = port == 0 ? Serial : Serial1;
-    uart.setTxBufferSize(0);
-    uart.begin(115200, SERIAL_8N1, pin, -1, false);
-    if (!uart)
+    if (!beginUART(115200))
     {
-        uart.end();
         srxl2Owner = nullptr;
         return;
     }
-    uart.setRxFIFOFull(1);
     txReady = true;
     uint32_t uid = 0x12345678;
 #if defined(PLATFORM_ESP32)
     const uint64_t mac = ESP.getEfuseMac();
     uid = uint32_t(mac) ^ uint32_t(mac >> 32);
-    gpio_config_t config{};
-    config.pin_bit_mask = uint64_t(1) << pin;
-#if defined(CONFIG_IDF_TARGET_ESP32)
-    config.mode = GPIO_MODE_INPUT;
-#else
-    config.mode = GPIO_MODE_INPUT_OUTPUT_OD;
-#endif
-    config.pull_up_en = GPIO_PULLUP_ENABLE;
-    config.pull_down_en = GPIO_PULLDOWN_DISABLE;
-    config.intr_type = GPIO_INTR_DISABLE;
-    gpio_config(&config);
-    pinMatrixInAttach(pin, port == 0 ? U0RXD_IN_IDX : U1RXD_IN_IDX, false);
 #if defined(CONFIG_IDF_TARGET_ESP32)
     // The selected UART retains Arduino's RX buffering. Own unused UART2 TX
     // so a short IRAM interrupt can release the bus without task scheduling.
@@ -238,23 +267,11 @@ SerialSRXL2::SerialSRXL2(Stream *output, Stream *input, int8_t txPin, uint8_t se
     if (!uart_is_driver_installed(UART_NUM_2))
     {
         periph_module_enable(PERIPH_UART2_MODULE);
-        periph_module_reset(PERIPH_UART2_MODULE);
-        auto hw = UART_LL_GET_HW(2);
-        uart_ll_disable_intr_mask(hw, UART_LL_INTR_MASK);
-        uart_ll_clr_intsts_mask(hw, UART_LL_INTR_MASK);
-        uart_ll_set_sclk(hw, UART_SCLK_APB);
-        uart_ll_set_baudrate(hw, 115200);
-        uart_ll_set_data_bit_num(hw, UART_DATA_8_BITS);
-        uart_ll_set_parity(hw, UART_PARITY_DISABLE);
-        uart_ll_set_stop_bits(hw, UART_STOP_BITS_1);
-        uart_ll_set_tx_idle_num(hw, 0);
-        uart_ll_set_hw_flow_ctrl(hw, UART_HW_FLOWCTRL_DISABLE, 0);
+        resetSmartTxUart(115200);
         txReady = esp_intr_alloc(ETS_UART2_INTR_SOURCE, ESP_INTR_FLAG_IRAM | ESP_INTR_FLAG_LEVEL3,
             onTxDone, this, &txInterrupt) == ESP_OK;
         if (!txReady) periph_module_disable(PERIPH_UART2_MODULE);
     }
-#else
-    pinMatrixOutAttach(pin, port == 0 ? U0TXD_OUT_IDX : U1TXD_OUT_IDX, false, false);
 #endif
 #endif
 #if defined(SRXL2_INSTALL_TX_IRQ)
@@ -262,7 +279,7 @@ SerialSRXL2::SerialSRXL2(Stream *output, Stream *input, int8_t txPin, uint8_t se
 #endif
     if (!txReady)
     {
-        uart.end();
+        (port == 0 ? Serial : Serial1).end();
 #if defined(PLATFORM_ESP32)
         gpio_set_direction(gpio_num_t(pin), GPIO_MODE_INPUT);
 #endif
@@ -282,6 +299,7 @@ SerialSRXL2::SerialSRXL2(Stream *output, Stream *input, int8_t txPin, uint8_t se
     lastPublished = micros();
     generation = srxl2RFGeneration;
     lastHardwareReceive = micros();
+    lastTransportReset = micros() - 2000000;
     crsfBatterySensorDetected = false;
 }
 
@@ -346,16 +364,28 @@ uint32_t SerialSRXL2::sendRCFrame(bool frameAvailable, bool frameMissed, uint32_
 void SerialSRXL2::completeTransmission(uint32_t now)
 {
     if (!transmitting) return;
+    bool finished = true;
 #if defined(SRXL2_IRQ_TX)
 #if defined(SRXL2_POLL_TX_IRQ)
     SRXL2_POLL_TX_IRQ();
 #endif
-    if (!txComplete) return;
-    now = txEnded;
+    finished = txComplete;
+    if (finished) now = txEnded;
 #elif defined(PLATFORM_ESP32)
     // The factory disables software TX buffering; observe both FIFO and shifter.
-    if (!uart_ll_is_tx_idle(UART_LL_GET_HW(port))) return;
+    finished = uart_ll_is_tx_idle(UART_LL_GET_HW(port));
 #endif
+    if (!finished)
+    {
+        if (uint32_t(now - txStarted) < 20000) return;
+#if defined(PLATFORM_ESP32) && !defined(CONFIG_IDF_TARGET_ESP32)
+        gpio_set_direction(gpio_num_t(pin), GPIO_MODE_INPUT);
+#endif
+        onTxDone(this); // Release the signal before aborting a stalled packet.
+        transmitting = txComplete = false;
+        link.transmitAborted(txEnded);
+        return;
+    }
     transmitting = false;
     link.transmitted(now);
 }
@@ -377,14 +407,33 @@ void ICACHE_RAM_ATTR SerialSRXL2::onTxDone(void *argument)
 void SerialSRXL2::synchronizeBaud(uint32_t now)
 {
     const uint32_t rate = link.baudRate();
-    if (transmitting || rate == appliedBaud) return;
+    const bool reset = link.transportResetNeeded();
+    if (transmitting || (!reset && rate == appliedBaud)) return;
     auto &uart = port == 0 ? Serial : Serial1;
-    uart.updateBaudRate(rate);
-#if defined(CONFIG_IDF_TARGET_ESP32)
-    uart_ll_set_baudrate(UART_LL_GET_HW(2), rate);
-#elif defined(SRXL2_SET_TX_BAUD)
-    SRXL2_SET_TX_BAUD(rate);
+    if (reset)
+    {
+        if (uint32_t(now - lastTransportReset) < 2000000) return;
+        lastTransportReset = now;
+#if defined(PLATFORM_ESP32)
+        gpio_set_direction(gpio_num_t(pin), GPIO_MODE_INPUT);
 #endif
+        uart.end();
+        if (!beginUART(rate)) return;
+#if defined(CONFIG_IDF_TARGET_ESP32)
+        resetSmartTxUart(rate);
+#elif defined(SRXL2_RESET_TX)
+        SRXL2_RESET_TX(rate);
+#endif
+    }
+    else
+    {
+        uart.updateBaudRate(rate);
+#if defined(CONFIG_IDF_TARGET_ESP32)
+        uart_ll_set_baudrate(UART_LL_GET_HW(2), rate);
+#elif defined(SRXL2_SET_TX_BAUD)
+        SRXL2_SET_TX_BAUD(rate);
+#endif
+    }
 #if defined(PLATFORM_ESP32)
     uart_flush_input(uart_port_t(port));
 #else
@@ -400,8 +449,9 @@ void SerialSRXL2::processBytes(uint8_t *bytes, uint16_t size)
     const uint32_t now = micros();
     const uint32_t previousBaud = appliedBaud;
     completeTransmission(now);
+    const bool reset = link.transportResetNeeded();
     synchronizeBaud(now);
-    if (appliedBaud != previousBaud) return; // This batch was read at the previous rate.
+    if (reset || appliedBaud != previousBaud || link.transportResetNeeded()) return;
     for (unsigned i = 0; i < size; ++i) link.receive(bytes[i], now);
     link.poll(now);
     synchronizeBaud(now);
@@ -416,6 +466,7 @@ void SerialSRXL2::sendQueuedData(uint32_t maxBytesToSend)
     completeTransmission(now);
     link.poll(now);
     synchronizeBaud(now);
+    if (link.transportResetNeeded()) { publishTelemetry(now); return; }
     const bool receivePending = inputPort->available() > 0 || SRXL2_HARDWARE_RX_BUSY();
     if (receivePending) lastHardwareReceive = now;
     if (txReady && !transmitting && !receivePending && uint32_t(now - lastHardwareReceive) >= 174 && maxBytesToSend >= 16)
@@ -426,6 +477,7 @@ void SerialSRXL2::sendQueuedData(uint32_t maxBytesToSend)
             SRXL2_BEGIN_TX();
             txComplete = false;
             transmitting = true;
+            txStarted = now;
 #if defined(CONFIG_IDF_TARGET_ESP32)
             // Only FIFO loading/IRQ arming is atomic; RF runs during transmission.
             // ponytail: current 14/16-byte packets fit the FIFO; add refill IRQs if they grow.

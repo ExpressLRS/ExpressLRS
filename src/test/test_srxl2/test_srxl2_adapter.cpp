@@ -30,6 +30,13 @@ static unsigned long testMicros() { return nowUs; }
 static bool busDriving, txDrained, releasedBeforeDrain;
 static uint32_t txBaud = 115200;
 static bool unsafeBaudChange;
+static unsigned transportResets[2] = {};
+static void resetTxHardware(uint8_t port, uint32_t rate)
+{
+    ++transportResets[port];
+    txDrained = true;
+    txBaud = rate;
+}
 static void changeTxBaud(uint32_t rate)
 {
     unsafeBaudChange |= busDriving || !txDrained;
@@ -96,6 +103,7 @@ static void releaseBusTransmit()
 #define SRXL2_POLL_TX_IRQ() do { if (autoTxDone) drainBusTransmit(); } while (0)
 #define SRXL2_RELEASE_TX() releaseBusTransmit()
 #define SRXL2_SET_TX_BAUD(rate) changeTxBaud(rate)
+#define SRXL2_RESET_TX(rate) resetTxHardware(port, rate)
 #define micros testMicros
 #define Serial uartStartup
 #define Serial1 uartStartup1
@@ -140,6 +148,7 @@ void setUp()
     busDriving = txDrained = releasedBeforeDrain = false;
     txBaud = 115200;
     unsafeBaudChange = false;
+    transportResets[0] = transportResets[1] = 0;
     autoTxDone = true;
     replyBlocked = false;
     uartStartup = UartStartupSpy();
@@ -365,8 +374,10 @@ static void establish(SerialSRXL2 &driver, std::string &in, std::string &out)
     send(driver, 2800);
     send(driver, 23000);
     send(driver, 24400);
+    input(driver, in, esc, sizeof(esc), 24600);
     send(driver, 43000);
     send(driver, 44400);
+    input(driver, in, esc, sizeof(esc), 44600);
     uint32_t channels[16] = {};
     channels[0] = 1811; channels[2] = 992;
     nowUs = 53000;
@@ -1311,8 +1322,168 @@ void test_master_recreation_starts_slow_and_requires_new_neutral()
     }
 }
 
+void test_stalled_transmit_recovers_on_either_port_and_requires_neutral()
+{
+    for (uint8_t port : {0, 1})
+    {
+        selectSmartPort(port);
+        std::string in, out;
+        BinaryStringStream rx(in), tx(out);
+        SerialSRXL2 driver(&tx, &rx, port ? 14 : 3, port);
+        establish(driver, in, out);
+        auto &uart = port ? uartStartup1 : uartStartup;
+        auto &other = port ? uartStartup : uartStartup1;
+        const unsigned begins = uart.begins;
+        const unsigned otherBegins = other.begins;
+        const unsigned resets = transportResets[port];
+        const unsigned otherResets = transportResets[1 - port];
+        uint32_t channels[16] = {};
+        channels[2] = 1811;
+        nowUs = 60000;
+        deliver(driver, true, channels);
+        autoTxDone = false;
+        send(driver, 73000);
+        const size_t sent = out.size();
+        TEST_ASSERT_TRUE(busDriving);
+        send(driver, 92999);
+        TEST_ASSERT_TRUE(busDriving);
+        send(driver, 93000);
+        TEST_ASSERT_FALSE(busDriving);
+        TEST_ASSERT_EQUAL(sent, out.size());
+        in.append("stale RX bytes");
+        send(driver, 142999);
+        TEST_ASSERT_EQUAL(begins, uart.begins);
+        nowUs = 143000;
+        driver.sendQueuedData(0);
+        TEST_ASSERT_EQUAL(begins + 1, uart.begins);
+        TEST_ASSERT_EQUAL(otherBegins, other.begins);
+        TEST_ASSERT_EQUAL(resets + 1, transportResets[port]);
+        TEST_ASSERT_EQUAL(otherResets, transportResets[1 - port]);
+        TEST_ASSERT_EQUAL(0, rx.available());
+        autoTxDone = true;
+        input(driver, in, hello, sizeof(hello), 143200);
+        send(driver, 143374);
+        send(driver, 144590);
+        nowUs = 145000;
+        deliver(driver, true, channels);
+        send(driver, 164590);
+        assert_neutral(out, 0);
+        send(driver, 165980);
+        input(driver, in, esc, sizeof(esc), 166180);
+        channels[2] = 992;
+        nowUs = 167000;
+        deliver(driver, true, channels);
+        channels[2] = 1811;
+        nowUs = 168000;
+        deliver(driver, true, channels);
+        send(driver, 184590);
+        TEST_ASSERT_EQUAL_HEX8(0x54, uint8_t(out[out.size() - 4]));
+        TEST_ASSERT_EQUAL_HEX8(0xD5, uint8_t(out[out.size() - 3]));
+        send(driver, 185980);
+    }
+}
+
+void test_failed_uart_restart_is_retried_without_driving_the_bus()
+{
+    std::string in, out;
+    BinaryStringStream rx(in), tx(out);
+    SerialSRXL2 driver(&tx, &rx, 3);
+    establish(driver, in, out);
+    autoTxDone = false;
+    send(driver, 73000);
+    send(driver, 93000);
+    TEST_ASSERT_FALSE(busDriving);
+    uartStartup.beginSucceeds = false;
+    send(driver, 143000);
+    const unsigned begins = uartStartup.begins;
+    const size_t sent = out.size();
+    uartStartup.beginSucceeds = true;
+    send(driver, 2142999);
+    TEST_ASSERT_EQUAL(begins, uartStartup.begins);
+    TEST_ASSERT_EQUAL(sent, out.size());
+    TEST_ASSERT_FALSE(busDriving);
+    in.append(reinterpret_cast<const char *>(hello), sizeof(hello));
+    nowUs = 2143000;
+    driver.processSerialInput(); // This batch predates the same-baud UART restart.
+    TEST_ASSERT_EQUAL(begins + 1, uartStartup.begins);
+    TEST_ASSERT_FALSE(busDriving);
+    autoTxDone = true;
+    send(driver, 2143174);
+    TEST_ASSERT_EQUAL_HEX8(0x40, uint8_t(out[out.size() - 10]));
+    TEST_ASSERT_TRUE(busDriving);
+    send(driver, 2144390);
+    input(driver, in, hello, sizeof(hello), 2144590);
+    send(driver, 2144764);
+    send(driver, 2145980);
+}
+
+void test_transmit_watchdog_and_uart_restart_survive_clock_wrap()
+{
+    const uint32_t offset = 0xFFFF7000u;
+    for (uint8_t port : {0, 1})
+    {
+        selectSmartPort(port);
+        autoTxDone = true;
+        nowUs = offset;
+        std::string in, out;
+        BinaryStringStream rx(in), tx(out);
+        SerialSRXL2 driver(&tx, &rx, port ? 14 : 3, port);
+        input(driver, in, hello, sizeof(hello), offset + 1400);
+        send(driver, offset + 1600);
+        send(driver, offset + 2816);
+        autoTxDone = false;
+        send(driver, offset + 23000);
+        TEST_ASSERT_TRUE(busDriving);
+        send(driver, offset + 42999);
+        TEST_ASSERT_TRUE(busDriving);
+        send(driver, offset + 43000);
+        TEST_ASSERT_FALSE(busDriving);
+        auto &uart = port ? uartStartup1 : uartStartup;
+        const unsigned begins = uart.begins;
+        send(driver, offset + 92999);
+        TEST_ASSERT_EQUAL(begins, uart.begins);
+        nowUs = offset + 93000;
+        driver.sendQueuedData(0);
+        TEST_ASSERT_EQUAL(begins + 1, uart.begins);
+        TEST_ASSERT_FALSE(busDriving);
+        autoTxDone = true;
+    }
+}
+
+void test_recovery_does_not_drive_an_externally_busy_bus()
+{
+    for (uint8_t port : {0, 1})
+    {
+        selectSmartPort(port);
+        autoTxDone = true;
+        std::string in, out;
+        BinaryStringStream rx(in), tx(out);
+        SerialSRXL2 driver(&tx, &rx, port ? 14 : 3, port);
+        establish(driver, in, out);
+        auto &uart = port ? uartStartup1 : uartStartup;
+        const unsigned begins = uart.begins;
+        auto &busy = port ? secondaryReceiving : uartReceiving;
+        busy = true;
+        const size_t sent = out.size();
+        send(driver, 2055000);
+        TEST_ASSERT_EQUAL(begins + 1, uart.begins);
+        send(driver, 2055200);
+        TEST_ASSERT_EQUAL(sent, out.size());
+        TEST_ASSERT_FALSE(busDriving);
+        busy = false;
+        send(driver, 2055400);
+        TEST_ASSERT_EQUAL(sent + 14, out.size());
+        TEST_ASSERT_EQUAL_HEX8(0x21, uint8_t(out[sent + 1]));
+        send(driver, 2056616);
+    }
+}
+
 void run_adapter_tests()
 {
+    RUN_TEST(test_stalled_transmit_recovers_on_either_port_and_requires_neutral);
+    RUN_TEST(test_failed_uart_restart_is_retried_without_driving_the_bus);
+    RUN_TEST(test_transmit_watchdog_and_uart_restart_survive_clock_wrap);
+    RUN_TEST(test_recovery_does_not_drive_an_externally_busy_bus);
     RUN_TEST(test_master_recreation_starts_slow_and_requires_new_neutral);
     RUN_TEST(test_fast_adapter_changes_rate_after_final_stop_bit_on_either_port);
     RUN_TEST(test_default_adapter_does_not_change_rate_or_flush_immediate_reply);

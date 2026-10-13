@@ -19,14 +19,17 @@ def check_baud_changes(compiler, environment, directory):
 #include <cstdint>
 struct Uart {
     uint32_t baud = 115200;
-    unsigned updates = 0;
+    unsigned updates = 0, begins = 0, ends = 0;
     void updateBaudRate(unsigned long rate) { baud = rate; ++updates; }
+    void end() { ++ends; }
 } Serial, Serial1;
 struct Link {
     uint32_t rate = 115200, confirmedAt = 0;
     unsigned confirms = 0;
+    bool resetPending = false;
     uint32_t baudRate() const { return rate; }
-    void baudApplied(uint32_t now) { confirmedAt = now; ++confirms; }
+    bool transportResetNeeded() const { return resetPending; }
+    void baudApplied(uint32_t now) { confirmedAt = now; ++confirms; resetPending = false; }
 };
 uint32_t txRates[3] = {115200, 115200, 115200};
 unsigned txUpdates = 0, flushes[2] = {};
@@ -34,13 +37,23 @@ using uart_port_t = int;
 enum { ESP_OK = 0 };
 #define UART_LL_GET_HW(port) (port)
 void uart_ll_set_baudrate(int port, uint32_t rate) { assert(port == 2); txRates[port] = rate; ++txUpdates; }
+void resetSmartTxUart(uint32_t rate) { txRates[2] = rate; ++txUpdates; }
 int uart_flush_input(uart_port_t port) { ++flushes[port]; return ESP_OK; }
+using gpio_num_t = int;
+const int GPIO_MODE_INPUT = 0;
+void gpio_set_direction(gpio_num_t pin, int mode) { assert(pin == 14 && mode == GPIO_MODE_INPUT); }
 class SerialSRXL2 {
 public:
     Link link;
-    unsigned port = 0;
+    unsigned port = 0, pin = 14;
     bool transmitting = false;
-    uint32_t appliedBaud = 115200, lastHardwareReceive = 0;
+    bool beginSucceeds = true;
+    uint32_t appliedBaud = 115200, lastHardwareReceive = 0, lastTransportReset = 0;
+    bool beginUART(uint32_t rate) {
+        Uart &selected = port ? Serial1 : Serial;
+        ++selected.begins; selected.baud = rate;
+        return beginSucceeds;
+    }
     void synchronizeBaud(uint32_t now);
 };
 '''
@@ -75,6 +88,20 @@ int main() {
         driver.synchronizeBaud(5);
         assert(selected.baud == 115200 && selected.updates == 2 && !other.updates);
         assert(driver.appliedBaud == 115200 && driver.link.confirms == 2 && flushes[port] == 2);
+        driver.link.resetPending = true;
+        driver.synchronizeBaud(2000000);
+        assert(selected.begins == 1 && selected.ends == 1 && !other.begins && !other.ends);
+        assert(driver.link.confirms == 3 && !driver.link.resetPending && flushes[port] == 3);
+        driver.link.resetPending = true;
+        driver.beginSucceeds = false;
+        driver.synchronizeBaud(4000000);
+        assert(driver.link.resetPending && driver.link.confirms == 3 && selected.begins == 2);
+        driver.beginSucceeds = true;
+        driver.synchronizeBaud(5999999);
+        assert(selected.begins == 2 && driver.link.resetPending);
+        driver.synchronizeBaud(6000000);
+        assert(selected.begins == 3 && driver.link.confirms == 4 && !driver.link.resetPending);
+        assert(!other.begins && !other.ends && !flushes[1 - port]);
     }
 }
 '''

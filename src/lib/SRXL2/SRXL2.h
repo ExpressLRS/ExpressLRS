@@ -25,11 +25,13 @@ public:
     bool nextPacket(uint32_t nowUs, Packet &packet);
     void poll(uint32_t nowUs);
     void transmitted(uint32_t nowUs);
+    void transmitAborted(uint32_t nowUs);
     bool connected() const;
     // Continue discovery when the startup transport already acknowledged a validated ESC.
     void finishStartupDiscovery(uint8_t commonBaudMask = 0);
     uint8_t commonBaudMask() const { return commonMask; }
     uint32_t baudRate() const { return requestedBaud; }
+    bool transportResetNeeded() const { return resetTransportPending; }
     void baudApplied(uint32_t nowUs);
     Telemetry telemetry(uint32_t nowUs) const;
 private:
@@ -41,12 +43,11 @@ private:
     bool permitted = false, released = false, hasSample = false;
     bool txBusy = false, requestReply = false, waitingReply = false, helloPending = false;
     bool startupAckOnly = false;
-    bool monitorReplies = false;
+    bool resetTransportPending = false;
     bool urgentControl = false;
     bool broadcastTx = false, cellCountKnown = false, controlPending = false, fadePending = false;
     uint8_t localMask = 0, commonMask = 0, selectedMask = 0;
     uint32_t requestedBaud = 115200, appliedBaud = 115200;
-    uint32_t fastReply = 0;
     bool failedFast = false, fastSuccessful = false;
     uint8_t input[80] = {}, inputSize = 0;
     mutable Telemetry data{}; // expiry is cached; a counter wrap must not revive it

@@ -68,15 +68,20 @@ void Link::baudApplied(uint32_t now)
         lastBus = now;
         if (appliedBaud == 400000 && phase == Active)
         {
-            fastReply = now;
+            lastReply = now;
             fastSuccessful = false;
         }
     }
-    if (phase == Recover && appliedBaud == 115200 && requestedBaud == 115200)
+    if (phase == Recover && resetTransportPending && appliedBaud == 115200 && requestedBaud == 115200)
     {
+        resetTransportPending = false;
+        inputSize = 0;
+        lastBus = now;
         commonMask = failedFast ? 0 : localMask;
         phase = Discover;
-        restart(now);
+        started = now;
+        lastHello = now - DISCOVERY_US;
+        helloPending = true;
     }
 }
 
@@ -87,15 +92,15 @@ void Link::restart(uint32_t now)
         (txBusy && broadcastTx && selectedMask == 1);
     if (fast) failedFast |= !fastSuccessful;
     else if (phase == Active) commonMask = failedFast ? 0 : localMask;
-    phase = fast ? Recover : Discover;
-    released = hasSample = waitingReply = cellCountKnown = monitorReplies = false;
+    phase = Recover;
+    released = hasSample = waitingReply = cellCountKnown = resetTransportPending = false;
     data = {};
     throttle = 0x8000;
     fadePending = false;
     urgentControl = false;
     controlPending = false;
-    // The bus has already been initialized; only first boot needs the 50 ms listen.
-    started = lastHello = now - DISCOVERY_US;
+    started = now;
+    lastHello = now - DISCOVERY_US;
     helloPending = true;
 }
 
@@ -103,15 +108,16 @@ void Link::setControlPermission(bool allowed)
 {
     if (permitted && !allowed) { controlPending = urgentControl = true; fadePending = false; }
     permitted = allowed;
-    if (!allowed) { released = hasSample = monitorReplies = false; throttle = 0x8000; }
+    if (!allowed) { released = hasSample = false; throttle = 0x8000; }
 }
 
 void Link::setThrottle(uint16_t value, uint32_t now)
 {
     if (!permitted || !connected()) return;
+    if (!hasSample || uint32_t(now - lastSample) >= SAMPLE_US) lastRequest = now - REQUEST_US;
     if (hasSample && uint32_t(now - lastSample) >= SAMPLE_US)
     {
-        released = monitorReplies = false;
+        released = false;
         urgentControl = true;
     }
     lastSample = now;
@@ -137,8 +143,7 @@ void Link::missedFrame()
 void Link::poll(uint32_t now)
 {
     const bool sampleExpired = hasSample && uint32_t(now - lastSample) >= SAMPLE_US;
-    if (sampleExpired) monitorReplies = false;
-    const bool peerExpired = phase == Active && monitorReplies && uint32_t(now - lastReply) >= STALE_US;
+    const bool peerExpired = connected() && uint32_t(now - lastReply) >= STALE_US;
     if (sampleExpired || peerExpired)
     {
         released = hasSample = false;
@@ -146,10 +151,11 @@ void Link::poll(uint32_t now)
         controlPending = urgentControl = true;
         fadePending = false;
     }
-    const bool fastExpired = connected() && appliedBaud == 400000 && uint32_t(now - fastReply) >= STALE_US;
-    if (fastExpired || (peerExpired && appliedBaud == 400000))
+    const bool discoveryExpired = phase != Active && phase != Recover && !startupAckOnly &&
+        uint32_t(now - started) >= STALE_US;
+    if (peerExpired || discoveryExpired)
     {
-        failedFast = true;
+        if (appliedBaud == 400000) failedFast = true;
         restart(now);
     }
     if (phase == Recover)
@@ -158,11 +164,10 @@ void Link::poll(uint32_t now)
         if (!txBusy && uint32_t(now - txEnded) >= DISCOVERY_US)
         {
             requestedBaud = 115200;
-            if (appliedBaud == 115200) baudApplied(now);
+            resetTransportPending = true;
         }
         return;
     }
-    if (peerExpired && !txBusy && (!waitingReply || uint32_t(now - txEnded) >= RESPONSE_US)) restart(now);
     if (!txBusy && (!waitingReply || uint32_t(now - txEnded) >= RESPONSE_US) &&
         inputSize && uint32_t(now - lastByte) >= 2500) inputSize = 0;
 }
@@ -204,15 +209,7 @@ bool Link::nextPacket(uint32_t now, Packet &p)
         if (!urgentNeutral && uint32_t(now - lastControl) < interval) return false;
         const bool fade = !safe && (fadePending || !controlPending);
         controlPending = fadePending = urgentControl = false;
-        requestReply = appliedBaud == 400000 ? uint32_t(now - lastRequest) >= REQUEST_US :
-            !failsafe && (!monitorReplies || uint32_t(now - lastRequest) >= REQUEST_US);
-        if (failsafe) monitorReplies = false;
-        else if (requestReply && !monitorReplies)
-        {
-            // Start the reply timeout with an actual telemetry poll, not startup failsafe.
-            monitorReplies = true;
-            lastReply = now;
-        }
+        requestReply = uint32_t(now - lastRequest) >= REQUEST_US;
         p.length = fade ? 14 : 16;
         const uint8_t header[] = {0xA6,0xCD,p.length,uint8_t(failsafe ? 1 : 0),uint8_t(requestReply ? 0x40 : 0),uint8_t(failsafe ? 0 : 100),0,0,uint8_t(fade ? 0 : 1),0,0,0};
         std::memcpy(p.bytes, header, sizeof(header));
@@ -249,8 +246,17 @@ void Link::transmitted(uint32_t now)
             lastControl = now;
             urgentControl = false;
             lastRequest = now - REQUEST_US;
+            lastReply = now;
         }
     }
+}
+
+void Link::transmitAborted(uint32_t now)
+{
+    failedFast |= requestedBaud == 400000 || appliedBaud == 400000 || (broadcastTx && selectedMask == 1);
+    txBusy = broadcastTx = false;
+    txEnded = lastBus = now;
+    restart(now);
 }
 
 void Link::resync()
@@ -318,7 +324,7 @@ void Link::processFrame(uint32_t now)
         if (!connected() || input[3] != 0x21) return;
         lastReply = now;
         waitingReply = false;
-        if (appliedBaud == 400000) { fastReply = now; fastSuccessful = true; }
+        if (appliedBaud == 400000) fastSuccessful = true;
         decodeTelemetry(input + 4, now);
     }
 }
