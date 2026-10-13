@@ -652,6 +652,22 @@ void test_burst_detector(void)
     TEST_ASSERT_EQUAL(3, sliding.count());
     TEST_ASSERT_UINT32_WITHIN(30, 1000, out[0].startUs);
     TEST_ASSERT_EQUAL(4, sliding.finish(4500));
+
+    // A strong signal that never drops below the threshold makes one long burst. Raising the
+    // threshold lets the dips between packets end it
+    BurstDetector strong(out, 8, -90, 3, 100, 200);
+    for (uint32_t t = 0; t < 3000; t += 29)
+        strong.sample(t, (t % 1000) < 700 ? -30 : -70); // packets at -30, leakage at -70 between them
+    TEST_ASSERT_UINT32_WITHIN(30, 3000, strong.openBurstUs(3000));
+    strong.setThreshold(-60);
+    TEST_ASSERT_EQUAL(-60, strong.getThreshold());
+    for (uint32_t t = 3000; t < 6000; t += 29)
+        strong.sample(t, (t % 1000) < 700 ? -30 : -70);
+    // The long burst ends at the first dip after the change, then each packet is its own burst
+    TEST_ASSERT_EQUAL(3, strong.finish(6000));
+    TEST_ASSERT_UINT32_WITHIN(30, 3700, out[0].endUs);
+    TEST_ASSERT_UINT32_WITHIN(30, 4000, out[1].startUs);
+    TEST_ASSERT_UINT32_WITHIN(30, 4700, out[1].endUs);
     TEST_ASSERT_UINT32_WITHIN(30, 4000, out[3].startUs);
     TEST_ASSERT_EQUAL_UINT32(4500, out[3].endUs);
 }

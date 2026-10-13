@@ -56,6 +56,15 @@ static constexpr uint16_t FLOOR_SAMPLES = 200;
 // A live capture shorter than this is not used yet, the band's previous capture is instead
 static constexpr uint32_t MIN_LIVE_US = 300000;
 static constexpr uint32_t EARLY_CHECK_MS = 250;
+// No packet is longer than ~30ms (25Hz SF9 plus the RSSI tail), so a longer burst means a strong
+// signal never drops below the threshold between packets, e.g. the TX close by leaking in from its
+// other channels. Raise the threshold in steps until the gaps show, up to a margin below the peak.
+static constexpr uint32_t OVERLONG_BURST_US = 40000;
+static constexpr int8_t THRESHOLD_STEP_DB = 6;
+static constexpr int8_t THRESHOLD_BELOW_PEAK_DB = 6;
+// A band's last capture stops counting after this long, so seeing nothing there doesn't steer the scan
+// away from that band for good, e.g. while the TX is still powering up
+static constexpr uint32_t STALE_CAPTURE_MS = 5000;
 
 // The capture in progress, on the band of the current rate
 static struct
@@ -73,6 +82,7 @@ static struct
     uint32_t windowStartUs; // moves on as the oldest bursts are discarded
     uint32_t lastUs;
     uint32_t samples;
+    uint32_t lastRaiseUs;   // when the threshold was last raised
 } live;
 
 // The last finished capture of each band. Single band chips only need one buffer.
@@ -84,6 +94,7 @@ static constexpr uint8_t BAND_BUFFERS = 1;
 static Burst doneBursts[BAND_BUFFERS][MAX_BURSTS];
 static BandCapture done[SLOT_COUNT];
 static uint32_t donePollUs[SLOT_COUNT];
+static uint32_t doneMillis[SLOT_COUNT];
 
 static uint32_t lastEarlyCheckMs;
 
@@ -131,7 +142,7 @@ static BandCapture liveCapture()
     return {true, live.windowStartUs, live.lastUs, live.bursts, live.detector.count()};
 }
 
-// The captures to score with: the live one once long enough, otherwise each band's last one
+// The captures to score with: the live one once long enough, otherwise each band's last one if recent
 static void currentCaptures(BandCapture captures[SLOT_COUNT], uint32_t &resolutionUs)
 {
     resolutionUs = 0;
@@ -142,11 +153,14 @@ static void currentCaptures(BandCapture captures[SLOT_COUNT], uint32_t &resoluti
             captures[slot] = liveCapture();
             resolutionUs = std::max(resolutionUs, livePollUs());
         }
-        else
+        else if (done[slot].valid && millis() - doneMillis[slot] < STALE_CAPTURE_MS)
         {
             captures[slot] = done[slot];
-            if (done[slot].valid)
-                resolutionUs = std::max(resolutionUs, donePollUs[slot]);
+            resolutionUs = std::max(resolutionUs, donePollUs[slot]);
+        }
+        else
+        {
+            captures[slot] = BandCapture{};
         }
     }
     if (resolutionUs == 0)
@@ -164,6 +178,7 @@ static void captureStart()
         memcpy(buffer, live.bursts, count * sizeof(Burst));
         done[live.slot] = {true, live.windowStartUs, live.lastUs, buffer, count};
         donePollUs[live.slot] = livePollUs();
+        doneMillis[live.slot] = millis();
     }
 
     live.active = true;
@@ -174,6 +189,7 @@ static void captureStart()
     live.windowStartUs = 0;
     live.lastUs = 0;
     live.samples = 0;
+    live.lastRaiseUs = 0;
     lastEarlyCheckMs = millis();
 }
 
@@ -214,9 +230,50 @@ static void capturePoll()
     if (rssi > live.peak)
         live.peak = rssi;
     live.detector.sample(live.lastUs, rssi);
+
+    if (live.detector.openBurstUs(live.lastUs) > OVERLONG_BURST_US && live.lastUs - live.lastRaiseUs > OVERLONG_BURST_US)
+    {
+        live.lastRaiseUs = live.lastUs;
+        const int8_t raised = std::min<int>(live.detector.getThreshold() + THRESHOLD_STEP_DB, live.peak - THRESHOLD_BELOW_PEAK_DB);
+        if (raised > live.detector.getThreshold())
+        {
+            live.detector.setThreshold(raised);
+            live.threshold = raised;
+        }
+    }
+
     // Slide along, discarding the oldest quarter of the bursts
     if (live.detector.full())
         live.windowStartUs = live.detector.dropOldest(MAX_BURSTS / 4);
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+// Rates tried this pass
+
+static bool rateTried[RATE_MAX];
+// Tried rates are offered again, once per pass, if their packets later clearly show, e.g. the TX
+// was turned on after the rate was tried. Only once, so another pilot's TX can't hold the scan.
+static bool rateRetried[RATE_MAX];
+
+// Rates with the same radio config are covered by one visit, as the SYNC carries the actual rate
+static void markRateTried(uint8_t index)
+{
+    for (uint8_t i = 0; i < RATE_MAX; i++)
+    {
+        if (isSameRadioConfig(i, index))
+        {
+            // A rate visited again is a retry
+            if (rateTried[i])
+                rateRetried[i] = true;
+            rateTried[i] = true;
+        }
+    }
+}
+
+static void clearRatesTried()
+{
+    memset(rateTried, 0, sizeof(rateTried));
+    memset(rateRetried, 0, sizeof(rateRetried));
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -251,7 +308,7 @@ static void printCapture(uint8_t slot, const BandCapture &capture, bool isLive)
 {
     if (!capture.valid)
     {
-        DBGLN("FP capture %s: none", slotName(slot));
+        DBGLN("FP capture %s: none or stale", slotName(slot));
         return;
     }
     DBGLN("FP capture %s %s %ums: %uus per poll, %u bursts", slotName(slot), isLive ? "live" : "last",
@@ -302,18 +359,46 @@ static size_t rank(const bool tried[RATE_MAX], RateSignature sigs[RATE_MAX], Ban
     return rankRates(sigs, candidate, RATE_MAX, captures, -1, tuning, order, scores);
 }
 
-// The best untried supported rate, or RATE_MAX if every rate has been tried
-static uint8_t bestUntriedRate(const bool tried[RATE_MAX])
+// The tried rate (other than current) whose packets now clearly show, scoring more than score, or
+// RATE_MAX. score is updated to its score.
+static uint8_t retryRate(const BandCapture captures[SLOT_COUNT], const Tuning &tuning, uint8_t current, float &score)
+{
+    if (RATE_FINGERPRINT_LEAVE_SCORE == 0)
+        return RATE_MAX;
+    uint8_t best = RATE_MAX;
+    for (uint8_t i = 0; i < RATE_MAX; i++)
+    {
+        if (!isSupportedRFRate(i) || !rateTried[i] || rateRetried[i] || isSameRadioConfig(i, current))
+            continue;
+        const float retryScore = scoreLikelihood(signatureFor(i), captures, tuning);
+        if (retryScore >= RATE_FINGERPRINT_LEAVE_SCORE && retryScore > score)
+        {
+            best = i;
+            score = retryScore;
+        }
+    }
+    return best;
+}
+
+// The best untried supported rate, or a tried one if its packets now clearly show, or RATE_MAX if
+// every rate has been tried
+static uint8_t bestNextRate(uint8_t current)
 {
     RateSignature sigs[RATE_MAX];
     BandCapture captures[SLOT_COUNT];
     Tuning tuning;
     uint8_t order[RATE_MAX];
     float scores[RATE_MAX];
-    const size_t count = rank(tried, sigs, captures, tuning, order, scores);
+    const size_t count = rank(rateTried, sigs, captures, tuning, order, scores);
+    float bestScore = count ? scores[order[0]] : -1e9f;
+    const uint8_t retry = retryRate(captures, tuning, current, bestScore);
 #if defined(DEBUG_RATE_FINGERPRINT)
     printRanking("dwell over", sigs, captures, order, scores, count);
+    if (retry != RATE_MAX)
+        DBGLN("FP retrying rate %u: %d", retry, (int32_t)(bestScore * 10));
 #endif
+    if (retry != RATE_MAX)
+        return retry;
     return count ? order[0] : RATE_MAX;
 }
 
@@ -334,8 +419,8 @@ static bool rateSeen(uint8_t index)
     return seen;
 }
 
-// An untried rate to move to now as it clearly fits and the current rate doesn't, or RATE_MAX to stay
-static uint8_t earlyRate(const bool tried[RATE_MAX], uint8_t current)
+// A rate to move to now as it clearly fits and the current rate doesn't, or RATE_MAX to stay
+static uint8_t earlyRate(uint8_t current)
 {
     if (RATE_FINGERPRINT_LEAVE_SCORE == 0 || !liveUsable())
         return RATE_MAX;
@@ -349,8 +434,13 @@ static uint8_t earlyRate(const bool tried[RATE_MAX], uint8_t current)
     Tuning tuning;
     uint8_t order[RATE_MAX];
     float scores[RATE_MAX];
-    const size_t count = rank(tried, sigs, captures, tuning, order, scores);
-    if (count == 0 || scores[order[0]] < RATE_FINGERPRINT_LEAVE_SCORE)
+    const size_t count = rank(rateTried, sigs, captures, tuning, order, scores);
+    float bestScore = count ? scores[order[0]] : -1e9f;
+    uint8_t best = count ? order[0] : RATE_MAX;
+    const uint8_t retry = retryRate(captures, tuning, current, bestScore);
+    if (retry != RATE_MAX)
+        best = retry;
+    if (best == RATE_MAX || bestScore < RATE_FINGERPRINT_LEAVE_SCORE)
         return RATE_MAX;
     // If the TX were on the current rate it would show up, so only leave if it doesn't
     if (scoreLikelihood(signatureFor(current), captures, tuning) > 0)
@@ -358,8 +448,10 @@ static uint8_t earlyRate(const bool tried[RATE_MAX], uint8_t current)
 
 #if defined(DEBUG_RATE_FINGERPRINT)
     printRanking("leaving early", sigs, captures, order, scores, count);
+    if (retry != RATE_MAX)
+        DBGLN("FP retrying rate %u: %d", retry, (int32_t)(bestScore * 10));
 #endif
-    return order[0];
+    return best;
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -372,22 +464,6 @@ static uint32_t cycleInterval; // dwell on the current rate in ms, before any mu
 static uint32_t RFmodeLastCycled;
 static uint8_t RFmodeCycleMultiplier;
 static bool LockRFmode;
-static bool rateTried[RATE_MAX]; // rates tried this pass
-
-// Rates with the same radio config are covered by one visit, as the SYNC carries the actual rate
-static void markRateTried(uint8_t index)
-{
-    for (uint8_t i = 0; i < RATE_MAX; i++)
-    {
-        if (isSameRadioConfig(i, index))
-            rateTried[i] = true;
-    }
-}
-
-static void clearRatesTried()
-{
-    memset(rateTried, 0, sizeof(rateTried));
-}
 
 static uint8_t savedRate()
 {
@@ -403,7 +479,7 @@ static uint8_t nextScanRate()
     bool anyTried = false;
     for (uint8_t i = 0; i < RATE_MAX; i++)
         anyTried |= rateTried[i];
-    uint8_t next = anyTried ? bestUntriedRate(rateTried) : savedRate();
+    uint8_t next = anyTried ? bestNextRate(ExpressLRS_currAirRate_Modparams->index) : savedRate();
     if (next == RATE_MAX)
     {
         // Every rate has been tried, start a new pass
@@ -487,7 +563,9 @@ void rxConnectLost(bool wasConnected, uint8_t rate)
     // (or the one a SYNC just moved us to) counts as tried
     if (wasConnected)
         clearRatesTried();
-    markRateTried(rate);
+    // Already tried if the lock failed on the rate we were on, which isn't a retry
+    if (!rateTried[rate])
+        markRateTried(rate);
     captureStart();
 }
 
@@ -518,7 +596,7 @@ void rxConnectUpdate(unsigned long now)
         return;
     now = millis();
 
-    const uint8_t early = earlyRate(rateTried, ExpressLRS_currAirRate_Modparams->index);
+    const uint8_t early = earlyRate(ExpressLRS_currAirRate_Modparams->index);
     if (early != RATE_MAX)
     {
         markRateTried(early);

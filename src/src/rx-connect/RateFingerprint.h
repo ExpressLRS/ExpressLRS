@@ -72,6 +72,15 @@ public:
     uint32_t dropOldest(uint16_t n);
 
     uint16_t count() const { return found; }
+    // How long the burst in progress has been going, 0 if none
+    uint32_t openBurstUs(uint32_t nowUs) const { return inBurst ? nowUs - out[found].startUs : 0; }
+    int8_t getThreshold() const { return threshold; }
+    // Change the threshold, e.g. raise it if a strong signal never drops below it between packets
+    void setThreshold(int8_t newThreshold)
+    {
+        lowThreshold = newThreshold - (threshold - lowThreshold);
+        threshold = newThreshold;
+    }
     uint16_t dropped() const { return short_; }
     bool full() const { return found == capacity; }
 
