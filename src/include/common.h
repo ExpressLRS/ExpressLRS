@@ -334,6 +334,7 @@ inline void setConnectionState(connectionState_e newState) {
 #endif
 
 extern bool crsfBatterySensorDetected;
+extern bool srxl2BatterySensorDetected;
 extern bool crsfBaroSensorDetected;
 
 void ChannelDataReset();

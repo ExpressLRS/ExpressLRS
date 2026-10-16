@@ -14,6 +14,7 @@ using std::min;
 connectionState_e connectionState = connected;
 bool connectionHasModelMatch = true, teamraceHasModelMatch = true;
 bool crsfBatterySensorDetected = false;
+bool srxl2BatterySensorDetected = false;
 uint32_t ChannelData[CRSF_NUM_CHANNELS] = {};
 CRSFRouter crsfRouter;
 static bool uartReceiving = false;
@@ -138,6 +139,7 @@ void setUp()
     nowUs = 0;
     connectionState = connected;
     connectionHasModelMatch = teamraceHasModelMatch = true;
+    crsfBatterySensorDetected = srxl2BatterySensorDetected = false;
     capture.frames.clear();
     uint8_t queuedSize, queued[CRSF_MAX_PACKET_LEN];
     while (capture.GetNextPayload(&queuedSize, queued)) {}
@@ -533,7 +535,7 @@ void test_adapter_real_crsf_payload_and_budget()
     const uint8_t wanted[] = {0,123,0,100,0,0,0,0};
     TEST_ASSERT_EQUAL(0x08, capture.frames[0][2]);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(wanted, capture.frames[0].data() + 3, 8);
-    TEST_ASSERT_TRUE(crsfBatterySensorDetected);
+    TEST_ASSERT_TRUE(srxl2BatterySensorDetected);
     send(driver, 199999);
     TEST_ASSERT_EQUAL(1, capture.frames.size());
     input(driver, in, battery, sizeof(battery), 200000);
@@ -552,7 +554,7 @@ void test_adapter_real_crsf_payload_and_budget()
     }
     TEST_ASSERT_TRUE(found);
     send(driver, 2300000);
-    TEST_ASSERT_FALSE(crsfBatterySensorDetected);
+    TEST_ASSERT_FALSE(srxl2BatterySensorDetected);
 }
 
 void test_esc_sensors_reach_the_real_elrs_downlink_queue()
@@ -601,11 +603,88 @@ void test_adapter_voltage_fallback_and_sentinel_suppression()
     voltageOnly[20] = crc >> 8; voltageOnly[21] = crc;
     input(driver, in, voltageOnly, sizeof(voltageOnly), 70000);
     send(driver, 100000);
-    const uint8_t wanted[] = {128,0x30,0x34};
+    const uint8_t wanted[] = {130,0x30,0x34};
     TEST_ASSERT_EQUAL(1, capture.frames.size());
     TEST_ASSERT_EQUAL(0x0E, capture.frames[0][2]);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(wanted, capture.frames[0].data() + 3, 3);
-    TEST_ASSERT_FALSE(crsfBatterySensorDetected);
+    TEST_ASSERT_FALSE(srxl2BatterySensorDetected);
+}
+
+void test_voltage_fallback_and_receiver_voltage_keep_separate_queue_entries()
+{
+    for (bool receiverFirst : {false, true})
+    {
+        nowUs = 0;
+        capture.frames.clear();
+        std::string in, out;
+        BinaryStringStream rx(in), tx(out);
+        SerialSRXL2 driver(&tx, &rx, 1);
+        establish(driver, in, out);
+        uint8_t voltageOnly[22];
+        std::memcpy(voltageOnly, esc, sizeof(esc));
+        for (unsigned i = 6; i < 20; ++i) voltageOnly[i] = 0xFF;
+        voltageOnly[8] = 4; voltageOnly[9] = 0xD2;
+        const uint16_t crc = SRXL2::crc16(voltageOnly, 20);
+        voltageOnly[20] = crc >> 8; voltageOnly[21] = crc;
+        input(driver, in, voltageOnly, sizeof(voltageOnly), 70000);
+
+        uint8_t analog[] = {0,0,0,128,0x1A,0xF4,0}; // Receiver ADC: 6.900 V.
+        auto header = reinterpret_cast<crsf_header_t *>(analog);
+        crsfRouter.SetHeaderAndCrc(header, CRSF_FRAMETYPE_CELLS, CRSF_FRAME_SIZE(3));
+        if (receiverFirst) crsfRouter.deliverMessageTo(CRSF_ADDRESS_RADIO_TRANSMITTER, header);
+        send(driver, 100000);
+        if (!receiverFirst) crsfRouter.deliverMessageTo(CRSF_ADDRESS_RADIO_TRANSMITTER, header);
+
+        uint8_t size = 0, queued[CRSF_MAX_PACKET_LEN];
+        bool foundReceiver = false, foundPack = false;
+        unsigned packets = 0;
+        while (capture.GetNextPayload(&size, queued))
+        {
+            ++packets;
+            TEST_ASSERT_EQUAL(7, size);
+            TEST_ASSERT_EQUAL(CRSF_FRAMETYPE_CELLS, queued[2]);
+            foundReceiver |= queued[3] == 128 && queued[4] == 0x1A && queued[5] == 0xF4;
+            foundPack |= queued[3] != 128 && queued[3] != 129 && queued[4] == 0x30 && queued[5] == 0x34;
+        }
+        TEST_ASSERT_EQUAL(2, packets);
+        TEST_ASSERT_TRUE(foundReceiver && foundPack);
+    }
+}
+
+void test_other_battery_detection_survives_srxl2_startup_expiry_and_removal()
+{
+    for (uint8_t port : {0, 1})
+    {
+        for (bool detectedAtStartup : {false, true})
+        {
+            nowUs = 0;
+            config.primary = port == 0 ? PROTOCOL_SRXL2 : PROTOCOL_CRSF;
+            config.secondary = port == 1 ? PROTOCOL_SERIAL1_SRXL2 : PROTOCOL_SERIAL1_CRSF;
+            crsfBatterySensorDetected = detectedAtStartup;
+            {
+                std::string in, out;
+                BinaryStringStream rx(in), tx(out);
+                SerialSRXL2 driver(&tx, &rx, port == 0 ? 3 : 14, port);
+                TEST_ASSERT_EQUAL(detectedAtStartup, crsfBatterySensorDetected);
+                TEST_ASSERT_FALSE(srxl2BatterySensorDetected);
+                crsfBatterySensorDetected = true; // A battery frame arrives on the other serial port.
+                send(driver, 1000);
+                TEST_ASSERT_TRUE(crsfBatterySensorDetected);
+                establish(driver, in, out);
+                send(driver, 100000);
+                TEST_ASSERT_TRUE(srxl2BatterySensorDetected);
+                TEST_ASSERT_TRUE(crsfBatterySensorDetected);
+                send(driver, 2300000);
+                TEST_ASSERT_FALSE(srxl2BatterySensorDetected);
+                TEST_ASSERT_TRUE(crsfBatterySensorDetected);
+                input(driver, in, esc, sizeof(esc), 2300100);
+                send(driver, 2300200);
+                TEST_ASSERT_TRUE(srxl2BatterySensorDetected);
+            }
+            TEST_ASSERT_FALSE(srxl2BatterySensorDetected);
+            TEST_ASSERT_TRUE(crsfBatterySensorDetected);
+        }
+    }
 }
 
 void test_rf_resync_drops_stale_callback_without_changing_core_latches()
@@ -973,7 +1052,7 @@ void test_rejected_owner_leaves_uart_irq_input_and_telemetry_with_first_owner()
         SerialSRXL2 first(&tx, &rx, 1);
         establish(first, in, out);
         send(first, 100000);
-        TEST_ASSERT_TRUE(crsfBatterySensorDetected);
+        TEST_ASSERT_TRUE(srxl2BatterySensorDetected);
         auto handler = txDoneInterrupt;
         auto argument = txDoneArgument;
         const size_t written = out.size();
@@ -981,21 +1060,21 @@ void test_rejected_owner_leaves_uart_irq_input_and_telemetry_with_first_owner()
         {
             SerialSRXL2 rejected(&tx, &rx, 14, 1);
             TEST_ASSERT_EQUAL(0, uartStartup1.begins);
-            TEST_ASSERT_TRUE(crsfBatterySensorDetected);
+            TEST_ASSERT_TRUE(srxl2BatterySensorDetected);
             rejected.processSerialInput();
             TEST_ASSERT_EQUAL(sizeof(hello), rx.available());
             send(rejected, 110000);
             TEST_ASSERT_EQUAL(written, out.size());
-            TEST_ASSERT_TRUE(crsfBatterySensorDetected);
+            TEST_ASSERT_TRUE(srxl2BatterySensorDetected);
         }
         TEST_ASSERT_TRUE(txDoneInterrupt == handler && txDoneArgument == argument);
-        TEST_ASSERT_TRUE(crsfBatterySensorDetected);
+        TEST_ASSERT_TRUE(srxl2BatterySensorDetected);
         first.processSerialInput();
         TEST_ASSERT_EQUAL(0, rx.available());
         send(first, 111000);
         TEST_ASSERT_GREATER_THAN(written, out.size());
     }
-    TEST_ASSERT_FALSE(crsfBatterySensorDetected);
+    TEST_ASSERT_FALSE(srxl2BatterySensorDetected);
     TEST_ASSERT_TRUE(txDoneInterrupt == nullptr);
     nowUs = 200000;
     SerialSRXL2 replacement(&tx, &rx, 14, 1);
@@ -1143,7 +1222,7 @@ void test_fast_adapter_changes_rate_after_final_stop_bit_on_either_port()
         TEST_ASSERT_EQUAL(30, out.size());
         TEST_ASSERT_EQUAL_HEX8(0x40, uint8_t(out[18]));
         assert_neutral(out, 0);
-        TEST_ASSERT_FALSE(crsfBatterySensorDetected); // The old-rate batch supplied no measurements.
+        TEST_ASSERT_FALSE(srxl2BatterySensorDetected); // The old-rate batch supplied no measurements.
         immediateReplyInput = &in;
         immediateReply.assign(reinterpret_cast<const char *>(esc), sizeof(esc));
         send(driver, 30400);
@@ -1151,7 +1230,7 @@ void test_fast_adapter_changes_rate_after_final_stop_bit_on_either_port()
         driver.processSerialInput(); // A genuine same-rate immediate reply must survive.
         nowUs = 30600;
         driver.sendQueuedData(0);
-        TEST_ASSERT_TRUE(crsfBatterySensorDetected);
+        TEST_ASSERT_TRUE(srxl2BatterySensorDetected);
         TEST_ASSERT_EQUAL(1, uart.updates);
         TEST_ASSERT_FALSE(replyBlocked);
     }
@@ -1613,6 +1692,8 @@ void run_adapter_tests()
     RUN_TEST(test_adapter_real_crsf_payload_and_budget);
     RUN_TEST(test_esc_sensors_reach_the_real_elrs_downlink_queue);
     RUN_TEST(test_adapter_voltage_fallback_and_sentinel_suppression);
+    RUN_TEST(test_voltage_fallback_and_receiver_voltage_keep_separate_queue_entries);
+    RUN_TEST(test_other_battery_detection_survives_srxl2_startup_expiry_and_removal);
     RUN_TEST(test_rf_resync_drops_stale_callback_without_changing_core_latches);
     RUN_TEST(test_late_receive_hardware_and_partial_reply_block_transmit);
     RUN_TEST(test_first_pending_neutral_after_rf_reset_cannot_release_motion);

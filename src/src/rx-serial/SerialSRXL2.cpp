@@ -300,7 +300,7 @@ SerialSRXL2::SerialSRXL2(Stream *output, Stream *input, int8_t txPin, uint8_t se
     generation = srxl2RFGeneration;
     lastHardwareReceive = micros();
     lastTransportReset = micros() - 2000000;
-    crsfBatterySensorDetected = false;
+    srxl2BatterySensorDetected = false;
 }
 
 SerialSRXL2::~SerialSRXL2()
@@ -320,7 +320,7 @@ SerialSRXL2::~SerialSRXL2()
 #if defined(PLATFORM_ESP32)
     gpio_set_direction(gpio_num_t(pin), GPIO_MODE_INPUT);
 #endif
-    crsfBatterySensorDetected = false;
+    srxl2BatterySensorDetected = false;
     srxl2Owner = nullptr;
 }
 
@@ -505,7 +505,7 @@ void SerialSRXL2::publishTelemetry(uint32_t now)
     const SRXL2::Telemetry values = link.telemetry(now);
     const SRXL2::Reading &current = values.batteryCurrent.valid ? values.batteryCurrent : values.current;
     const bool battery = values.voltage.valid && current.valid && current.value >= 0 && current.value / 100 <= 32767;
-    crsfBatterySensorDetected = battery;
+    srxl2BatterySensorDetected = battery;
     if (uint32_t(now - lastPublished) < 100000) return;
 
     uint8_t frame[CRSF_MAX_PACKET_LEN] = {};
@@ -530,7 +530,7 @@ void SerialSRXL2::publishTelemetry(uint32_t now)
         {
             type = CRSF_FRAMETYPE_CELLS;
             size = 3;
-            payload[0] = 128;
+            payload[0] = 130; // Receiver voltage uses 128; ESC BEC voltage uses 129.
             putBE(payload + 1, values.voltage.value, 2);
         }
         else if (sensor == 1 && values.rpm.valid && values.rpm.value <= 0x7FFFFF)

@@ -10,6 +10,64 @@ import re
 ROOT = Path(__file__).resolve().parents[2]
 
 
+def check_analog_battery_suppression(compiler, environment, directory):
+    source = (ROOT / 'src/lib/AnalogVbat/devAnalogVbat.cpp').read_text()
+    report = re.search(r'static void reportVbat\(\)\s*\{.*?^\}', source, re.M | re.S).group()
+    boundary = r'''
+#include <cassert>
+#include <vector>
+#include "crsf_protocol.h"
+#include "helpers.h"
+constexpr uint8_t VOLTAGE_SOURCE_COUNT = 4;
+constexpr unsigned VBAT_MIN_CRSFRATE = 5000;
+constexpr int PROTOCOL_MAVLINK = 7;
+bool crsfBatterySensorDetected = false, srxl2BatterySensorDetected = false;
+struct { int protocol = 0; int GetSerialProtocol() { return protocol; } } config;
+static unsigned clockMs = 0;
+static unsigned reportMillis() { return clockMs; }
+#define millis reportMillis
+bool sourceIsDefined(uint8_t index) { return index == 0; }
+bool sourceHasReading(uint8_t index) { return sourceIsDefined(index); }
+uint32_t readSmoothedAdc(uint8_t) { return 6900; }
+int32_t adcToMilliVolts(uint8_t, uint32_t value) { return value; }
+struct {
+    std::vector<uint8_t> types;
+    void SetHeaderAndCrc(crsf_header_t *header, crsf_frame_type_e type, uint8_t) { header->type = type; }
+    void deliverMessageTo(uint8_t, const crsf_header_t *header) { types.push_back(header->type); }
+} crsfRouter;
+'''
+    probe = r'''
+int main() {
+    const struct { bool external, smart; int protocol; unsigned batteries; } cases[] = {
+        {false, false, 0, 1}, {true, false, 0, 0}, {false, true, 0, 0},
+        {true, true, 0, 0}, {false, false, 7, 0}, {false, false, 0, 1}
+    };
+    for (const auto &test : cases) {
+        crsfBatterySensorDetected = test.external;
+        srxl2BatterySensorDetected = test.smart;
+        config.protocol = test.protocol;
+        clockMs += 5000;
+        crsfRouter.types.clear();
+        reportVbat();
+        unsigned batteries = 0, voltages = 0;
+        for (auto type : crsfRouter.types) {
+            batteries += type == CRSF_FRAMETYPE_BATTERY_SENSOR;
+            voltages += type == CRSF_FRAMETYPE_CELLS;
+        }
+        assert(batteries == test.batteries);
+        assert(voltages == 1); // The receiver's independent voltage sensor remains available.
+    }
+}
+'''
+    cpp = Path(directory) / 'analog-battery.cpp'
+    executable = Path(directory) / 'analog-battery.exe'
+    cpp.write_text(boundary + report + probe)
+    subprocess.run([compiler, '-std=c++11', '-DTARGET_NATIVE', '-I' + str(ROOT / 'src/include'),
+                    str(cpp), '-o', str(executable)], env=environment, check=True)
+    subprocess.run([str(executable)], env=environment, check=True)
+    print('Analog telemetry: either external battery source suppresses fallback; voltage remains available', flush=True)
+
+
 def check_baud_changes(compiler, environment, directory):
     source = (ROOT / "src/src/rx-serial/SerialSRXL2.cpp").read_text()
     change = re.search(r'void SerialSRXL2::synchronizeBaud\(uint32_t now\)\s*\{.*?^\}', source, re.M | re.S)
@@ -416,6 +474,7 @@ int main() {
             ["-DPLATFORM_ESP32", "-DCONFIG_IDF_TARGET_ESP32C6"])
         check_early_teardown(compiler, environment, directory)
         check_baud_changes(compiler, environment, directory)
+        check_analog_battery_suppression(compiler, environment, directory)
     print("Unsupported SoCs, transmitters, and missing serial pins remain disabled")
 
 

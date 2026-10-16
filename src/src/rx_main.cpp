@@ -109,6 +109,7 @@ RXEndpoint crsfReceiver;
 RXOTAConnector otaConnector;
 
 bool crsfBatterySensorDetected = false;
+bool srxl2BatterySensorDetected = false;
 bool crsfBaroSensorDetected = false;
 
 extern bool webserverPreventAutoStart;
