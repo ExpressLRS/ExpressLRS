@@ -46,6 +46,7 @@ extern int32_t FreqCorrection_2;    // Only used for the SX1276
 
 // Primary Band
 extern uint16_t primaryBandCount;
+extern uint8_t usableChannels;
 extern uint32_t freq_spread;
 extern uint8_t FHSSsequence[];
 extern uint8_t sync_channel;
@@ -56,6 +57,7 @@ extern const fhss_config_t *FHSSconfig;
 extern bool FHSSusePrimaryFreqBand;
 extern bool FHSSuseDualBand;
 extern uint16_t secondaryBandCount;
+extern uint8_t usableChannelsDual;
 extern uint32_t freq_spread_DualBand;
 extern uint8_t FHSSsequence_DualBand[];
 extern uint8_t sync_channel_DualBand;
@@ -67,6 +69,7 @@ extern const fhss_config_t *FHSSconfigDualBand;
 constexpr bool FHSSusePrimaryFreqBand = true;
 constexpr bool FHSSuseDualBand = false;
 constexpr uint16_t secondaryBandCount = 0;
+constexpr uint8_t usableChannelsDual = 0;
 [[maybe_unused]] static uint32_t &freq_spread_DualBand = freq_spread;
 [[maybe_unused]] static uint8_t *const FHSSsequence_DualBand = FHSSsequence;
 [[maybe_unused]] static uint8_t &sync_channel_DualBand = sync_channel;
@@ -100,14 +103,7 @@ static inline uint32_t FHSSgetMaximumFreq(void)
 // The number of frequencies for this regulatory domain
 static inline uint32_t FHSSgetChannelCount(void)
 {
-    if (FHSSusePrimaryFreqBand)
-    {
-        return FHSSconfig->freq_count;
-    }
-    else
-    {
-        return FHSSconfigDualBand->freq_count;
-    }
+    return FHSSusePrimaryFreqBand ? usableChannels : usableChannelsDual;
 }
 
 // how far the shared hop index may advance in the current mode. This is not any

@@ -78,6 +78,7 @@ int32_t FreqCorrection_2;
 uint32_t freq_spread;
 
 uint16_t primaryBandCount;
+uint8_t usableChannels;
 
 #if defined(RADIO_LR1121) || defined(RADIO_LR2021) || defined(UNIT_TEST)
 // Variables for Dual Band radios
@@ -88,6 +89,7 @@ uint32_t freq_spread_DualBand;
 bool FHSSusePrimaryFreqBand = true;
 bool FHSSuseDualBand = false;
 uint16_t secondaryBandCount;
+uint8_t usableChannelsDual;
 #endif
 
 constexpr uint8_t VERSION_DOMAIN_MAXLEN = 26 + 1;   // max. number of characters (plus '\0') the Lua script can display
@@ -161,7 +163,7 @@ void FHSSrandomiseFHSSsequence(const uint32_t seed)
 
     sync_channel = getSyncChannel(FHSSconfig);
 
-    const uint8_t usableChannels = getUsableChannelCount(FHSSconfig);
+    usableChannels = getUsableChannelCount(FHSSconfig);
 
     DBGLN("Primary Domain %s, %u/%u channels, sync=%u",
         FHSSconfig->domain, usableChannels, FHSSconfig->freq_count, sync_channel);
@@ -174,7 +176,7 @@ void FHSSrandomiseFHSSsequence(const uint32_t seed)
 
     sync_channel_DualBand = getSyncChannel(FHSSconfigDualBand);
 
-    const uint8_t usableChannelsDual = getUsableChannelCount(FHSSconfigDualBand);
+    usableChannelsDual = getUsableChannelCount(FHSSconfigDualBand);
 
     DBGLN("Dual Domain %s, %u/%u channels, sync=%u",
         FHSSconfigDualBand->domain, usableChannelsDual, FHSSconfigDualBand->freq_count, sync_channel_DualBand);
