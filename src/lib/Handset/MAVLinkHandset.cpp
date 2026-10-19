@@ -10,6 +10,7 @@
 #include "common.h"
 #include "logging.h"
 #include "OTA.h"
+#include "device.h"
 
 #if defined(PLATFORM_ESP32)
 #include <hal/uart_ll.h>
@@ -220,6 +221,16 @@ void MAVLinkHandset::setPacketInterval(int32_t PacketInterval)
     computeChunkBudget(edgetxRcPeriodUs());
 }
 
+static void setArmed(bool armed)
+{
+    if (isArmed == armed)
+        return;
+    isArmed = armed;
+#if defined(PLATFORM_ESP32)
+    devicesTriggerEvent(EVENT_ARM_FLAG_CHANGED);
+#endif
+}
+
 void MAVLinkHandset::processByte(uint8_t b)
 {
     mavlink_message_t msg;
@@ -299,6 +310,7 @@ void MAVLinkHandset::processByte(uint8_t b)
     }
 
     PerformChannelOverrides(channels, CRSF_NUM_CHANNELS);
+    setArmed(CRSF_to_BIT(channels[AUX1]));
     RCDataReceived(channels, CRSF_NUM_CHANNELS);
 }
 
@@ -628,6 +640,7 @@ void MAVLinkHandset::handleInput()
         curRemaining = 0;
         curOffset = 0;
         DBGLN("MAVLink handset disconnected");
+        setArmed(false);
         if (disconnected) disconnected();
 #if defined(PLATFORM_ESP32)
         lastPolarityProbeMs = millis();
