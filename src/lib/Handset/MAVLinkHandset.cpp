@@ -142,7 +142,8 @@ void MAVLinkHandset::computeChunkBudget(uint32_t periodUs)
     uint32_t periodBytes = (uint64_t)currentBaud * periodUs / 10000000ULL * 87 / 100;
     if (periodBytes > HANDSET_TELEMETRY_FIFO_SIZE)
         periodBytes = HANDSET_TELEMETRY_FIFO_SIZE;
-    int32_t pkt = (int32_t)periodBytes - std::max((int32_t)(periodBytes / 2), (int32_t)26);
+    constexpr int32_t rcFrameBytes = MAVLINK_V2_HEADER_LEN + MAVLINK_MSG_ID_RC_CHANNELS_OVERRIDE_LEN + MAVLINK_CHECKSUM_LEN;
+    int32_t pkt = (int32_t)periodBytes - std::max((int32_t)(periodBytes / 2), rcFrameBytes);
     maxPacketBytes = (uint8_t)std::max(pkt, (int32_t)16);
 }
 
@@ -209,7 +210,7 @@ uint32_t MAVLinkHandset::hwAutobaud()
 
 int MAVLinkHandset::getMinPacketInterval() const
 {
-    if (currentBaud <= 115200) return 5000;
+    if (currentBaud <= 115200) return 10000;
     if (currentBaud <= 400000) return 2000;
     return 1;
 }
@@ -218,7 +219,7 @@ void MAVLinkHandset::setPacketInterval(int32_t PacketInterval)
 {
     RequestedRCpacketInterval = PacketInterval;
     advertisedPeriodUs = (uint32_t)PacketInterval;
-    computeChunkBudget(edgetxRcPeriodUs());
+    computeChunkBudget(std::min(advertisedPeriodUs, edgetxRcPeriodUs()));
 }
 
 static void setArmed(bool armed)
@@ -458,6 +459,9 @@ static void pushFrame(FIFO<MAVLINK_HANDSET_FIFO_SIZE> &fifo, const uint8_t *fram
 void MAVLinkHandset::forwardMessage(const crsf_header_t *message)
 {
     if (!controllerConnected)
+        return;
+
+    if (message->type < CRSF_FRAMETYPE_DEVICE_PING || message->type > CRSF_FRAMETYPE_HANDSET)
         return;
 
     const uint8_t size = CRSF_FRAME_SIZE(message->frame_size);

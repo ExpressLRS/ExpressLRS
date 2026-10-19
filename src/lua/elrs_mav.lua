@@ -909,29 +909,39 @@ local function setMock()
 end
 
 local function checkMavlinkModule()
-  -- Loop through the modules and look for one set to MAVLINK (18)
-  for modIdx = 0, 1 do
-    local mod = model.getModule(modIdx)
-    if mod and (mod.Type == nil or mod.Type == 18) then
-      -- MAVLINK found, put module type in Loading message
-      local modDescrip = (mod.Type == nil) and " awaiting" or (modIdx == 0) and " Internal" or " External"
-      -- Prefix with "Lua rXXX" from between EXITVER parens
-      deviceName = string.match(EXITVER, "%((.*)%)") .. modDescrip .. " TX..."
-      checkMavlinkModule = nil
-      return 0
+  local title = "  No ExpressLRS"
+  local msgs = {
+    " Enable a MAVLink",
+    "   External module in",
+    "       Model settings",
+  }
+  if not (crossfireTelemetryPush and crossfireTelemetryPop) then
+    title = "  No MAVLink"
+    msgs = {
+      " Radio firmware has",
+      "   no MAVLink Lua",
+      "       support",
+    }
+  else
+    -- Loop through the modules and look for one set to MAVLINK (18)
+    for modIdx = 0, 1 do
+      local mod = model.getModule(modIdx)
+      if mod and (mod.Type == nil or mod.Type == 18) then
+        -- MAVLINK found, put module type in Loading message
+        local modDescrip = (mod.Type == nil) and " awaiting" or (modIdx == 0) and " Internal" or " External"
+        -- Prefix with "Lua rXXX" from between EXITVER parens
+        deviceName = string.match(EXITVER, "%((.*)%)") .. modDescrip .. " TX..."
+        checkMavlinkModule = nil
+        return 0
+      end
     end
   end
 
   -- No MAVLINK module found, save an error message for run()
   lcd.clear()
   local y = 0
-  lcd.drawText(2, y, "  No ExpressLRS", MIDSIZE)
+  lcd.drawText(2, y, title, MIDSIZE)
   y = y + (textSize * 2) - 2
-  local msgs = {
-    " Enable a MAVLink",
-    "   External module in",
-    "       Model settings",
-  }
   for i, msg in ipairs(msgs) do
     lcd.drawText(2, y, msg)
     y = y + textSize

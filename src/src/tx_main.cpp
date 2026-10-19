@@ -1542,7 +1542,8 @@ void loop()
         {
           const uint8_t count = CRSFinBuffer[CRSF_TELEMETRY_LENGTH_INDEX];
           // Convert to CRSF telemetry where we can and send to handset
-          convert_mavlink_to_crsf_telem(CRSF_ADDRESS_RADIO_TRANSMITTER, CRSFinBuffer, count);
+          if (!txHandsetIsMavlink)
+            convert_mavlink_to_crsf_telem(CRSF_ADDRESS_RADIO_TRANSMITTER, CRSFinBuffer, count);
           // Forward raw FC telemetry to the handset
           handset->queueTelemetry(CRSFinBuffer + CRSF_FRAME_NOT_COUNTED_BYTES, count);
           // forward raw mavlink data to USB
