@@ -232,6 +232,33 @@ enum eSerialProtocol : uint8_t
     PROTOCOL_SCORPION_TLM
 };
 
+// Required directions for primary-port pin pairing. GPS may optionally use TX
+// for auto-configuration; only RX is required for listening.
+enum SerialPinDirection : uint8_t
+{
+    SERIAL_PIN_TX = 1,
+    SERIAL_PIN_RX = 2,
+    SERIAL_PIN_BOTH = SERIAL_PIN_TX | SERIAL_PIN_RX
+};
+
+inline uint8_t serialProtocolDirections(eSerialProtocol protocol, bool airport = false)
+{
+    if (airport)
+        return SERIAL_PIN_BOTH;
+    switch (protocol)
+    {
+    case PROTOCOL_SBUS:
+    case PROTOCOL_INVERTED_SBUS:
+    case PROTOCOL_SUMD:
+    case PROTOCOL_DJI_RS_PRO:
+        return SERIAL_PIN_TX;
+    case PROTOCOL_GPS:
+        return SERIAL_PIN_RX;
+    default:
+        return SERIAL_PIN_BOTH;
+    }
+}
+
 #if defined(PLATFORM_ESP32)
 enum eSerial1Protocol : uint8_t
 {

@@ -120,7 +120,7 @@ class ConnectionsPanel extends LitElement {
     firstUpdated() {
         elrsState.config.pwm.forEach((item, index) => {
             const modeField = _(`pwm_${index}_mode`)
-            this._pinModeChange(modeField, index)
+            this._pinModeChange(modeField, index, false)
             const failsafeModeField = _(`pwm_${index}_fsmode`)
             this._failsafeModeChange(failsafeModeField, index)
         })
@@ -177,10 +177,10 @@ class ConnectionsPanel extends LitElement {
                 modes.push(undefined, undefined)
             }
             if (features & 1) {
-                this.pinRxIndex = index
+                this.pinTxIndex = index
                 modes.push('Serial TX')
             } else if (features & 2) {
-                this.pinTxIndex = index
+                this.pinRxIndex = index
                 modes.push('Serial RX')
             } else {
                 modes.push(undefined)
@@ -212,7 +212,7 @@ class ConnectionsPanel extends LitElement {
         return htmlFields
     }
 
-    _pinModeChange(pinMode, index) {
+    _pinModeChange(pinMode, index, pairPins = true) {
         const setDisabled = (index, onoff) => {
             _(`pwm_${index}_ch`).disabled = onoff
             _(`pwm_${index}_inv`).disabled = onoff
@@ -241,38 +241,26 @@ class ConnectionsPanel extends LitElement {
         updateOthers(this.pinModes[index], false) // enable others
         this.pinModes[index] = pinMode.value
 
-        // put some constraints on pinRx/Tx mode selects
-        if (this.pinRxIndex !== undefined && this.pinTxIndex !== undefined) {
-            const pinRxMode = _(`pwm_${this.pinRxIndex}_mode`)
-            const pinTxMode = _(`pwm_${this.pinTxIndex}_mode`)
-            const pinRxModeValue = Number.parseInt(pinRxMode.value)
-            const pinTxModeValue = Number.parseInt(pinTxMode.value)
-            if (index === this.pinRxIndex) {
-                if (pinRxModeValue === PWM_MODE_SERIAL) { // Serial
-                    pinTxMode.value = PWM_MODE_SERIAL
-                    setDisabled(this.pinRxIndex, true)
-                    setDisabled(this.pinTxIndex, true)
-                    pinTxMode.disabled = true
-                }
-                else if (pinTxModeValue === PWM_MODE_SERIAL) {
-                    pinTxMode.value = 0
-                    setDisabled(this.pinRxIndex, false)
-                    setDisabled(this.pinTxIndex, false)
-                    pinTxMode.disabled = false
-                }
+        // Loading the page must preserve the mapping saved by Lua or another client.
+        // The receiver supplies protocol directions, so the UI needs no protocol table.
+        if (pairPins && this.pinRxIndex !== undefined && this.pinTxIndex !== undefined &&
+            (index === this.pinRxIndex || index === this.pinTxIndex)) {
+            const directions = elrsState.settings.serial_directions ?? 3
+            const sibling = index === this.pinRxIndex ? this.pinTxIndex : this.pinRxIndex
+            const siblingDirection = sibling === this.pinTxIndex ? 1 : 2
+            const siblingMode = _(`pwm_${sibling}_mode`)
+            if (Number(pinMode.value) === PWM_MODE_SERIAL && (directions & siblingDirection)) {
+                siblingMode.value = PWM_MODE_SERIAL
+                this.pinModes[sibling] = PWM_MODE_SERIAL
+                setDisabled(sibling, true)
+            } else if (Number(pinMode.value) !== PWM_MODE_SERIAL && directions === 3 &&
+                Number(siblingMode.value) === PWM_MODE_SERIAL) {
+                siblingMode.value = 0
+                this.pinModes[sibling] = 0
+                setDisabled(sibling, false)
+                this._failsafeModeChange(_(`pwm_${sibling}_fsmode`), sibling)
             }
-            if (index === this.pinTxIndex) {
-                if (pinTxModeValue === PWM_MODE_SERIAL) { // Serial
-                    pinRxMode.value = PWM_MODE_SERIAL
-                    setDisabled(this.pinRxIndex, true)
-                    setDisabled(this.pinTxIndex, true)
-                    pinTxMode.disabled = true
-                }
-            }
-            const pinTx = pinTxMode.value
-            if (pinRxModeValue !== PWM_MODE_SERIAL) pinTxMode.value = pinTx
         }
-
     }
 
     _failsafeModeChange(failsafeMode, index) {
