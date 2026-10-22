@@ -1215,6 +1215,17 @@ bool ICACHE_RAM_ATTR RXdoneISR(SX12xxDriverCommon::rx_status const status)
         return false; // Already received a packet, do not run ProcessRFPacket() again.
     }
 
+    // The TX never transmits in a telemetry slot, so anything heard there is another
+    // receiver's downlink, e.g. the selected RX of a teamrace pair while this one is
+    // inhibited and not sending its own telemetry. Downlink LINKSTATS shares RCDATA's
+    // type bits and the CRC is seeded with UID ^ OtaNonce in both directions, so it
+    // would decode as RC data and briefly un-inhibit this receiver.
+    if (connectionState == connected && ExpressLRS_currTlmDenom != 1 &&
+        (OtaNonce % ExpressLRS_currTlmDenom) == 0)
+    {
+        return false;
+    }
+
     if (ProcessRFPacket(status))
     {
         if (doStartTimer)
