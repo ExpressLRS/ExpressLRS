@@ -2194,13 +2194,11 @@ void loop()
 }
 #endif
 
-struct bootloader {
-    uint32_t key;
-    uint32_t reset_type;
-};
-
 void reset_into_bootloader(void)
 {
+    // Safety first, only go to bootloader mode if not connected.
+    if (connectionState == connected) return;
+
     SERIAL_PROTOCOL_TX.println((const char *)&target_name[4]);
     SERIAL_PROTOCOL_TX.flush();
 #if defined(PLATFORM_ESP8266)
