@@ -403,7 +403,8 @@ void ICACHE_RAM_ATTR GenerateSyncPacketData(OTA_Sync_s * const syncPtr)
   syncPtr->fhssIndex = FHSSgetCurrIndex();
   syncPtr->nonce = OtaNonce;
   syncPtr->rfRateEnum = get_elrs_airRateConfig(Index)->enum_rate;
-  syncPtr->switchEncMode = SwitchEncMode;
+  syncPtr->switchEncMode = SwitchEncMode & 1;
+  syncPtr->switchEncMode12 = SwitchEncMode >> 1;
   syncPtr->newTlmRatio = newTlmRatio - TLM_RATIO_NO_TLM;
   syncPtr->geminiMode = inGeminiMode();
   syncPtr->otaProtocol = config.GetLinkMode();
