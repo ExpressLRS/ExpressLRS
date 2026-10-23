@@ -35,6 +35,7 @@ public:
     SX1280Hal();
 
     void init();
+    void enableInterrupts();
     void end();
     void reset();
 
