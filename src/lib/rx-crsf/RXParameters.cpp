@@ -208,6 +208,9 @@ static uint8_t sanitizePwmMode(uint8_t mode)
 
 void RXEndpoint::luaparamMappingChannelOut(propertiesCommon *item, uint8_t arg)
 {
+    // arg is 1-based and indexes GPIO_PIN_PWM_OUTPUTS, which may have fewer than PWM_MAX_CHANNELS entries
+    arg = constrain(arg, 1, GPIO_PIN_PWM_OUTPUTS_COUNT);
+
     bool sclAssigned = false;
     bool sdaAssigned = false;
 #if defined(PLATFORM_ESP32)
