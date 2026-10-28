@@ -801,6 +801,7 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
 void LostConnection(bool resumeRx)
 {
     DBGLN("lost conn fc=%d fo=%d", FreqCorrection, hwTimer::getFreqOffset());
+    const bool wasConnected = connectionState == connected;
 
     setConnectionState(disconnected); //set lost connection
     RXtimerState = tim_disconnected;
@@ -823,6 +824,7 @@ void LostConnection(bool resumeRx)
             hwTimer::stop();
         }
         SetRFLinkRate(ExpressLRS_nextAirRateIndex, false); // also sets to initialFreq
+        rxConnectLost(wasConnected, ExpressLRS_nextAirRateIndex);
         // If not resumRx, Radio will be left in SX127x_OPMODE_STANDBY / SX1280_MODE_STDBY_XOSC
         if (resumeRx)
         {
@@ -1680,7 +1682,7 @@ static void ExitBindingMode()
 
     webserverPreventAutoStart = true;
 
-    // Force RF cycling to start at the beginning immediately
+    // Force a new rate scan pass to start immediately
     rxConnectRestartScan();
     LostConnection(false);
 

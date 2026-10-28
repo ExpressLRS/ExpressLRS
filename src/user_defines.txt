@@ -71,6 +71,10 @@
 # Print a letter for each packet received or missed (RX debugging)
 #-DDEBUG_RX_SCOREBOARD
 
+# RX only: print the RSSI captures and rankings used to order the search for the TX's rate (needs DEBUG_LOG)
+# Optional: -DRATE_FINGERPRINT_MARGIN_DB=10 / -DRATE_FINGERPRINT_MARGIN_DB_GFSK=14 (burst threshold above the noise floor)
+#-DDEBUG_RATE_FINGERPRINT
+
 # Don't send RC msgs over UART
 #-DDEBUG_CRSF_NO_OUTPUT
 

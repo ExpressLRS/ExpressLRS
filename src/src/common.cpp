@@ -324,3 +324,27 @@ bool ICACHE_RAM_ATTR isSupportedRFRate(uint8_t index)
     return true;
 }
 #endif
+
+/***
+ * @brief Return true if two rates configure the radio identically, so either one can receive
+ * the other's packets. They may still differ on air, e.g. in packet interval or numOfSends.
+ */
+bool isSameRadioConfig(uint8_t indexA, uint8_t indexB)
+{
+    const expresslrs_mod_settings_s *const a = get_elrs_airRateConfig(indexA);
+    const expresslrs_mod_settings_s *const b = get_elrs_airRateConfig(indexB);
+
+    return a->radio_type == b->radio_type
+        && a->bw == b->bw
+        && a->sf == b->sf
+        && a->cr == b->cr
+        && a->PreambleLen == b->PreambleLen
+        && a->PayloadLength == b->PayloadLength
+#if defined(RADIO_LR1121) || defined(RADIO_LR2021)
+        && a->bw2 == b->bw2
+        && a->sf2 == b->sf2
+        && a->cr2 == b->cr2
+        && a->PreambleLen2 == b->PreambleLen2
+#endif
+        ;
+}

@@ -345,3 +345,4 @@ bool isSupportedRFRate(uint8_t index);
 #else
 inline bool isSupportedRFRate(uint8_t index) { return true; }
 #endif
+bool isSameRadioConfig(uint8_t indexA, uint8_t indexB);
