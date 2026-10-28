@@ -141,7 +141,8 @@ typedef struct expresslrs_rf_pref_params_s
 {
     uint8_t index;
     int16_t RXsensitivity;                // expected min RF sensitivity
-    uint16_t TOA;                         // time on air in microseconds
+    uint16_t TOA;                         // time on air of one packet in microseconds (the 900MHz radio's for dual band).
+                                          // Also identifies the rate from RSSI when searching for the TX, so keep it accurate
     uint16_t DisconnectTimeoutMs;         // Time without a packet before receiver goes to disconnected (ms)
     uint16_t RxLockTimeoutMs;             // Max time to go from tentative -> connected state on receiver (ms)
     uint16_t SyncPktIntervalDisconnected; // how often to send the PACKET_TYPE_SYNC (ms) when there is no response from RX
@@ -149,7 +150,9 @@ typedef struct expresslrs_rf_pref_params_s
     int8_t DynpowerSnrThreshUp;           // Request a raise in power if the reported (average) SNR is at or below this
                                           // or DYNPOWER_UPTHRESH_SNR_NONE to use RSSI
     int8_t DynpowerSnrThreshDn;           // Like DynpowerSnrUpThreshold except to lower power
-
+#if defined(RADIO_LR1121) || defined(RADIO_LR2021)
+    uint16_t TOA2;                        // dual band only: time on air of the 2.4GHz radio's packet (us)
+#endif
 } expresslrs_rf_pref_params_s;
 
 typedef struct expresslrs_mod_settings_s
