@@ -156,6 +156,8 @@ LPF LPF_UplinkRSSI1(5);
 MeanAccumulator<int32_t, int8_t, -16> SnrMean;
 
 uint8_t ExpressLRS_nextAirRateIndex;
+// A SYNC heard while disconnected named another rate, to move to from loop()
+static volatile bool syncRateChangePending;
 int8_t SwitchModePending;
 
 int32_t PfdPrevRawOffset;
@@ -1070,6 +1072,15 @@ static bool ICACHE_RAM_ATTR ProcessRfPacket_SYNC(uint32_t const now, OTA_Sync_s 
         DBGLN("New TLMrate 1:%u", TlmDenom);
         ExpressLRS_currTlmDenom = TlmDenom;
         telemBurstValid = false;
+    }
+
+    // Heard on another rate with the same radio config while disconnected: move to the named rate
+    // without going tentative here. Tentative sends telemetry, which makes the TX think it's connected
+    // and slow its SYNCs (to SyncPktIntervalConnected) until its connection lost timeout, ~0.5s
+    if (connectionState == disconnected && !InBindingMode && proposedRateIdx != ExpressLRS_currAirRate_Modparams->index)
+    {
+        syncRateChangePending = true;
+        return false;
     }
 
     // modelId = 0xff indicates modelMatch is disabled, the XOR does nothing in that case
@@ -2069,8 +2080,9 @@ void loop()
         return;
     }
 
-    if ((connectionState != disconnected) && (ExpressLRS_currAirRate_Modparams->index != ExpressLRS_nextAirRateIndex)) // forced change
+    if ((connectionState != disconnected || syncRateChangePending) && (ExpressLRS_currAirRate_Modparams->index != ExpressLRS_nextAirRateIndex)) // forced change
     {
+        syncRateChangePending = false;
         DBGLN("Req air rate change %u->%u", ExpressLRS_currAirRate_Modparams->index, ExpressLRS_nextAirRateIndex);
         LostConnection(true);
         LastSyncPacket = now;           // reset this variable to stop rf mode switching and add extra time
