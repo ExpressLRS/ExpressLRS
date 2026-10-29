@@ -433,9 +433,10 @@ uint32_t format_velandyaw(float climb_mps, float airspeed_mps, float groundspeed
 /*
  * Adapted from Ardupilot's AP_Frsky_SPort_Passthrough::calc_attiandrng()
  * This is the content of the 0x5006 Attitude and RangeFinder.
- * We don't provide Rangefinder here.
+ * rangefinder_cm is the downward rangefinder distance in cm, or 0 when there
+ * is no rangefinder.
  */
-uint32_t format_attiandrng(float pitch_rad, float roll_rad)
+uint32_t format_attiandrng(float pitch_rad, float roll_rad, int32_t rangefinder_cm)
 {
 #define ATTIANDRNG_ROLL_LIMIT       0x7FF
 #define ATTIANDRNG_PITCH_LIMIT      0x3FF
@@ -443,6 +444,8 @@ uint32_t format_attiandrng(float pitch_rad, float roll_rad)
 #define ATTIANDRNG_RNGFND_OFFSET    21
     uint32_t attiandrng = ((((uint16_t)(roll_rad * 286.0f)) + 900) & ATTIANDRNG_ROLL_LIMIT);
     attiandrng |= ((((uint16_t)(pitch_rad * 286.0f)) + 450) & ATTIANDRNG_PITCH_LIMIT)<<ATTIANDRNG_PITCH_OFFSET;
+    // rangefinder measurement in cm
+    attiandrng |= prep_number(rangefinder_cm, 3, 1)<<ATTIANDRNG_RNGFND_OFFSET;
     return attiandrng;
 }
 
@@ -499,6 +502,23 @@ uint32_t format_waypoint(uint8_t heading, uint16_t distance, uint16_t number)
     value |= prep_number(distance, 3, 2) << WP_DISTANCE_OFFSET;
     // bearing encoded in 3 degrees increments
     value |= (heading * 2 / 3) << WP_BEARING_OFFSET;
+    return value;
+}
+
+
+/*
+ * Adapted from Ardupilot's AP_Frsky_SPort_Passthrough::calc_wind()
+ * This is the content of the 0x500C wind value.
+ * Apparent wind is a Rover WindVane feature and is not available via MAVLink,
+ * so only the true wind angle and speed are sent.
+ */
+uint32_t format_wind(float direction_deg, float speed_mps)
+{
+#define WIND_SPEED_OFFSET           7
+    // true wind angle in 3 degree increments 0,360 (unsigned)
+    uint32_t value = prep_number(lroundf(direction_deg * (1.0f / 3.0f)), 2, 0);
+    // true wind speed in dm/s
+    value |= prep_number(lroundf(speed_mps * 10), 2, 1) << WIND_SPEED_OFFSET;
     return value;
 }
 
