@@ -170,6 +170,8 @@ bool doStartTimer = false;
 ///////////////////////////////////////////////
 
 static bool alreadyTLMresp = false;
+// The serial protocol in use before the TX switched us to MAVLink, restored when it switches back
+static eSerialProtocol protocolBeforeMavlink = PROTOCOL_CRSF;
 
 //////////////////////////////////////////////////////////////
 
@@ -1051,11 +1053,15 @@ static bool ICACHE_RAM_ATTR ProcessRfPacket_SYNC(uint32_t const now, OTA_Sync_s 
 
     if (otaSync->otaProtocol == TX_MAVLINK_MODE)
     {
+        if (config.GetSerialProtocol() != PROTOCOL_MAVLINK)
+        {
+            protocolBeforeMavlink = config.GetSerialProtocol();
+        }
         config.SetSerialProtocol(PROTOCOL_MAVLINK);
     }
     else if (config.GetSerialProtocol() == PROTOCOL_MAVLINK)
     {
-        config.SetSerialProtocol(PROTOCOL_CRSF);
+        config.SetSerialProtocol(protocolBeforeMavlink);
     }
 
     // Check if otaProtocol has been updated.
