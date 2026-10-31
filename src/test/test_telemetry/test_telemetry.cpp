@@ -17,7 +17,7 @@ public:
     void handleMessage(const crsf_header_t *message) override
     {
     }
-    bool handleRaw(const crsf_header_t *message) override
+    bool handleRaw(const CRSFConnector *connector, const crsf_header_t *message) override
     {
         for (int i=0 ; i<message->frame_size + CRSF_FRAME_NOT_COUNTED_BYTES ; i++)
         {
