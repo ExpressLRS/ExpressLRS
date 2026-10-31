@@ -81,26 +81,26 @@ expresslrs_mod_settings_s ExpressLRS_AirRateConfig[RATE_MAX] = {
     {19, RadioBandMod::Combined::LORA_DUAL, RATE_LORA_DUAL_100HZ_8CH, LR11XX_RADIO_LORA_BW_500,       LR11XX_RADIO_LORA_SF6,       LR11XX_RADIO_LORA_CR_4_8,    18, LR11XX_RADIO_LORA_BW_800,       LR11XX_RADIO_LORA_SF7,       LR11XX_RADIO_LORA_CR_LI_4_8, 14, TLM_RATIO_1_32,  4, 10000, OTA8_PACKET_SIZE, 1}};
 
 expresslrs_rf_pref_params_s ExpressLRS_AirRateRFperf[RATE_MAX] = {
-    {0,  -101,   658, 2500, 2500,   3,  5000, DYNPOWER_SNR_THRESH_NONE, DYNPOWER_SNR_THRESH_NONE},
-    {1,  -111,  3216, 3500, 2500, 600,  5000, SNR_SCALE( 1), SNR_SCALE(3.0)}, // These SNR_SCALE values all need to be checked!
-    {2,  -111,  4240, 3500, 2500, 600,  5000, SNR_SCALE( 1), SNR_SCALE(3.0)},
+    {0,  -101,   453, 2500, 2500,   3,  5000, DYNPOWER_SNR_THRESH_NONE, DYNPOWER_SNR_THRESH_NONE},
+    {1,  -111,  2960, 3500, 2500, 600,  5000, SNR_SCALE( 1), SNR_SCALE(3.0)}, // These SNR_SCALE values all need to be checked!
+    {2,  -111,  3664, 3500, 2500, 600,  5000, SNR_SCALE( 1), SNR_SCALE(3.0)},
     {3,  -112,  4380, 3000, 2500, 600,  5000, SNR_SCALE( 1), SNR_SCALE(3.0)},
     {4,  -112,  6690, 3500, 2500, 600,  5000, SNR_SCALE( 1), SNR_SCALE(3.0)},
     {5,  -117,  8770, 3500, 2500, 600,  5000, SNR_SCALE( 1), SNR_SCALE(2.5)},
     {6,  -120, 18560, 4000, 2500, 600,  5000, SNR_SCALE(-1), SNR_SCALE(1.5)},
     {7,  -123, 29950, 6000, 4000, 600,  5000, SNR_SCALE(-3), SNR_SCALE(0.5)},
     {8,  -112,  4380, 3000, 2500, 600,  5000, SNR_SCALE( 1), SNR_SCALE(3.0)},
-    {9,  -103,   690, 2500, 2500,   3,  5000, DYNPOWER_SNR_THRESH_NONE, DYNPOWER_SNR_THRESH_NONE},
-    {10, -103,   690, 2500, 2500,   3,  5000, DYNPOWER_SNR_THRESH_NONE, DYNPOWER_SNR_THRESH_NONE},
-    {11, -103,   690, 2500, 2500,   3,  5000, DYNPOWER_SNR_THRESH_NONE, DYNPOWER_SNR_THRESH_NONE},
+    {9,  -103,   480, 2500, 2500,   3,  5000, DYNPOWER_SNR_THRESH_NONE, DYNPOWER_SNR_THRESH_NONE},
+    {10, -103,   480, 2500, 2500,   3,  5000, DYNPOWER_SNR_THRESH_NONE, DYNPOWER_SNR_THRESH_NONE},
+    {11, -103,   480, 2500, 2500,   3,  5000, DYNPOWER_SNR_THRESH_NONE, DYNPOWER_SNR_THRESH_NONE},
     {12, -105,  1507, 2500, 2500,   3,  5000, SNR_SCALE( 5), SNR_SCALE(9.5)},
     {13, -105,  2374, 2500, 2500,   4,  5000, SNR_SCALE( 5), SNR_SCALE(9.5)},
     {14, -108,  3300, 3000, 2500,   6,  5000, SNR_SCALE( 3), SNR_SCALE(9.5)},
     {15, -112,  5871, 3500, 2500,  10,  5000, SNR_SCALE( 0), SNR_SCALE(8.5)},
     {16, -112,  7605, 3500, 2500,  11,  5000, SNR_SCALE( 0), SNR_SCALE(8.5)},
     {17, -115, 10798, 4000, 2500,   0,  5000, SNR_SCALE(-1), SNR_SCALE(6.5)},
-    {18, -112,  5871, 3500, 2500,  10,  5000, SNR_SCALE( 0), SNR_SCALE(8.5)},
-    {19, -112,  7456, 3500, 2500,  11,  5000, SNR_SCALE( 0), SNR_SCALE(8.5)}};
+    {18, -112,  5152, 3500, 2500,  10,  5000, SNR_SCALE( 0), SNR_SCALE(8.5), 5081},
+    {19, -112,  7968, 3500, 2500,  11,  5000, SNR_SCALE( 0), SNR_SCALE(8.5), 7916}};
 #endif
 
 #if defined(RADIO_LR2021)
@@ -135,9 +135,9 @@ expresslrs_mod_settings_s ExpressLRS_AirRateConfig[RATE_MAX] = {
     {23, RadioBandMod::Combined::LORA_DUAL, RATE_LORA_DUAL_100HZ_8CH, LR2021_RADIO_LORA_BW_500,       LR2021_RADIO_LORA_SF6,       LR2021_RADIO_LORA_CR_4_8,    18, LR2021_RADIO_LORA_BW_800,       LR2021_RADIO_LORA_SF7,       LR2021_RADIO_LORA_CR_LI_4_8, 14, TLM_RATIO_1_32,  4, 10000, OTA8_PACKET_SIZE, 1}};
 
 expresslrs_rf_pref_params_s ExpressLRS_AirRateRFperf[RATE_MAX] = {
-    {0,  -101,   658, 2500, 2500,   3,  5000, DYNPOWER_SNR_THRESH_NONE, DYNPOWER_SNR_THRESH_NONE},
-    {1,  -111,  3216, 3500, 2500, 600,  5000, SNR_SCALE( 1), SNR_SCALE(3.0)}, // These SNR_SCALE values all need to be checked!
-    {2,  -111,  4240, 3500, 2500, 600,  5000, SNR_SCALE( 1), SNR_SCALE(3.0)},
+    {0,  -101,   453, 2500, 2500,   3,  5000, DYNPOWER_SNR_THRESH_NONE, DYNPOWER_SNR_THRESH_NONE},
+    {1,  -111,  2960, 3500, 2500, 600,  5000, SNR_SCALE( 1), SNR_SCALE(3.0)}, // These SNR_SCALE values all need to be checked!
+    {2,  -111,  3664, 3500, 2500, 600,  5000, SNR_SCALE( 1), SNR_SCALE(3.0)},
     {3,  -112,  4380, 3000, 2500, 600,  5000, SNR_SCALE( 1), SNR_SCALE(3.0)},
     {4,  -112,  6690, 3500, 2500, 600,  5000, SNR_SCALE( 1), SNR_SCALE(3.0)},
     {5,  -117,  8770, 3500, 2500, 600,  5000, SNR_SCALE( 1), SNR_SCALE(2.5)},
@@ -148,17 +148,17 @@ expresslrs_rf_pref_params_s ExpressLRS_AirRateRFperf[RATE_MAX] = {
     {10, -104,   389, 2500, 2500,   3,  5000, DYNPOWER_SNR_THRESH_NONE, DYNPOWER_SNR_THRESH_NONE},
     {11, -104,   389, 2500, 2500,   3,  5000, DYNPOWER_SNR_THRESH_NONE, DYNPOWER_SNR_THRESH_NONE},
     {12, -104,   389, 2500, 2500,   3,  5000, DYNPOWER_SNR_THRESH_NONE, DYNPOWER_SNR_THRESH_NONE},
-    {13, -103,   690, 2500, 2500,   3,  5000, DYNPOWER_SNR_THRESH_NONE, DYNPOWER_SNR_THRESH_NONE},
-    {14, -103,   690, 2500, 2500,   3,  5000, DYNPOWER_SNR_THRESH_NONE, DYNPOWER_SNR_THRESH_NONE},
-    {15, -103,   690, 2500, 2500,   3,  5000, DYNPOWER_SNR_THRESH_NONE, DYNPOWER_SNR_THRESH_NONE},
+    {13, -103,   480, 2500, 2500,   3,  5000, DYNPOWER_SNR_THRESH_NONE, DYNPOWER_SNR_THRESH_NONE},
+    {14, -103,   480, 2500, 2500,   3,  5000, DYNPOWER_SNR_THRESH_NONE, DYNPOWER_SNR_THRESH_NONE},
+    {15, -103,   480, 2500, 2500,   3,  5000, DYNPOWER_SNR_THRESH_NONE, DYNPOWER_SNR_THRESH_NONE},
     {16, -105,  1507, 2500, 2500,   3,  5000, SNR_SCALE( 5), SNR_SCALE(9.5)},
     {17, -105,  2374, 2500, 2500,   4,  5000, SNR_SCALE( 5), SNR_SCALE(9.5)},
     {18, -108,  3300, 3000, 2500,   6,  5000, SNR_SCALE( 3), SNR_SCALE(9.5)},
     {19, -112,  5871, 3500, 2500,  10,  5000, SNR_SCALE( 0), SNR_SCALE(8.5)},
     {20, -112,  7605, 3500, 2500,  11,  5000, SNR_SCALE( 0), SNR_SCALE(8.5)},
     {21, -115, 10798, 4000, 2500,   0,  5000, SNR_SCALE(-1), SNR_SCALE(6.5)},
-    {22, -112,  5871, 3500, 2500,  10,  5000, SNR_SCALE( 0), SNR_SCALE(8.5)},
-    {23, -112,  7456, 3500, 2500,  11,  5000, SNR_SCALE( 0), SNR_SCALE(8.5)}};
+    {22, -112,  5152, 3500, 2500,  10,  5000, SNR_SCALE( 0), SNR_SCALE(8.5), 5081},
+    {23, -112,  7968, 3500, 2500,  11,  5000, SNR_SCALE( 0), SNR_SCALE(8.5), 7916}};
 #endif
 
 expresslrs_mod_settings_s *get_elrs_airRateConfig(uint8_t index)
@@ -324,3 +324,27 @@ bool ICACHE_RAM_ATTR isSupportedRFRate(uint8_t index)
     return true;
 }
 #endif
+
+/***
+ * @brief Return true if two rates configure the radio identically, so either one can receive
+ * the other's packets. They may still differ on air, e.g. in packet interval or numOfSends.
+ */
+bool isSameRadioConfig(uint8_t indexA, uint8_t indexB)
+{
+    const expresslrs_mod_settings_s *const a = get_elrs_airRateConfig(indexA);
+    const expresslrs_mod_settings_s *const b = get_elrs_airRateConfig(indexB);
+
+    return a->radio_type == b->radio_type
+        && a->bw == b->bw
+        && a->sf == b->sf
+        && a->cr == b->cr
+        && a->PreambleLen == b->PreambleLen
+        && a->PayloadLength == b->PayloadLength
+#if defined(RADIO_LR1121) || defined(RADIO_LR2021)
+        && a->bw2 == b->bw2
+        && a->sf2 == b->sf2
+        && a->cr2 == b->cr2
+        && a->PreambleLen2 == b->PreambleLen2
+#endif
+        ;
+}
