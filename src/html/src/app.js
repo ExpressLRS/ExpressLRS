@@ -2,7 +2,7 @@ import {LitElement, html, svg} from 'lit'
 import {customElement, query, state} from "lit/decorators.js"
 import {initRipple} from './utils/ripple.js'
 import {initMuiSelect} from './utils/select.js'
-import {elrsState, formatBand} from './utils/state.js'
+import {elrsState, formatBand, hardwareIssue} from './utils/state.js'
 import {overlay} from './utils/overlay.js'
 import './components/elrs-footer.js'
 
@@ -52,7 +52,7 @@ export class App extends LitElement {
                 </div>
                 <div class="mui-divider"></div>
                 <ul>
-                    <li>
+                    <li ?hidden="${hardwareIssue()}">
                         <strong>General</strong>
                         <ul>
                             <li><a id="menu-info" href="#info"><span class="mui--align-middle icon--symbols icon--symbols--info"></span>Information</a></li>
@@ -66,18 +66,25 @@ export class App extends LitElement {
                             <!-- /FEATURE:IS_TX -->
                             <!-- FEATURE:NOT IS_TX -->
                             ${elrsState.config.pwm !== undefined ? html`
-                            <li><a id="menu-connections" href="#connections"><span class="mui--align-middle icon--symbols icon--symbols--connections"></span>Connections</a></li>
+                                <li><a id="menu-connections" href="#connections"><span class="mui--align-middle icon--symbols icon--symbols--connections"></span>Connections</a></li>
                             ` : ''}
                             <li><a id="menu-serial" href="#serial"><span class="mui--align-middle icon--symbols icon--symbols--serial"></span>Serial</a></li>
                             ${elrsState.settings?.has_gps ? html`
-                            <li><a id="menu-gps" href="#gps"><span class="mui--align-middle icon--symbols icon--symbols--gps"></span>GPS</a></li>
+                                <li><a id="menu-gps" href="#gps"><span class="mui--align-middle icon--symbols icon--symbols--gps"></span>GPS</a></li>
                             ` : ''}
                             <!-- /FEATURE:NOT IS_TX -->
                             <li><a id="menu-wifi" href="#wifi"><span class="mui--align-middle icon--symbols icon--symbols--wifi"></span>WiFi</a></li>
                             <li><a id="menu-update" href="#update"><span class="mui--align-middle icon--symbols icon--symbols--update"></span>Update</a></li>
                         </ul>
                     </li>
-                    <li>
+                    <li ?hidden="${!hardwareIssue()}">
+                        <strong>Recovery</strong>
+                        <ul>
+                            <li><a id="recovery-info" href="#info"><span class="mui--align-middle icon--symbols icon--symbols--info"></span>Information</a></li>
+                            <li><a id="recovery-hardware" href="#hardware"><span class="mui--align-middle icon--symbols icon--symbols--hardware"></span>Hardware Layout</a></li>
+                        </ul>
+                    </li>
+                    <li ?hidden="${hardwareIssue()}">
                         <strong>Advanced</strong>
                         <ul>
                             <li><a id="menu-hardware" href="#hardware"><span class="mui--align-middle icon--symbols icon--symbols--hardware"></span>Hardware Layout</a></li>
@@ -201,8 +208,8 @@ export class App extends LitElement {
             const links = this.sideDrawer.querySelectorAll('a[href^="#"]')
             links.forEach(a => a.classList.remove('active'))
         }
-        const id = 'menu-' +route
-        const el = id ? (this.querySelector(`#${id}`) || document.getElementById(id)) : null
+        const id = (hardwareIssue() ? 'recovery-' : 'menu-') + route
+        const el = this.querySelector(`#${id}`) || document.getElementById(id)
         if (el) el.classList.add('active')
     }
 
@@ -343,7 +350,11 @@ export class App extends LitElement {
 
     // Route navigation orchestration
     renderRoute() {
-        const route = (location.hash || '#info').replace('#', '')
+        let route = (location.hash || '#info').replace('#', '')
+        if (hardwareIssue() && !['info', 'hardware'].includes(route)) {
+            location.hash = '#info'
+            return Promise.resolve()
+        }
         if (this.currentRoute && route === this.currentRoute) {
             this.setActiveMenu(route)
             return Promise.resolve()

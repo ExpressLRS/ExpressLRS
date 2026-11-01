@@ -16,7 +16,7 @@
 #include <soc/uart_pins.h>
 #else
 #include <ESP8266WiFi.h>
-#include <ESP8266mDNS.h>
+#include "MiniMDNS.h"
 #define wifi_mode_t WiFiMode_t
 #endif
 #include <DNSServer.h>
@@ -84,6 +84,9 @@ static bool scanComplete = false;
 
 static AsyncWebServer server(80);
 static bool servicesStarted = false;
+#if defined(PLATFORM_ESP8266)
+static MiniMDNS *mdns = nullptr;
+#endif
 static constexpr uint32_t STALE_WIFI_SCAN = 20000;
 static uint32_t lastScanTimeMS = 0;
 
@@ -161,14 +164,7 @@ static void WebUpdateHandleRoot(AsyncWebServerRequest *request)
     return;
   }
   force_update = request->hasArg("force");
-  if (connectionState == hardwareUndefined)
-  {
-    request->redirect("/index.html#hardware");
-  }
-  else
-  {
-    request->redirect("/index.html");
-  }
+  request->redirect("/index.html");
 }
 
 static void putFile(AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total)
@@ -419,6 +415,28 @@ static void GetConfiguration(AsyncWebServerRequest *request)
   auto *response = new AsyncJsonResponse();
   const auto json = response->getRoot();
 
+  if (!exportMode && connectionState >= FAILURE_STATES)
+  {
+    json["config"]["uid"].to<JsonArray>();
+    const auto settings = json["settings"].to<JsonObject>();
+    settings["product_name"] = product_name;
+    settings["lua_name"] = device_name;
+    settings["target"] = &target_name[4];
+    settings["version"] = VERSION;
+    settings["git-commit"] = commit;
+    settings["radio_failed"] = connectionState == radioFailed;
+    settings["hardware_undefined"] = connectionState == hardwareUndefined;
+#if defined(TARGET_TX)
+    settings["module-type"] = "TX";
+#endif
+#if defined(TARGET_RX)
+    settings["module-type"] = "RX";
+#endif
+    response->setLength();
+    request->send(response);
+    return;
+  }
+
   if (!exportMode)
   {
     JsonDocument options;
@@ -548,6 +566,7 @@ static void GetConfiguration(AsyncWebServerRequest *request)
     settings["uidtype"] = GetConfigUidType(json);
     settings["ssid"] = station_ssid;
     settings["mode"] = wifiMode == WIFI_STA ? "STA" : "AP";
+    settings["radio_failed"] = connectionState == radioFailed;
     settings["wifi_dbm"] = wifi_GetClientRssi();
     settings["custom_hardware"] = hardware_flag(HARDWARE_customised);
     settings["target"] = &target_name[4];
@@ -560,6 +579,8 @@ static void GetConfiguration(AsyncWebServerRequest *request)
     settings["module-type"] = "RX";
     settings["voltage_source_count"] = getDefinedVoltageSourceCount();
 #endif
+    if (connectionState != radioFailed)
+    {
 #if defined(RADIO_SX127X)
     settings["radio-type"] = "SX127X";
     settings["has_low_band"] = true;
@@ -583,6 +604,7 @@ static void GetConfiguration(AsyncWebServerRequest *request)
     settings["reg_domain_low"] = FHSSconfig->domain;
     settings["reg_domain_high"] = FHSSconfigDualBand->domain;
 #endif
+    }
   }
 
   response->setLength();
@@ -1137,11 +1159,13 @@ static void startWiFi(unsigned long now)
 
 static void startMDNS()
 {
+  #if defined(PLATFORM_ESP32)
   if (!MDNS.begin(wifi_hostname))
   {
     DBGLN("Error starting mDNS");
     return;
   }
+  #endif
 
   String options = "-DAUTO_WIFI_ON_INTERVAL=" + (firmwareOptions.wifi_auto_on_interval == -1 ? "-1" : String(firmwareOptions.wifi_auto_on_interval / 1000));
 
@@ -1162,29 +1186,23 @@ static void startMDNS()
   options += " -DRCVR_UART_BAUD=" + String(firmwareOptions.uart_baud);
   #endif
 
-  String instance = String(wifi_hostname) + "_" + WiFi.macAddress();
-  instance.replace(":", "");
   #if defined(PLATFORM_ESP8266)
-    // We have to do it differently on ESP8266 as setInstanceName has the side-effect of chainging the hostname!
-    MDNS.setInstanceName(wifi_hostname);
-    MDNSResponder::hMDNSService service = MDNS.addService(instance.c_str(), "http", "tcp", 80);
-    MDNS.addServiceTxt(service, "vendor", "elrs");
-    MDNS.addServiceTxt(service, "target", (const char *)&target_name[4]);
-    MDNS.addServiceTxt(service, "device", (const char *)device_name);
-    MDNS.addServiceTxt(service, "product", (const char *)product_name);
-    MDNS.addServiceTxt(service, "version", VERSION);
-    MDNS.addServiceTxt(service, "options", options.c_str());
-    MDNS.addServiceTxt(service, "type", "rx");
-    // If the probe result fails because there is another device on the network with the same name
-    // use our unique instance name as the hostname. A better way to do this would be to use
-    // MDNSResponder::indexDomain and change wifi_hostname as well.
-    MDNS.setHostProbeResultCallback([instance](const char* p_pcDomainName, bool p_bProbeResult) {
-      if (!p_bProbeResult) {
-        WiFi.hostname(instance);
-        MDNS.setInstanceName(instance);
-      }
-    });
+    // The responder names the service instance <hostname>_<MAC> itself
+    mdns = new MiniMDNS(wifi_hostname, 80);
+    mdns->addTxt(PSTR("vendor"), PSTR("elrs"));
+    mdns->addTxt(PSTR("target"), (const char *)&target_name[4]);
+    mdns->addTxt(PSTR("device"), device_name);
+    mdns->addTxt(PSTR("product"), product_name);
+    mdns->addTxt(PSTR("version"), VERSION);
+    mdns->addTxt(PSTR("options"), mdns->store(options.c_str()));
+  #if defined(TARGET_TX)
+    mdns->addTxt(PSTR("type"), PSTR("tx"));
   #else
+    mdns->addTxt(PSTR("type"), PSTR("rx"));
+  #endif
+  #else
+    String instance = String(wifi_hostname) + "_" + WiFi.macAddress();
+    instance.replace(":", "");
     MDNS.setInstanceName(instance);
     MDNS.addService("http", "tcp", 80);
     MDNS.addServiceTxt("http", "tcp", "vendor", "elrs");
@@ -1249,6 +1267,11 @@ static void startServices()
     #if defined(PLATFORM_ESP32)
       MDNS.end();
       startMDNS();
+    #else
+      if (mdns == nullptr)
+      {
+        startMDNS();
+      }
     #endif
     return;
   }
@@ -1403,9 +1426,6 @@ static void HandleWebUpdate()
       default:
         break;
     }
-    #if defined(PLATFORM_ESP8266)
-      MDNS.notifyAPChange();
-    #endif
     changeMode = WIFI_OFF;
   }
 
@@ -1421,7 +1441,10 @@ static void HandleWebUpdate()
   {
     dnsServer.processNextRequest();
     #if defined(PLATFORM_ESP8266)
-      MDNS.update();
+      if (mdns)
+      {
+        mdns->update();
+      }
     #endif
 
     #if defined(TARGET_TX) && defined(PLATFORM_ESP32)
@@ -1448,6 +1471,10 @@ static int event()
   else if (wifiStarted)
   {
     wifiStarted = false;
+    #if defined(PLATFORM_ESP8266)
+    delete mdns;
+    mdns = nullptr;
+    #endif
     WiFi.disconnect(true);
     WiFi.mode(WIFI_OFF);
     #if defined(PLATFORM_ESP8266)
