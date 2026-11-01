@@ -4,7 +4,7 @@
 
 > **Rate-Mode** seems to work faily well, even on Delta/Vtais.
 
-> **Auto-Level** seems to loose level if you do high rotation aerobatics (tight loops, snap rolls) before engaging auto-level. Takes like 10s before it recovers to level. If you fly normally, even nice aerobatics, it works well.
+> **Auto-Level** Works well with IMU MPU6050 and SC7U22.  LSM6Dxx seems to loose level if you do high rotation aerobatics (tight loops, snap rolls) before engaging auto-level. Takes like 10s before it recovers to level. If you fly normally, even nice aerobatics, it works well.
 
 
 **NEW from 1.08**. New hardware\target.json is needed to enable the gyro.. See instructions at the end of the file
@@ -53,8 +53,7 @@ A lot of code has been changed from the original to make it easier to setup.  So
   - [x] Gyro mode: Launch (Level + pitch up)
   - [ ] Gyro mode: Hover (NOT READY)
 
-- [ ] Stick Priority for VTail/Delta
-  - Currently it will use the Elevon channel for both Roll/Pitch, and Vtail for Pitch/Yaw. Somehow Spektrum RC can separate them properly, even though the radio send then together. So there is a way! Probably analyzing when both move together is Pitch, and separate are Roll/Yaw. 
+- [x] Stick Priority for VTail/Delta
 
 ## Getting started
 
@@ -92,16 +91,21 @@ It is also possible to add an external gyro to some receivers, by connecting it 
 - BetaFPV Super-P
 - RadioMaster ER8, ER6
 
-##### Gyros
+##### Gyros/IMU
 
-- MPU-6050: Very common, and supports 5V.
-- LSM6DSO IMU: Not that common, but trying to support the family of LSM6Dxx. Not that friendly since it only supports 3.3V, and will need a regulator.
+- MPU-6050: Very common, and supports 5V. Avaialbe in Amazon and AliExpress.
+- SC7U22: Also you can get boards in AliExpress.
+- LSM6DSO: Not that common, but trying to support the family of LSM6Dxx. Not that friendly since it only supports 3.3V, and will need a regulator. Auto-Level Panic/Rescue not working that well.
 
 #### Wiring
 
 Example: BetaFPV SuperP receiver with an external MPU-6050 I2C module. 
 
 ![receiver-with-gyroscope](betafpv-mpu6050.jpg)
+
+Example: HR8E with MPU=6050 redirecting the I2C to the serial port.
+
+![receiver-with-gyroscope2](hr8E_MPU6050.jpg)
 
 ### Transmitter setup
 
