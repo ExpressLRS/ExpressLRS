@@ -169,7 +169,7 @@ class SerialPanel extends LitElement {
     }
 
     _displayPortSelected() {
-        return this.serial1Protocol === 8 || this.serial2Protocol === 9
+        return this.serial1Protocol === 8 || this.serial2Protocol === 10
     }
 
     _configChanged() {
