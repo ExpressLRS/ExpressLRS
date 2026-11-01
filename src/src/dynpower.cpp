@@ -1,4 +1,3 @@
-
 #include <dynpower.h>
 
 #include "OTA.h"
@@ -27,6 +26,24 @@
 // SNR-based increment defines
 #define DYNPOWER_LQ_THRESH_DN 95          // Min LQ for lowering power using SNR-based power lowering
 constexpr int8_t SNR1dB = SNR_SCALE(1.0); // SNR 1dB scaled
+
+static uint8_t DynamicPower_GetMinFloor()
+{
+    uint8_t floor = config.GetMinPower();
+    if (floor < (uint8_t)POWERMGNT::getMinPower())
+    {
+        floor = (uint8_t)POWERMGNT::getMinPower();
+    }
+    if (floor > (uint8_t)config.GetPower())
+    {
+        floor = (uint8_t)config.GetPower();
+    }
+    if (floor > (uint8_t)POWERMGNT::getMaxPower())
+    {
+        floor = (uint8_t)POWERMGNT::getMaxPower();
+    }
+    return floor;
+}
 
 template<uint8_t K, uint8_t SHIFT>
 class MovingAvg
@@ -97,6 +114,14 @@ void DynamicPower_Update(uint32_t now)
       DynamicPower_SetToConfigPower();
     }
     return;
+  }
+
+  // keep the configured floor in effect even when dynamic is active
+  const uint8_t minFloor = DynamicPower_GetMinFloor();
+  if ((uint8_t)POWERMGNT::currPower() < minFloor)
+  {
+      POWERMGNT::setPower((PowerLevels_e)minFloor);
+      return;
   }
 
   //
@@ -183,7 +208,10 @@ void DynamicPower_Update(uint32_t now)
       else if (avg_rssi > rssi_dec_threshold && lq_avg >= DYNPOWER_LQ_THRESH_DN)
       {
         DBGVLN("-power (rssi)"); // Verbose because this spams when idle
-        POWERMGNT::decPower();
+        if (POWERMGNT::currPower() > minFloor)
+        {
+          POWERMGNT::decPower();
+        }
       }
     }
   } // ^^ if RSSI-based
@@ -228,11 +256,14 @@ void DynamicPower_Update(uint32_t now)
     // Increase the power for each (X) SNR below the threshold
     if (snrScaled >= snr_stat_threshold_dn && lq_avg >= DYNPOWER_LQ_THRESH_DN)
     {
-      if(POWERMGNT::currPower() > MinPower) // prevent spamming when idle
+      if(POWERMGNT::currPower() > minFloor)
       {
         DBGLN("-power (snr) %d >= %d", snrScaled, snr_stat_threshold_dn);
       }
-      POWERMGNT::decPower();
+      if (POWERMGNT::currPower() > minFloor)
+      {
+        POWERMGNT::decPower();
+      }
     }
 
     // use RSSI_DN threshold to make sure the signal is still in good range but with some distance for SNR to exhibit a fair distribution
@@ -263,7 +294,7 @@ void DynamicPower_Update(uint32_t now)
 /***
  * @brief: Set power to configured power or update power to match the current TX power
  * @param initialize: Set to true if calling from setup() to force even PWR_MATCH_TX to default power
-*/
+ */
 void DynamicPower_UpdateRx(bool initialize)
 {
   if (config.GetPower() != PWR_MATCH_TX)
@@ -288,3 +319,4 @@ void DynamicPower_UpdateRx(bool initialize)
 }
 
 #endif // TARGET_RX
+

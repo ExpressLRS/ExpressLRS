@@ -43,7 +43,7 @@ void BindphraseConfigurable::SetBindPhrase(uint8_t *phrase, size_t phraseLen)
 
 #if defined(TARGET_TX)
 
-#define ALL_CHANGED         (EVENT_CONFIG_MODEL_CHANGED | EVENT_CONFIG_VTX_CHANGED | EVENT_CONFIG_MAIN_CHANGED | EVENT_CONFIG_FAN_CHANGED | EVENT_CONFIG_MOTION_CHANGED | EVENT_CONFIG_BUTTON_CHANGED | EVENT_CONFIG_VERSION_CHANGED)
+#define ALL_CHANGED         (EVENT_CONFIG_MODEL_CHANGED | EVENT_CONFIG_VTX_CHANGED | EVENT_CONFIG_MAIN_CHANGED | EVENT_CONFIG_FAN_CHANGED | EVENT_CONFIG_MOTION_CHANGED | EVENT_CONFIG_BUTTON_CHANGED)
 
 // Really awful but safe(?) type punning of model_config_t/v6_model_config_t to and from uint32_t
 template<class T> static const void U32_to_Model(uint32_t const u32, T * const model)
@@ -219,6 +219,12 @@ void TxConfig::Load()
         m_config.fanMode = value;
     if (nvs_get_u32(handle, "motion", &value) == ESP_OK)
         m_config.motionMode = value;
+
+    // dynamic power floor
+    if (nvs_get_u8(handle, "txdynmin", &value8) == ESP_OK)
+        m_config.minPower = value8;
+    else
+        m_config.minPower = POWERMGNT::getMinPower();
 
     if (version >= 6)
     {
@@ -467,6 +473,7 @@ TxConfig::Commit()
         nvs_set_u8(handle, "dvraux", m_config.dvrAux);
         nvs_set_u8(handle, "dvrstartdelay", m_config.dvrStartDelay);
         nvs_set_u8(handle, "dvrstopdelay", m_config.dvrStopDelay);
+        nvs_set_u8(handle, "txdynmin", m_config.minPower);
     }
     if (m_modified & EVENT_CONFIG_BUTTON_CHANGED)
     {
@@ -516,6 +523,17 @@ TxConfig::SetPower(uint8_t power)
     {
         m_model->power = power;
         m_modified |= EVENT_CONFIG_MODEL_CHANGED;
+    }
+}
+
+void
+TxConfig::SetMinPower(uint8_t minPower)
+{
+    uint8_t clamped = constrain(minPower, POWERMGNT::getMinPower(), POWERMGNT::getMaxPower());
+    if (GetMinPower() != clamped)
+    {
+        m_config.minPower = clamped;
+        m_modified |= EVENT_CONFIG_MAIN_CHANGED;
     }
 }
 
@@ -740,6 +758,7 @@ TxConfig::SetDefaults(bool commit)
 
     m_config.version = TX_CONFIG_VERSION | TX_CONFIG_MAGIC;
     m_config.powerFanThreshold = PWR_250mW;
+    m_config.minPower = POWERMGNT::getMinPower();
     m_modified = ALL_CHANGED;
 
     // Set defaults for button 1
@@ -828,7 +847,7 @@ void TxConfig::SetUID(uint8_t uid[UID_LEN])
 
 #endif
 
-/////////////////////////////////////////////////////
+////////////////////////////////////////////////////
 
 #if defined(TARGET_RX)
 
@@ -1470,3 +1489,4 @@ void RxConfig::ReturnLoan()
 }
 
 #endif
+
