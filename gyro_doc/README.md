@@ -308,7 +308,7 @@ The gyro uses two configurable PIDs, one for rate, one for all angular modes (Le
     - do "file"-> "Clone Repository"
     - in the URL tab, type "https://github.com/frankiearzu/ExpressLRS"
     - It will download into a folder like this "C:\Users\frank\Documents\GitHub\ExpressLRS".
-    - You can either choose my latest code by switching to the "gyro-dev" branch, or from the history, you can check out a tested/flow version using a "tag", tags will looks like "v1.11-Stable", by chossing on the left pannel "history", then right click on the tag you want, and "check out tag" (the warning that you are checking out a headless tag/branch is ok) ![github-tag](github_desktop_tag.jpg)
+    - You can either choose my latest code by switching to the "gyro-4.1-merge" branch, or from the history, you can check out a tested/flow version using a "tag", tags will looks like "v1.11-Stable", by chossing on the left pannel "history", then right click on the tag you want, and "check out tag" (the warning that you are checking out a headless tag/branch is ok) ![github-tag](github_desktop_tag.jpg)
 
 
 2. Start ELRS Configurator, and choose to do a "local" build. Select the non-gyro version of your RX to do the first buid. This will create the folder "src/hardware" and all official ELRS RX files.
