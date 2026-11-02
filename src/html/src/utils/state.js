@@ -113,4 +113,16 @@ export async function saveOptionsAndConfig(changes, successCB) {
     })
 }
 
+export function radioFailed() {
+    return !!elrsState.settings?.radio_failed
+}
+
+export function hardwareUndefined() {
+    return !!elrsState.settings?.hardware_undefined
+}
+
+export function hardwareIssue() {
+    return radioFailed() || hardwareUndefined()
+}
+
 export let elrsState = new ElrsState()

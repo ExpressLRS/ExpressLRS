@@ -4,6 +4,7 @@ import {loadJSON, postWithFeedback, saveJSONWithReboot} from '../utils/feedback.
 import '../components/filedrag.js'
 import HARDWARE_SCHEMA from '../utils/hardware-schema.js'
 import {_arrayInput, _floatInput, _intInput, _uintInput} from "../utils/libs.js"
+import {hardwareUndefined} from "../utils/state.js";
 
 @customElement('hardware-layout')
 export class HardwareLayout extends LitElement {
@@ -107,7 +108,7 @@ export class HardwareLayout extends LitElement {
     }
 
     pageReady() {
-        if (!this.loadPromise) {
+        if (!this.loadPromise && !hardwareUndefined()) {
             this.loadPromise = this.updateComplete
                 .then(() => loadJSON('/hardware.json', 'Failed to load hardware configuration.'))
                 .then((data) => {
@@ -198,8 +199,7 @@ export class HardwareLayout extends LitElement {
     }
 
     _isSaveDisabled() {
-        if (this.loadedHardwareJson === null) return true
-        return this.currentHardwareJson === this.loadedHardwareJson
+        return this.currentHardwareJson === (this.loadedHardwareJson ?? '{}')
     }
 
     checkChanged() {

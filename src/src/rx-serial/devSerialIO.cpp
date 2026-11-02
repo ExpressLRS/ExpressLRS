@@ -269,13 +269,13 @@ void sendImmediateRC()
 void handleSerialIO()
 {
     // still get telemetry and send link stats if there's no model match
-    if (*(serial0.io) != nullptr)
+    if (serial0.io != nullptr && *(serial0.io) != nullptr)
     {
         (*(serial0.io))->processSerialInput();
         (*(serial0.io))->sendQueuedData((*(serial0.io))->getMaxSerialWriteSize());
     }
 #if defined(PLATFORM_ESP32)
-    if (*(serial1.io) != nullptr)
+    if (serial1.io != nullptr && *(serial1.io) != nullptr)
     {
         (*(serial1.io))->processSerialInput();
         (*(serial1.io))->sendQueuedData((*(serial1.io))->getMaxSerialWriteSize());

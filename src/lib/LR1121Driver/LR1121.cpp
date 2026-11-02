@@ -111,14 +111,16 @@ bool LR1121Driver::Begin(uint32_t minimumFrequency, uint32_t maximumFrequency)
     hal.reset();
 
     // Validate that the LR1121(s) are working.
-    if (!CheckVersion(SX12XX_Radio_1)) return false;
-    if (GPIO_PIN_NSS_2 != UNDEF_PIN)
+    if (!CheckVersion(SX12XX_Radio_1))
     {
-        if (!CheckVersion(SX12XX_Radio_2)) return false;
+        hal.end();
+        return false;
     }
-
-    hal.IsrCallback_1 = &LR1121Driver::IsrCallback_1;
-    hal.IsrCallback_2 = &LR1121Driver::IsrCallback_2;
+    if (GPIO_PIN_NSS_2 != UNDEF_PIN && !CheckVersion(SX12XX_Radio_2))
+    {
+        hal.end();
+        return false;
+    }
 
     //Clear Errors
     hal.WriteCommand(LR11XX_SYSTEM_CLEAR_ERRORS_OC, SX12XX_Radio_All); // Remove later?  Might not be required???
@@ -167,6 +169,9 @@ bool LR1121Driver::Begin(uint32_t minimumFrequency, uint32_t maximumFrequency)
     CalImagebuf[1] = 1 + ((maximumFrequency / 1000000 ) + 1) / 4;   // Freq2 = ceil( (fmax_mhz + 1)/4)
     hal.WriteCommand(LR11XX_SYSTEM_CALIBRATE_IMAGE_OC, CalImagebuf, sizeof(CalImagebuf), SX12XX_Radio_All);
 
+    hal.IsrCallback_1 = &LR1121Driver::IsrCallback_1;
+    hal.IsrCallback_2 = &LR1121Driver::IsrCallback_2;
+    hal.enableInterrupts();
     return true;
 }
 
