@@ -119,9 +119,10 @@ static void send_telemetry()
     // Attitude
     CRSF_MK_FRAME_T(crsf_sensor_attitude_t)
     crsfAttitude = {0};
-    crsfAttitude.p.pitch = htobe16(ahrs.angle_rpy[GYRO_AXIS_PITCH] * 10000);
-    crsfAttitude.p.roll = htobe16(ahrs.angle_rpy[GYRO_AXIS_ROLL] * 10000);
-    crsfAttitude.p.yaw = htobe16(ahrs.angle_rpy[GYRO_AXIS_YAW] * 10000);
+    // Convert to signed first: float -> uint16_t loses negative angles on ESP32-C3.
+    crsfAttitude.p.pitch = htobe16((int16_t)(ahrs.angle_rpy[GYRO_AXIS_PITCH] * 10000));
+    crsfAttitude.p.roll = htobe16((int16_t)(ahrs.angle_rpy[GYRO_AXIS_ROLL] * 10000));
+    crsfAttitude.p.yaw = htobe16((int16_t)(ahrs.angle_rpy[GYRO_AXIS_YAW] * 10000));
 
     crsfRouter.SetHeaderAndCrc((crsf_header_t *)&crsfAttitude, CRSF_FRAMETYPE_ATTITUDE, CRSF_FRAME_SIZE(sizeof(crsf_sensor_attitude_t)));
     crsfRouter.deliverMessageTo(CRSF_ADDRESS_RADIO_TRANSMITTER, &crsfAttitude.h);
