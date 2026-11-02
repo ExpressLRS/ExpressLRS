@@ -37,6 +37,7 @@ static MedianAvgFilter<voltageAnalogStorage_t, VBAT_SMOOTH_CNT> voltageSmooth[VO
 static bool voltageSourceConnected[VOLTAGE_SOURCE_COUNT];
 static uint8_t vbatUpdateScale;
 static bool calibrationActive;
+uint32_t vbatMilliVolts;
 
 static const voltageSource_t voltageSources[VOLTAGE_SOURCE_COUNT] = {
     {HARDWARE_vbat, HARDWARE_vbat_offset, HARDWARE_vbat_scale, HARDWARE_vbat_atten, HARDWARE_vbat_noreading},
@@ -170,6 +171,8 @@ static void reportVbat()
             }
         }
     }
+
+    vbatMilliVolts = sourceMilliVolts[0] > 0 ? sourceMilliVolts[0] : 0;
 
     uint32_t now = millis();
 

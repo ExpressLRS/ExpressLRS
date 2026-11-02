@@ -17,6 +17,7 @@ CONSEQUENTIAL DAMAGES, FOR ANY REASON WHATSOEVER.
 #include "SerialDisplayport.h"
 #include "OTA.h"
 #include "options.h"
+#include "devAnalogVbat.h"
 
 void SerialDisplayport::send(uint8_t messageID, void * payload, uint8_t size, Stream * _stream)
 {
@@ -58,6 +59,18 @@ uint32_t SerialDisplayport::sendRCFrame(bool frameAvailable, bool frameMissed, u
 
     // Send extended status MSP
     send(MSP_STATUS_EX, &status, sizeof(status), _outputPort);
+
+    // Send battery voltage MSP if an analog Vbat sensor has a reading
+    if (vbatMilliVolts > 0)
+    {
+        uint16_t centiVolts = vbatMilliVolts / 10;
+        uint8_t battery[11] = {0};
+        battery[0] = vbatMilliVolts / 4300 + 1;  // cell count, auto-detected at 4.3V/cell like Betaflight
+        battery[3] = vbatMilliVolts / 100;       // voltage, 0.1V
+        battery[9] = centiVolts & 0xFF;          // voltage, 0.01V (little endian)
+        battery[10] = centiVolts >> 8;
+        send(MSP_BATTERY_STATE, battery, sizeof(battery), _outputPort);
+    }
 
     return MSP_MSG_PERIOD_MS;   // Send MSP msgs to DJI at 10Hz
 }
