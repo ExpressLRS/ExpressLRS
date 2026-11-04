@@ -3,8 +3,26 @@
 #include <cstring>
 #include <SX1280_Regs.h>
 #include <FHSS.h>
+#include "options.h"
 #include <unity.h>
 #include <set>
+
+// firmwareOptions.domain comes from options.json (writable via the WiFi UI) and is not range checked
+void test_fhss_invalid_domain_uses_default(void)
+{
+    firmwareOptions.domain = 0;
+    FHSSrandomiseFHSSsequence(0x01020304L);
+    const fhss_config_t *defaultDomain = FHSSconfig;
+
+    for (const unsigned domain : {50u, 255u})
+    {
+        firmwareOptions.domain = domain;
+        FHSSrandomiseFHSSsequence(0x01020304L);
+        TEST_ASSERT_EQUAL_PTR(defaultDomain, FHSSconfig);
+        TEST_ASSERT_EQUAL_STRING(defaultDomain->domain, FHSSgetRegulatoryDomain());
+    }
+    firmwareOptions.domain = 0;
+}
 
 void test_fhss_first(void)
 {
@@ -146,6 +164,7 @@ int main(int argc, char **argv)
 {
     UNITY_BEGIN();
     RUN_TEST(test_fhss_first);
+    RUN_TEST(test_fhss_invalid_domain_uses_default);
     RUN_TEST(test_fhss_assignment);
     RUN_TEST(test_fhss_unique);
     RUN_TEST(test_fhss_same);
