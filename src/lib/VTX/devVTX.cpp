@@ -52,6 +52,11 @@ void VtxPitmodeSwitchUpdate()
 
     uint8_t auxInverted = config.GetVtxPitmode() % 2;
     uint8_t auxNumber = (config.GetVtxPitmode() / 2) + 3;
+    // the pitmode setting can be set to any value via WiFi import, ignore it if it doesn't map to a channel
+    if (auxNumber >= CRSF_NUM_CHANNELS)
+    {
+        return;
+    }
     uint8_t newPitmodeAuxState = CRSF_to_BIT(ChannelData[auxNumber]) ^ auxInverted;
 
     if (pitmodeAuxState == PITMODE_NOT_INITIALISED)
