@@ -667,7 +667,11 @@ static void ImportConfiguration(AsyncWebServerRequest *request, JsonVariant &jso
   {
     for(JsonPair kv : json["model"].as<JsonObject>())
     {
-      const uint8_t model = atoi(kv.key().c_str());
+      const int model = atoi(kv.key().c_str());
+      if (model < 0 || model >= CONFIG_TX_MODEL_CNT)
+      {
+        continue; // otherwise the settings would be applied to the current model
+      }
       const auto modelJson = kv.value().as<JsonObject>();
 
       config.SetModelId(model);
