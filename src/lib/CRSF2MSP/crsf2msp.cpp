@@ -12,6 +12,12 @@ void CROSSFIRE2MSP::reset()
 
 void CROSSFIRE2MSP::parse(const uint8_t *data, const std::function<void(uint8_t *, uint32_t)> &processMSP)
 {
+    // The frame must at least contain the extended header and the MSP status byte
+    if (data[CRSF_FRAME_PAYLOAD_LEN_IDX] < CRSF_EXT_FRAME_PAYLOAD_LEN_SIZE_OFFSET)
+    {
+        reset();
+        return;
+    }
     const uint8_t CRSFpayloadLen = data[CRSF_FRAME_PAYLOAD_LEN_IDX] - CRSF_EXT_FRAME_PAYLOAD_LEN_SIZE_OFFSET;
     const bool error = isError(data);
     const bool newFrame = isNewFrame(data);
@@ -38,8 +44,21 @@ void CROSSFIRE2MSP::parse(const uint8_t *data, const std::function<void(uint8_t 
 
     if (newFrame) // If it's a new frame then out a header on first
     {
+        // getVersion() reads the first payload byte to detect V1 JUMBO
+        if (CRSFpayloadLen < 1)
+        {
+            reset();
+            return;
+        }
         idx = 3; // skip the header start wiring at offset 3.
         MSPvers = getVersion(data);
+        // The payload length is read from the MSP header: V1 [len], V1 JUMBO [0xff][cmd][len lo][len hi], V2 [flags][func lo][func hi][len lo][len hi]
+        const uint8_t minHeaderLen = MSPvers == MSP_FRAME_V2 ? 5 : MSPvers == MSP_FRAME_V1_JUMBO ? 4 : 1;
+        if (CRSFpayloadLen < minHeaderLen)
+        {
+            reset();
+            return;
+        }
         src = data[CRSF_MSP_SRC_OFFSET];
         dest = data[CRSF_MSP_DEST_OFFSET];
         outBuffer[0] = '$';
