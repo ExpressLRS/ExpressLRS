@@ -80,6 +80,9 @@ static SerialGPS *gps;
 
 static void setupDriver(int8_t txPin = 4)
 {
+    // a failed assertion skips teardownDriver(), make sure the router no longer references the old connector
+    if (connector)
+        crsfRouter.removeConnector(connector);
     delete gps;
     delete port;
     delete connector;
@@ -281,6 +284,24 @@ static void test_nmea_bad_checksum_ignored(void)
     teardownDriver();
 }
 
+static void test_nmea_checksum_must_be_two_hex_digits(void)
+{
+    setupDriver();
+    // "*0XX\n": the '*' is still 5 bytes from the end, but the checksum field is 3 hex digits
+    // and there is no \r. strtol() would read all three digits and accept the sentence.
+    const std::string body = "GPGGA,123519.00,4807.038,N,01131.000,E,1,08,0.9,545.4,M,46.9,M,,";
+    uint8_t csum = 0;
+    for (const char c : body)
+        csum ^= (uint8_t)c;
+    char tail[8];
+    snprintf(tail, sizeof(tail), "*0%02X\n", csum);
+    port->feed("$" + body + tail);
+    pump();
+
+    TEST_ASSERT_EQUAL_UINT32(0, connector->frames.size());
+    teardownDriver();
+}
+
 // ---------------------------------------------------------------------------
 // UBX
 // ---------------------------------------------------------------------------
@@ -360,6 +381,20 @@ static void test_ubx_oversized_message_does_not_desync(void)
     setupDriver();
     // MON-VER is far larger than the driver's buffer, it has to be consumed rather than skipped
     port->feed(ubx(0x0a, 0x04, std::vector<uint8_t>(220, 0x41)));
+    port->feed(ubx(0x01, 0x07, navPvt(3, 0x01, 11, REF_LON, REF_LAT, 545400, 2833, 5470000, 0x03)));
+    pump();
+
+    const uint8_t *p = connector->lastPayload(CRSF_FRAMETYPE_GPS);
+    TEST_ASSERT_NOT_NULL(p);
+    TEST_ASSERT_EQUAL_INT32(REF_LAT, be32(p));
+    teardownDriver();
+}
+
+static void test_ubx_message_longer_than_255_does_not_desync(void)
+{
+    setupDriver();
+    // UBX lengths go up to 512 here, the payload byte counter must not wrap at 256
+    port->feed(ubx(0x0a, 0x04, std::vector<uint8_t>(300, 0x41)));
     port->feed(ubx(0x01, 0x07, navPvt(3, 0x01, 11, REF_LON, REF_LAT, 545400, 2833, 5470000, 0x03)));
     pump();
 
@@ -1001,11 +1036,13 @@ int main(int argc, char **argv)
     RUN_TEST(test_nmea_no_fix_zeroes_position);
     RUN_TEST(test_nmea_time);
     RUN_TEST(test_nmea_bad_checksum_ignored);
+    RUN_TEST(test_nmea_checksum_must_be_two_hex_digits);
     RUN_TEST(test_ubx_navpvt_position);
     RUN_TEST(test_ubx_navpvt_negative_heading_wraps);
     RUN_TEST(test_ubx_navpvt_no_fix);
     RUN_TEST(test_ubx_bad_checksum_ignored);
     RUN_TEST(test_ubx_oversized_message_does_not_desync);
+    RUN_TEST(test_ubx_message_longer_than_255_does_not_desync);
     RUN_TEST(test_ubx_and_nmea_interleaved);
     RUN_TEST(test_nothing_is_sent_before_lock);
     RUN_TEST(test_probe_sweeps_baud_rates);
