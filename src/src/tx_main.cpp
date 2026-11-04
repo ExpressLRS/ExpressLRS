@@ -1535,7 +1535,10 @@ void loop()
           }
         }
       }
-      else if (validLength && CRSFinBuffer[CRSF_TELEMETRY_LENGTH_INDEX] >= 2) // a CRSF frame has at least a type and crc
+      // a CRSF frame has at least a type and crc. RC channels only come from the handset, TXModuleEndpoint would
+      // take channels received from the RX (or anything sending on the downlink) as stick input
+      else if (validLength && CRSFinBuffer[CRSF_TELEMETRY_LENGTH_INDEX] >= 2
+               && ((crsf_header_t *)CRSFinBuffer)->type != CRSF_FRAMETYPE_RC_CHANNELS_PACKED)
       {
         // Send all other tlm to CRSF router
         crsfRouter.processMessage(&otaConnector, (crsf_header_t *)CRSFinBuffer);
