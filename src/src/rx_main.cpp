@@ -1230,7 +1230,8 @@ bool ICACHE_RAM_ATTR RXdoneISR(SX12xxDriverCommon::rx_status const status)
     {
         // Leave continuous RX now if the next slot is telemetry. A TX started straight from RX
         // occasionally ends after ~300 us with nothing sent (seen on LR1121, ~0.4 % of telemetry).
-        if (connectionState == connected && ExpressLRS_currTlmDenom != 1 && ((OtaNonce + 1) % ExpressLRS_currTlmDenom) == 0 && !config.GetForceTlmOff())
+        // Not with LBT: its channel check before the TX needs the radio in RX.
+        if (connectionState == connected && ExpressLRS_currTlmDenom != 1 && ((OtaNonce + 1) % ExpressLRS_currTlmDenom) == 0 && !config.GetForceTlmOff() && !LbtIsEnabled)
         {
             Radio.SetTxIdleMode();
             tlmIdleSet = true;
