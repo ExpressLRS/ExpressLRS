@@ -6,19 +6,19 @@
  *   - v8 and v9 structs are the same size
  *   - minPower in v9 sits exactly where _pad9_11[0] was in v8
  *   - all other fields are at identical byte offsets
- *   - copying v8 -> v9 preserves all user data except minPower (which is
- *     intentionally reset to the hardware minimum on upgrade; see the
- *     INTERIM-BUILD NOTE in config.cpp / config_legacy.h)
+ *   - copying v8 -> v9 preserves all user data; minPower is always reset
+ *     to the hardware minimum (byte 9 is never read — see the NOTE in
+ *     UpgradeEepromV8ToV9 for why interim-build floors are discarded)
  *   - SetModelId re-clamps a global floor that is now above the newly active
  *     model's per-model max, and marks MAIN_CHANGED
  *   - SetPower/SetMinPower keep minPower <= configured max in both
  *     directions
  *
- * The test includes the real config_legacy.h / config.h headers so the
- * static_assert layout checks and the offsetof checks are exercised
- * directly, and stubs the minimal hardware surface needed to compile
- * config.cpp's logic patterns (POWERMGNT range, constrain) without pulling
- * in the full TX build.
+ * NOTE: this test reimplements the field-copy in a local helper; it does
+ * NOT call the production TxConfig::UpgradeEepromV8ToV9() (which needs a
+ * live ELRS_EEPROM). It therefore proves layout + ordering logic, not the
+ * production migration path. The firmware builds (ESP32 + ESP8285) prove
+ * that the production code compiles, including the static_asserts.
  */
 #include <cstdint>
 #include <cstddef>
@@ -149,15 +149,9 @@ static tx_config_t upgrade_v8_to_v9(const v8_tx_config_t &v8)
     v9.dvrAux = v8.dvrAux;
     memcpy(v9.buttonColors, v8.buttonColors, sizeof(v9.buttonColors));
     memcpy(v9.model_config, v8.model_config, sizeof(v9.model_config));
-    // Interim-build preservation: keep byte 9 only if it is a valid floor,
-    // otherwise reset to the hardware minimum (matches UpgradeEepromV8ToV9).
-    {
-        uint8_t interim = v8._pad9_11[0];
-        v9.minPower = (interim >= POWERMGNT::getMinPower() &&
-                       interim <= POWERMGNT::getMaxPower())
-                          ? interim
-                          : POWERMGNT::getMinPower();
-    }
+    // Byte 9 is never read as a saved floor (see NOTE in UpgradeEepromV8ToV9).
+    (void)v8; // v8._pad9_11 intentionally unused
+    v9.minPower = POWERMGNT::getMinPower();
     return v9;
 }
 
@@ -218,18 +212,14 @@ int main()
         printf("[PASS] migration: user data preserved, out-of-range floor reset\n");
     }
 
-    // --- 2b. interim-build preservation: valid pad byte kept, garbage reset --
+    // --- 2b. byte 9 is ALWAYS discarded (even when it holds a plausible
+    // floor), so garbage can never be resurrected ---------------------------
     {
-        // Genuine v8: padding usually 0x00 from the SetDefaults memset. With a
-        // stub floor of PWR_10mW (0), a stored 0x00 is indistinguishable from
-        // a real floor of 10mW — either way the value equals getMinPower(),
-        // so behavior matches. Use the in-range case to prove preservation,
-        // and an out-of-range case (0xFF) to prove garbage is discarded.
         v8_tx_config_t v8{};
-        v8._pad9_11[0] = PWR_500mW; // interim build stored a real 500mW floor
+        v8._pad9_11[0] = PWR_500mW; // looks like a deliberate interim floor
         tx_config_t v9 = upgrade_v8_to_v9(v8);
-        assert(v9.minPower == PWR_500mW);
-        printf("[PASS] migration: interim-build valid floor preserved\n");
+        assert(v9.minPower == POWERMGNT::getMinPower());
+        printf("[PASS] migration: plausible interim floor intentionally discarded\n");
 
         v8._pad9_11[0] = 0xFF; // genuine-v8 garbage outside hardware range
         v9 = upgrade_v8_to_v9(v8);

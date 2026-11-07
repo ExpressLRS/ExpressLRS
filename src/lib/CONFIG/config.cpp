@@ -43,7 +43,7 @@ void BindphraseConfigurable::SetBindPhrase(uint8_t *phrase, size_t phraseLen)
 
 #if defined(TARGET_TX)
 
-#define ALL_CHANGED         (EVENT_CONFIG_MODEL_CHANGED | EVENT_CONFIG_VTX_CHANGED | EVENT_CONFIG_MAIN_CHANGED | EVENT_CONFIG_FAN_CHANGED | EVENT_CONFIG_MOTION_CHANGED | EVENT_CONFIG_BUTTON_CHANGED)
+#define ALL_CHANGED         (EVENT_CONFIG_MODEL_CHANGED | EVENT_CONFIG_VTX_CHANGED | EVENT_CONFIG_MAIN_CHANGED | EVENT_CONFIG_FAN_CHANGED | EVENT_CONFIG_MOTION_CHANGED | EVENT_CONFIG_BUTTON_CHANGED | EVENT_CONFIG_VERSION_CHANGED)
 
 // Really awful but safe(?) type punning of model_config_t/v6_model_config_t to and from uint32_t
 template<class T> static const void U32_to_Model(uint32_t const u32, T * const model)
@@ -478,8 +478,8 @@ void TxConfig::UpgradeEepromV8ToV9()
     // V9 only adds minPower, which reuses one byte of V8 struct padding
     // (offset 9: padding in V8 -> minPower in V9). All other fields are at the
     // same byte offsets, so the EEPROM image is byte-compatible apart from that
-    // single byte. Do NOT read byte 9 from a V8 image as minPower - it may be
-    // stack garbage. Default it to POWERMGNT::getMinPower() like SetDefaults.
+    // single byte. Byte 9 is never read as a saved floor (see NOTE below —
+    // genuine-v8 garbage and interim-build floors are indistinguishable).
     //
     // Precondition: m_config already holds defaults (from SetDefaults(false) in
     // Load), but the per-field copies below overwrite with the actual V8 data.
@@ -521,35 +521,19 @@ void TxConfig::UpgradeEepromV8ToV9()
     // model_config structs have identical bit layouts; copy byte-for-byte
     memcpy(m_config.model_config, v8Config.model_config, sizeof(m_config.model_config));
 
-    // New in V9: default to the hardware floor (safe; matches ESP32 NVS path
-    // and SetDefaults).
+    // New in V9: reset to the hardware floor. Genuine v8 EEPROM images hold
+    // undefined padding garbage at byte 9, so it is never read as minPower.
     //
-    // INTERIM-BUILD PRESERVATION: the pre-release commits on this branch
-    // (d13aafbe and descendants) stored a real minPower floor in this very
-    // padding byte while still labelling the image TX_CONFIG_VERSION 8.
-    // A genuine v8 image holds undefined padding garbage there, but what
-    // old firmware actually writes is usually 0x00 (m_config is zeroed in
-    // SetDefaults and the struct is only partially overwritten onward).
-    // We therefore preserve the byte when it is provably a *valid* floor —
-    // i.e. within the hardware range [MinPower, MaxPower], the same range
-    // the interim code's SetMinPower clamped into — and reset to the
-    // hardware minimum otherwise. A false positive (garbage landing
-    // in-range) is benign: the value is a legal power level the user can
-    // re-set, and the per-model clamps in SetModelId / SetPower /
-    // DynamicPower_GetMinFloor keep it from ever exceeding the active
-    // model's max or being emitted as-is.
-    {
-        uint8_t interim = v8Config._pad9_11[0];
-        if (interim >= POWERMGNT::getMinPower() &&
-            interim <= POWERMGNT::getMaxPower())
-        {
-            m_config.minPower = interim;
-        }
-        else
-        {
-            m_config.minPower = POWERMGNT::getMinPower();
-        }
-    }
+    // NOTE: interim pre-release builds on this branch stored a real floor in
+    // that padding byte while labelling the image TX_CONFIG_VERSION 8. Any
+    // such floor is intentionally lost on upgrade. Distinguishing an interim
+    // byte from garbage is impossible (a garbage value in [MinPower,
+    // MaxPower] is indistinguishable from a deliberately saved floor), and
+    // resurrecting garbage could leave Dynamic Power transmitting at an
+    // unintended high minimum until the user notices. Resetting is safe: the
+    // user simply re-sets the floor once, and the per-model clamps in
+    // SetModelId / SetPower / DynamicPower_GetMinFloor are unaffected.
+    m_config.minPower = POWERMGNT::getMinPower();
 
     m_modified = ALL_CHANGED;
 
