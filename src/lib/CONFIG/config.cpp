@@ -282,8 +282,9 @@ void TxConfig::Load()
                 nvs_set_u32(handle, model, Model_to_U32(newModel));
             }
 
-            if (version == TX_CONFIG_VERSION)
+            if (version >= 8)
             {
+                // v8 and v9 model format are identical (minPower is in m_config, not per-model)
                 U32_to_Model(value, &m_config.model_config[i]);
             }
 
@@ -294,6 +295,21 @@ void TxConfig::Load()
             }
         }
     } // for each model
+
+    // Sanitize stale or out-of-range minPower (e.g. a test build wrote an
+    // invalid value, or hardware limits changed between flashes). Persist the
+    // sanitized value so the Lua selector never displays an impossible index.
+    {
+        uint8_t hi = std::min((uint8_t)POWERMGNT::getMaxPower(), GetPower());
+        if (hi < (uint8_t)POWERMGNT::getMinPower())
+            hi = (uint8_t)POWERMGNT::getMinPower();
+        uint8_t clamped = constrain(m_config.minPower, POWERMGNT::getMinPower(), hi);
+        if (clamped != m_config.minPower)
+        {
+            m_config.minPower = clamped;
+            m_modified |= EVENT_CONFIG_MAIN_CHANGED;
+        }
+    }
 
     if (version != TX_CONFIG_VERSION)
     {
@@ -312,9 +328,22 @@ void TxConfig::Load()
         version = m_config.version & ~CONFIG_MAGIC_MASK;
     DBGLN("Config version %u", version);
 
-    // If version is current, all done
+    // If version is current, sanitize minPower (may be stale/garbage if a test
+    // build or a hardware change invalidated it) and return.
     if (version == TX_CONFIG_VERSION)
+    {
+        uint8_t hi = std::min((uint8_t)POWERMGNT::getMaxPower(), GetPower());
+        if (hi < (uint8_t)POWERMGNT::getMinPower())
+            hi = (uint8_t)POWERMGNT::getMinPower();
+        uint8_t clamped = constrain(m_config.minPower, POWERMGNT::getMinPower(), hi);
+        if (clamped != m_config.minPower)
+        {
+            m_config.minPower = clamped;
+            m_modified |= EVENT_CONFIG_MAIN_CHANGED;
+            Commit();
+        }
         return;
+    }
 
     // Can't upgrade from version <5, or when flashing a previous version, just use defaults.
     if (version < 5 || version > TX_CONFIG_VERSION)
@@ -341,6 +370,12 @@ void TxConfig::Load()
     if (version == 7)
     {
         UpgradeEepromV7ToV8();
+        version = 8;
+    }
+
+    if (version == 8)
+    {
+        UpgradeEepromV8ToV9();
     }
 }
 
@@ -424,6 +459,53 @@ void TxConfig::UpgradeEepromV7ToV8()
 
     // Full Commit now
     m_config.version = 8U | TX_CONFIG_MAGIC;
+    Commit();
+}
+
+void TxConfig::UpgradeEepromV8ToV9()
+{
+    // V9 only adds minPower, which reuses one byte of V8 struct padding
+    // (offset 9: padding in V8 -> minPower in V9). All other fields are at the
+    // same byte offsets, so the EEPROM image is byte-compatible apart from that
+    // single byte. Do NOT read byte 9 from a V8 image as minPower - it may be
+    // stack garbage. Default it to POWERMGNT::getMinPower() like SetDefaults.
+    //
+    // Precondition: m_config already holds defaults (from SetDefaults(false) in
+    // Load), but the per-field copies below overwrite with the actual V8 data.
+    v8_tx_config_t v8Config;
+    m_eeprom.Get(0, v8Config);
+
+    // v8 model_config entries are already in the current (V8) format, so they
+    // can be copied verbatim (v8_tx_config_t models are the same bit layout as
+    // model_config_t in tx_config_t).
+    static_assert(sizeof(v8Config.model_config) == sizeof(m_config.model_config),
+                  "v8/v9 model_config array sizes must match");
+    static_assert(sizeof(v8Config) == sizeof(m_config),
+                  "v8 and v9 tx_config sizes must match (minPower reuses padding)");
+    // Field copies (same members exist in both)
+    m_config.vtxBand = v8Config.vtxBand;
+    m_config.vtxChannel = v8Config.vtxChannel;
+    m_config.vtxPower = v8Config.vtxPower;
+    m_config.vtxPitmode = v8Config.vtxPitmode;
+    m_config.powerFanThreshold = v8Config.powerFanThreshold;
+    m_config.fanMode = v8Config.fanMode;
+    m_config.motionMode = v8Config.motionMode;
+    m_config.dvrStopDelay = v8Config.dvrStopDelay;
+    m_config.backpackDisable = v8Config.backpackDisable;
+    m_config.backpackTlmMode = v8Config.backpackTlmMode;
+    m_config.dvrStartDelay = v8Config.dvrStartDelay;
+    m_config.dvrAux = v8Config.dvrAux;
+    memcpy(m_config.buttonColors, v8Config.buttonColors, sizeof(m_config.buttonColors));
+    // model_config structs have identical bit layouts; copy byte-for-byte
+    memcpy(m_config.model_config, v8Config.model_config, sizeof(m_config.model_config));
+
+    // New in V9: default to the hardware floor (safe; matches ESP32 NVS path
+    // and SetDefaults). Never trust the V8 padding byte.
+    m_config.minPower = POWERMGNT::getMinPower();
+
+    m_modified = ALL_CHANGED;
+
+    m_config.version = 9U | TX_CONFIG_MAGIC;
     Commit();
 }
 #endif
@@ -519,17 +601,30 @@ TxConfig::SetTlm(uint8_t tlm)
 void
 TxConfig::SetPower(uint8_t power)
 {
+    power = constrain(power, POWERMGNT::getMinPower(), POWERMGNT::getMaxPower());
     if (GetPower() != power)
     {
         m_model->power = power;
         m_modified |= EVENT_CONFIG_MODEL_CHANGED;
+        // Keep the invariant minPower <= power. If max is lowered below the
+        // saved floor, drop the floor to the new max so it persists.
+        if (GetMinPower() > power)
+        {
+            m_config.minPower = power;
+            m_modified |= EVENT_CONFIG_MAIN_CHANGED;
+        }
     }
 }
 
 void
 TxConfig::SetMinPower(uint8_t minPower)
 {
-    uint8_t clamped = constrain(minPower, POWERMGNT::getMinPower(), POWERMGNT::getMaxPower());
+    // Clamp to [MinPower, min(GetMaxPower, GetPower)] so minPower never exceeds
+    // the configured maximum for the currently selected model.
+    uint8_t hi = std::min((uint8_t)POWERMGNT::getMaxPower(), GetPower());
+    if (hi < (uint8_t)POWERMGNT::getMinPower())
+        hi = (uint8_t)POWERMGNT::getMinPower();
+    uint8_t clamped = constrain(minPower, POWERMGNT::getMinPower(), hi);
     if (GetMinPower() != clamped)
     {
         m_config.minPower = clamped;

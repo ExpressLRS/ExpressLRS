@@ -97,6 +97,43 @@ typedef struct {
     uint8_t         dvrStopDelay:3;
 } v7_tx_config_t;
 
+// V8 = V7 upgradable to tx_config_t (current) - tx_config_t without minPower,
+// but with same layout for all fields except byte at offset 9 (padding -> minPower).
+// model_config_t here is the current TX model struct (post V7->V8 conversion).
+// Used only for the V8 -> V9 EEPROM upgrade path on ESP8266.
+typedef struct {
+    uint32_t        version;
+    uint8_t         vtxBand;
+    uint8_t         vtxChannel;
+    uint8_t         vtxPower;
+    uint8_t         vtxPitmode;
+    uint8_t         powerFanThreshold:4;
+    // offset 9 in V8 is 3 bytes of struct padding (byte 9, 10, 11) before model_config at offset 12.
+    // In V9 byte 9 becomes minPower; bytes 10-11 remain padding. Do NOT read byte 9 from V8
+    // as minPower - it is undefined padding garbage.
+    uint8_t         _pad9_11[3];
+    struct {
+        uint32_t    rate:5, tlm:4, power:3, switchMode:2, boostChannel:3,
+                    dynamicPower:1, modelMatch:1, txAntenna:2,
+                    ptrStartChannel:4, ptrEnableChannel:5, linkMode:2;
+    } model_config[64];
+    uint8_t         fanMode;
+    uint8_t         motionMode:2, dvrStopDelay:3, backpackDisable:1, backpackTlmMode:2;
+    uint8_t         dvrStartDelay:3, dvrAux:5;
+    // Explicit padding to match the 4-byte alignment of tx_button_color_t
+    // (union containing uint32 raw) in tx_config_t: buttonColors must start at
+    // offset 272, not 271. Without this, field offsets would be wrong.
+    uint8_t         _pad271;
+    union {
+        struct {
+            uint8_t     color;
+            struct { uint8_t pressType:1, count:3, action:4; } actions[2];
+            uint8_t     unused;
+        } val;
+        uint32_t raw;
+    } buttonColors[2];
+} v8_tx_config_t;
+
 /***
  * RX config
  ***/

@@ -16,7 +16,7 @@
 #define TX_CONFIG_MAGIC     (0b01U << 30)
 #define RX_CONFIG_MAGIC     (0b10U << 30)
 
-#define TX_CONFIG_VERSION   8U
+#define TX_CONFIG_VERSION   9U
 #define RX_CONFIG_VERSION   11U
 
 class BindphraseConfigurable
@@ -207,6 +207,7 @@ private:
     void UpgradeEepromV5ToV6();
     void UpgradeEepromV6ToV7();
     void UpgradeEepromV7ToV8();
+    void UpgradeEepromV8ToV9();
 #endif
 };
 
