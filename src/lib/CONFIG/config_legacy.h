@@ -17,6 +17,7 @@
  ***/
 
 #include <inttypes.h>
+#include <stddef.h>
 
 /***
  * TX config
@@ -101,6 +102,17 @@ typedef struct {
 // but with same layout for all fields except byte at offset 9 (padding -> minPower).
 // model_config_t here is the current TX model struct (post V7->V8 conversion).
 // Used only for the V8 -> V9 EEPROM upgrade path on ESP8266.
+//
+// INTERIM-BUILD NOTE: the pre-release commits on this branch (d13aafbe through
+// the parent of 6b605c4e) stored minPower in that very padding byte while still
+// labelling the image TX_CONFIG_VERSION 8. If such an interim image is upgraded
+// here, the user's configured floor is lost and reset to the hardware minimum.
+// That is intentional: a genuine v8 image has undefined padding garbage there,
+// and there is no reliable way to distinguish an interim build's byte from
+// garbage, so preserving it would risk resurrecting a garbage floor for normal
+// v8 users. The cost is limited to users who flashed an unreleased interim
+// build and configured a floor; they can simply re-set it once. See also the
+// comment in UpgradeEepromV8ToV9.
 typedef struct {
     uint32_t        version;
     uint8_t         vtxBand;
@@ -110,7 +122,8 @@ typedef struct {
     uint8_t         powerFanThreshold:4;
     // offset 9 in V8 is 3 bytes of struct padding (byte 9, 10, 11) before model_config at offset 12.
     // In V9 byte 9 becomes minPower; bytes 10-11 remain padding. Do NOT read byte 9 from V8
-    // as minPower - it is undefined padding garbage.
+    // as minPower - it is undefined padding garbage (except for interim builds,
+    // see note above — intentionally also ignored).
     uint8_t         _pad9_11[3];
     struct {
         uint32_t    rate:5, tlm:4, power:3, switchMode:2, boostChannel:3,
@@ -133,6 +146,24 @@ typedef struct {
         uint32_t raw;
     } buttonColors[2];
 } v8_tx_config_t;
+
+// Layout assertions: v8 and v9 must be byte-identical apart from byte 9 (see
+// comment in UpgradeEepromV8ToV9 and the note on v8_tx_config_t). These
+// offsetof checks run at compile time on the build host compiler; they
+// verify the intentional layout assumption that the migration depends on.
+// If a future field edit moves offsets, these will fail loudly instead of
+// silently corrupting the EEPROM image on upgrade.
+//
+// model_config_t itself is defined in config.h, not here, so offsetof on
+// tx_config_t's model_config is checked where both types are visible
+// (config.cpp, in UpgradeEepromV8ToV9). Here we assert the legacy-struct
+// internal offsets only.
+static_assert(offsetof(v8_tx_config_t, version) == 0, "v8 version offset");
+static_assert(offsetof(v8_tx_config_t, _pad9_11) == 9, "v8 pad offset (minPower reuse point)");
+static_assert(offsetof(v8_tx_config_t, model_config) == 12, "v8 model_config offset");
+static_assert(offsetof(v8_tx_config_t, fanMode) == 268, "v8 fanMode offset");
+static_assert(offsetof(v8_tx_config_t, _pad271) == 271, "v8 pad271 offset");
+static_assert(offsetof(v8_tx_config_t, buttonColors) == 272, "v8 buttonColors offset");
 
 /***
  * RX config
