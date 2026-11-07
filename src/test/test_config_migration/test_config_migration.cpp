@@ -149,7 +149,15 @@ static tx_config_t upgrade_v8_to_v9(const v8_tx_config_t &v8)
     v9.dvrAux = v8.dvrAux;
     memcpy(v9.buttonColors, v8.buttonColors, sizeof(v9.buttonColors));
     memcpy(v9.model_config, v8.model_config, sizeof(v9.model_config));
-    v9.minPower = POWERMGNT::getMinPower(); // intentional reset (see note)
+    // Interim-build preservation: keep byte 9 only if it is a valid floor,
+    // otherwise reset to the hardware minimum (matches UpgradeEepromV8ToV9).
+    {
+        uint8_t interim = v8._pad9_11[0];
+        v9.minPower = (interim >= POWERMGNT::getMinPower() &&
+                       interim <= POWERMGNT::getMaxPower())
+                          ? interim
+                          : POWERMGNT::getMinPower();
+    }
     return v9;
 }
 
@@ -204,10 +212,29 @@ int main()
         assert(v9.model_config[0].power == 5 &&
                v9.model_config[0].dynamicPower == 1 &&
                v9.model_config[42].rate == 7 && v9.model_config[63].power == 1);
-        // minPower is ALWAYS reset, even if byte 9 happened to hold a plausible
-        // interim-build floor (0xFF here must not leak through).
+        // minPower is reset when byte 9 is out of hardware range (0xFF here
+        // must not leak through), even if the rest of the image is valid.
         assert(v9.minPower == POWERMGNT::getMinPower());
-        printf("[PASS] migration: user data preserved, minPower reset safely\n");
+        printf("[PASS] migration: user data preserved, out-of-range floor reset\n");
+    }
+
+    // --- 2b. interim-build preservation: valid pad byte kept, garbage reset --
+    {
+        // Genuine v8: padding usually 0x00 from the SetDefaults memset. With a
+        // stub floor of PWR_10mW (0), a stored 0x00 is indistinguishable from
+        // a real floor of 10mW — either way the value equals getMinPower(),
+        // so behavior matches. Use the in-range case to prove preservation,
+        // and an out-of-range case (0xFF) to prove garbage is discarded.
+        v8_tx_config_t v8{};
+        v8._pad9_11[0] = PWR_500mW; // interim build stored a real 500mW floor
+        tx_config_t v9 = upgrade_v8_to_v9(v8);
+        assert(v9.minPower == PWR_500mW);
+        printf("[PASS] migration: interim-build valid floor preserved\n");
+
+        v8._pad9_11[0] = 0xFF; // genuine-v8 garbage outside hardware range
+        v9 = upgrade_v8_to_v9(v8);
+        assert(v9.minPower == POWERMGNT::getMinPower());
+        printf("[PASS] migration: genuine-v8 garbage byte discarded\n");
     }
 
     // --- 3. max/min ordering: SetPower lowering below floor ------------------

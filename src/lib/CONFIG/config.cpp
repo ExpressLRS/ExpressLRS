@@ -522,21 +522,34 @@ void TxConfig::UpgradeEepromV8ToV9()
     memcpy(m_config.model_config, v8Config.model_config, sizeof(m_config.model_config));
 
     // New in V9: default to the hardware floor (safe; matches ESP32 NVS path
-    // and SetDefaults). Never trust the V8 padding byte.
+    // and SetDefaults).
     //
-    // INTERIM-BUILD NOTE: the pre-release commits on this branch (d13aafbe
-    // and later on top of it through 6b605c4e's parent) stored minPower in
-    // that very padding byte while still labelling the image TX_CONFIG_VERSION
-    // 8. If such an interim image is upgraded here, the user's configured
-    // floor is lost and reset to the hardware minimum. That is intentional:
-    // a genuine v8 image has undefined padding garbage there, and there is no
-    // reliable way to distinguish an interim build's byte from garbage, so
-    // preserving it would risk resurrecting a garbage floor for normal v8
-    // users. The cost is limited to users who flashed an unreleased interim
-    // build and configured a floor; they can simply re-set it once. The
-    // runtime floor clamp in dynpower protects them in the meantime (a
-    // too-high value would be clamped per-model, never emitted as-is).
-    m_config.minPower = POWERMGNT::getMinPower();
+    // INTERIM-BUILD PRESERVATION: the pre-release commits on this branch
+    // (d13aafbe and descendants) stored a real minPower floor in this very
+    // padding byte while still labelling the image TX_CONFIG_VERSION 8.
+    // A genuine v8 image holds undefined padding garbage there, but what
+    // old firmware actually writes is usually 0x00 (m_config is zeroed in
+    // SetDefaults and the struct is only partially overwritten onward).
+    // We therefore preserve the byte when it is provably a *valid* floor —
+    // i.e. within the hardware range [MinPower, MaxPower], the same range
+    // the interim code's SetMinPower clamped into — and reset to the
+    // hardware minimum otherwise. A false positive (garbage landing
+    // in-range) is benign: the value is a legal power level the user can
+    // re-set, and the per-model clamps in SetModelId / SetPower /
+    // DynamicPower_GetMinFloor keep it from ever exceeding the active
+    // model's max or being emitted as-is.
+    {
+        uint8_t interim = v8Config._pad9_11[0];
+        if (interim >= POWERMGNT::getMinPower() &&
+            interim <= POWERMGNT::getMaxPower())
+        {
+            m_config.minPower = interim;
+        }
+        else
+        {
+            m_config.minPower = POWERMGNT::getMinPower();
+        }
+    }
 
     m_modified = ALL_CHANGED;
 

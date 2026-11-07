@@ -103,16 +103,16 @@ typedef struct {
 // model_config_t here is the current TX model struct (post V7->V8 conversion).
 // Used only for the V8 -> V9 EEPROM upgrade path on ESP8266.
 //
-// INTERIM-BUILD NOTE: the pre-release commits on this branch (d13aafbe through
-// the parent of 6b605c4e) stored minPower in that very padding byte while still
-// labelling the image TX_CONFIG_VERSION 8. If such an interim image is upgraded
-// here, the user's configured floor is lost and reset to the hardware minimum.
-// That is intentional: a genuine v8 image has undefined padding garbage there,
-// and there is no reliable way to distinguish an interim build's byte from
-// garbage, so preserving it would risk resurrecting a garbage floor for normal
-// v8 users. The cost is limited to users who flashed an unreleased interim
-// build and configured a floor; they can simply re-set it once. See also the
-// comment in UpgradeEepromV8ToV9.
+// INTERIM-BUILD PRESERVATION: the pre-release commits on this branch
+// (d13aafbe and descendants) stored a real minPower floor in this very
+// padding byte while still labelling the image TX_CONFIG_VERSION 8. On
+// upgrade, UpgradeEepromV8ToV9 preserves the byte when it lies within the
+// hardware range [MinPower, MaxPower] (the range the interim code clamped
+// into) and resets it to getMinPower() otherwise. A genuine v8 image holds
+// undefined padding garbage there, but that is usually 0x00 (m_config is
+// zeroed in SetDefaults), and a false positive landing in-range is benign
+// (a legal power level the user can re-set; per-model clamps keep it safe).
+// See the comment in UpgradeEepromV8ToV9.
 typedef struct {
     uint32_t        version;
     uint8_t         vtxBand;
@@ -121,9 +121,11 @@ typedef struct {
     uint8_t         vtxPitmode;
     uint8_t         powerFanThreshold:4;
     // offset 9 in V8 is 3 bytes of struct padding (byte 9, 10, 11) before model_config at offset 12.
-    // In V9 byte 9 becomes minPower; bytes 10-11 remain padding. Do NOT read byte 9 from V8
-    // as minPower - it is undefined padding garbage (except for interim builds,
-    // see note above — intentionally also ignored).
+    // In V9 byte 9 becomes minPower; bytes 10-11 remain padding. Byte 9 in V8
+    // is normally undefined padding garbage (usually 0x00); interim pre-release
+    // builds stored a real floor there. UpgradeEepromV8ToV9 reads it ONLY when
+    // it falls within the hardware range (see INTERIM-BUILD PRESERVATION note
+    // above) and otherwise defaults minPower to getMinPower().
     uint8_t         _pad9_11[3];
     struct {
         uint32_t    rate:5, tlm:4, power:3, switchMode:2, boostChannel:3,
