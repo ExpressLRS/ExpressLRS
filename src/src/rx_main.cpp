@@ -167,6 +167,7 @@ bool doStartTimer = false;
 ///////////////////////////////////////////////
 
 static bool alreadyTLMresp = false;
+static volatile bool tlmIdleSet = false; // radio already moved from RX to FS for the coming telemetry TX
 
 //////////////////////////////////////////////////////////////
 
@@ -550,6 +551,11 @@ bool ICACHE_RAM_ATTR HandleSendDataDl()
         }
     }
 
+    if (transmittingRadio != SX12XX_Radio_NONE && !tlmIdleSet)
+    {
+        Radio.SetTxIdleMode(); // uplink packet was missed: radio is still in RX
+    }
+
     // Gemini flips frequencies between radios on the rx side only.  This is to help minimise antenna cross polarization.
     // The payloads need to be switch when this happens.
     // GemX does not switch due to the time required to reconfigure the LR1121 params.
@@ -793,6 +799,11 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
     HandleFHSS();
     updateDiversity();
     bool tlmSent = HandleSendDataDl();
+    if (tlmIdleSet && !tlmSent)
+    {
+        Radio.RXnb(); // idle was set but no telemetry went out: back to RX
+    }
+    tlmIdleSet = false;
     updatePhaseLock();
 
     #if defined(DEBUG_RX_SCOREBOARD)
@@ -1217,6 +1228,14 @@ bool ICACHE_RAM_ATTR RXdoneISR(SX12xxDriverCommon::rx_status const status)
 
     if (ProcessRFPacket(status))
     {
+        // Leave continuous RX now if the next slot is telemetry. A TX started straight from RX
+        // occasionally ends after ~300 us with nothing sent (seen on LR1121, ~0.4 % of telemetry).
+        // Not with LBT: its channel check before the TX needs the radio in RX.
+        if (connectionState == connected && ExpressLRS_currTlmDenom != 1 && ((OtaNonce + 1) % ExpressLRS_currTlmDenom) == 0 && !config.GetForceTlmOff() && !LbtIsEnabled)
+        {
+            Radio.SetTxIdleMode();
+            tlmIdleSet = true;
+        }
         if (doStartTimer)
         {
             doStartTimer = false;
