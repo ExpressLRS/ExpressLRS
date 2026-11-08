@@ -45,6 +45,24 @@ public:
 
 CRSFRouter crsfRouter;
 
+void test_frame_fits_buffer(void)
+{
+    uint8_t buf[CRSF_MAX_PACKET_LEN + 1] = {CRSF_ADDRESS_CRSF_RECEIVER};
+    // [sync][len][len bytes...] must fit, len counts type ... crc
+    buf[1] = sizeof(buf) - CRSF_FRAME_NOT_COUNTED_BYTES;
+    TEST_ASSERT_TRUE(crsfFrameFitsBuffer(buf, sizeof(buf)));
+    buf[1] = 0;
+    TEST_ASSERT_TRUE(crsfFrameFitsBuffer(buf, sizeof(buf)));
+
+    for (unsigned len = sizeof(buf) - CRSF_FRAME_NOT_COUNTED_BYTES + 1; len <= 255; len++)
+    {
+        buf[1] = len;
+        TEST_ASSERT_FALSE(crsfFrameFitsBuffer(buf, sizeof(buf)));
+    }
+    // a buffer too short for the length byte
+    TEST_ASSERT_FALSE(crsfFrameFitsBuffer(buf, 1));
+}
+
 void test_ver_to_u32(void)
 {
     constexpr struct tagVerItem {
@@ -106,6 +124,7 @@ int main(int argc, char **argv)
     crsfRouter.addEndpoint(&crsfEndpoint);
 
     UNITY_BEGIN();
+    RUN_TEST(test_frame_fits_buffer);
     RUN_TEST(test_ver_to_u32);
     RUN_TEST(test_device_info);
     UNITY_END();
