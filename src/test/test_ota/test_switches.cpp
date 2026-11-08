@@ -696,6 +696,38 @@ void test_decodingHybridWide_AUXX_low()
         test_decodingHybridWide(i, 0, CRSF_CHANNEL_VALUE_1000);
 }
 
+// Airport packets carry a 6 bit (std) / 5 bit (full res) byte count, which can exceed the payload size
+static void test_unpackAirportCount(const uint8_t packetSize, const uint8_t maxPayload, const uint8_t maxCount)
+{
+    OtaUpdateSerializers(smWideOr8ch, packetSize);
+    for (uint8_t count = 0; count <= maxCount; count++)
+    {
+        // exactly sized packet so ASan catches reads past it
+        auto *raw = new uint8_t[packetSize]();
+        auto *otaPkt = (OTA_Packet_s *)raw;
+        otaPkt->std.type = PACKET_TYPE_DATA;
+        if (packetSize == OTA8_PACKET_SIZE)
+            otaPkt->full.airport.count = count;
+        else
+            otaPkt->std.airport.count = count;
+
+        FIFO<AP_MAX_BUF_LEN> out;
+        OtaUnpackAirportData(otaPkt, &out);
+        delete[] raw;
+        TEST_ASSERT_EQUAL_UINT16(std::min(count, maxPayload), out.size());
+    }
+}
+
+void test_unpackAirportData_std_countBeyondPayload()
+{
+    test_unpackAirportCount(OTA4_PACKET_SIZE, ELRS4_DATA_DL_BYTES_PER_CALL, 63);
+}
+
+void test_unpackAirportData_full_countBeyondPayload()
+{
+    test_unpackAirportCount(OTA8_PACKET_SIZE, ELRS8_DATA_DL_BYTES_PER_CALL, 31);
+}
+
 // Unity setup/teardown
 void setUp() {}
 void tearDown() {}
@@ -726,6 +758,9 @@ int main(int argc, char **argv)
     RUN_TEST(test_encodingFullres16ch);
     RUN_TEST(test_encodingFullres12ch);
     RUN_TEST(test_decodingFullres16chLow);
+
+    RUN_TEST(test_unpackAirportData_std_countBeyondPayload);
+    RUN_TEST(test_unpackAirportData_full_countBeyondPayload);
 
     UNITY_END();
 
