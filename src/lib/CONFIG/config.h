@@ -329,7 +329,18 @@ public:
     void SetBindStorage(rx_config_bindstorage_t value);
     void ReturnLoan();
 
+    /**
+     * Connected on this rate: make it the initial rate for next boot and reset the power on counter.
+     * Safe to call from an ISR. Rather than a full Commit(), which needs the link dropped, it is
+     * saved with a quick append to flash by CommitQuickSave(), and folded into the config at boot.
+     */
+    void SetConnectedRate(uint8_t rateIdx);
+    bool HasQuickSave() const { return m_quickSavePending; }
+    void CommitQuickSave();
+
 private:
+    void LoadEeprom();
+    void LoadQuickSave();
     void CheckUpdateFlashedUid(bool skipDescrimCheck);
     void UpgradeUid(uint8_t *onLoanUid, uint8_t *boundUid);
     void UpgradeEepromV4();
@@ -341,6 +352,7 @@ private:
     rx_config_t m_config;
     ELRS_EEPROM *m_eeprom;
     uint32_t    m_modified;
+    volatile bool m_quickSavePending = false;
 };
 
 extern RxConfig config;
