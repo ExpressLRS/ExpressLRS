@@ -1,4 +1,3 @@
-
 #include <dynpower.h>
 
 #include "OTA.h"
@@ -13,7 +12,7 @@
 #include "MeanAccumulator.h"
 #include "StdevAccumulator.h"
 
-// LQ-based boost defines
+// LQ-based power boost defines
 #define DYNPOWER_LQ_BOOST_THRESH_DIFF 20  // If LQ is dropped suddenly for this amount (relative), immediately boost to the max power configured.
 #define DYNPOWER_LQ_BOOST_THRESH_MIN  50  // If LQ is below this value (absolute), immediately boost to the max power configured.
 #define DYNPOWER_LQ_MOVING_AVG_K      8   // Number of previous values for calculating moving average. Best with power of 2.
@@ -27,6 +26,26 @@
 // SNR-based increment defines
 #define DYNPOWER_LQ_THRESH_DN 95          // Min LQ for lowering power using SNR-based power lowering
 constexpr int8_t SNR1dB = SNR_SCALE(1.0); // SNR 1dB scaled
+
+static uint8_t DynamicPower_GetMinFloor()
+{
+    const uint8_t hardwareMin = (uint8_t)POWERMGNT::getMinPower();
+    const uint8_t hardwareMax = (uint8_t)POWERMGNT::getMaxPower();
+
+    // Treat any invalid configured maximum as the nearest supported power level.
+    uint8_t configuredMax = (uint8_t)config.GetPower();
+    if (configuredMax < hardwareMin)
+        configuredMax = hardwareMin;
+    if (configuredMax > hardwareMax)
+        configuredMax = hardwareMax;
+
+    uint8_t floor = config.GetMinPower();
+    if (floor < hardwareMin)
+        floor = hardwareMin;
+    if (floor > configuredMax)
+        floor = configuredMax;
+    return floor;
+}
 
 template<uint8_t K, uint8_t SHIFT>
 class MovingAvg
@@ -81,15 +100,28 @@ void DynamicPower_Update(uint32_t now)
     dynpower_stat_snr.reset();
   }
 
+  // Enforce the dynamic-power floor before any reduction, including overload protection.
+  // This prevents an overload adjustment from briefly taking power below the configured floor.
+  const bool dynamicPower = config.GetDynamicPower();
+  const uint8_t minFloor = dynamicPower ? DynamicPower_GetMinFloor() : (uint8_t)POWERMGNT::getMinPower();
+  if (dynamicPower && (uint8_t)POWERMGNT::currPower() < minFloor)
+  {
+      POWERMGNT::setPower((PowerLevels_e)minFloor);
+      return;
+  }
+
   // power is too strong and saturate the RX LNA
   if (newTlmAvail && (rssi >= -5))
   {
     DBGVLN("-power (overload)");
-    POWERMGNT::decPower();
+    if (!dynamicPower || (uint8_t)POWERMGNT::currPower() > minFloor)
+    {
+      POWERMGNT::decPower();
+    }
   }
 
   // When not using dynamic power, return here
-  if (!config.GetDynamicPower())
+  if (!dynamicPower)
   {
     // if RSSI is dropped enough, inc power back to the configured power
     if (newTlmAvail && (rssi <= -20) &&  POWERMGNT::currPower() < (PowerLevels_e)config.GetPower())
@@ -183,7 +215,10 @@ void DynamicPower_Update(uint32_t now)
       else if (avg_rssi > rssi_dec_threshold && lq_avg >= DYNPOWER_LQ_THRESH_DN)
       {
         DBGVLN("-power (rssi)"); // Verbose because this spams when idle
-        POWERMGNT::decPower();
+        if (POWERMGNT::currPower() > minFloor)
+        {
+          POWERMGNT::decPower();
+        }
       }
     }
   } // ^^ if RSSI-based
@@ -198,7 +233,7 @@ void DynamicPower_Update(uint32_t now)
     {
         dynpower_stat_snr.add(snrScaled);
     }
-    // is SNR stat ready? = is the buffer fully stuffed?
+    // is SNR stat ready? = the buffer fully stuffed?
     if(dynpower_stat_snr.getCount() >= dynpower_stat_snr.WINDOW_SIZE)
     {
       static_assert(dynpower_stat_snr.FIXED_POINT_SHIFT >= 4, "StdDevAccumulator must be at least 4 bits of decimal fixed point");
@@ -219,7 +254,7 @@ void DynamicPower_Update(uint32_t now)
 
       snr_stat_threshold_up = std::min(snr_thre_up_scaled, snr_thre_up_limit);
       snr_stat_threshold_dn = snr_thre_dn_scaled;
-      //DBGLN("cur=%d tup=%d tdn=%d lim=%d mean=%d sd=%d", snrScaled, snr_thre_up_scaled, snr_thre_dn_scaled, snr_thre_up_limit, snr_stat_mean, snr_stat_stdev);
+      //DBGLN("cur=%d tup=%d tdn=%d lim=%d mean=%d sd=%d", snrScaled, snr_stat_threshold_up, snr_stat_threshold_dn, snr_thre_up_limit, snr_stat_mean, snr_stat_stdev);
       //DBGLN("cur %d t_up %d t_dn %d lqavg %d", snrScaled, snr_stat_threshold_up, snr_stat_threshold_dn, lq_avg);
     }
 
@@ -228,11 +263,14 @@ void DynamicPower_Update(uint32_t now)
     // Increase the power for each (X) SNR below the threshold
     if (snrScaled >= snr_stat_threshold_dn && lq_avg >= DYNPOWER_LQ_THRESH_DN)
     {
-      if(POWERMGNT::currPower() > MinPower) // prevent spamming when idle
+      if(POWERMGNT::currPower() > minFloor)
       {
         DBGLN("-power (snr) %d >= %d", snrScaled, snr_stat_threshold_dn);
       }
-      POWERMGNT::decPower();
+      if (POWERMGNT::currPower() > minFloor)
+      {
+        POWERMGNT::decPower();
+      }
     }
 
     // use RSSI_DN threshold to make sure the signal is still in good range but with some distance for SNR to exhibit a fair distribution
@@ -263,7 +301,7 @@ void DynamicPower_Update(uint32_t now)
 /***
  * @brief: Set power to configured power or update power to match the current TX power
  * @param initialize: Set to true if calling from setup() to force even PWR_MATCH_TX to default power
-*/
+ */
 void DynamicPower_UpdateRx(bool initialize)
 {
   if (config.GetPower() != PWR_MATCH_TX)

@@ -16,7 +16,7 @@
 #define TX_CONFIG_MAGIC     (0b01U << 30)
 #define RX_CONFIG_MAGIC     (0b10U << 30)
 
-#define TX_CONFIG_VERSION   8U
+#define TX_CONFIG_VERSION   9U
 #define RX_CONFIG_VERSION   11U
 
 class BindphraseConfigurable
@@ -111,6 +111,7 @@ typedef struct {
     uint8_t         vtxPower;   // 0=Do not set, else power number
     uint8_t         vtxPitmode; // Off/On/AUX1^/AUX1v/etc
     uint8_t         powerFanThreshold:4; // Power level to enable fan if present
+    uint8_t         minPower;            // global floor used by dynamic power when enabled
     model_config_t  model_config[CONFIG_TX_MODEL_CNT];
     uint8_t         fanMode;            // some value used by thermal?
     uint8_t         motionMode:2,       // bool, but space for 2 more modes
@@ -136,6 +137,7 @@ public:
     uint8_t GetRate() const { return m_model->rate; }
     uint8_t GetTlm() const { return m_model->tlm; }
     uint8_t GetPower() const { return m_model->power; }
+    uint8_t GetMinPower() const { return m_config.minPower; }
     bool GetDynamicPower() const { return m_model->dynamicPower; }
     uint8_t GetBoostChannel() const { return m_model->boostChannel; }
     uint8_t GetSwitchMode() const { return m_model->switchMode; }
@@ -164,6 +166,7 @@ public:
     void SetRate(uint8_t rate);
     void SetTlm(uint8_t tlm);
     void SetPower(uint8_t power);
+    void SetMinPower(uint8_t minPower);
     void SetDynamicPower(bool dynamicPower);
     void SetBoostChannel(uint8_t boostChannel);
     void SetSwitchMode(uint8_t switchMode);
@@ -204,6 +207,7 @@ private:
     void UpgradeEepromV5ToV6();
     void UpgradeEepromV6ToV7();
     void UpgradeEepromV7ToV8();
+    void UpgradeEepromV8ToV9();
 #endif
 };
 
@@ -319,7 +323,7 @@ public:
     void SetRateInitialIdx(uint8_t rateInitialIdx);
     void SetSerialProtocol(eSerialProtocol serialProtocol);
 #if defined(PLATFORM_ESP32)
-    void SetSerial1Protocol(eSerial1Protocol serial1Protocol);
+    void SetSerial1Protocol(eSerial1Protocol serialProtocol);
 #endif
     void SetTeamraceChannel(uint8_t teamraceChannel);
     void SetTeamracePosition(uint8_t teamracePosition);
@@ -346,3 +350,4 @@ private:
 extern RxConfig config;
 
 #endif
+
