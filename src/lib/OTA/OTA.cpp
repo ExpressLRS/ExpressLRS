@@ -16,6 +16,7 @@ uint8_t UID[UID_LEN] {};  // "bind phrase" ID
 elrsLinkStatistics_t linkStats {};
 bool isArmed = false;       // global arming status for other functions
 bool OtaIsFullRes;
+uint8_t OtaNumChannels;
 volatile uint8_t OtaNonce;
 uint16_t OtaCrcInitializer;
 OtaSwitchMode_e OtaSwitchModeCurrent;
@@ -481,24 +482,7 @@ bool ICACHE_RAM_ATTR OtaIsChannelDataComplete(uint32_t const *channelData)
     return true;
 #else
     if (!OtaChannelDataComplete) {
-        uint8_t lastRequiredChannel = 11;
-        if (OtaIsFullRes)
-        {
-            switch (OtaSwitchModeCurrent)
-            {
-                case smWideOr8ch:
-                    lastRequiredChannel = 7;
-                    break;
-                case sm12ch:
-                    lastRequiredChannel = 11;
-                    break;
-                case smHybridOr16ch:
-                    lastRequiredChannel = 15;
-                    break;
-            }
-        }
-
-        for (uint8_t ch = 0; ch <= lastRequiredChannel; ++ch)
+        for (uint8_t ch = 0; ch < OtaNumChannels; ++ch)
         {
             if (channelData[ch] == CRSF_CHANNEL_VALUE_UNSET)
             {
@@ -552,7 +536,6 @@ void ICACHE_RAM_ATTR GeneratePacketCrcStd(OTA_Packet_s * const otaPktPtr)
 void OtaUpdateSerializers(OtaSwitchMode_e const switchMode, uint8_t packetSize)
 {
     OtaIsFullRes = (packetSize == OTA8_PACKET_SIZE);
-
     if (OtaIsFullRes)
     {
         OtaValidatePacketCrc = &ValidatePacketCrcFull;
@@ -568,8 +551,20 @@ void OtaUpdateSerializers(OtaSwitchMode_e const switchMode, uint8_t packetSize)
         #if defined(TARGET_RX) || defined(UNIT_TEST)
         OtaUnpackChannelData = &UnpackChannelData8ch;
         #endif
-    } // is8ch
 
+        switch (switchMode)
+        {
+        case smWideOr8ch:
+            OtaNumChannels = 8;
+            break;
+        case sm12ch:
+            OtaNumChannels = 12;
+            break;
+        case smHybridOr16ch:
+            OtaNumChannels = 16;
+            break;
+        }
+    } // is8ch
     else
     {
         OtaValidatePacketCrc = &ValidatePacketCrcStd;
@@ -585,7 +580,6 @@ void OtaUpdateSerializers(OtaSwitchMode_e const switchMode, uint8_t packetSize)
             OtaUnpackChannelData = &UnpackChannelDataHybridWide;
             #endif
         } // !is8ch and smWideOr8ch
-
         else
         {
             #if defined(TARGET_TX) || defined(UNIT_TEST)
@@ -595,6 +589,7 @@ void OtaUpdateSerializers(OtaSwitchMode_e const switchMode, uint8_t packetSize)
             OtaUnpackChannelData = &UnpackChannelDataHybridSwitch8;
             #endif
         } // !is8ch and smHybridOr16ch
+        OtaNumChannels = 12;
     }
 
     OtaSwitchModeCurrent = switchMode;
