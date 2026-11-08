@@ -252,12 +252,18 @@ static IRAM_ATTR void timer1Interrupt() {
   constexpr uint32_t MAXINTERVAL_CS = microsecondsToClockCycles(25000);
   // Keep running until the next event is at least this far in the future
 #if F_CPU == 80000000
-  constexpr int32_t DELTAIRQ_CS = microsecondsToClockCycles(8);
+  constexpr int32_t DELTAIRQ_CS = microsecondsToClockCycles(16);
 #else
-  constexpr int32_t DELTAIRQ_CS = microsecondsToClockCycles(5);
+  constexpr int32_t DELTAIRQ_CS = microsecondsToClockCycles(10);
 #endif
   // Schedule the timer this much earlier to account for time to get to the first pin flip. Should be significantly lower than DELTAIRQ_CS
   constexpr int32_t PRESCHEDULE_CS = microsecondsToClockCycles(3);
+  // The SDK's NMI vector is not re-entrant. After this returns it clears the timer flag, then re-enables
+  // the NMI a few instructions before its rfi. A timer armed less than ~3us out (at 160MHz) either expires
+  // before the clear and is lost, stopping all PWM, or fires in that window and traps the CPU in the vector
+  // until the hardware watchdog resets it. Edges closer than this are handled by the loop above instead.
+  static_assert(DELTAIRQ_CS - PRESCHEDULE_CS >= microsecondsToClockCycles(F_CPU == 80000000 ? 12 : 6),
+                "timer1 must not be armed inside the NMI vector's return path");
   // Disable the timer while in the interrupt, even though it should be one-shot anyway
   T1C = 0;
   T1I = 0;
