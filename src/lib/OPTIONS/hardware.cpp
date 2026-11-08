@@ -184,6 +184,7 @@ typedef union {
 } data_holder_t;
 
 static data_holder_t hardware[HARDWARE_LAST];
+static uint16_t arrayCount[HARDWARE_LAST];
 static String builtinHardwareConfig;
 
 String& getHardware()
@@ -219,6 +220,7 @@ static void hardware_ClearAllFields()
                 break;
             case ARRAY:
                 hardware[field.position].array_value = nullptr;
+                arrayCount[field.position] = 0;
                 break;
             case COUNT:
                 hardware[field.position].int_value = 0;
@@ -249,6 +251,7 @@ static void hardware_LoadFieldsFromDoc(JsonDocument &doc)
                         JsonArray array = doc[name].as<JsonArray>();
                         hardware[field.position].array_value = new int16_t[array.size()];
                         copyArray(array, hardware[field.position].array_value, array.size());
+                        arrayCount[field.position] = array.size();
                     }
                     break;
                 case COUNT:
@@ -259,6 +262,19 @@ static void hardware_LoadFieldsFromDoc(JsonDocument &doc)
                     break;
             }
         }
+    }
+
+    // hardware.json can be uploaded with any content, make sure the arrays are at least as long as the code expects
+    if (hardware[HARDWARE_pwm_outputs_count].int_value > HARDWARE_MAX_PWM_OUTPUTS)
+    {
+        hardware[HARDWARE_pwm_outputs_count].int_value = HARDWARE_MAX_PWM_OUTPUTS;
+    }
+    // power_values2 is indexed like power_values, treat it as not defined if it is shorter
+    if (arrayCount[HARDWARE_power_values2] < arrayCount[HARDWARE_power_values])
+    {
+        delete[] hardware[HARDWARE_power_values2].array_value;
+        hardware[HARDWARE_power_values2].array_value = nullptr;
+        arrayCount[HARDWARE_power_values2] = 0;
     }
 }
 
@@ -325,5 +341,10 @@ const int16_t* hardware_i16_array(nameType name)
 const uint16_t* hardware_u16_array(nameType name)
 {
     return (uint16_t *)hardware[name].array_value;
+}
+
+size_t hardware_array_count(nameType name)
+{
+    return arrayCount[name];
 }
 #endif
