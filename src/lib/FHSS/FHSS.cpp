@@ -99,7 +99,9 @@ void FHSSrandomiseFHSSsequence(const uint32_t seed)
     // the hop pointer indexes sequences that are about to be replaced
     FHSSptr = 0;
 
-    FHSSconfig = &domains[firmwareOptions.domain];
+    // domain comes from the firmware options (options.json), fall back to the first domain if it is invalid
+    const uint8_t domain = firmwareOptions.domain < sizeof(domains) / sizeof(domains[0]) ? firmwareOptions.domain : 0;
+    FHSSconfig = &domains[domain];
     sync_channel = FHSSconfig->freq_count / 2;
     freq_spread = (FHSSconfig->freq_stop - FHSSconfig->freq_start) * FREQ_SPREAD_SCALE / (FHSSconfig->freq_count - 1);
 
