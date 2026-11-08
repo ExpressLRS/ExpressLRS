@@ -708,6 +708,10 @@ TxConfig::SetBackpackTlmMode(uint8_t mode)
 void
 TxConfig::SetButtonActions(uint8_t button, tx_button_color_t *action)
 {
+    if (button >= ARRAY_SIZE(m_config.buttonColors))
+    {
+        return;
+    }
     if (m_config.buttonColors[button].raw != action->raw) {
         m_config.buttonColors[button].raw = action->raw;
         m_modified |= EVENT_CONFIG_BUTTON_CHANGED;
