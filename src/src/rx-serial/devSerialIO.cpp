@@ -139,6 +139,7 @@ static bool confirmFrameAvailable(devserial_ctx_t *ctx)
     if (config.GetTeamracePosition() == CONFIG_TEAMRACE_POS_OFF)
     {
         ctx->teamraceOutputInhibitState = troiPass;
+        teamraceHasModelMatch = true;
         return true;
     }
 
