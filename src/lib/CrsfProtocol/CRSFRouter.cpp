@@ -39,7 +39,7 @@ void CRSFRouter::processMessage(CRSFConnector *connector, const crsf_header_t *m
 
     for (const auto endpoint : endpoints)
     {
-        if (endpoint->handleRaw(message))
+        if (endpoint->handleRaw(connector, message))
         {
             return;
         }

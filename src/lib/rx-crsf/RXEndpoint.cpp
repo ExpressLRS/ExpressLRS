@@ -9,8 +9,10 @@
 #include "freqTable.h"
 #endif
 #include "logging.h"
+#include "RXOTAConnector.h"
 
 extern void reset_into_bootloader();
+extern RXOTAConnector otaConnector;
 
 RXEndpoint::RXEndpoint()
     : RxTxEndpoint(CRSF_ADDRESS_CRSF_RECEIVER)
@@ -22,10 +24,15 @@ RXEndpoint::RXEndpoint()
  * @param message
  * @return
  */
-bool RXEndpoint::handleRaw(const crsf_header_t *message)
+bool RXEndpoint::handleRaw(const CRSFConnector *connector, const crsf_header_t *message)
 {
     if (message->sync_byte == CRSF_ADDRESS_CRSF_RECEIVER && message->frame_size >= 4 && message->type == CRSF_FRAMETYPE_COMMAND)
     {
+        // These commands come from the FC (passthrough/configurator), drop them if received over the air
+        if (connector == &otaConnector)
+        {
+            return true;
+        }
         uint8_t *payload = (uint8_t *)message + sizeof(crsf_header_t);
         // Non CRSF, dest=b src=l -> reboot to bootloader
         if (payload[0] == 'b' && payload[1] == 'l')

@@ -5,7 +5,7 @@
 class RXEndpoint final : public RxTxEndpoint {
 public:
     RXEndpoint();
-    bool handleRaw(const crsf_header_t *message) override;
+    bool handleRaw(const CRSFConnector *connector, const crsf_header_t *message) override;
     void handleMessage(const crsf_header_t *message) override;
 
     void registerParameters() override;

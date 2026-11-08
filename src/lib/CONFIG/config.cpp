@@ -806,6 +806,10 @@ TxConfig::SetDefaults(bool commit)
 bool
 TxConfig::SetModelId(uint8_t modelId)
 {
+    // modelId comes from CRSF or the web UI and can be any byte, keep the current model if out of range
+    if (modelId >= CONFIG_TX_MODEL_CNT)
+        return false;
+
     model_config_t *newModel = &m_config.model_config[modelId];
     if (newModel != m_model)
     {
