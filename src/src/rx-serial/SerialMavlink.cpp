@@ -13,7 +13,7 @@
 
 #define MAV_FTP_OPCODE_OPENFILERO 4
 
-SerialMavlink::SerialMavlink(Stream &out, Stream &in):
+SerialMavlink::SerialMavlink(Stream &out, Stream &in, uint32_t radioStatusIntervalMs):
     SerialIO(&out, &in),
 
     //system ID of the device component sending command to FC, can be set using lua options, 0 is the default value for initialized storage, treat it as 255 which is commonly used as GCS SysID
@@ -24,7 +24,8 @@ SerialMavlink::SerialMavlink(Stream &out, Stream &in):
     // system ID of vehicle we want to control must be the same as target vehicle, can be set using lua options, 0 is the default value for initialized storage, treat it as 1 which is commonly used as UAV SysID in 1:1 networks
     target_system_id(config.GetTargetSysId() ? config.GetTargetSysId() : 1),
     // Send to all components as we may have ex. gimbal that listens to RC instead of using Autopilot driver
-    target_component_id(MAV_COMPONENT::MAV_COMP_ID_ALL)
+    target_component_id(MAV_COMPONENT::MAV_COMP_ID_ALL),
+    radioStatusIntervalMs(radioStatusIntervalMs)
 {
 }
 
@@ -80,9 +81,9 @@ void SerialMavlink::processBytes(uint8_t *bytes, u_int16_t size)
 void SerialMavlink::sendQueuedData(uint32_t maxBytesToSend)
 {
 
-    // Send radio messages at 100Hz
+    // Send radio messages, 100Hz by default
     const uint32_t now = millis();
-    if ((now - lastSentFlowCtrl) > 10)
+    if ((now - lastSentFlowCtrl) > radioStatusIntervalMs)
     {
         lastSentFlowCtrl = now;
 

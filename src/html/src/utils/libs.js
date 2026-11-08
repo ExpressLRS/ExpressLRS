@@ -8,9 +8,9 @@ export function _(el) {
 
 export function _renderOptions(options, selected) {
     return options.map(
-        (label, index) => html`
+        (label, index) => label ? html`
             <option .value="${index.toString()}" ?selected="${index === selected}">${label}</option>
-        `
+        ` : ''
     )
 }
 
