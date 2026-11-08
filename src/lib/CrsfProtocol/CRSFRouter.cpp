@@ -132,7 +132,8 @@ void CRSFRouter::SetMspV2Request(uint8_t *frame, const uint16_t function, const 
     packet[3] = (function >> 8) & 0xFF;
     packet[4] = payloadLength & 0xFF;
     packet[5] = (payloadLength >> 8) & 0xFF;
-    memcpy(packet + 6, payload, payloadLength);
+    if (payloadLength)
+        memcpy(packet + 6, payload, payloadLength);
     packet[6 + payloadLength] = CalcCRCMsp(packet + 1, payloadLength + 5); // crc = flags + function + length + payload
 }
 
