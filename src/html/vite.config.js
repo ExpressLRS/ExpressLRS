@@ -1,6 +1,7 @@
 import { defineConfig, loadEnv } from 'vite'
 import path from 'path'
 import { minifyTemplateLiterals } from 'rollup-plugin-minify-template-literals';
+import { normalizeEolPlugin } from './build-plugins/normalize-eol-plugin.js'
 import { babelDecoratorsPlugin } from './build-plugins/babel-decorators-plugin.js'
 import { cssTreeShakePlugin } from './build-plugins/css-tree-shake-plugin.js'
 import { htmlFeatureBlocksPlugin } from './build-plugins/feature-blocks-plugin.js'
@@ -18,6 +19,7 @@ export default defineConfig(({ command, mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
   return {
     plugins: [
+      normalizeEolPlugin(),
       htmlFeatureBlocksPlugin(env),
       minifyTemplateLiterals({
         include: ['src/**/*.js'],
@@ -38,7 +40,7 @@ export default defineConfig(({ command, mode }) => {
       }),
       cssTreeShakePlugin(env),
       inlineStaticHtmlAssetsPlugin(),
-      viteEsp32HeaderPlugin({ headerOut: env.ELRS_WEB_HEADER_OUT }),
+      viteEsp32HeaderPlugin({ headerOut: env.ELRS_WEB_HEADER_OUT, eol: env.ELRS_WEB_HEADER_EOL }),
       babelDecoratorsPlugin(),
       ...(command === 'serve'
         ? [

@@ -28,6 +28,15 @@ async function* walk(dir) {
   }
 }
 
+// Text assets must be byte-identical regardless of the checkout's line endings
+// (git autocrlf on Windows turns every source file into CRLF).
+const TEXT_EXTS = new Set(['.html', '.css', '.js', '.mjs', '.json', '.svg', '.txt', '.map'])
+function normalizeTextEol(rel, buf) {
+  if (!TEXT_EXTS.has(path.extname(rel).toLowerCase())) return buf
+  const text = buf.toString('utf8')
+  return text.includes('\r') ? Buffer.from(text.replace(/\r\n?/g, '\n'), 'utf8') : buf
+}
+
 function toHexArray(buf) {
   const parts = []
   for (let i = 0; i < buf.length; i++) {
@@ -81,6 +90,10 @@ export function viteEsp32HeaderPlugin(options = {}) {
   const headerName = options.headerName || 'esp32_fs.h'
   const headerOut = options.headerOut || null
   const includeMaps = options.includeMaps ?? false
+  // Line ending of the emitted header. Fixed (not OS-dependent) so Windows and
+  // Linux produce byte-identical files. Default LF (matches the
+  // repo blobs); pass 'crlf' to override (or set ELRS_WEB_HEADER_EOL=crlf).
+  const eol = String(options.eol || 'lf').toLowerCase() === 'crlf' ? '\r\n' : '\n'
 
   let outDir = 'dist'
   let root = process.cwd()
@@ -109,7 +122,15 @@ export function viteEsp32HeaderPlugin(options = {}) {
       }
 
       if (files.length === 0) return
-      files.sort()
+
+      // Sort by the forward-slash web path using plain code-unit order. Sorting
+      // absolute OS paths is platform dependent ('\\' sorts after '/' and '-').
+      const toRel = (abs) => path.relative(distDir, abs).split(path.sep).join('/')
+      files.sort((a, b) => {
+        const ra = toRel(a)
+        const rb = toRel(b)
+        return ra < rb ? -1 : ra > rb ? 1 : 0
+      })
 
       const assetEntries = []
       let totalCompressedBytes = 0
@@ -118,7 +139,7 @@ export function viteEsp32HeaderPlugin(options = {}) {
         const rel = path.relative(distDir, abs).split(path.sep).join('/')
         const webPath = '/' + rel
         const id = toCIdentifier(rel)
-        const data = await fs.readFile(abs)
+        const data = normalizeTextEol(rel, await fs.readFile(abs))
         const compressed = Zopfli.gzipSync(data, { numiterations: 15 })
         totalCompressedBytes += compressed.length
         const contentType = guessContentType(rel)
@@ -130,7 +151,8 @@ export function viteEsp32HeaderPlugin(options = {}) {
       const outFile = headerOut
         ? path.resolve(root, headerOut)
         : path.join(distDir, headerName)
-      const artifactName = path.relative(root, outFile)
+      // Forward slashes so the comment is identical on every OS.
+      const artifactName = path.relative(root, outFile).split(path.sep).join('/')
 
       header += `\n// Artifact: ${artifactName}\n`
       header += `// Total web asset payload: ${formatBytes(totalCompressedBytes)} across ${assetEntries.length} assets\n`
@@ -149,6 +171,8 @@ export function viteEsp32HeaderPlugin(options = {}) {
       header += '};\n'
       header += 'static const size_t WEB_ASSETS_COUNT = sizeof(WEB_ASSETS) / sizeof(WEB_ASSETS[0]);\n\n'
       header += headerEpilogue()
+
+      header = header.replace(/\r\n?/g, '\n').replace(/\n/g, eol)
 
       await fs.mkdir(path.dirname(outFile), { recursive: true })
       await fs.writeFile(outFile, header, 'utf8')
