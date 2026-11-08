@@ -70,5 +70,8 @@ public:
     }
 
 private:
+    // Time to wait after DIO1 before the first SPI access on boards without a BUSY pin
+    static constexpr uint32_t DIO_HOLDOFF_US = 20;
+    void ICACHE_RAM_ATTR DioHoldoff();
 
 };
