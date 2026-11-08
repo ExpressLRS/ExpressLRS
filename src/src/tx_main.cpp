@@ -1126,7 +1126,9 @@ static void HandleUARTin()
 
     if (handset->isMavlinkHandset())
     {
-      (void)buf;
+      uartInputBuffer.lock();
+      uartInputBuffer.pushBytes(buf, size);
+      uartInputBuffer.unlock();
     }
     else
     {
@@ -1162,7 +1164,7 @@ static void HandleUARTin()
       uint8_t buf[size];
       BackpackOrLogStrm->readBytes(buf, size);
 
-      if (!handset->isMavlinkHandset() && config.GetLinkMode() == TX_MAVLINK_MODE)
+      if (mavlinkTunnelActive())
       {
         uartInputBuffer.lock();
         uartInputBuffer.pushBytes(buf, size);
@@ -1184,7 +1186,7 @@ static void HandleUARTin()
     }
   }
 
-  if (config.GetLinkMode() == TX_MAVLINK_MODE)
+  if (mavlinkTunnelActive())
   {
     // Use DataUlSender for MAVLINK uplink data
     uint8_t *nextPayload = 0;
