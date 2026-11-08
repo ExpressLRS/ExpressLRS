@@ -70,6 +70,13 @@ uint32_t SerialDisplayport::sendRCFrame(bool frameAvailable, bool frameMissed, u
         battery[9] = centiVolts & 0xFF;          // voltage, 0.01V (little endian)
         battery[10] = centiVolts >> 8;
         send(MSP_BATTERY_STATE, battery, sizeof(battery), _outputPort);
+
+        // Also send MSP_ANALOG as required by Vista/OG AU
+        uint8_t analog[9] = {0};
+        analog[0] = vbatMilliVolts / 100;        // voltage, 0.1V
+        analog[7] = centiVolts & 0xFF;           // voltage, 0.01V (little endian)
+        analog[8] = centiVolts >> 8;
+        send(MSP_ANALOG, analog, sizeof(analog), _outputPort);
     }
 
     return MSP_MSG_PERIOD_MS;   // Send MSP msgs to DJI at 10Hz
