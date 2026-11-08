@@ -77,7 +77,7 @@ uint32_t BMP085::getPressure()
     X2 = (-7357 * p) >> 16;
 
     p = p + ((X1 + X2 + (int32_t)3791) >> 4);
-    return p;
+    return p * 10; // Pa to deci-Pascals
 }
 
 uint8_t BMP085::getTemperatureDuration()
