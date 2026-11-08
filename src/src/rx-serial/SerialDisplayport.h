@@ -20,6 +20,8 @@ CONSEQUENTIAL DAMAGES, FOR ANY REASON WHATSOEVER.
 
 #define MSP_STATUS          101
 #define MSP_STATUS_EX       150
+#define MSP_ANALOG          110
+#define MSP_BATTERY_STATE   130
 #define MSP_MSG_PERIOD_MS   100
 
 struct msp_status_t
