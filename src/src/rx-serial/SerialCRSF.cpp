@@ -5,8 +5,6 @@
 #include "device.h"
 #include "msp2crsf.h"
 
-extern void reset_into_bootloader();
-
 void SerialCRSF::forwardMessage(const crsf_header_t *message)
 {
     // No MSP data to the FC if team-race is selected and the correct model is not selected
