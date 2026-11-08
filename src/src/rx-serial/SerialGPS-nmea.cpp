@@ -111,10 +111,18 @@ void SerialGPS::nmeaByte(uint8_t c)
     rxState = grIdle;
 }
 
+static int hexDigitValue(const char c)
+{
+    if (c >= '0' && c <= '9') return c - '0';
+    if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+    if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+    return -1;
+}
+
 bool SerialGPS::isValidChecksum(char *sentence, uint8_t size)
 {
-    // Could also check for the \r\n but we know it at least has the \n to get here
-    if (size < 6 || sentence[0] != '$' || sentence[size-5] != '*')
+    // A sentence ends with "*XX\r\n", we know it at least has the \n to get here
+    if (size < 6 || sentence[0] != '$' || sentence[size-5] != '*' || sentence[size-2] != '\r')
     {
         DBGLN("NMEA invalid");
         return false;
@@ -127,8 +135,10 @@ bool SerialGPS::isValidChecksum(char *sentence, uint8_t size)
         csumCalculated ^= sentence[b];
     }
 
-    uint8_t csumSentence = strtol((char *)&sentence[size-4], nullptr, 16);
-    if (csumCalculated != csumSentence)
+    // The buffer is not null terminated, parse exactly the two checksum digits
+    const int csumHigh = hexDigitValue(sentence[size-4]);
+    const int csumLow = hexDigitValue(sentence[size-3]);
+    if (csumHigh < 0 || csumLow < 0 || csumCalculated != ((csumHigh << 4) | csumLow))
     {
         DBGLN("NMEA csum");
         return false;
