@@ -358,15 +358,17 @@ uint32_t format_gps_status(uint8_t fix_type, int32_t alt_msl_mm, uint16_t eph, u
  * Adapted from Ardupilot's AP_Frsky_SPort_Passthrough::calc_batt()
  * This is the content of the 0x5003 BATT1 value.
  * -1 on current values indicate invalid thus fields are kept 0
+ * voltage saturates at 51.1v
  */
-uint32_t format_batt1(uint16_t voltage_mv, int16_t current_ca, int32_t current_consumed)
+uint32_t format_batt1(uint32_t voltage_mv, int16_t current_ca, int32_t current_consumed)
 {
 #define BATT_VOLTAGE_LIMIT          0x1FF
 #define BATT_CURRENT_OFFSET         9
 #define BATT_TOTALMAH_LIMIT         0x7FFF
 #define BATT_TOTALMAH_OFFSET        17
     // battery voltage in decivolts, can have up to a 12S battery (4.25Vx12S = 51.0V)
-    uint32_t batt = ((voltage_mv / 100) & BATT_VOLTAGE_LIMIT);
+    // Constrain down rather than wrapping
+    uint32_t batt = MIN((voltage_mv / 100), BATT_VOLTAGE_LIMIT);
     if (current_ca > 0){
         // battery current draw in deciamps
         batt |= prep_number(current_ca / 10, 2, 1)<<BATT_CURRENT_OFFSET;

@@ -66,8 +66,9 @@ uint32_t format_gps_status(uint8_t fix_type, int32_t alt_msl_mm, uint16_t eph, u
  * Adapted from Ardupilot's AP_Frsky_SPort_Passthrough::calc_batt()
  * This is the content of the 0x5003 BATT1 value.
  * -1 on current values indicate invalid thus fields are kept 0
+ * voltage saturates at 51.1v
  */
-uint32_t format_batt1(uint16_t voltage_mv, int16_t current_ca, int32_t current_consumed);
+uint32_t format_batt1(uint32_t voltage_mv, int16_t current_ca, int32_t current_consumed);
 
 /*
  * Adapted from Ardupilot's AP_Frsky_SPort_Passthrough::calc_home()

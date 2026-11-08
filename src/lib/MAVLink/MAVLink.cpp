@@ -85,6 +85,42 @@ static void ap_send_crsf_passthrough_multi(crsf_addr_e destination, uint16_t app
     crsfRouter.deliverMessageTo(destination, &crsfpassthrough.h);
 }
 
+/*
+ * Total pack voltage in mV from a BATTERY_STATUS message.
+ */
+static uint32_t battery_status_voltage_mv(const mavlink_battery_status_t &battery_status)
+{
+    // The MAVLink message will contain cell voltages if available.
+    // High voltage packs will also overflow into subsequent cell voltages such that the total voltage is still correct.
+
+    uint32_t voltage_mv = 0;
+
+    // Voltage in the main message uses UINT16_MAX for invalid
+    // Cells 1 to 10
+    for (uint16_t cell_mv : battery_status.voltages)
+    {
+        if (cell_mv == UINT16_MAX)
+        {
+            return voltage_mv;
+        }
+        voltage_mv += cell_mv;
+    }
+
+    // Voltage in the extension defaults to 0
+    // But they may be UINT16_MAX
+    // Cells 11 to 14
+    for (uint16_t cell_mv : battery_status.voltages_ext)
+    {
+        if ((cell_mv == 0) || (cell_mv == UINT16_MAX))
+        {
+            return voltage_mv;
+        }
+        voltage_mv += cell_mv;
+    }
+
+    return voltage_mv;
+}
+
 void convert_mavlink_to_crsf_telem(crsf_addr_e destination, uint8_t *CRSFinBuffer, uint8_t count)
 {
     // Store the relative altitude for GPS altitude
@@ -131,10 +167,11 @@ void convert_mavlink_to_crsf_telem(crsf_addr_e destination, uint8_t *CRSFinBuffe
                     ap_send_crsf_passthrough_single(destination, 0x5008, format_batt1(battery_status.voltages[0], battery_status.current_battery, battery_status.current_consumed));
                     break;
                 }
+                const uint32_t voltage_mv = battery_status_voltage_mv(battery_status);
                 CRSF_MK_FRAME_T(crsf_sensor_battery_t)
                 crsfbatt = {0};
                 // mV -> mv*100
-                crsfbatt.p.voltage = htobe16(battery_status.voltages[0] / 100);
+                crsfbatt.p.voltage = htobe16(voltage_mv / 100);
                 // cA -> mA*100
                 crsfbatt.p.current = 0;
                 if (battery_status.current_battery > 0){ // int16_t, -1 means invalid
@@ -154,7 +191,7 @@ void convert_mavlink_to_crsf_telem(crsf_addr_e destination, uint8_t *CRSFinBuffe
                 crsfRouter.deliverMessageTo(destination, &crsfbatt.h);
 
                 // send the batt1 message to Yaapu Telemetry Script
-                ap_send_crsf_passthrough_single(destination, 0x5003, format_batt1(battery_status.voltages[0], battery_status.current_battery, battery_status.current_consumed));
+                ap_send_crsf_passthrough_single(destination, 0x5003, format_batt1(voltage_mv, battery_status.current_battery, battery_status.current_consumed));
                 break;
             }
             case MAVLINK_MSG_ID_GPS_RAW_INT: {
