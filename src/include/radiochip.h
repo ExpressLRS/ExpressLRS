@@ -25,3 +25,9 @@ constexpr radio_chip_e radioChip = RADIO_CHIP_LR1121;
 #elif defined(RADIO_LR2021)
 constexpr radio_chip_e radioChip = RADIO_CHIP_LR2021;
 #endif
+
+// The LR11xx/LR20xx chips: Hz frequencies, a sub-GHz and a 2.4 GHz band, dual band rates
+static inline bool radioIsLR()
+{
+    return radioChip == RADIO_CHIP_LR1121 || radioChip == RADIO_CHIP_LR2021;
+}

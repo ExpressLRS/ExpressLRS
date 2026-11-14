@@ -684,7 +684,12 @@ void ICACHE_RAM_ATTR LR1121Driver::TXnb(uint8_t *data, const bool sendGeminiBuff
 #endif
 }
 
-inline void ICACHE_RAM_ATTR LR1121Driver::DecodeRssiSnr(SX12XX_Radio_Number_t radioNumber, const uint8_t *buf)
+// Not inline in a multi-radio build: there the driver state it writes is static, so it
+// needs literals, and GCC puts an inline IRAM function's literals in flash, past the code
+#if !defined(RADIO_MULTI)
+inline
+#endif
+void ICACHE_RAM_ATTR LR1121Driver::DecodeRssiSnr(SX12XX_Radio_Number_t radioNumber, const uint8_t *buf)
 {
     // RssiPkt defines the average RSSI over the last packet received. RSSI value in dBm is –RssiPkt/2.
     const int8_t rssi = -(int8_t)(buf[RadioBandMod::isGFSK(modulation) ? 3 : 5] / 2);

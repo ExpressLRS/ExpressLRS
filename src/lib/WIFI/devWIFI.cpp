@@ -589,25 +589,26 @@ static void GetConfiguration(AsyncWebServerRequest *request)
         settings["has_high_band"] = false;
         settings["reg_domain_low"] = FHSSconfig->domain;
     }
-    else
+    else if (radioChip == RADIO_CHIP_SX128X)
     {
         settings["radio-type"] = "SX128X";
         settings["has_low_band"] = false;
         settings["has_high_band"] = true;
         settings["reg_domain_high"] = FHSSconfig->domain;
     }
-#elif defined(RADIO_LR1121)
-    settings["radio-type"] = "LR1121";
-    settings["has_low_band"] = POWER_OUTPUT_VALUES_COUNT != 0;
-    settings["has_high_band"] = POWER_OUTPUT_VALUES_DUAL_COUNT != 0;
-    settings["reg_domain_low"] = FHSSconfig->domain;
-    settings["reg_domain_high"] = FHSSconfigDualBand->domain;
-#elif defined(RADIO_LR2021)
-    settings["radio-type"] = "LR2021";
-    settings["has_low_band"] = POWER_OUTPUT_VALUES_COUNT != 0;
-    settings["has_high_band"] = POWER_OUTPUT_VALUES_DUAL_COUNT != 0;
-    settings["reg_domain_low"] = FHSSconfig->domain;
-    settings["reg_domain_high"] = FHSSconfigDualBand->domain;
+#endif
+#if defined(RADIO_LR1121) || defined(RADIO_LR2021)
+    if (radioIsLR())
+    {
+        if (radioChip == RADIO_CHIP_LR1121)
+            settings["radio-type"] = "LR1121";
+        else
+            settings["radio-type"] = "LR2021";
+        settings["has_low_band"] = POWER_OUTPUT_VALUES_COUNT != 0;
+        settings["has_high_band"] = POWER_OUTPUT_VALUES_DUAL_COUNT != 0;
+        settings["reg_domain_low"] = FHSSconfig->domain;
+        settings["reg_domain_high"] = FHSSconfigDualBand->domain;
+    }
 #endif
     }
   }
@@ -1091,7 +1092,12 @@ static void HandleContinuousWave(AsyncWebServerRequest *request) {
     POWERMGNT::setPower(POWERMGNT::getMinPower());
 
 #if defined(RADIO_LR1121) || defined(RADIO_LR2021)
-    Radio.startCWTest(setSubGHz ? FHSSconfig->freq_center : FHSSconfigDualBand->freq_center, radio);
+    // an SX12xx chip has its one band in FHSSconfig
+    Radio.startCWTest((setSubGHz || !radioIsLR()) ? FHSSconfig->freq_center : FHSSconfigDualBand->freq_center, radio);
+#if defined(RADIO_MULTI)
+    if (radioChip == RADIO_CHIP_SX127X)
+        deferExecutionMillis(50, [radio](){ Radio.cwRepeat(radio); });
+#endif
 #else
     Radio.startCWTest(FHSSconfig->freq_center, radio);
 #if defined(RADIO_SX127X)
@@ -1103,7 +1109,7 @@ static void HandleContinuousWave(AsyncWebServerRequest *request) {
     int radios = (GPIO_PIN_NSS_2 == UNDEF_PIN) ? 1 : 2;
     request->send(200, "application/json", String("{\"radios\": ") + radios + ", \"center\": "+ FHSSconfig->freq_center +
 #if defined(RADIO_LR1121) || defined(RADIO_LR2021)
-            ", \"center2\": "+ FHSSconfigDualBand->freq_center +
+            ", \"center2\": "+ (radioIsLR() ? FHSSconfigDualBand->freq_center : FHSSconfig->freq_center) +
 #endif
             "}");
   }
@@ -1329,8 +1335,11 @@ static void startServices()
   #endif
 
   #if defined(RADIO_LR1121)
+  if (radioChip == RADIO_CHIP_LR1121)
+  {
     server.on("/lr1121", HTTP_OPTIONS, corsPreflightResponse);
     addLR1121Handlers(server);
+  }
   #endif
 
   #if defined(TARGET_RX)

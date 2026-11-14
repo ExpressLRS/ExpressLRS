@@ -4,8 +4,9 @@
 #include "random.h"
 
 #if defined(RADIO_MULTI)
-// The register unit (FREQ_STEP) is the fitted chip's, see MultiRadioDriver.h
-#define FreqCorrectionMax (radioChip == RADIO_CHIP_SX127X ? (int32_t)(100000/SX127X_FREQ_STEP) : (int32_t)(200000/SX1280_FREQ_STEP))
+// The register unit (FREQ_STEP) is the fitted chip's, see MultiRadioDriver.h. The LR
+// drivers' FREQ_STEP is the SX127x's.
+#define FreqCorrectionMax (radioChip == RADIO_CHIP_SX128X ? (int32_t)(200000/SX1280_FREQ_STEP) : (int32_t)(100000/SX127X_FREQ_STEP))
 #elif defined(RADIO_SX127X)
 #define FreqCorrectionMax ((int32_t)(100000/FREQ_STEP))
 #elif defined(RADIO_SX128X)
@@ -17,7 +18,12 @@
 #endif
 #define FreqCorrectionMin (-FreqCorrectionMax)
 
-#if defined(RADIO_LR1121) || defined(RADIO_LR2021) || defined(UNIT_TEST)
+#if defined(RADIO_MULTI) && (defined(RADIO_LR1121) || defined(RADIO_LR2021))
+// Register units with 8 extra bits of spread on an SX12xx, Hz on an LR chip: set with
+// FHSSconfig in FHSSrandomiseFHSSsequence(). The tables are converted in FHSS.cpp.
+extern uint8_t freqSpreadShift;
+#define FREQ_SPREAD_SCALE (1u << freqSpreadShift)
+#elif defined(RADIO_LR1121) || defined(RADIO_LR2021) || defined(UNIT_TEST)
 #define FREQ_HZ_TO_REG_VAL(freq) (freq)
 #define FREQ_SPREAD_SCALE 1
 #else

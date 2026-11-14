@@ -567,6 +567,13 @@ void RXEndpoint::registerParameters()
 
   if (POWERMGNT::getMinPower() != POWERMGNT::getMaxPower())
   {
+#if defined(Regulatory_Domain_EU_CE_2400) && defined(RADIO_MULTI) && (defined(RADIO_LR1121) || defined(RADIO_LR2021))
+    // the sub-GHz/2.4 GHz pairs above are for the LR chips, the SX12xx have one band
+    if (!radioIsLR())
+    {
+      strcpy(strPowerLevels, "10;25;50;100;250;500;1000;2000;MatchTX ");
+    }
+#endif
     filterOptions(&luaTlmPower, POWERMGNT::getMinPower(), POWERMGNT::getMaxPower(), strPowerLevels);
     strcat(strPowerLevels, ";MatchTX ");
     registerParameter(&luaTlmPower, &luaparamSetPower);

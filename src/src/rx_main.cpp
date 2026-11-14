@@ -321,13 +321,20 @@ void SetRFLinkRate(uint8_t index, bool bindMode) // Set speed of RF link
     hwTimer::updateInterval(interval);
 
 #if defined(RADIO_LR1121) || defined(RADIO_LR2021)
-    FHSSusePrimaryFreqBand = !RadioBandMod::isB2G4(ModParams->radio_type);
-    FHSSuseDualBand = RadioBandMod::isBDUAL(ModParams->radio_type);
+    // an SX12xx chip has one band, in FHSSconfig
+    if (radioIsLR())
+    {
+        FHSSusePrimaryFreqBand = !RadioBandMod::isB2G4(ModParams->radio_type);
+        FHSSuseDualBand = RadioBandMod::isBDUAL(ModParams->radio_type);
+    }
 #endif
 
     Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, FHSSgetInitialFreq(),
                  ModParams->PreambleLen, invertIQ, ModParams->PayloadLength
-#if defined(RADIO_SX128X)
+#if defined(RADIO_MULTI)
+                 , ModParams->radio_type, (uint8_t)UID[5], (uint8_t)UID[4]
+                 , OtaGetUidSeed(), OtaCrcInitializer
+#elif defined(RADIO_SX128X)
                  , OtaGetUidSeed(), OtaCrcInitializer, ModParams->radio_type
 #elif defined(RADIO_LR1121)
                  , ModParams->radio_type, (uint8_t)UID[5], (uint8_t)UID[4]
@@ -1769,7 +1776,7 @@ static void updateBindingMode(unsigned long now)
 
 #if defined(RADIO_LR1121) || defined(RADIO_LR2021)
     // Change frequency domains every 500ms.  This will allow single LR1121 receivers to receive bind packets from SX12XX Tx modules.
-    else if (InBindingMode && (now - BindingRateChangeMs) > BindingRateChangeCyclePeriodMs)
+    else if (InBindingMode && radioIsLR() && (now - BindingRateChangeMs) > BindingRateChangeCyclePeriodMs)
     {
         BindingRateChangeMs = now;
         if (ExpressLRS_currAirRate_Modparams->enum_rate == RATE_DUALBAND_BINDING)
