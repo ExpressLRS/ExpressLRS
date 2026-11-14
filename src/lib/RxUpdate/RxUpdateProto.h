@@ -13,14 +13,25 @@
 //
 // The RX takes a station MAC derived from the binding UID, so the TX knows where to
 // send without any discovery, and only a TX with the same bind phrase can reach it.
+//
+// An RX in bind mode also listens, with its own factory MAC, for a HELLO broadcast by
+// any TX: it answers with its name and stays in bind mode. Several receivers in bind
+// mode can answer the same HELLO; the TX takes the first. Then either:
+//   * BIND(uid): the TX's Bind. The RX takes the UID, leaves bind mode, and listens on
+//     its new UID's MAC (as after a boot) until the link is up, so an update offered
+//     right after reaches it even when it can't link to this TX.
+//   * BEGIN: the TX's Update Receiver. The RX updates, and after a good FINISH binds to
+//     the UID from the HELLO.
+//
 // HELLO/BEGIN/FINISH are stop-and-wait. DATA is windowed and acked cumulatively, though
 // not every DATA gets its own answer (see ACK_EVERY).
 //
-//   TX  HELLO        ->  RX  HELLO_ACK   (image key, version, commit, max image size)
+//   TX  HELLO(uid)   ->  RX  HELLO_ACK   (image key, version, commit, max image size, name)
 //   TX  BEGIN(size)  ->  RX  BEGIN_ACK
 //   TX  DATA(off)    ->  RX  DATA_ACK(next expected offset)   ... a window in flight
 //   TX  FINISH(sha)  ->  RX  FINISH_ACK(status, text), then the RX reboots into it
 //   TX  CANCEL_UPDATE(why)  ->  RX  CANCEL_UPDATE_ACK, then the RX reboots into what it has
+//   TX  BIND(uid)    ->  RX  BIND_ACK    (bind mode only)
 //
 // This protocol has to outlive the RC link protocol: an RX that can't link is
 // exactly the one that needs it. So it only ever grows. Packets keep their types
@@ -33,11 +44,14 @@
 
 namespace RxUpdate
 {
-constexpr uint8_t PROTO_VERSION = 1;
+// 2: HELLO carries the TX's UID, HELLO_ACK the RX's name; bind-mode receivers, BIND
+constexpr uint8_t PROTO_VERSION = 2;
 constexpr uint8_t ESPNOW_CHANNEL = 1;
 // how long an RX listens for a HELLO after boot, alongside starting the link; the
 // first valid RC packet ends it early
 constexpr uint32_t BOOT_LISTEN_MS = 1500;
+// the same after a BIND, long enough for someone to answer the TX's update offer
+constexpr uint32_t BIND_LISTEN_MS = 60000;
 constexpr uint8_t MAGIC0 = 'E', MAGIC1 = 'U';
 constexpr uint16_t DATA_MAX = 232;
 // Packets the TX keeps in flight for any RX. The RX acks cumulatively ("next offset I
@@ -65,6 +79,11 @@ constexpr wifi_phy_rate_t ACK_RATE = WIFI_PHY_RATE_1M_L;
 // ESP8285 has no second app slot, the raw image doesn't fit next to the running one,
 // and its bootloader inflates gzip images itself.
 constexpr uint8_t FLAG_WANTS_GZIP = 0x01;
+// The RX answered from bind mode: a good FINISH binds it to the HELLO's UID
+constexpr uint8_t FLAG_BINDING = 0x02;
+
+// where an RX in bind mode hears a TX: ESP-NOW broadcast
+constexpr uint8_t BROADCAST_MAC[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 
 enum Type : uint8_t
 {
@@ -78,6 +97,8 @@ enum Type : uint8_t
     FINISH_ACK,
     CANCEL_UPDATE,
     CANCEL_UPDATE_ACK,
+    BIND,
+    BIND_ACK,
 };
 
 // Cancel.reason: why the TX gave up, so the RX's log says the same as the handset
@@ -113,7 +134,17 @@ struct __attribute__((packed)) Hello
 {
     Header h;
     uint8_t proto;     // PROTO_VERSION; absent (0) from the first transmitters
+    uint8_t uid[6];    // the TX's bind UID: what a receiver in bind mode binds to
+    uint8_t flags;     // HELLO_*
 };
+
+// Hello.flags: broadcast to receivers in bind mode. Only those answer it; a receiver
+// listening on its UID's MAC hears broadcasts too, and must ignore this one.
+constexpr uint8_t HELLO_BIND = 0x01;
+inline bool isBindHello(const uint8_t *p, int len)
+{
+    return len >= (int)sizeof(Hello) && (((const Hello *)p)->flags & HELLO_BIND);
+}
 
 struct __attribute__((packed)) HelloAck
 {
@@ -125,6 +156,8 @@ struct __attribute__((packed)) HelloAck
     uint8_t flags;     // FLAG_*; absent (0) from older receivers
     uint8_t proto;     // PROTO_VERSION; absent (0) from older receivers
     uint8_t domain;    // DOMAIN_*: which regulatory build this is; absent (0) means FCC
+    char name[16];     // the RX's device name (as in the Lua), for the handset to show
+    uint8_t otaVersion; // OTA_VERSION_ID: a different one can't link to this TX
 };
 
 // HelloAck.domain. The 2.4 GHz regulatory domain is compiled in, not set in the
@@ -139,6 +172,12 @@ inline uint8_t buildDomain()
     return DOMAIN_FCC;
 #endif
 }
+
+struct __attribute__((packed)) Bind
+{
+    Header h;
+    uint8_t uid[6];
+};
 
 struct __attribute__((packed)) Begin
 {

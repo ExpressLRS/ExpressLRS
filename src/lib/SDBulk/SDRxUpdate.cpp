@@ -6,6 +6,7 @@
 #include "OTA.h"
 #include "RxUpdateProto.h"
 #include "logging.h"
+#include "options.h"
 
 #include <ArduinoJson.h>
 #include <WiFi.h>
@@ -27,6 +28,8 @@ static constexpr uint32_t PROGRESS_MS = 500;
 static constexpr uint32_t FIND_RX_TIMEOUT_MS = 10000;
 // how long to wait for someone to power the receiver on
 static constexpr uint32_t FIND_BOOTING_RX_TIMEOUT_MS = 30000;
+// how long the name of a receiver found in bind mode stays up before we start on it
+static constexpr uint32_t BIND_CONFIRM_MS = 3000;
 
 static QueueHandle_t ackQueue;
 // the transfer loop sleeps until an ESP-NOW callback has news
@@ -50,15 +53,18 @@ struct Reply
 {
     uint8_t len;
     uint8_t data[250];
+    uint8_t mac[6];
 };
 
 static void onRecv(const uint8_t *mac, const uint8_t *data, int len)
 {
-    if (!valid(data, len) || len > 250 || memcmp(mac, rxMac, 6) != 0)
+    // while rxMac is the broadcast address (looking for a receiver in bind mode), anyone
+    if (!valid(data, len) || len > 250 || (memcmp(mac, rxMac, 6) != 0 && memcmp(rxMac, BROADCAST_MAC, 6) != 0))
         return;
     Reply r;
     r.len = len;
     memcpy(r.data, data, len);
+    memcpy(r.mac, mac, 6);
     xQueueSend(ackQueue, &r, 0);
     if (waiter)
         xTaskNotifyGive(waiter);
@@ -91,7 +97,8 @@ static int keepalive(SDBulkLink &link, const char *text, uint32_t done = 0, uint
 }
 
 // One stop-and-wait exchange: send, wait for the matching answer type and seq
-static bool exchange(void *pkt, size_t len, Type want, Reply &out, uint32_t timeoutMs, int tries)
+static bool exchange(void *pkt, size_t len, Type want, Reply &out, uint32_t timeoutMs, int tries,
+                     const uint8_t *to = nullptr)
 {
     auto h = (Header *)pkt;
     h->magic[0] = MAGIC0;
@@ -99,7 +106,7 @@ static bool exchange(void *pkt, size_t len, Type want, Reply &out, uint32_t time
     h->seq = ++seq;
     for (int t = 0; t < tries; t++)
     {
-        esp_now_send(rxMac, (const uint8_t *)pkt, len);
+        esp_now_send(to ? to : rxMac, (const uint8_t *)pkt, len);
         const uint32_t start = millis();
         while (millis() - start < timeoutMs)
         {
@@ -114,10 +121,21 @@ static bool exchange(void *pkt, size_t len, Type want, Reply &out, uint32_t time
     return false;
 }
 
+static bool addPeer(const uint8_t *mac)
+{
+    esp_now_peer_info_t info = {};
+    memcpy(info.peer_addr, mac, 6);
+    info.channel = ESPNOW_CHANNEL;
+    info.ifidx = WIFI_IF_STA;
+    return esp_now_add_peer(&info) == ESP_OK;
+}
+
+// Starts out listening to anyone (rxMac is the broadcast address) until a receiver
+// answers; then it's that receiver only.
 static bool startEspNow()
 {
     ackQueue = xQueueCreate(32, sizeof(Reply));
-    macFromUid(UID, rxMac);
+    memcpy(rxMac, BROADCAST_MAC, 6);
     WiFi.persistent(false);
     WiFi.mode(WIFI_STA);
     WiFi.disconnect();
@@ -130,11 +148,25 @@ static bool startEspNow()
     esp_now_register_recv_cb(onRecv);
     esp_now_register_send_cb(onSent);
     sendOk = sendFail = 0;
-    esp_now_peer_info_t info = {};
-    memcpy(info.peer_addr, rxMac, 6);
-    info.channel = ESPNOW_CHANNEL;
-    info.ifidx = WIFI_IF_STA;
-    return esp_now_add_peer(&info) == ESP_OK;
+    uint8_t ours[6];
+    macFromUid(UID, ours);
+    return addPeer(BROADCAST_MAC) && addPeer(ours);
+}
+
+static void lockOnto(const uint8_t *mac)
+{
+    memcpy(rxMac, mac, 6);
+    addPeer(rxMac); // fails harmlessly if it's our UID's MAC, added already
+}
+
+static Hello makeHello(bool bindMode)
+{
+    Hello hello = {};
+    hello.h.type = HELLO;
+    hello.proto = PROTO_VERSION;
+    memcpy(hello.uid, UID, sizeof(hello.uid));
+    hello.flags = bindMode ? HELLO_BIND : 0;
+    return hello;
 }
 
 static void stopEspNow()
@@ -158,7 +190,10 @@ static void cancelRx(CancelReason reason, const char *text)
     strncpy(c.text, text, sizeof(c.text) - 1);
     Reply r;
     xQueueReset(ackQueue);
-    exchange(&c, sizeof(c), CANCEL_UPDATE_ACK, r, 200, 3);
+    // not found yet: only ours can be waiting for us (a linked RX told to switch over)
+    uint8_t ours[6];
+    macFromUid(UID, ours);
+    exchange(&c, sizeof(c), CANCEL_UPDATE_ACK, r, 200, 3, memcmp(rxMac, BROADCAST_MAC, 6) == 0 ? ours : nullptr);
 }
 
 // The image the last sync left for this key, as FIRMWARE/manifest.json records it
@@ -421,6 +456,100 @@ private:
 
 static ImageSource *src;
 
+//---------------------------- Bind over ESP-NOW ----------------------------
+
+// how long LoRa bind waits for an ESP-NOW one: long enough for a receiver in bind mode
+// to answer a few HELLOs, short enough not to be noticed
+static constexpr uint32_t ESP_ONLY_MS = 1000;
+// the probe never outlives LoRa bind (~0.5 s) by much, even if nobody calls stop()
+static constexpr uint32_t BIND_PROBE_MAX_MS = 5000;
+
+static volatile uint8_t bindState = RxBind::IDLE;
+static volatile bool bindStopping = false;
+static uint32_t bindStart = 0, boundAt = 0;
+static RxBind::Found bindFound;
+
+static void bindTask(void *)
+{
+    Reply r;
+    HelloAck info = {};
+    bool found = false;
+    if (startEspNow())
+    {
+        while (!found && !bindStopping && millis() - bindStart < BIND_PROBE_MAX_MS)
+        {
+            Hello hello = makeHello(true);
+            if (exchange(&hello, sizeof(hello), HELLO_ACK, r, 50, 1, BROADCAST_MAC))
+            {
+                memcpy(&info, r.data, std::min<size_t>(r.len, sizeof(info)));
+                found = info.flags & FLAG_BINDING;
+            }
+        }
+    }
+    bool bound = false;
+    if (found)
+    {
+        lockOnto(r.mac);
+        Bind b = {};
+        b.h.type = BIND;
+        memcpy(b.uid, UID, sizeof(b.uid));
+        bound = exchange(&b, sizeof(b), BIND_ACK, r, 100, 10) && ((const StatusOnly *)r.data)->status == ST_OK;
+    }
+    if (bound)
+    {
+        memset(&bindFound, 0, sizeof(bindFound));
+        memcpy(bindFound.name, info.name, sizeof(info.name));
+        if (!bindFound.name[0])
+            memcpy(bindFound.name, info.key, sizeof(bindFound.name) - 1);
+        memcpy(bindFound.version, info.version, sizeof(info.version));
+        // CI images are this TX's build: anything else is worth an update
+        bindFound.needsUpdate = strncmp(info.commit, commit, 6) != 0;
+        bindFound.otherMajor = info.otaVersion != OTA_VERSION_ID;
+        boundAt = millis();
+        DBGLN("RX bind: %s took our UID over ESP-NOW (%s)", bindFound.name, bindFound.version);
+    }
+    stopEspNow();
+    bindState = bound ? RxBind::BOUND : RxBind::NONE;
+    vTaskDelete(nullptr);
+}
+
+void RxBind::start()
+{
+    if (bindState == RUNNING)
+        return;
+    bindStopping = false;
+    bindStart = millis();
+    bindState = RUNNING;
+    xTaskCreatePinnedToCore(bindTask, "rxbind", 4096, nullptr, 3, nullptr, 1);
+}
+
+bool RxBind::holdingLoRa()
+{
+    return bindState == RUNNING && millis() - bindStart < ESP_ONLY_MS;
+}
+
+void RxBind::stop()
+{
+    bindStopping = true;
+}
+
+RxBind::State RxBind::state()
+{
+    return (State)bindState;
+}
+
+const RxBind::Found &RxBind::found()
+{
+    return bindFound;
+}
+
+bool RxBind::justBound()
+{
+    return boundAt && millis() - boundAt < BIND_LISTEN_MS;
+}
+
+//---------------------------- Update ----------------------------
+
 bool runRxUpdate(SDBulkLink &link, const char *path, bool linked, char *result, size_t resultLen)
 {
     lastCall = millis();
@@ -445,23 +574,35 @@ bool runRxUpdate(SDBulkLink &link, const char *path, bool linked, char *result, 
     if (!startEspNow())
         return fail("ESP-NOW init failed");
 
-    // Find the receiver. A linked one switches over ~0.5 s after acking the link
-    // command; any other listens for BOOT_LISTEN_MS after power-on, so ask often.
+    // Find the receiver, on our UID's MAC. A linked one switches over ~0.5 s after
+    // acking the link command; any other listens for BOOT_LISTEN_MS after power-on (or
+    // a while after a bind), so ask often. Not linked, a receiver in bind mode will do
+    // too: ask those with a broadcast in between.
     Reply r;
     HelloAck info = {};
-    const char *finding = linked ? "Finding receiver" : "Power on the receiver now";
+    uint8_t ours[6];
+    macFromUid(UID, ours);
+    const char *finding = linked || RxBind::justBound() ? "Finding receiver" : "Power on the receiver now";
     keepalive(link, finding, 0, 0, true);
     const uint32_t t0 = millis();
-    bool found = false;
+    bool found = false, bind = false;
     while (!found && millis() - t0 < (linked ? FIND_RX_TIMEOUT_MS : FIND_BOOTING_RX_TIMEOUT_MS))
     {
-        Hello hello = {};
-        hello.h.type = HELLO;
-        hello.proto = PROTO_VERSION;
-        if (exchange(&hello, sizeof(hello), HELLO_ACK, r, linked ? 150 : 50, 1))
+        Hello hello = makeHello(false);
+        if (exchange(&hello, sizeof(hello), HELLO_ACK, r, linked ? 150 : 50, 1, ours))
         {
             memcpy(&info, r.data, std::min<size_t>(r.len, sizeof(info)));
             found = true;
+        }
+        else if (!linked)
+        {
+            hello = makeHello(true);
+            if (exchange(&hello, sizeof(hello), HELLO_ACK, r, 50, 1, BROADCAST_MAC))
+            {
+                memcpy(&info, r.data, std::min<size_t>(r.len, sizeof(info)));
+                // only a receiver that is in bind mode, and knows it, may be bound
+                found = bind = info.flags & FLAG_BINDING;
+            }
         }
         if (keepalive(link, finding) == SDBulk::CANCELLED)
             return failRx(CANCEL_USER, "Cancelled");
@@ -473,7 +614,27 @@ bool runRxUpdate(SDBulkLink &link, const char *path, bool linked, char *result, 
         // a linked RX that did switch over but can't hear us still gets told
         return linked ? failRx(CANCEL_OTHER, "Receiver not found") : fail("Receiver not found at power-on");
     }
+    lockOnto(r.mac);
     info.key[sizeof(info.key) - 1] = info.version[sizeof(info.version) - 1] = '\0';
+    char name[sizeof(info.name) + 1] = {};
+    memcpy(name, info.name, sizeof(info.name));
+    if (!name[0])
+        snprintf(name, sizeof(name), "%s", info.key);
+    if (bind)
+    {
+        // It stays in bind mode until our BEGIN, so this is the moment to back out if
+        // it's the wrong one
+        char foundText[40];
+        snprintf(foundText, sizeof(foundText), "Found %s", name);
+        keepalive(link, foundText, 0, 0, true);
+        const uint32_t shown = millis();
+        while (millis() - shown < BIND_CONFIRM_MS)
+        {
+            vTaskDelay(pdMS_TO_TICKS(50));
+            if (keepalive(link, foundText) == SDBulk::CANCELLED)
+                return fail("Cancelled");
+        }
+    }
     // where its images live on the card: EU (LBT) builds have their own
     char key[24];
     snprintf(key, sizeof(key), "%s%s", info.key, info.domain == DOMAIN_LBT ? "-lbt" : "");
@@ -759,7 +920,10 @@ bool runRxUpdate(SDBulkLink &link, const char *path, bool linked, char *result, 
         return false;
     }
     char msg[49];
-    snprintf(msg, sizeof(msg), "RX updated to %.30s", file);
+    if (bind)
+        snprintf(msg, sizeof(msg), "%.16s bound, updated to %.20s", name, file);
+    else
+        snprintf(msg, sizeof(msg), "RX updated to %.30s", file);
     link.end(0, msg);
     snprintf(result, resultLen, "rxupd %.8s->%.16s %uKB %ums %ur", rxCommit, file, rawSize / 1024, dt, retries);
     return true;

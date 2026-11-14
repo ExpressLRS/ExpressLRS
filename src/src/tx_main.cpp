@@ -40,6 +40,7 @@ void sendMAVLinkTelemetryToBackpack(uint8_t *) {}
 #include "TXUSBConnector.h"
 #if defined(PLATFORM_ESP32)
 #include "SDSession.h"
+#include "SDRxUpdate.h"
 #endif
 
 #if defined(PLATFORM_ESP8266)
@@ -989,7 +990,38 @@ void SendUIDOverMSP()
   DataUlSender.SetDataToTransmit(MSPDataPackage, 5);
 }
 
+// Bind pressed with ESP-NOW going first: LoRa bind starts once RxBind lets go
+static bool bindWaitingForEspNow = false;
+
+static void EnterLoRaBindingMode();
+
 static void EnterBindingMode()
+{
+  if (InBindingMode || bindWaitingForEspNow)
+      return;
+#if defined(PLATFORM_ESP32)
+  // a receiver that can bind over ESP-NOW does so before LoRa gets a chance (and can be
+  // offered an update right after); one that can't still gets the LoRa bind, a second on
+  if (!SDSession::busy())
+  {
+    RxBind::start();
+    bindWaitingForEspNow = true;
+    return;
+  }
+#endif
+  EnterLoRaBindingMode();
+}
+
+bool BindInProgress()
+{
+  return InBindingMode || bindWaitingForEspNow
+#if defined(PLATFORM_ESP32)
+    || RxBind::state() == RxBind::RUNNING
+#endif
+    ;
+}
+
+static void EnterLoRaBindingMode()
 {
   if (InBindingMode)
       return;
@@ -1026,6 +1058,9 @@ static void ExitBindingMode()
   // Reset CRCInit to UID-defined value
   OtaUpdateCrcInitFromUid();
   InBindingMode = false; // Clear binding mode before SetRFLinkRate() for correct IQ
+#if defined(PLATFORM_ESP32)
+  RxBind::stop();
+#endif
 
   UARTconnected();
 
@@ -1491,6 +1526,18 @@ void setup()
 void loop()
 {
   uint32_t now = millis();
+
+#if defined(PLATFORM_ESP32)
+  if (bindWaitingForEspNow && !RxBind::holdingLoRa())
+  {
+    bindWaitingForEspNow = false;
+    if (RxBind::state() != RxBind::BOUND)
+      EnterLoRaBindingMode();
+  }
+  // a receiver bound over ESP-NOW while LoRa bind was going: that's done, then
+  if (InBindingMode && RxBind::state() == RxBind::BOUND)
+    ExitBindingMode();
+#endif
 
   HandleUARTout(); // Only used for non-CRSF output
 

@@ -1726,6 +1726,10 @@ static void EnterBindingMode()
 
     DBGLN("Entered binding mode at freq = %d", Radio.currFreq);
     devicesTriggerEvent(EVENT_ENTER_BIND_MODE);
+#if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
+    // a TX's Bind Receiver can also find us, update us and bind us
+    RxUpdateReceiver::bindListen(true);
+#endif
 }
 
 static void ExitBindingMode()
@@ -1757,6 +1761,9 @@ static void ExitBindingMode()
     // Do this last as LostConnection() will wait for a tock that never comes
     // if we're in binding mode
     InBindingMode = false;
+#if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
+    RxUpdateReceiver::bindListen(false);
+#endif
     DBGLN("Exiting binding mode");
     devicesTriggerEvent(EVENT_EXIT_BIND_MODE);
 }
@@ -2133,7 +2140,7 @@ void loop()
     executeDeferredFunction(micros());
 
 #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
-    RxUpdateReceiver::bootListenLoop(now);
+    RxUpdateReceiver::listenLoop(now);
     if (connectionState == rxUpdate)
     {
         RxUpdateReceiver::loop(now);

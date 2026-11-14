@@ -79,6 +79,9 @@ void setTransport(SDBulkTransport *t)
 
 bool requestSession(uint8_t k, const char *arg, crsf_addr_e to)
 {
+    // the ESP-NOW bind owns WiFi for its second or two
+    if (RxBind::state() == RxBind::RUNNING)
+        return false;
     if (state != IDLE)
         return false;
     reportTo = to;

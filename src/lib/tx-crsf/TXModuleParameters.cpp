@@ -1,6 +1,7 @@
 #include "TXModuleEndpoint.h"
 #if defined(PLATFORM_ESP32)
 #include "SDSession.h"
+#include "SDRxUpdate.h"
 #include "SDImageSync.h"
 #endif
 
@@ -237,6 +238,7 @@ static commandParameter luaRxFwSync = {
     lcsIdle, // step
     STR_EMPTYSPACE
 };
+
 
 #if defined(PLATFORM_ESP32)
 // "Sync from WiFi (network)". The Lua draws command names unclipped, so a long SSID
@@ -585,6 +587,7 @@ void TXModuleEndpoint::handleSdSession(propertiesCommon *item, uint8_t arg)
         sendCommandResponse(cmd, lcsAskConfirm, "Update RX from SD card?");
         return;
       }
+
       // fallthrough: syncing touches nothing but the card
 
     case lcsConfirmed:
@@ -604,6 +607,94 @@ void TXModuleEndpoint::handleSdSession(propertiesCommon *item, uint8_t arg)
       else
         sendCommandResponse(cmd, lcsIdle, STR_EMPTYSPACE);
       break;
+  }
+}
+#endif
+
+#if defined(PLATFORM_ESP32)
+// Bind, then, if the receiver took our UID over ESP-NOW and isn't on this TX's build,
+// offer to update it. Saying no leaves it bound but not updated.
+void TXModuleEndpoint::handleBind(propertiesCommon *item, uint8_t arg)
+{
+  auto cmd = (commandParameter *)item;
+  static bool offered = false;   // this bind's offer has been made (or wasn't needed)
+  static bool updating = false;  // accepted: showing the SD session's progress
+  static char note[48];
+  static uint32_t noteUntil = 0;
+  constexpr uint32_t NOTE_MS = 3000;
+  constexpr uint32_t RESULT_SHOW_MS = 4000;
+  const auto &found = RxBind::found();
+
+  auto showNote = [&](const char *fmt, const char *a, const char *b) {
+    snprintf(note, sizeof(note), fmt, a, b);
+    noteUntil = millis() + NOTE_MS;
+    sendCommandResponse(cmd, lcsExecuting, note);
+  };
+
+  switch ((commandStep_e)arg)
+  {
+    case lcsClick:
+      offered = updating = false;
+      noteUntil = 0;
+      EnterBindingModeSafely();
+      sendCommandResponse(cmd, lcsExecuting, "Binding...");
+      return;
+
+    case lcsConfirmed: // the update offer, accepted
+      if (SDSession::requestSession(SDSession::KIND_RX_UPDATE, ""))
+      {
+        updating = true;
+        sendCommandResponse(cmd, lcsExecuting, SDSession::statusText());
+      }
+      else
+        sendCommandResponse(cmd, lcsIdle, "Busy");
+      return;
+
+    case lcsCancel: // the update offer, declined
+      if (found.otherMajor)
+        showNote("%.16s bound%s, needs update to connect", found.name, "");
+      else
+        sendCommandResponse(cmd, lcsIdle, STR_EMPTYSPACE);
+      return;
+
+    default: // lcsQuery while executing
+      if (updating)
+      {
+        if (SDSession::busy() || millis() - SDSession::finishedAt() < RESULT_SHOW_MS)
+          sendCommandResponse(cmd, lcsExecuting, SDSession::statusText());
+        else
+        {
+          updating = false;
+          sendCommandResponse(cmd, lcsIdle, STR_EMPTYSPACE);
+        }
+        return;
+      }
+      if (noteUntil && (int32_t)(millis() - noteUntil) < 0)
+      {
+        sendCommandResponse(cmd, lcsExecuting, note);
+        return;
+      }
+      noteUntil = 0;
+      if (BindInProgress())
+      {
+        sendCommandResponse(cmd, lcsExecuting, "Binding...");
+        return;
+      }
+      if (!offered && RxBind::state() == RxBind::BOUND)
+      {
+        offered = true;
+        if (found.needsUpdate)
+        {
+          char ask[48];
+          snprintf(ask, sizeof(ask), "Update %.16s to %.12s?", found.name, version);
+          sendCommandResponse(cmd, lcsAskConfirm, ask);
+        }
+        else
+          showNote("Bound %.16s%s", found.name, "");
+        return;
+      }
+      sendCommandResponse(cmd, lcsIdle, STR_EMPTYSPACE);
+      return;
   }
 }
 #endif
@@ -1075,7 +1166,11 @@ void TXModuleEndpoint::registerParameters()
   #endif
 
   if (HAS_RADIO) {
+#if defined(PLATFORM_ESP32)
+    registerParameter(&luaBind, [&](propertiesCommon *item, const uint8_t arg) { handleBind(item, arg); });
+#else
     registerParameter(&luaBind, sendCallback);
+#endif
   }
 
   registerParameter(&luaELRSversion);
