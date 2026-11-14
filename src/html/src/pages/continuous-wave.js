@@ -166,10 +166,11 @@ export class ContinuousWave extends LitElement {
 
     _measured() {
         // FEATURE:MULTI_RADIO
-        const isSX127x = elrsState.settings['radio-type'] === 'SX127X'
-        const xtalNominal = isSX127x ? 32000000 : 52000000
-        const warn_offset = isSX127x ? 100000 : 90000
-        const bad_offset = isSX127x ? 125000 : 180000
+        // the SX1280 has a 52 MHz crystal, the other chips 32 MHz
+        const isSX128x = elrsState.settings['radio-type'] === 'SX128X'
+        const xtalNominal = isSX128x ? 52000000 : 32000000
+        const warn_offset = isSX128x ? 90000 : 100000
+        const bad_offset = isSX128x ? 180000 : 125000
         // /FEATURE:MULTI_RADIO
         // FEATURE:NOT MULTI_RADIO
         // FEATURE:HAS_SX127X

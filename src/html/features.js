@@ -28,6 +28,8 @@ export function deriveFeatures(env = ENV) {
     MULTI_RADIO: multiRadio,
     SX127X_ONLY: toBool(env.VITE_FEATURE_HAS_SX127X, false) && !multiRadio,
     SX128X_ONLY: toBool(env.VITE_FEATURE_HAS_SX128X, false) && !multiRadio,
+    // a multi-radio build shows the LR1121 entries of the hardware layout for both LR chips
+    LR2021_ONLY: toBool(env.VITE_FEATURE_HAS_LR2021, false) && !multiRadio,
   }
 }
 
