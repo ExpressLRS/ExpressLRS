@@ -163,7 +163,7 @@ jobs:
             mkdir -p $OUTDIR
             mv .pio/build/${{ matrix.target }}/*.{elrs,bin} $OUTDIR >& /dev/null || :
             ;;
-          *LR1121*)
+          *LR1121* | Unified_ESP8285_RX_via_* | Unified_ESP32_RX_via_* | Unified_ESP32C3_RX_via_* | Unified_ESP32S3_RX_via_*)
             # release builds
             PLATFORMIO_BUILD_FLAGS="-DRegulatory_Domain_EU_CE_2400 -DRegulatory_Domain_FCC_915" pio run -e ${{ matrix.target }}
             OUTDIR=~/artifacts/firmware/LBT/`echo ${{ matrix.target }} | sed s/_via.*//`
