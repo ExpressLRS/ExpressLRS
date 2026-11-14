@@ -685,8 +685,9 @@ void TXModuleEndpoint::handleBind(propertiesCommon *item, uint8_t arg)
         offered = true;
         if (found.needsUpdate)
         {
-          char ask[48];
-          snprintf(ask, sizeof(ask), "Update %.16s to %.12s?", found.name, version);
+          // the endpoint keeps a pointer to it, chunks may go out later
+          static char ask[64];
+          snprintf(ask, sizeof(ask), "Update %.16s to %.24s?", found.name, version);
           sendCommandResponse(cmd, lcsAskConfirm, ask);
         }
         else

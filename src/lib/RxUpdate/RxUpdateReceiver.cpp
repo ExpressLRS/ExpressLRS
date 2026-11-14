@@ -323,7 +323,7 @@ void RxUpdateReceiver::listenLoop(uint32_t now)
     {
         bootListening = false;
         enterUpdateMode();
-        RXU_LOG("TX found us during boot\n");
+        RXU_LOG("TX found us while listening\n");
         xQueueSend(rxQueue, &hello, 0);
     }
 }

@@ -301,7 +301,7 @@ void RxUpdateReceiver::listenLoop(uint32_t now)
             bootListening = false;
             ringTail = i;
             enterUpdateMode();
-            RXU_LOG("TX found us during boot\n");
+            RXU_LOG("TX found us while listening\n");
             return;
         }
     }
