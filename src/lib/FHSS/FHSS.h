@@ -3,7 +3,10 @@
 #include "targets.h"
 #include "random.h"
 
-#if defined(RADIO_SX127X)
+#if defined(RADIO_MULTI)
+// The register unit (FREQ_STEP) is the fitted chip's, see MultiRadioDriver.h
+#define FreqCorrectionMax (radioChip == RADIO_CHIP_SX127X ? (int32_t)(100000/SX127X_FREQ_STEP) : (int32_t)(200000/SX1280_FREQ_STEP))
+#elif defined(RADIO_SX127X)
 #define FreqCorrectionMax ((int32_t)(100000/FREQ_STEP))
 #elif defined(RADIO_SX128X)
 #define FreqCorrectionMax ((int32_t)(200000/FREQ_STEP))

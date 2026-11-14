@@ -92,6 +92,10 @@ void LbtEnableIfRequired()
 #if defined(RADIO_LR1121) || defined(RADIO_LR2021)
     LbtIsEnabled &= (RadioBandMod::isB2G4(ExpressLRS_currAirRate_Modparams->radio_type) || RadioBandMod::isBDUAL(ExpressLRS_currAirRate_Modparams->radio_type));
 #endif
+#if defined(RADIO_MULTI)
+    // LBT is for 2.4 GHz only, a CE build with an SX127x fitted is a sub-GHz receiver
+    LbtIsEnabled &= radioChip != RADIO_CHIP_SX127X;
+#endif
     validRSSIdelayUs = SpreadingFactorToRSSIvalidDelayUs(ExpressLRS_currAirRate_Modparams->sf, ExpressLRS_currAirRate_Modparams->radio_type);
 }
 

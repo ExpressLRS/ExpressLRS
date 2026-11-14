@@ -160,8 +160,17 @@ typedef enum {
     X(HARDWARE_vtx_amp_pwm_25mW, "vtx_amp_pwm_25mW", ARRAY) \
     X(HARDWARE_vtx_amp_pwm_100mW, "vtx_amp_pwm_100mW", ARRAY)
 
+// A multi-radio build also takes the chip, a radio_chip_e. Without it the chip is
+// worked out from the radio pins (MultiRadioDriver::ChipFromLayout()).
+#if defined(RADIO_MULTI)
+#define HARDWARE_FIELDS_MULTI(X) X(HARDWARE_radio_chip, "radio_chip", INT)
+#else
+#define HARDWARE_FIELDS_MULTI(X)
+#endif
+
 #define X(pos, str, typ) static const char name_##pos[] PROGMEM = str;
 HARDWARE_FIELDS(X)
+HARDWARE_FIELDS_MULTI(X)
 #undef X
 
 typedef struct {
@@ -173,6 +182,7 @@ typedef struct {
 static const field_t fields[] PROGMEM = {
 #define X(pos, str, typ) {pos, name_##pos, typ},
 HARDWARE_FIELDS(X)
+HARDWARE_FIELDS_MULTI(X)
 #undef X
 };
 

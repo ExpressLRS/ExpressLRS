@@ -1,6 +1,7 @@
 #pragma once
 
 #include "options.h"
+#include "radiochip.h"
 
 #if defined(PLATFORM_ESP32)
 #include <nvs_flash.h>
@@ -90,7 +91,8 @@ public:
         PowerLevels_e power;
         power = MaxPower;
         #if defined(Regulatory_Domain_EU_CE_2400)
-            if (power > PWR_100mW)
+            // a multi-radio CE build with an SX127x fitted is a sub-GHz receiver, without the 2.4 GHz limit
+            if (power > PWR_100mW && radioChip != RADIO_CHIP_SX127X)
             {
                 power = PWR_100mW;
             }

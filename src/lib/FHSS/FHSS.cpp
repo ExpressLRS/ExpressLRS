@@ -8,13 +8,20 @@
 #define POWER_OUTPUT_VALUES_DUAL_COUNT 0
 #endif
 
+#if defined(RADIO_MULTI)
+// Each chip has its own frequency register unit. FREQ_HZ_TO_REG_VAL() converts with
+// FREQ_STEP, so it is set to the SX127x's for the sub-GHz table and the SX1280's for 2.4 GHz.
+#include "MultiRadioDriver.h"
+#define FREQ_STEP SX127X_FREQ_STEP
+#endif
+
 #if defined(RADIO_SX127X) || defined(RADIO_LR1121) || defined(RADIO_LR2021)
 
-#if defined(RADIO_SX127X)
+#if defined(RADIO_SX127X) && !defined(RADIO_MULTI)
 #include "SX127xDriver.h"
 #elif defined(RADIO_LR1121)
 #include "LR1121Driver.h"
-#else
+#elif defined(RADIO_LR2021)
 #include "LR2021Driver.h"
 #endif
 
@@ -43,10 +50,20 @@ const fhss_config_t domainsDualBand[] = {
 };
 #endif
 
-#elif defined(RADIO_SX128X)
-#include "SX1280Driver.h"
+#endif
 
-const fhss_config_t domains[] = {
+#if defined(RADIO_SX128X)
+#if defined(RADIO_MULTI)
+#undef FREQ_STEP
+#define FREQ_STEP SX1280_FREQ_STEP
+// domains[] is the sub-GHz table above
+#define DOMAINS_2G4 domains2G4
+#else
+#include "SX1280Driver.h"
+#define DOMAINS_2G4 domains
+#endif
+
+const fhss_config_t DOMAINS_2G4[] = {
     {
     #if defined(Regulatory_Domain_EU_CE_2400)
         "CE_LBT",
@@ -99,7 +116,12 @@ void FHSSrandomiseFHSSsequence(const uint32_t seed)
     // the hop pointer indexes sequences that are about to be replaced
     FHSSptr = 0;
 
+#if defined(RADIO_MULTI)
+    // the 2.4 GHz band has one domain, which the sub-GHz domain option doesn't select
+    FHSSconfig = radioChip == RADIO_CHIP_SX127X ? &domains[firmwareOptions.domain] : &domains2G4[0];
+#else
     FHSSconfig = &domains[firmwareOptions.domain];
+#endif
     sync_channel = FHSSconfig->freq_count / 2;
     freq_spread = (FHSSconfig->freq_stop - FHSSconfig->freq_start) * FREQ_SPREAD_SCALE / (FHSSconfig->freq_count - 1);
 

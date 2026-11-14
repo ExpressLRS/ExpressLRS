@@ -3,9 +3,12 @@
 #ifndef UNIT_TEST
 #include "targets.h"
 #include "device.h"
+#include "radiochip.h"
 
 
-#if defined(RADIO_SX127X)
+#if defined(RADIO_MULTI)
+#include "MultiRadioDriver.h"
+#elif defined(RADIO_SX127X)
 #include "SX127xDriver.h"
 #elif defined(RADIO_SX128X)
 #include "SX1280Driver.h"
@@ -277,14 +280,26 @@ enum eAuxChannels : uint8_t
 };
 
 #ifndef UNIT_TEST
-#if defined(RADIO_SX127X)
-#define RATE_MAX 6
+#define RATE_MAX_SX127X 6
+#define RATE_MAX_SX128X 10     // 2xFLRC + 2xDVDA + 4xLoRa + 2xFullRes
+
+#if defined(RADIO_MULTI)
+// Both SX12xx rate tables are linked in and the fitted chip's is used, see setRadioChip()
+#define RATE_MAX (radioChip == RADIO_CHIP_SX127X ? RATE_MAX_SX127X : RATE_MAX_SX128X)
+#define RATE_BINDING (radioChip == RADIO_CHIP_SX127X ? RATE_LORA_900_50HZ : RATE_LORA_2G4_50HZ)
+
+extern MultiRadioDriver Radio;
+
+void setRadioChip(radio_chip_e chip);
+
+#elif defined(RADIO_SX127X)
+#define RATE_MAX RATE_MAX_SX127X
 #define RATE_BINDING RATE_LORA_900_50HZ
 
 extern SX127xDriver Radio;
 
 #elif defined(RADIO_SX128X)
-#define RATE_MAX 10     // 2xFLRC + 2xDVDA + 4xLoRa + 2xFullRes
+#define RATE_MAX RATE_MAX_SX128X
 #define RATE_BINDING RATE_LORA_2G4_50HZ
 
 extern SX1280Driver Radio;

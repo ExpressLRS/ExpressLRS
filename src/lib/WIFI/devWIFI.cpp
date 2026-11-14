@@ -581,16 +581,21 @@ static void GetConfiguration(AsyncWebServerRequest *request)
 #endif
     if (connectionState != radioFailed)
     {
-#if defined(RADIO_SX127X)
-    settings["radio-type"] = "SX127X";
-    settings["has_low_band"] = true;
-    settings["has_high_band"] = false;
-    settings["reg_domain_low"] = FHSSconfig->domain;
-#elif defined(RADIO_SX128X)
-    settings["radio-type"] = "SX128X";
-    settings["has_low_band"] = false;
-    settings["has_high_band"] = true;
-    settings["reg_domain_high"] = FHSSconfig->domain;
+#if defined(RADIO_SX127X) || defined(RADIO_SX128X)
+    if (radioChip == RADIO_CHIP_SX127X)
+    {
+        settings["radio-type"] = "SX127X";
+        settings["has_low_band"] = true;
+        settings["has_high_band"] = false;
+        settings["reg_domain_low"] = FHSSconfig->domain;
+    }
+    else
+    {
+        settings["radio-type"] = "SX128X";
+        settings["has_low_band"] = false;
+        settings["has_high_band"] = true;
+        settings["reg_domain_high"] = FHSSconfig->domain;
+    }
 #elif defined(RADIO_LR1121)
     settings["radio-type"] = "LR1121";
     settings["has_low_band"] = POWER_OUTPUT_VALUES_COUNT != 0;
@@ -1090,7 +1095,8 @@ static void HandleContinuousWave(AsyncWebServerRequest *request) {
 #else
     Radio.startCWTest(FHSSconfig->freq_center, radio);
 #if defined(RADIO_SX127X)
-    deferExecutionMillis(50, [radio](){ Radio.cwRepeat(radio); });
+    if (radioChip == RADIO_CHIP_SX127X)
+        deferExecutionMillis(50, [radio](){ Radio.cwRepeat(radio); });
 #endif
 #endif
   } else {

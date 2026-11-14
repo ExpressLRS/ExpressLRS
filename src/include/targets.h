@@ -45,7 +45,12 @@ extern bool pwmSerialDefined;
 #define OPT_CRSF_RCVR_NO_SERIAL false
 #endif
 
-#if defined(RADIO_SX128X)
+#if defined(RADIO_MULTI)
+// 2.4 GHz is ISM (or CE LBT) as in an SX128X build, sub-GHz takes its domain from
+// firmwareOptions.domain as in an SX127X build, so neither set of defines is dropped
+#define Regulatory_Domain_ISM_2400 1
+
+#elif defined(RADIO_SX128X)
 #define Regulatory_Domain_ISM_2400 1
 // ISM 2400 band is in use => undefine other requlatory domain defines
 #undef Regulatory_Domain_AU_915
