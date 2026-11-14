@@ -165,6 +165,13 @@ export class ContinuousWave extends LitElement {
     }
 
     _measured() {
+        // FEATURE:MULTI_RADIO
+        const isSX127x = elrsState.settings['radio-type'] === 'SX127X'
+        const xtalNominal = isSX127x ? 32000000 : 52000000
+        const warn_offset = isSX127x ? 100000 : 90000
+        const bad_offset = isSX127x ? 125000 : 180000
+        // /FEATURE:MULTI_RADIO
+        // FEATURE:NOT MULTI_RADIO
         // FEATURE:HAS_SX127X
         const xtalNominal = 32000000
         const warn_offset = 100000
@@ -185,6 +192,7 @@ export class ContinuousWave extends LitElement {
         const warn_offset = 100000
         const bad_offset = 125000
         // /FEATURE:HAS_LR2021
+        // /FEATURE:NOT MULTI_RADIO
 
         if (!this.measured) return
         const calc = (this.measured.value / this.cwFreq) * xtalNominal
