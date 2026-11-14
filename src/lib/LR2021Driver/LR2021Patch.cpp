@@ -4,7 +4,8 @@
 #include "LR2021_Regs.h"
 #include "SPIEx.h"
 
-extern LR2021Hal hal;
+namespace lr2021 { extern LR2021Hal hal; }
+using lr2021::hal;
 
 #define LR20XX_PRAM_BASE_ADDRESS ( 0x801000 )
 

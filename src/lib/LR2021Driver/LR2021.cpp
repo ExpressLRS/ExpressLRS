@@ -5,7 +5,9 @@
 
 #include <LittleFS.h>
 
-LR2021Hal hal;
+// In a namespace: every radio driver has a global hal, and a multi-radio build links several
+namespace lr2021 { LR2021Hal hal; }
+using lr2021::hal;
 LR2021Driver *LR2021Driver::instance = nullptr;
 
 // DEBUG_LR2021_OTA_TIMING
@@ -15,6 +17,8 @@ static uint32_t beginTX;
 static uint32_t endTX;
 #endif
 
+// In an unnamed namespace: the LR1121 driver has codecs of the same names
+namespace {
 class FECCodec final : public BufferCodec
 {
 public:
@@ -28,6 +32,7 @@ public:
     void encode(uint8_t *out, uint8_t *in, uint32_t len) override;
     void decode(uint8_t *out, uint8_t *in, uint32_t len) override;
 } copyCodec;
+}
 
 void ICACHE_RAM_ATTR FECCodec::encode(uint8_t *out, uint8_t *in, const uint32_t len)
 {

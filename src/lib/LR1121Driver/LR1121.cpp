@@ -9,7 +9,9 @@
 
 #define LR1121_FIRMWARE_TYPE 0xF3
 
-LR1121Hal hal;
+// In a namespace: every radio driver has a global hal, and a multi-radio build links several
+namespace lr1121 { LR1121Hal hal; }
+using lr1121::hal;
 LR1121Driver *LR1121Driver::instance = NULL;
 
 //DEBUG_LR1121_OTA_TIMING
@@ -19,6 +21,8 @@ static uint32_t beginTX;
 static uint32_t endTX;
 #endif
 
+// In an unnamed namespace: the LR2021 driver has codecs of the same names
+namespace {
 class FECCodec final : public BufferCodec
 {
 public:
@@ -32,6 +36,7 @@ public:
     void encode(uint8_t *out, uint8_t *in, uint32_t len) override;
     void decode(uint8_t *out, uint8_t *in, uint32_t len) override;
 } copyCodec;
+}
 
 void ICACHE_RAM_ATTR FECCodec::encode(uint8_t *out, uint8_t *in, uint32_t len)
 {
