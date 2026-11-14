@@ -8,7 +8,6 @@
 #include "RxUpdateProto.h"
 
 #include <ArduinoJson.h>
-#include <HTTPClient.h>
 #include <WiFi.h>
 #include <mbedtls/sha256.h>
 
@@ -109,6 +108,73 @@ static void stopWifi()
     WiFi.mode(WIFI_OFF);
 }
 
+// one header line, CR/LF stripped and truncated to fit; false on stall or close
+static bool readLine(WiFiClient &client, char *out, size_t outLen)
+{
+    size_t n = 0;
+    uint32_t lastByte = millis();
+    while (true)
+    {
+        const int c = client.read();
+        if (c < 0)
+        {
+            if (!client.connected() || millis() - lastByte > HTTP_STALL_TIMEOUT_MS)
+                return false;
+            vTaskDelay(1);
+            continue;
+        }
+        lastByte = millis();
+        if (c == '\n')
+            break;
+        if (c != '\r' && n < outLen - 1)
+            out[n++] = c;
+    }
+    out[n] = '\0';
+    return true;
+}
+
+// A bare HTTP/1.0 GET (so never chunked), leaving the client at the body. Not
+// Arduino's HTTPClient: it parses cookie dates on every response, which links
+// strptime, mktime and tzset, and on ESP32 that's 6 KB of IRAM the TX doesn't have.
+// Returns the status code, or -1 if the URL is bad, the connect fails or the
+// response is garbage.
+static int httpGet(WiFiClient &client, const String &url)
+{
+    if (!url.startsWith("http://"))
+        return -1;
+    const int hostStart = 7;
+    int pathStart = url.indexOf('/', hostStart);
+    if (pathStart < 0)
+        pathStart = url.length();
+    String host = url.substring(hostStart, pathStart);
+    uint16_t port = 80;
+    const int colon = host.indexOf(':');
+    if (colon >= 0)
+    {
+        port = host.substring(colon + 1).toInt();
+        host.remove(colon);
+    }
+    const String path = pathStart < (int)url.length() ? url.substring(pathStart) : String("/");
+
+    if (!client.connect(host.c_str(), port, HTTP_STALL_TIMEOUT_MS))
+        return -1;
+    client.printf("GET %s HTTP/1.0\r\nHost: %s\r\nUser-Agent: ExpressLRS\r\nConnection: close\r\n\r\n",
+                  path.c_str(), host.c_str());
+
+    // "HTTP/1.1 200 OK", then headers up to a blank line; none of them matter to us
+    char line[128];
+    if (!readLine(client, line, sizeof(line)) || strncmp(line, "HTTP/", 5) != 0)
+        return -1;
+    const char *sp = strchr(line, ' ');
+    const int code = sp ? atoi(sp + 1) : -1;
+    do
+    {
+        if (!readLine(client, line, sizeof(line)))
+            return -1;
+    } while (line[0]);
+    return code;
+}
+
 enum FetchResult
 {
     FETCH_OK,
@@ -140,15 +206,12 @@ static FetchResult fetchImage(SDBulkLink &link, const String &url, const char *k
     if (link.open(part, SDBulk::OPEN_TRUNCATE, &h, nullptr) != SDBulk::OK)
         return FETCH_FAILED;
 
-    HTTPClient http;
     WiFiClient client;
-    http.setTimeout(HTTP_STALL_TIMEOUT_MS);
-    http.begin(client, url);
-    const int code = http.GET();
-    if (code != HTTP_CODE_OK)
+    const int code = httpGet(client, url);
+    if (code != 200)
     {
         DBGLN("SD sync: GET %s -> %d", url.c_str(), code);
-        http.end();
+        client.stop();
         link.close(h);
         link.remove(part);
         return FETCH_FAILED;
@@ -158,7 +221,7 @@ static FetchResult fetchImage(SDBulkLink &link, const String &url, const char *k
     mbedtls_sha256_init(&sha);
     mbedtls_sha256_starts_ret(&sha, 0);
 
-    WiFiClient *stream = http.getStreamPtr();
+    WiFiClient *stream = &client;
     const uint16_t step = link.chunkSize();
     uint32_t off = 0, lastByte = millis(), lastShown = 0;
     uint16_t fill = 0;
@@ -205,7 +268,7 @@ static FetchResult fetchImage(SDBulkLink &link, const String &url, const char *k
         if (avail <= 0)
             vTaskDelay(1);
     }
-    http.end();
+    client.stop();
     link.close(h);
     bytesFetched += off;
 
@@ -257,9 +320,15 @@ bool runImageSync(SDBulkLink &link, const char *manifestUrl, char *result, size_
     static char wifiTxt[256];
     if (url.isEmpty() && readSmallFile(link, "WIFI.TXT", wifiTxt, sizeof(wifiTxt)))
     {
-        char *save = nullptr;
-        const char *l1 = strtok_r(wifiTxt, " \t\r\n", &save);
-        if (l1 && strncmp(l1, "http", 4) == 0)
+        // the first whitespace-delimited word (not strtok_r: that's more IRAM on ESP32)
+        char *l1 = wifiTxt;
+        while (*l1 && isspace((unsigned char)*l1))
+            l1++;
+        char *end = l1;
+        while (*end && !isspace((unsigned char)*end))
+            end++;
+        *end = '\0';
+        if (strncmp(l1, "http", 4) == 0)
             url = l1;
     }
     const bool ownBuild = url.isEmpty();
@@ -283,22 +352,42 @@ bool runImageSync(SDBulkLink &link, const char *manifestUrl, char *result, size_
     String manifest;
     int code;
     {
-        HTTPClient http;
         WiFiClient client;
-        http.setTimeout(HTTP_STALL_TIMEOUT_MS);
-        http.begin(client, url);
-        code = http.GET();
-        if (code == HTTP_CODE_OK)
-            manifest = http.getString();
-        http.end();
+        code = httpGet(client, url);
+        if (code == 200)
+        {
+            // HTTP/1.0: the body runs until the server closes
+            uint32_t lastByte = millis();
+            while (true)
+            {
+                const int avail = client.available();
+                if (avail > 0)
+                {
+                    const int got = client.read(chunk, std::min<int>(avail, sizeof(chunk)));
+                    if (got > 0)
+                        manifest.concat((const char *)chunk, got);
+                    lastByte = millis();
+                }
+                else if (!client.connected())
+                    break;
+                else if (millis() - lastByte > HTTP_STALL_TIMEOUT_MS)
+                {
+                    code = -1;
+                    break;
+                }
+                else
+                    vTaskDelay(1);
+            }
+        }
+        client.stop();
     }
     // Only now, with the client gone: its destructor closes the socket, and doing that
     // after WiFi is stopped frees an lwIP buffer into the dead driver (LoadProhibited)
-    if (code != HTTP_CODE_OK)
+    if (code != 200)
     {
         stopWifi();
         // a local or unreleased build: nothing was ever published for it
-        if (ownBuild && code == HTTP_CODE_NOT_FOUND)
+        if (ownBuild && code == 404)
             snprintf(result, resultLen, "No RX images published for this TX build");
         else
             snprintf(result, resultLen, "manifest GET %d", code);
