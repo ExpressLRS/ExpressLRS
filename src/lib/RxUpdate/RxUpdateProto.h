@@ -12,7 +12,9 @@
 // one a major version ahead of or behind the TX, say.
 //
 // The RX takes a station MAC derived from the binding UID, so the TX knows where to
-// send without any discovery, and only a TX with the same bind phrase can reach it.
+// send without any discovery, and only a TX it's bound to can reach it. Only the four
+// UID bytes the link itself uses go into it: a bind over the link (MSP) carries just
+// those, so a receiver bound that way, with a phrase or over ESP-NOW all get the same.
 //
 // An RX in bind mode also listens, with its own factory MAC, for a HELLO broadcast by
 // any TX: it answers with its name and stays in bind mode. Several receivers in bind
@@ -227,8 +229,17 @@ struct __attribute__((packed)) Cancel
 
 inline void macFromUid(const uint8_t *uid, uint8_t *mac)
 {
-    memcpy(mac, uid, 6);
-    mac[0] = (mac[0] & 0xFE) | 0x02; // unicast, locally administered
+    mac[0] = 0x02; // unicast, locally administered
+    mac[1] = 'E';
+    memcpy(&mac[2], &uid[2], 4);
+}
+
+// What a bind stores: the link's four UID bytes, the rest zero, exactly as a bind over
+// the link does, so it doesn't matter how a receiver was bound
+inline void uidFromBind(const uint8_t *uid, uint8_t *out)
+{
+    out[0] = out[1] = 0;
+    memcpy(&out[2], &uid[2], 4);
 }
 
 inline bool valid(const uint8_t *p, int len)

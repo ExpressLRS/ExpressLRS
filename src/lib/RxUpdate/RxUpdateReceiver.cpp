@@ -251,7 +251,7 @@ static void takeBind(const Packet &p)
     a.status = ST_OK;
     if (OtaUidIsBound(b->uid))
     {
-        memcpy(UID, b->uid, UID_LEN);
+        uidFromBind(b->uid, UID);
         config.SetUID(UID);
         boundOverEspNow = true;
     }
@@ -270,7 +270,7 @@ static void bindListenLoop()
         if (h->type == HELLO && isBindHello(p.data, p.len) && OtaUidIsBound(hello->uid))
         {
             memcpy(bindPeer, p.mac, 6);
-            memcpy(bindUid, hello->uid, 6);
+            uidFromBind(hello->uid, bindUid);
             bindAnswered = true;
             sendHelloAck(p);
         }
@@ -414,7 +414,7 @@ static uint8_t finish(const Finish *f, char *text, size_t textLen)
     started = false;
     if (binding)
     {
-        // exactly what a bind over the link stores, with the TX's whole UID
+        // exactly what a bind over the link stores
         config.SetUID(bindUid);
         config.Commit();
         RXU_LOG("bound to %u,%u,%u,%u,%u,%u\n", bindUid[0], bindUid[1], bindUid[2], bindUid[3], bindUid[4],
