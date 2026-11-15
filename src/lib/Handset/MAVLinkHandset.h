@@ -31,7 +31,7 @@ public:
 
     // CRSFConnector: ELRS settings/config tunneled over MAVLink
     void forwardMessage(const crsf_header_t *message) override;
-    uint8_t GetMaxPacketBytes() const override { return CRSF_MAX_PACKET_LEN; }
+    uint8_t GetMaxPacketBytes() const override;
 
 private:
     void processByte(uint8_t b);
@@ -39,9 +39,9 @@ private:
     uint8_t buildHeartbeat(uint8_t *buf);       // pack synthetic HEARTBEAT into buf, return length
     uint8_t buildRadioStatus(uint8_t *buf);     // pack RADIO_STATUS into buf, return length
     uint8_t buildSync(uint8_t *buf);            // pack EdgeTX timing correction (ETXSYNC DEBUG_VECT), return len
-    bool loadDueKeepalive(uint32_t now);        // build a due keepalive into outBuf (true if one was loaded)
+    bool loadDueKeepalive(uint32_t now, uint16_t budget); // build a due keepalive into outBuf (true if one was loaded)
     bool edgetxGapOpen() const;                 // true once EdgeTX follows our advertised cadence (lean-bootstrap gate)
-    bool loadNextConfigFrame();                 // pop the next wrapped config TUNNEL from the FIFO into outBuf
+    bool loadNextConfigFrame(uint16_t budget); // pop the next wrapped config TUNNEL from the FIFO into outBuf
     bool loadNextFcFrame();                     // pop next whole FC frame from FIFO into outBuf
     bool popFrame(FIFO<MAVLINK_HANDSET_FIFO_SIZE> &fifo); // shared length-prefixed dequeue into outBuf
     void frameDownlinkByte(uint8_t b);          // reassemble whole FC frames from the raw OTA telemetry stream

@@ -57,6 +57,8 @@ static constexpr uint8_t MAVLINK_V2_HEADER_LEN = 10; // STX,LEN,incompat,compat,
 static constexpr uint8_t MAVLINK_V1_HEADER_LEN = 6;  // STX,LEN,seq,sysid,compid,msgid
 static constexpr uint8_t MAVLINK_CHECKSUM_LEN = 2;
 static constexpr uint8_t MAVLINK_V2_SIGNATURE_LEN = 13; // present iff incompat_flags & MAVLINK_IFLAG_SIGNED
+static constexpr uint8_t MAVLINK_TUNNEL_OVERHEAD = MAVLINK_V2_HEADER_LEN + MAVLINK_MSG_ID_TUNNEL_LEN - MAVLINK_MSG_TUNNEL_FIELD_PAYLOAD_LEN + MAVLINK_CHECKSUM_LEN;
+static constexpr uint8_t CONFIG_CHUNK_MIN_BYTES = 24;
 
 // ETXSYNC emit cadence
 static constexpr uint32_t SYNC_PACKET_INTERVAL_MS = 100;
@@ -360,7 +362,7 @@ bool MAVLinkHandset::edgetxGapOpen() const
     return advertisedPeriodUs != 0 && rcFrameIntervalUs != 0 && rcFrameIntervalUs >= advertisedPeriodUs / 2;
 }
 
-bool MAVLinkHandset::loadDueKeepalive(uint32_t now)
+bool MAVLinkHandset::loadDueKeepalive(uint32_t now, uint16_t budget)
 {
     if (uint8_t syncLen = buildSync(outBuf))
     {
@@ -372,7 +374,7 @@ bool MAVLinkHandset::loadDueKeepalive(uint32_t now)
     if (!edgetxGapOpen())
         return false;
 
-    if (loadNextConfigFrame())
+    if (loadNextConfigFrame(budget))
         return true;
 
     if (connectionState == connectionState_e::connected)
@@ -483,8 +485,19 @@ void MAVLinkHandset::forwardMessage(const crsf_header_t *message)
     pushFrame(configFifo, frame, len);
 }
 
-bool MAVLinkHandset::loadNextConfigFrame()
+uint8_t MAVLinkHandset::GetMaxPacketBytes() const
 {
+    const int32_t chunk = std::max((int32_t)maxPacketBytes - MAVLINK_TUNNEL_OVERHEAD, (int32_t)CONFIG_CHUNK_MIN_BYTES);
+    return (uint8_t)std::min(chunk, (int32_t)CRSF_MAX_PACKET_LEN);
+}
+
+bool MAVLinkHandset::loadNextConfigFrame(uint16_t budget)
+{
+    configFifo.lock();
+    const uint16_t frameLen = configFifo.peekSize();
+    configFifo.unlock();
+    if (frameLen == 0 || (frameLen > budget && budget < maxPacketBytes))
+        return false;
     return popFrame(configFifo);
 }
 
@@ -496,7 +509,7 @@ void MAVLinkHandset::handleOutput(uint32_t now)
     {
         if (curRemaining == 0)
         {
-            if (!loadDueKeepalive(now) && !(edgetxGapOpen() && loadNextFcFrame()))
+            if (!loadDueKeepalive(now, budget) && !(edgetxGapOpen() && loadNextFcFrame()))
                 break;
         }
 
