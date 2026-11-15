@@ -81,6 +81,11 @@ void CRSFHandset::Begin()
 #endif
 }
 
+CRSFHandset::~CRSFHandset()
+{
+    crsfRouter.removeConnector(this);
+}
+
 void CRSFHandset::End()
 {
     uint32_t startTime = millis();
@@ -233,6 +238,13 @@ void CRSFHandset::alignBufferToSync(uint8_t startIdx)
 
 void CRSFHandset::handleInput()
 {
+#if defined(PLATFORM_ESP32)
+    if (viaAutoDetect && detectionTimedOut())
+    {
+        restartDetection();
+        return;
+    }
+#endif
     if (UARTwdt())
     {
         return;

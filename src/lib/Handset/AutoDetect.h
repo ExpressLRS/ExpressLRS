@@ -11,10 +11,12 @@ public:
     void End() override;
     void handleInput() override;
 
+    static bool tryMavlinkFirst;
+
 private:
     void migrateTo(Handset *that) const;
     void startPPM() const;
-    void startCRSF() const;
+    void startSerialProtocol() const;
 
     int input_detect = 0;
     RingbufHandle_t rb = nullptr;
