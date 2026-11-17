@@ -2,6 +2,7 @@
 
 #include "targets.h"
 #include "SX12xxDriverCommon.h"
+#include "BufferCodec.h"
 #include "LR1121_Regs.h"
 
 #ifdef PLATFORM_ESP8266
@@ -16,14 +17,6 @@ typedef struct
     uint8_t type;
     uint16_t version;
 } __attribute__((packed)) firmware_version_t;
-
-class BufferCodec
-{
-public:
-    virtual ~BufferCodec() {}
-    virtual void encode(uint8_t *out, uint8_t *in, uint32_t len);
-    virtual void decode(uint8_t *out, uint8_t *in, uint32_t len);
-};
 
 class LR1121Driver: public SX12xxDriverCommon
 {

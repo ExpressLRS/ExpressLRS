@@ -146,8 +146,8 @@ build_flags.append("-DTARGET_NAME=" + re.sub("_VIA_.*", "", target_name))
 condense_flags()
 
 if '-DRADIO_SX127X=1' in build_flags or '-DRADIO_LR1121=1' in build_flags or '-DRADIO_LR2021=1' in build_flags:
-    # disallow setting 2400s for 900
-    if '-DRADIO_SX127X=1' in build_flags and \
+    # disallow setting 2400s for 900, a multi-radio build takes both a 2.4 GHz and a sub-GHz domain
+    if '-DRADIO_SX127X=1' in build_flags and '-DRADIO_MULTI=1' not in build_flags and \
             (fnmatch.filter(build_flags, '*-DRegulatory_Domain_ISM_2400') or
              fnmatch.filter(build_flags, '*-DRegulatory_Domain_EU_CE_2400')):
         print_error('Regulatory_Domain 2400 not compatible with RADIO_SX127X')
@@ -176,6 +176,10 @@ if '-DRADIO_SX127X=1' in build_flags or '-DRADIO_LR1121=1' in build_flags or '-D
         json_flags['domain'] = 8
 else:
     json_flags['domain'] = 0
+
+# EU CE 2.4 GHz (LBT) is a trailer option now, so the same firmware serves both
+if fnmatch.filter(build_flags, '*-DRegulatory_Domain_EU_CE_2400'):
+    json_flags['lbt'] = True
 
 # Remove ISM_2400 domain flag if not unit test, it is defined per target config
 if fnmatch.filter(build_flags, '*Regulatory_Domain_ISM_2400*') and \

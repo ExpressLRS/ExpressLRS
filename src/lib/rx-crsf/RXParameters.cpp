@@ -20,14 +20,10 @@ extern bool BindingModeRequest;
 
 extern RXEndpoint crsfReceiver;
 
-#if defined(Regulatory_Domain_EU_CE_2400)
+char strPowerLevels[] = "10;25;50;100;250;500;1000;2000;MatchTX ";
 #if defined(RADIO_LR1121) || defined(RADIO_LR2021)
-char strPowerLevels[] = "10/10;25/25;25/50;25/100;25/250;25/500;25/1000;25/2000;MatchTX ";
-#else
-char strPowerLevels[] = "10;25;50;100;250;500;1000;2000;MatchTX ";
-#endif
-#else
-char strPowerLevels[] = "10;25;50;100;250;500;1000;2000;MatchTX ";
+// LBT: sub-GHz is limited to 25 mW, so show both bands' power
+static char strPowerLevelsCE[] = "10/10;25/25;25/50;25/100;25/250;25/500;25/1000;25/2000;MatchTX ";
 #endif
 static char modelString[] = "000";
 static char pwmModes[] = "50Hz;60Hz;100Hz;160Hz;333Hz;400Hz;10kHzDuty;On/Off;DShot;DShot 3D;Serial RX;Serial TX;I2C SCL;I2C SDA;Serial2 RX;Serial2 TX";
@@ -567,8 +563,14 @@ void RXEndpoint::registerParameters()
 
   if (POWERMGNT::getMinPower() != POWERMGNT::getMaxPower())
   {
-    filterOptions(&luaTlmPower, POWERMGNT::getMinPower(), POWERMGNT::getMaxPower(), strPowerLevels);
-    strcat(strPowerLevels, ";MatchTX ");
+    char *powerLevels = strPowerLevels;
+#if defined(RADIO_LR1121) || defined(RADIO_LR2021)
+    // the sub-GHz/2.4 GHz pairs are for the LR chips, the SX12xx have one band
+    if (firmwareOptions.lbt && radioIsLR())
+        powerLevels = strPowerLevelsCE;
+#endif
+    filterOptions(&luaTlmPower, POWERMGNT::getMinPower(), POWERMGNT::getMaxPower(), powerLevels);
+    strcat(powerLevels, ";MatchTX ");
     registerParameter(&luaTlmPower, &luaparamSetPower);
   }
 

@@ -1,20 +1,32 @@
 #include "common.h"
 #include "OTA.h"
 
+#if defined(RADIO_MULTI)
+MultiRadioDriver Radio;
+
+// Both SX12xx tables are linked in, each under its own name, and setRadioChip() points
+// ExpressLRS_AirRateConfig/RFperf at the fitted chip's pair
+#define AIRRATE_TABLE(table, chip) table##_##chip
+#else
+#define AIRRATE_TABLE(table, chip) table
+#endif
+
 #if defined(RADIO_SX127X)
 
 #include "SX127xDriver.h"
+#if !defined(RADIO_MULTI)
 SX127xDriver Radio;
+#endif
 
-expresslrs_mod_settings_s ExpressLRS_AirRateConfig[RATE_MAX] = {
-    {0, RadioBandMod::Combined::LORA_900, RATE_LORA_900_200HZ,     SX127x_BW_500_00_KHZ, SX127x_SF_6, SX127x_CR_4_7,  8, TLM_RATIO_1_64, 4,  5000, OTA4_PACKET_SIZE, 1},
-    {1, RadioBandMod::Combined::LORA_900, RATE_LORA_900_100HZ_8CH, SX127x_BW_500_00_KHZ, SX127x_SF_6, SX127x_CR_4_8,  8, TLM_RATIO_1_32, 4, 10000, OTA8_PACKET_SIZE, 1},
-    {2, RadioBandMod::Combined::LORA_900, RATE_LORA_900_100HZ,     SX127x_BW_500_00_KHZ, SX127x_SF_7, SX127x_CR_4_7,  8, TLM_RATIO_1_32, 4, 10000, OTA4_PACKET_SIZE, 1},
-    {3, RadioBandMod::Combined::LORA_900, RATE_LORA_900_50HZ,      SX127x_BW_500_00_KHZ, SX127x_SF_8, SX127x_CR_4_7, 10, TLM_RATIO_1_16, 4, 20000, OTA4_PACKET_SIZE, 1},
-    {4, RadioBandMod::Combined::LORA_900, RATE_LORA_900_25HZ,      SX127x_BW_500_00_KHZ, SX127x_SF_9, SX127x_CR_4_7, 10, TLM_RATIO_1_8,  2, 40000, OTA4_PACKET_SIZE, 1},
-    {5, RadioBandMod::Combined::LORA_900, RATE_LORA_900_50HZ_DVDA, SX127x_BW_500_00_KHZ, SX127x_SF_6, SX127x_CR_4_7,  8, TLM_RATIO_1_64, 2,  5000, OTA4_PACKET_SIZE, 4}};
+expresslrs_mod_settings_s AIRRATE_TABLE(ExpressLRS_AirRateConfig, SX127X)[RATE_MAX_SX127X] = {
+    {0, RadioBandMod::Combined::LORA_900, RATE_LORA_900_200HZ,     SX127x_BW_500_00_KHZ, SX127x_SF_6, SX127x_CR_4_7,  8, MOD_NO_BAND2 TLM_RATIO_1_64, 4,  5000, OTA4_PACKET_SIZE, 1},
+    {1, RadioBandMod::Combined::LORA_900, RATE_LORA_900_100HZ_8CH, SX127x_BW_500_00_KHZ, SX127x_SF_6, SX127x_CR_4_8,  8, MOD_NO_BAND2 TLM_RATIO_1_32, 4, 10000, OTA8_PACKET_SIZE, 1},
+    {2, RadioBandMod::Combined::LORA_900, RATE_LORA_900_100HZ,     SX127x_BW_500_00_KHZ, SX127x_SF_7, SX127x_CR_4_7,  8, MOD_NO_BAND2 TLM_RATIO_1_32, 4, 10000, OTA4_PACKET_SIZE, 1},
+    {3, RadioBandMod::Combined::LORA_900, RATE_LORA_900_50HZ,      SX127x_BW_500_00_KHZ, SX127x_SF_8, SX127x_CR_4_7, 10, MOD_NO_BAND2 TLM_RATIO_1_16, 4, 20000, OTA4_PACKET_SIZE, 1},
+    {4, RadioBandMod::Combined::LORA_900, RATE_LORA_900_25HZ,      SX127x_BW_500_00_KHZ, SX127x_SF_9, SX127x_CR_4_7, 10, MOD_NO_BAND2 TLM_RATIO_1_8,  2, 40000, OTA4_PACKET_SIZE, 1},
+    {5, RadioBandMod::Combined::LORA_900, RATE_LORA_900_50HZ_DVDA, SX127x_BW_500_00_KHZ, SX127x_SF_6, SX127x_CR_4_7,  8, MOD_NO_BAND2 TLM_RATIO_1_64, 2,  5000, OTA4_PACKET_SIZE, 4}};
 
-expresslrs_rf_pref_params_s ExpressLRS_AirRateRFperf[RATE_MAX] = {
+expresslrs_rf_pref_params_s AIRRATE_TABLE(ExpressLRS_AirRateRFperf, SX127X)[RATE_MAX_SX127X] = {
     {0, -112,  4380, 3000, 2500, 600, 5000, SNR_SCALE( 1), SNR_SCALE(3.0)},
     {1, -112,  6690, 3500, 2500, 600, 5000, SNR_SCALE( 1), SNR_SCALE(3.0)},
     {2, -117,  8770, 3500, 2500, 600, 5000, SNR_SCALE( 1), SNR_SCALE(2.5)},
@@ -26,21 +38,23 @@ expresslrs_rf_pref_params_s ExpressLRS_AirRateRFperf[RATE_MAX] = {
 #if defined(RADIO_SX128X)
 
 #include "SX1280Driver.h"
+#if !defined(RADIO_MULTI)
 SX1280Driver Radio;
+#endif
 
-expresslrs_mod_settings_s ExpressLRS_AirRateConfig[RATE_MAX] = {
-    {0, RadioBandMod::Combined::FLRC_2G4, RATE_FLRC_2G4_1000HZ,     SX1280_FLRC_BR_0_650_BW_0_6, SX1280_FLRC_BT_1, SX1280_FLRC_CR_1_2,    32, TLM_RATIO_1_128, 2,  1000, OTA4_PACKET_SIZE, 1},
-    {1, RadioBandMod::Combined::FLRC_2G4, RATE_FLRC_2G4_500HZ,      SX1280_FLRC_BR_0_650_BW_0_6, SX1280_FLRC_BT_1, SX1280_FLRC_CR_1_2,    32, TLM_RATIO_1_128, 2,  2000, OTA4_PACKET_SIZE, 1},
-    {2, RadioBandMod::Combined::FLRC_2G4, RATE_FLRC_2G4_500HZ_DVDA, SX1280_FLRC_BR_0_650_BW_0_6, SX1280_FLRC_BT_1, SX1280_FLRC_CR_1_2,    32, TLM_RATIO_1_128, 2,  1000, OTA4_PACKET_SIZE, 2},
-    {3, RadioBandMod::Combined::FLRC_2G4, RATE_FLRC_2G4_250HZ_DVDA, SX1280_FLRC_BR_0_650_BW_0_6, SX1280_FLRC_BT_1, SX1280_FLRC_CR_1_2,    32, TLM_RATIO_1_128, 2,  1000, OTA4_PACKET_SIZE, 4},
-    {4, RadioBandMod::Combined::LORA_2G4, RATE_LORA_2G4_500HZ,      SX1280_LORA_BW_0800,         SX1280_LORA_SF5,  SX1280_LORA_CR_LI_4_6, 12, TLM_RATIO_1_128, 4,  2000, OTA4_PACKET_SIZE, 1},
-    {5, RadioBandMod::Combined::LORA_2G4, RATE_LORA_2G4_333HZ_8CH,  SX1280_LORA_BW_0800,         SX1280_LORA_SF5,  SX1280_LORA_CR_LI_4_8, 12, TLM_RATIO_1_128, 4,  3003, OTA8_PACKET_SIZE, 1},
-    {6, RadioBandMod::Combined::LORA_2G4, RATE_LORA_2G4_250HZ,      SX1280_LORA_BW_0800,         SX1280_LORA_SF6,  SX1280_LORA_CR_LI_4_8, 14, TLM_RATIO_1_64,  4,  4000, OTA4_PACKET_SIZE, 1},
-    {7, RadioBandMod::Combined::LORA_2G4, RATE_LORA_2G4_150HZ,      SX1280_LORA_BW_0800,         SX1280_LORA_SF7,  SX1280_LORA_CR_LI_4_8, 12, TLM_RATIO_1_32,  4,  6666, OTA4_PACKET_SIZE, 1},
-    {8, RadioBandMod::Combined::LORA_2G4, RATE_LORA_2G4_100HZ_8CH,  SX1280_LORA_BW_0800,         SX1280_LORA_SF7,  SX1280_LORA_CR_LI_4_8, 12, TLM_RATIO_1_32,  4, 10000, OTA8_PACKET_SIZE, 1},
-    {9, RadioBandMod::Combined::LORA_2G4, RATE_LORA_2G4_50HZ,       SX1280_LORA_BW_0800,         SX1280_LORA_SF8,  SX1280_LORA_CR_LI_4_8, 12, TLM_RATIO_1_16,  2, 20000, OTA4_PACKET_SIZE, 1}};
+expresslrs_mod_settings_s AIRRATE_TABLE(ExpressLRS_AirRateConfig, SX128X)[RATE_MAX_SX128X] = {
+    {0, RadioBandMod::Combined::FLRC_2G4, RATE_FLRC_2G4_1000HZ,     SX1280_FLRC_BR_0_650_BW_0_6, SX1280_FLRC_BT_1, SX1280_FLRC_CR_1_2,    32, MOD_NO_BAND2 TLM_RATIO_1_128, 2,  1000, OTA4_PACKET_SIZE, 1},
+    {1, RadioBandMod::Combined::FLRC_2G4, RATE_FLRC_2G4_500HZ,      SX1280_FLRC_BR_0_650_BW_0_6, SX1280_FLRC_BT_1, SX1280_FLRC_CR_1_2,    32, MOD_NO_BAND2 TLM_RATIO_1_128, 2,  2000, OTA4_PACKET_SIZE, 1},
+    {2, RadioBandMod::Combined::FLRC_2G4, RATE_FLRC_2G4_500HZ_DVDA, SX1280_FLRC_BR_0_650_BW_0_6, SX1280_FLRC_BT_1, SX1280_FLRC_CR_1_2,    32, MOD_NO_BAND2 TLM_RATIO_1_128, 2,  1000, OTA4_PACKET_SIZE, 2},
+    {3, RadioBandMod::Combined::FLRC_2G4, RATE_FLRC_2G4_250HZ_DVDA, SX1280_FLRC_BR_0_650_BW_0_6, SX1280_FLRC_BT_1, SX1280_FLRC_CR_1_2,    32, MOD_NO_BAND2 TLM_RATIO_1_128, 2,  1000, OTA4_PACKET_SIZE, 4},
+    {4, RadioBandMod::Combined::LORA_2G4, RATE_LORA_2G4_500HZ,      SX1280_LORA_BW_0800,         SX1280_LORA_SF5,  SX1280_LORA_CR_LI_4_6, 12, MOD_NO_BAND2 TLM_RATIO_1_128, 4,  2000, OTA4_PACKET_SIZE, 1},
+    {5, RadioBandMod::Combined::LORA_2G4, RATE_LORA_2G4_333HZ_8CH,  SX1280_LORA_BW_0800,         SX1280_LORA_SF5,  SX1280_LORA_CR_LI_4_8, 12, MOD_NO_BAND2 TLM_RATIO_1_128, 4,  3003, OTA8_PACKET_SIZE, 1},
+    {6, RadioBandMod::Combined::LORA_2G4, RATE_LORA_2G4_250HZ,      SX1280_LORA_BW_0800,         SX1280_LORA_SF6,  SX1280_LORA_CR_LI_4_8, 14, MOD_NO_BAND2 TLM_RATIO_1_64,  4,  4000, OTA4_PACKET_SIZE, 1},
+    {7, RadioBandMod::Combined::LORA_2G4, RATE_LORA_2G4_150HZ,      SX1280_LORA_BW_0800,         SX1280_LORA_SF7,  SX1280_LORA_CR_LI_4_8, 12, MOD_NO_BAND2 TLM_RATIO_1_32,  4,  6666, OTA4_PACKET_SIZE, 1},
+    {8, RadioBandMod::Combined::LORA_2G4, RATE_LORA_2G4_100HZ_8CH,  SX1280_LORA_BW_0800,         SX1280_LORA_SF7,  SX1280_LORA_CR_LI_4_8, 12, MOD_NO_BAND2 TLM_RATIO_1_32,  4, 10000, OTA8_PACKET_SIZE, 1},
+    {9, RadioBandMod::Combined::LORA_2G4, RATE_LORA_2G4_50HZ,       SX1280_LORA_BW_0800,         SX1280_LORA_SF8,  SX1280_LORA_CR_LI_4_8, 12, MOD_NO_BAND2 TLM_RATIO_1_16,  2, 20000, OTA4_PACKET_SIZE, 1}};
 
-expresslrs_rf_pref_params_s ExpressLRS_AirRateRFperf[RATE_MAX] = {
+expresslrs_rf_pref_params_s AIRRATE_TABLE(ExpressLRS_AirRateRFperf, SX128X)[RATE_MAX_SX128X] = {
     {0, -104,   389, 2500, 2500,  3, 5000, DYNPOWER_SNR_THRESH_NONE, DYNPOWER_SNR_THRESH_NONE},
     {1, -104,   389, 2500, 2500,  3, 5000, DYNPOWER_SNR_THRESH_NONE, DYNPOWER_SNR_THRESH_NONE},
     {2, -104,   389, 2500, 2500,  3, 5000, DYNPOWER_SNR_THRESH_NONE, DYNPOWER_SNR_THRESH_NONE},
@@ -56,9 +70,11 @@ expresslrs_rf_pref_params_s ExpressLRS_AirRateRFperf[RATE_MAX] = {
 #if defined(RADIO_LR1121)
 
 #include "LR1121Driver.h"
+#if !defined(RADIO_MULTI)
 LR1121Driver Radio;
+#endif
 
-expresslrs_mod_settings_s ExpressLRS_AirRateConfig[RATE_MAX] = {
+expresslrs_mod_settings_s AIRRATE_TABLE(ExpressLRS_AirRateConfig, LR1121)[RATE_MAX_LR1121] = {
     {0,  RadioBandMod::Combined::GFSK_900,  RATE_FSK_900_1000HZ_8CH,  LR11XX_RADIO_GFSK_BITRATE_300k, LR11XX_RADIO_GFSK_BW_467000, LR11XX_RADIO_GFSK_FDEV_100k, 16, LR11XX_RADIO_GFSK_BITRATE_300k, LR11XX_RADIO_GFSK_BW_467000, LR11XX_RADIO_GFSK_FDEV_100k, 16, TLM_RATIO_1_128, 2,  1000, OTA8_PACKET_SIZE, 1},
     {1,  RadioBandMod::Combined::LORA_900,  RATE_LORA_900_250HZ,      LR11XX_RADIO_LORA_BW_500,       LR11XX_RADIO_LORA_SF5,       LR11XX_RADIO_LORA_CR_4_8,     8, LR11XX_RADIO_LORA_BW_500,       LR11XX_RADIO_LORA_SF5,       LR11XX_RADIO_LORA_CR_4_8,     8, TLM_RATIO_1_64,  4,  4000, OTA4_PACKET_SIZE, 1},
     {2,  RadioBandMod::Combined::LORA_900,  RATE_LORA_900_200HZ_8CH,  LR11XX_RADIO_LORA_BW_500,       LR11XX_RADIO_LORA_SF5,       LR11XX_RADIO_LORA_CR_4_7,     8, LR11XX_RADIO_LORA_BW_500,       LR11XX_RADIO_LORA_SF5,       LR11XX_RADIO_LORA_CR_4_7,     8, TLM_RATIO_1_64,  4,  5000, OTA8_PACKET_SIZE, 1},
@@ -80,7 +96,7 @@ expresslrs_mod_settings_s ExpressLRS_AirRateConfig[RATE_MAX] = {
     {18, RadioBandMod::Combined::LORA_DUAL, RATE_LORA_DUAL_150HZ,     LR11XX_RADIO_LORA_BW_500,       LR11XX_RADIO_LORA_SF6,       LR11XX_RADIO_LORA_CR_4_8,    12, LR11XX_RADIO_LORA_BW_800,       LR11XX_RADIO_LORA_SF7,       LR11XX_RADIO_LORA_CR_LI_4_6, 12, TLM_RATIO_1_32,  4,  6666, OTA4_PACKET_SIZE, 1},
     {19, RadioBandMod::Combined::LORA_DUAL, RATE_LORA_DUAL_100HZ_8CH, LR11XX_RADIO_LORA_BW_500,       LR11XX_RADIO_LORA_SF6,       LR11XX_RADIO_LORA_CR_4_8,    18, LR11XX_RADIO_LORA_BW_800,       LR11XX_RADIO_LORA_SF7,       LR11XX_RADIO_LORA_CR_LI_4_8, 14, TLM_RATIO_1_32,  4, 10000, OTA8_PACKET_SIZE, 1}};
 
-expresslrs_rf_pref_params_s ExpressLRS_AirRateRFperf[RATE_MAX] = {
+expresslrs_rf_pref_params_s AIRRATE_TABLE(ExpressLRS_AirRateRFperf, LR1121)[RATE_MAX_LR1121] = {
     {0,  -101,   658, 2500, 2500,   3,  5000, DYNPOWER_SNR_THRESH_NONE, DYNPOWER_SNR_THRESH_NONE},
     {1,  -111,  3216, 3500, 2500, 600,  5000, SNR_SCALE( 1), SNR_SCALE(3.0)}, // These SNR_SCALE values all need to be checked!
     {2,  -111,  4240, 3500, 2500, 600,  5000, SNR_SCALE( 1), SNR_SCALE(3.0)},
@@ -106,9 +122,11 @@ expresslrs_rf_pref_params_s ExpressLRS_AirRateRFperf[RATE_MAX] = {
 #if defined(RADIO_LR2021)
 
 #include "LR2021Driver.h"
+#if !defined(RADIO_MULTI)
 LR2021Driver Radio;
+#endif
 
-expresslrs_mod_settings_s ExpressLRS_AirRateConfig[RATE_MAX] = {
+expresslrs_mod_settings_s AIRRATE_TABLE(ExpressLRS_AirRateConfig, LR2021)[RATE_MAX_LR2021] = {
     {0,  RadioBandMod::Combined::GFSK_900,  RATE_FSK_900_1000HZ_8CH,  LR2021_RADIO_GFSK_BITRATE_300k, LR2021_RADIO_GFSK_BW_476000, LR2021_RADIO_GFSK_FDEV_100k, 16, LR2021_RADIO_GFSK_BITRATE_300k, LR2021_RADIO_GFSK_BW_476000, LR2021_RADIO_GFSK_FDEV_100k, 16, TLM_RATIO_1_128, 2,  1000, OTA8_PACKET_SIZE, 1},
     {1,  RadioBandMod::Combined::LORA_900,  RATE_LORA_900_250HZ,      LR2021_RADIO_LORA_BW_500,       LR2021_RADIO_LORA_SF5,       LR2021_RADIO_LORA_CR_4_8,     8, LR2021_RADIO_LORA_BW_500,       LR2021_RADIO_LORA_SF5,       LR2021_RADIO_LORA_CR_4_8,     8, TLM_RATIO_1_64,  4,  4000, OTA4_PACKET_SIZE, 1},
     {2,  RadioBandMod::Combined::LORA_900,  RATE_LORA_900_200HZ_8CH,  LR2021_RADIO_LORA_BW_500,       LR2021_RADIO_LORA_SF5,       LR2021_RADIO_LORA_CR_4_7,     8, LR2021_RADIO_LORA_BW_500,       LR2021_RADIO_LORA_SF5,       LR2021_RADIO_LORA_CR_4_7,     8, TLM_RATIO_1_64,  4,  5000, OTA8_PACKET_SIZE, 1},
@@ -134,7 +152,7 @@ expresslrs_mod_settings_s ExpressLRS_AirRateConfig[RATE_MAX] = {
     {22, RadioBandMod::Combined::LORA_DUAL, RATE_LORA_DUAL_150HZ,     LR2021_RADIO_LORA_BW_500,       LR2021_RADIO_LORA_SF6,       LR2021_RADIO_LORA_CR_4_8,    12, LR2021_RADIO_LORA_BW_800,       LR2021_RADIO_LORA_SF7,       LR2021_RADIO_LORA_CR_LI_4_6, 12, TLM_RATIO_1_32,  4,  6666, OTA4_PACKET_SIZE, 1},
     {23, RadioBandMod::Combined::LORA_DUAL, RATE_LORA_DUAL_100HZ_8CH, LR2021_RADIO_LORA_BW_500,       LR2021_RADIO_LORA_SF6,       LR2021_RADIO_LORA_CR_4_8,    18, LR2021_RADIO_LORA_BW_800,       LR2021_RADIO_LORA_SF7,       LR2021_RADIO_LORA_CR_LI_4_8, 14, TLM_RATIO_1_32,  4, 10000, OTA8_PACKET_SIZE, 1}};
 
-expresslrs_rf_pref_params_s ExpressLRS_AirRateRFperf[RATE_MAX] = {
+expresslrs_rf_pref_params_s AIRRATE_TABLE(ExpressLRS_AirRateRFperf, LR2021)[RATE_MAX_LR2021] = {
     {0,  -101,   658, 2500, 2500,   3,  5000, DYNPOWER_SNR_THRESH_NONE, DYNPOWER_SNR_THRESH_NONE},
     {1,  -111,  3216, 3500, 2500, 600,  5000, SNR_SCALE( 1), SNR_SCALE(3.0)}, // These SNR_SCALE values all need to be checked!
     {2,  -111,  4240, 3500, 2500, 600,  5000, SNR_SCALE( 1), SNR_SCALE(3.0)},
@@ -159,6 +177,49 @@ expresslrs_rf_pref_params_s ExpressLRS_AirRateRFperf[RATE_MAX] = {
     {21, -115, 10798, 4000, 2500,   0,  5000, SNR_SCALE(-1), SNR_SCALE(6.5)},
     {22, -112,  5871, 3500, 2500,  10,  5000, SNR_SCALE( 0), SNR_SCALE(8.5)},
     {23, -112,  7456, 3500, 2500,  11,  5000, SNR_SCALE( 0), SNR_SCALE(8.5)}};
+#endif
+
+#if defined(RADIO_MULTI)
+// Until setRadioChip() runs these are the SX128X tables, as radioChip starts out
+static expresslrs_mod_settings_s *ExpressLRS_AirRateConfig = ExpressLRS_AirRateConfig_SX128X;
+static expresslrs_rf_pref_params_s *ExpressLRS_AirRateRFperf = ExpressLRS_AirRateRFperf_SX128X;
+uint8_t radioRateMax = RATE_MAX_SX128X;
+
+/***
+ * @brief Select the radio chip a multi-radio build drives, and with it the rate tables.
+ * Must run before the FHSS sequence is built and the radio started.
+ */
+void setRadioChip(radio_chip_e chip)
+{
+    radioChip = chip;
+    switch (chip)
+    {
+    case RADIO_CHIP_SX127X:
+        ExpressLRS_AirRateConfig = ExpressLRS_AirRateConfig_SX127X;
+        ExpressLRS_AirRateRFperf = ExpressLRS_AirRateRFperf_SX127X;
+        radioRateMax = RATE_MAX_SX127X;
+        break;
+#if defined(RADIO_LR1121)
+    case RADIO_CHIP_LR1121:
+        ExpressLRS_AirRateConfig = ExpressLRS_AirRateConfig_LR1121;
+        ExpressLRS_AirRateRFperf = ExpressLRS_AirRateRFperf_LR1121;
+        radioRateMax = RATE_MAX_LR1121;
+        break;
+#endif
+#if defined(RADIO_LR2021)
+    case RADIO_CHIP_LR2021:
+        ExpressLRS_AirRateConfig = ExpressLRS_AirRateConfig_LR2021;
+        ExpressLRS_AirRateRFperf = ExpressLRS_AirRateRFperf_LR2021;
+        radioRateMax = RATE_MAX_LR2021;
+        break;
+#endif
+    default:
+        ExpressLRS_AirRateConfig = ExpressLRS_AirRateConfig_SX128X;
+        ExpressLRS_AirRateRFperf = ExpressLRS_AirRateRFperf_SX128X;
+        radioRateMax = RATE_MAX_SX128X;
+        break;
+    }
+}
 #endif
 
 expresslrs_mod_settings_s *get_elrs_airRateConfig(uint8_t index)
@@ -304,6 +365,13 @@ bool ICACHE_RAM_ATTR isDualRadio()
  */
 bool ICACHE_RAM_ATTR isSupportedRFRate(uint8_t index)
 {
+#if defined(RADIO_MULTI)
+    // the SX12xx chips have one band and every rate in their table
+    if (!radioIsLR())
+    {
+        return true;
+    }
+#endif
     const expresslrs_mod_settings_s *const ModParams = get_elrs_airRateConfig(index);
 
     // Dual Band modes not supported for hardware with only a single LR1121

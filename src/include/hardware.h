@@ -29,6 +29,9 @@ typedef enum {
     HARDWARE_radio_rfsw_ctrl_count,
     HARDWARE_radio_tcxo,
     HARDWARE_radio_tcxo_delay,
+#if defined(RADIO_MULTI)
+    HARDWARE_radio_chip,
+#endif
 
     // Radio Antenna
     HARDWARE_ant_ctrl,

@@ -3,9 +3,12 @@
 #ifndef UNIT_TEST
 #include "targets.h"
 #include "device.h"
+#include "radiochip.h"
 
 
-#if defined(RADIO_SX127X)
+#if defined(RADIO_MULTI)
+#include "MultiRadioDriver.h"
+#elif defined(RADIO_SX127X)
 #include "SX127xDriver.h"
 #elif defined(RADIO_SX128X)
 #include "SX1280Driver.h"
@@ -174,6 +177,14 @@ typedef struct expresslrs_mod_settings_s
     uint8_t numOfSends;         // Number of packets to send.
 } expresslrs_mod_settings_t;
 
+// An SX12xx rate has one band. When the struct has the LR chips' second band (a
+// multi-radio build with LR drivers), the SX12xx tables fill it with zeros.
+#if defined(RADIO_LR1121) || defined(RADIO_LR2021)
+#define MOD_NO_BAND2 0, 0, 0, 0,
+#else
+#define MOD_NO_BAND2
+#endif
+
 // Limited to 16 possible ACTIONs by config storage currently
 typedef enum : uint8_t {
     ACTION_NONE,
@@ -277,27 +288,43 @@ enum eAuxChannels : uint8_t
 };
 
 #ifndef UNIT_TEST
-#if defined(RADIO_SX127X)
-#define RATE_MAX 6
+#define RATE_MAX_SX127X 6
+#define RATE_MAX_SX128X 10     // 2xFLRC + 2xDVDA + 4xLoRa + 2xFullRes
+#define RATE_MAX_LR1121 20
+#define RATE_MAX_LR2021 24
+
+#if defined(RADIO_MULTI)
+// Every linked driver's rate table is in the image and the fitted chip's is used, see setRadioChip()
+#define RATE_MAX radioRateMax
+#define RATE_BINDING (radioChip == RADIO_CHIP_SX128X ? RATE_LORA_2G4_50HZ : RATE_LORA_900_50HZ)
+#define RATE_DUALBAND_BINDING RATE_LORA_2G4_50HZ
+
+extern uint8_t radioRateMax;
+extern MultiRadioDriver Radio;
+
+void setRadioChip(radio_chip_e chip);
+
+#elif defined(RADIO_SX127X)
+#define RATE_MAX RATE_MAX_SX127X
 #define RATE_BINDING RATE_LORA_900_50HZ
 
 extern SX127xDriver Radio;
 
 #elif defined(RADIO_SX128X)
-#define RATE_MAX 10     // 2xFLRC + 2xDVDA + 4xLoRa + 2xFullRes
+#define RATE_MAX RATE_MAX_SX128X
 #define RATE_BINDING RATE_LORA_2G4_50HZ
 
 extern SX1280Driver Radio;
 
 #elif defined(RADIO_LR1121)
-#define RATE_MAX 20
+#define RATE_MAX RATE_MAX_LR1121
 #define RATE_BINDING RATE_LORA_900_50HZ
 #define RATE_DUALBAND_BINDING RATE_LORA_2G4_50HZ
 
 extern LR1121Driver Radio;
 
 #elif defined(RADIO_LR2021)
-#define RATE_MAX 24
+#define RATE_MAX RATE_MAX_LR2021
 #define RATE_BINDING RATE_LORA_900_50HZ
 #define RATE_DUALBAND_BINDING RATE_LORA_2G4_50HZ
 

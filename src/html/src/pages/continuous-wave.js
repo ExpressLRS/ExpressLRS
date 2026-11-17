@@ -165,6 +165,14 @@ export class ContinuousWave extends LitElement {
     }
 
     _measured() {
+        // FEATURE:MULTI_RADIO
+        // the SX1280 has a 52 MHz crystal, the other chips 32 MHz
+        const isSX128x = elrsState.settings['radio-type'] === 'SX128X'
+        const xtalNominal = isSX128x ? 52000000 : 32000000
+        const warn_offset = isSX128x ? 90000 : 100000
+        const bad_offset = isSX128x ? 180000 : 125000
+        // /FEATURE:MULTI_RADIO
+        // FEATURE:NOT MULTI_RADIO
         // FEATURE:HAS_SX127X
         const xtalNominal = 32000000
         const warn_offset = 100000
@@ -185,6 +193,7 @@ export class ContinuousWave extends LitElement {
         const warn_offset = 100000
         const bad_offset = 125000
         // /FEATURE:HAS_LR2021
+        // /FEATURE:NOT MULTI_RADIO
 
         if (!this.measured) return
         const calc = (this.measured.value / this.cwFreq) * xtalNominal

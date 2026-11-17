@@ -59,40 +59,54 @@ public:
         SX12XX_RX_SYNCWORD_ERROR = 1 << 2,
     };
 
+#if defined(RADIO_MULTI)
+    // A multi-radio build links more than one driver but only ever starts one. All of
+    // them share the state below (static), so Radio, the MultiRadioDriver in front of
+    // them, reads what the running driver wrote. It is defined in MultiRadioDriver.cpp.
+    #define SX12XX_SHARED static
+    SX12xxDriverCommon() {}
+#else
+    #define SX12XX_SHARED
     SX12xxDriverCommon():
         RXdoneCallback(nullCallbackRx),
         TXdoneCallback(nullCallbackTx) {}
+#endif
 
     static bool ICACHE_RAM_ATTR nullCallbackRx(rx_status) {return false;}
     static void ICACHE_RAM_ATTR nullCallbackTx() {}
 
     ///////Callback Function Pointers/////
-    bool (*RXdoneCallback)(rx_status crcFail); //function pointer for callback
-    void (*TXdoneCallback)(); //function pointer for callback
+    SX12XX_SHARED bool (*RXdoneCallback)(rx_status crcFail); //function pointer for callback
+    SX12XX_SHARED void (*TXdoneCallback)(); //function pointer for callback
 
     #define RXBuffSize 16
-    WORD_ALIGNED_ATTR uint8_t RXdataBuffer[RXBuffSize];
-    WORD_ALIGNED_ATTR uint8_t RXdataBufferSecond[RXBuffSize];
+    WORD_ALIGNED_ATTR SX12XX_SHARED uint8_t RXdataBuffer[RXBuffSize];
+    WORD_ALIGNED_ATTR SX12XX_SHARED uint8_t RXdataBufferSecond[RXBuffSize];
 
     ///////////Radio Variables////////
-    uint32_t currFreq;  // This actually the reg value! TODO fix the naming!
-    uint8_t PayloadLength;
-    bool IQinverted;
+    SX12XX_SHARED uint32_t currFreq;  // This actually the reg value! TODO fix the naming!
+    SX12XX_SHARED uint8_t PayloadLength;
+    SX12XX_SHARED bool IQinverted;
 
-    SX12XX_Radio_Number_t processingPacketRadio;
-    SX12XX_Radio_Number_t transmittingRadio;
-    SX12XX_Radio_Number_t strongestReceivingRadio;
+    SX12XX_SHARED SX12XX_Radio_Number_t processingPacketRadio;
+    SX12XX_SHARED SX12XX_Radio_Number_t transmittingRadio;
+    SX12XX_SHARED SX12XX_Radio_Number_t strongestReceivingRadio;
     SX12XX_Radio_Number_t GetProcessingPacketRadio() { return processingPacketRadio; }
     SX12XX_Radio_Number_t GetStrongestReceivingRadio() { return strongestReceivingRadio; }
     SX12XX_Radio_Number_t GetLastTransmitRadio() {return transmittingRadio; }
 
     /////////////Packet Stats//////////
-    int8_t LastPacketRSSI;
-    int8_t LastPacketRSSI2;
-    int8_t LastPacketSNRRaw; // in RADIO_SNR_SCALE units
-    int8_t FuzzySNRThreshold;
+    SX12XX_SHARED int8_t LastPacketRSSI;
+    SX12XX_SHARED int8_t LastPacketRSSI2;
+    SX12XX_SHARED int8_t LastPacketSNRRaw; // in RADIO_SNR_SCALE units
+    SX12XX_SHARED int8_t FuzzySNRThreshold;
+#if defined(RADIO_MULTI)
+    static bool gotRadio[2];
+    static bool hasSecondRadioGotData;
+#else
     bool gotRadio[2] = {false, false};
     bool hasSecondRadioGotData = false;
+#endif
 
 #if defined(DEBUG_RCVR_SIGNAL_STATS)
     typedef struct rxSignalStats_s
@@ -105,9 +119,9 @@ public:
         uint16_t fail_count;
     } rxSignalStats_t;
 
-    rxSignalStats_t rxSignalStats[2];
-    uint16_t irq_count_or;
-    uint16_t irq_count_both;
+    SX12XX_SHARED rxSignalStats_t rxSignalStats[2];
+    SX12XX_SHARED uint16_t irq_count_or;
+    SX12XX_SHARED uint16_t irq_count_both;
 #endif
 
 protected:

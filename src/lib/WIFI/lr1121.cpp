@@ -15,7 +15,8 @@
 #include "wifiJoystick.h"
 #endif
 
-extern LR1121Hal hal;
+namespace lr1121 { extern LR1121Hal hal; }
+using lr1121::hal;
 
 static void WebUploadLR1121ResponseHandler(AsyncWebServerRequest *request)
 {

@@ -152,6 +152,11 @@ static void options_LoadFromFlashOrFile(EspFlashStream &strmFlash)
         }
     }
 
+    // LBT only ever comes from the trailer, never from options.json: it's set when the
+    // device is flashed, and the web UI can't take it away. (Read it before `doc`
+    // below, which may overwrite flashDoc.)
+    firmwareOptions.lbt = hasFlash ? (flashDoc["lbt"] | LBT_BUILD_DEFAULT) : LBT_BUILD_DEFAULT;
+
     JsonDocument &doc = flashDoc;
     if (hasFlash && hasSpiffs)
     {

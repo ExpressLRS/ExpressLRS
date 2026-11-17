@@ -8,53 +8,89 @@
 #define POWER_OUTPUT_VALUES_DUAL_COUNT 0
 #endif
 
+#if defined(RADIO_MULTI)
+// Each chip has its own frequency unit: a register step on the SX12xx chips, Hz on the LR
+// ones. Each table below is converted with its own chip's: FREQ_HZ_TO_REG_VAL() uses
+// FREQ_STEP, set to the SX127x's for the first sub-GHz table and the SX1280's for 2.4 GHz.
+#include "MultiRadioDriver.h"
+#if defined(RADIO_LR1121) || defined(RADIO_LR2021)
+#define FREQ_HZ_TO_REG_VAL(freq) ((uint32_t)((double)freq/(double)FREQ_STEP))
+#endif
+#define FREQ_STEP SX127X_FREQ_STEP
+#endif
+
 #if defined(RADIO_SX127X) || defined(RADIO_LR1121) || defined(RADIO_LR2021)
 
-#if defined(RADIO_SX127X)
+#if defined(RADIO_MULTI)
+// MultiRadioDriver.h has the drivers
+#elif defined(RADIO_SX127X)
 #include "SX127xDriver.h"
 #elif defined(RADIO_LR1121)
 #include "LR1121Driver.h"
-#else
+#elif defined(RADIO_LR2021)
 #include "LR2021Driver.h"
 #endif
 
-const fhss_config_t domains[] = {
-    {"AU915",  FREQ_HZ_TO_REG_VAL(915500000), FREQ_HZ_TO_REG_VAL(926900000), 20, 921000000},
-    {"FCC915", FREQ_HZ_TO_REG_VAL(903500000), FREQ_HZ_TO_REG_VAL(926900000), 40, 915000000},
-    {"EU868",  FREQ_HZ_TO_REG_VAL(863275000), FREQ_HZ_TO_REG_VAL(869575000), 13, 868000000},
-    {"IN866",  FREQ_HZ_TO_REG_VAL(865375000), FREQ_HZ_TO_REG_VAL(866950000), 4, 866000000},
-    {"AU433",  FREQ_HZ_TO_REG_VAL(433420000), FREQ_HZ_TO_REG_VAL(434420000), 3, 434000000},
-    {"EU433",  FREQ_HZ_TO_REG_VAL(433100000), FREQ_HZ_TO_REG_VAL(434450000), 3, 434000000},
-    {"US433",  FREQ_HZ_TO_REG_VAL(433250000), FREQ_HZ_TO_REG_VAL(438000000), 8, 434000000},
-    {"US433W",  FREQ_HZ_TO_REG_VAL(423500000), FREQ_HZ_TO_REG_VAL(438000000), 20, 434000000},
-    // Thailand NBTC 920-925 MHz: 8 FHSS channels, 600 kHz spacing
+// A macro so that a multi-radio build can expand it once per frequency unit
+#define FHSS_DOMAINS_900 \
+    {"AU915",  FREQ_HZ_TO_REG_VAL(915500000), FREQ_HZ_TO_REG_VAL(926900000), 20, 921000000}, \
+    {"FCC915", FREQ_HZ_TO_REG_VAL(903500000), FREQ_HZ_TO_REG_VAL(926900000), 40, 915000000}, \
+    {"EU868",  FREQ_HZ_TO_REG_VAL(863275000), FREQ_HZ_TO_REG_VAL(869575000), 13, 868000000}, \
+    {"IN866",  FREQ_HZ_TO_REG_VAL(865375000), FREQ_HZ_TO_REG_VAL(866950000), 4, 866000000}, \
+    {"AU433",  FREQ_HZ_TO_REG_VAL(433420000), FREQ_HZ_TO_REG_VAL(434420000), 3, 434000000}, \
+    {"EU433",  FREQ_HZ_TO_REG_VAL(433100000), FREQ_HZ_TO_REG_VAL(434450000), 3, 434000000}, \
+    {"US433",  FREQ_HZ_TO_REG_VAL(433250000), FREQ_HZ_TO_REG_VAL(438000000), 8, 434000000}, \
+    {"US433W",  FREQ_HZ_TO_REG_VAL(423500000), FREQ_HZ_TO_REG_VAL(438000000), 20, 434000000}, \
+    /* Thailand NBTC 920-925 MHz: 8 FHSS channels, 600 kHz spacing */ \
     {"TH920",  FREQ_HZ_TO_REG_VAL(920500000), FREQ_HZ_TO_REG_VAL(924700000), 8, 922600000},
+
+const fhss_config_t domains[] = {
+    FHSS_DOMAINS_900
 };
 
-#if defined(RADIO_LR1121) || defined(RADIO_LR2021)
+#if (defined(RADIO_LR1121) || defined(RADIO_LR2021)) && !defined(RADIO_MULTI)
+// the same channels either way: firmwareOptions.lbt picks which one names them
 const fhss_config_t domainsDualBand[] = {
-    {
-    #if defined(Regulatory_Domain_EU_CE_2400)
-        "CE_LBT",
-    #else
-        "ISM2G4",
-    #endif
-    FREQ_HZ_TO_REG_VAL(2400400000), FREQ_HZ_TO_REG_VAL(2479400000), 80, 2440000000}
+    {"ISM2G4", FREQ_HZ_TO_REG_VAL(2400400000), FREQ_HZ_TO_REG_VAL(2479400000), 80, 2440000000},
+    {"CE_LBT", FREQ_HZ_TO_REG_VAL(2400400000), FREQ_HZ_TO_REG_VAL(2479400000), 80, 2440000000},
 };
 #endif
 
-#elif defined(RADIO_SX128X)
-#include "SX1280Driver.h"
+#endif
 
-const fhss_config_t domains[] = {
-    {
-    #if defined(Regulatory_Domain_EU_CE_2400)
-        "CE_LBT",
-    #elif defined(Regulatory_Domain_ISM_2400)
-        "ISM2G4",
-    #endif
-    FREQ_HZ_TO_REG_VAL(2400400000), FREQ_HZ_TO_REG_VAL(2479400000), 80, 2440000000}
+#if defined(RADIO_SX128X)
+#if defined(RADIO_MULTI)
+#undef FREQ_STEP
+#define FREQ_STEP SX1280_FREQ_STEP
+// domains[] is the sub-GHz table above
+#define DOMAINS_2G4 domains2G4
+#else
+#include "SX1280Driver.h"
+#define DOMAINS_2G4 domains
+#endif
+
+// the same channels either way: firmwareOptions.lbt picks which one names them
+const fhss_config_t DOMAINS_2G4[] = {
+    {"ISM2G4", FREQ_HZ_TO_REG_VAL(2400400000), FREQ_HZ_TO_REG_VAL(2479400000), 80, 2440000000},
+    {"CE_LBT", FREQ_HZ_TO_REG_VAL(2400400000), FREQ_HZ_TO_REG_VAL(2479400000), 80, 2440000000},
 };
+#endif
+
+#if defined(RADIO_MULTI) && (defined(RADIO_LR1121) || defined(RADIO_LR2021))
+// the LR chips take Hz: the same domains again, unconverted
+#undef FREQ_HZ_TO_REG_VAL
+#define FREQ_HZ_TO_REG_VAL(freq) (freq)
+static const fhss_config_t domainsHz[] = {
+    FHSS_DOMAINS_900
+};
+
+static const fhss_config_t domainsDualBand[] = {
+    {"ISM2G4", FREQ_HZ_TO_REG_VAL(2400400000), FREQ_HZ_TO_REG_VAL(2479400000), 80, 2440000000},
+    {"CE_LBT", FREQ_HZ_TO_REG_VAL(2400400000), FREQ_HZ_TO_REG_VAL(2479400000), 80, 2440000000},
+};
+
+// 8 extra bits of spread precision on the SX12xx register units; none on Hz, which would overflow
+uint8_t freqSpreadShift = 8;
 #endif
 
 // Our table of FHSS frequencies. Define a regulatory domain to select the correct set for your location and radio
@@ -99,7 +135,26 @@ void FHSSrandomiseFHSSsequence(const uint32_t seed)
     // the hop pointer indexes sequences that are about to be replaced
     FHSSptr = 0;
 
+#if defined(RADIO_MULTI) && (defined(RADIO_LR1121) || defined(RADIO_LR2021))
+    // the 2.4 GHz band has one domain, which the sub-GHz domain option doesn't select
+    if (radioIsLR())
+    {
+        FHSSconfig = &domainsHz[firmwareOptions.domain];
+        freqSpreadShift = 0;
+    }
+    else
+    {
+        FHSSconfig = radioChip == RADIO_CHIP_SX127X ? &domains[firmwareOptions.domain] : &domains2G4[firmwareOptions.lbt ? 1 : 0];
+        freqSpreadShift = 8;
+    }
+#elif defined(RADIO_MULTI)
+    // the 2.4 GHz band has one domain, which the sub-GHz domain option doesn't select
+    FHSSconfig = radioChip == RADIO_CHIP_SX127X ? &domains[firmwareOptions.domain] : &domains2G4[firmwareOptions.lbt ? 1 : 0];
+#elif defined(RADIO_SX128X)
+    FHSSconfig = &domains[firmwareOptions.lbt ? 1 : 0];
+#else
     FHSSconfig = &domains[firmwareOptions.domain];
+#endif
     sync_channel = FHSSconfig->freq_count / 2;
     freq_spread = (FHSSconfig->freq_stop - FHSSconfig->freq_start) * FREQ_SPREAD_SCALE / (FHSSconfig->freq_count - 1);
 
@@ -109,14 +164,20 @@ void FHSSrandomiseFHSSsequence(const uint32_t seed)
     primaryBandCount = FHSSrandomiseFHSSsequenceBuild(seed, FHSSconfig->freq_count, sync_channel, FHSSsequence);
 
 #if defined(RADIO_LR1121) || defined(RADIO_LR2021)
-    FHSSconfigDualBand = &domainsDualBand[0];
-    sync_channel_DualBand = FHSSconfigDualBand->freq_count / 2;
-    freq_spread_DualBand = (FHSSconfigDualBand->freq_stop - FHSSconfigDualBand->freq_start) * FREQ_SPREAD_SCALE / (FHSSconfigDualBand->freq_count - 1);
+#if defined(RADIO_MULTI)
+    // an SX12xx chip has one band: its rates never leave FHSSconfig
+    if (radioIsLR())
+#endif
+    {
+        FHSSconfigDualBand = &domainsDualBand[firmwareOptions.lbt ? 1 : 0];
+        sync_channel_DualBand = FHSSconfigDualBand->freq_count / 2;
+        freq_spread_DualBand = (FHSSconfigDualBand->freq_stop - FHSSconfigDualBand->freq_start) * FREQ_SPREAD_SCALE / (FHSSconfigDualBand->freq_count - 1);
 
-    DBGLN("Dual Domain %s, %u channels, sync=%u",
-        FHSSconfigDualBand->domain, FHSSconfigDualBand->freq_count, sync_channel_DualBand);
+        DBGLN("Dual Domain %s, %u channels, sync=%u",
+            FHSSconfigDualBand->domain, FHSSconfigDualBand->freq_count, sync_channel_DualBand);
 
-    secondaryBandCount = FHSSrandomiseFHSSsequenceBuild(seed, FHSSconfigDualBand->freq_count, sync_channel_DualBand, FHSSsequence_DualBand);
+        secondaryBandCount = FHSSrandomiseFHSSsequenceBuild(seed, FHSSconfigDualBand->freq_count, sync_channel_DualBand, FHSSsequence_DualBand);
+    }
 #endif
 
     // add frequency and regulatory domain to the string used by the Lua script

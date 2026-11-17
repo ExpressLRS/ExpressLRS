@@ -2,10 +2,11 @@
 #include "logging.h"
 #include "RFAMP_hal.h"
 
-SX127xHal hal;
+// static: a multi-radio build links both SX12xx drivers, each with its own hal
+static SX127xHal hal;
 SX127xDriver *SX127xDriver::instance = NULL;
 
-RFAMP_hal RFAMP;
+static RFAMP_hal RFAMP;
 
 const uint8_t SX127x_AllowedSyncwords[105] =
     {0, 5, 6, 7, 11, 12, 13, 15, 18,

@@ -2,6 +2,7 @@
 
 #include "LR2021_Regs.h"
 #include "SX12xxDriverCommon.h"
+#include "BufferCodec.h"
 #include "targets.h"
 
 #ifdef PLATFORM_ESP8266
@@ -9,14 +10,6 @@
 #endif
 
 #define RADIO_SNR_SCALE 4
-
-class BufferCodec
-{
-public:
-    virtual ~BufferCodec() {}
-    virtual void encode(uint8_t *out, uint8_t *in, uint32_t len);
-    virtual void decode(uint8_t *out, uint8_t *in, uint32_t len);
-};
 
 class LR2021Driver : public SX12xxDriverCommon
 {

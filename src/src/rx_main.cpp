@@ -314,19 +314,27 @@ void SetRFLinkRate(uint8_t index, bool bindMode) // Set speed of RF link
 
     uint32_t interval = ModParams->interval;
 #if defined(DEBUG_FREQ_CORRECTION) && defined(RADIO_SX128X)
-    interval = interval * 12 / 10; // increase the packet interval by 20% to allow adding packet header
+    if (radioChip == RADIO_CHIP_SX128X)
+        interval = interval * 12 / 10; // increase the packet interval by 20% to allow adding packet header
 #endif
 
     hwTimer::updateInterval(interval);
 
 #if defined(RADIO_LR1121) || defined(RADIO_LR2021)
-    FHSSusePrimaryFreqBand = !RadioBandMod::isB2G4(ModParams->radio_type);
-    FHSSuseDualBand = RadioBandMod::isBDUAL(ModParams->radio_type);
+    // an SX12xx chip has one band, in FHSSconfig
+    if (radioIsLR())
+    {
+        FHSSusePrimaryFreqBand = !RadioBandMod::isB2G4(ModParams->radio_type);
+        FHSSuseDualBand = RadioBandMod::isBDUAL(ModParams->radio_type);
+    }
 #endif
 
     Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, FHSSgetInitialFreq(),
                  ModParams->PreambleLen, invertIQ, ModParams->PayloadLength
-#if defined(RADIO_SX128X)
+#if defined(RADIO_MULTI)
+                 , ModParams->radio_type, (uint8_t)UID[5], (uint8_t)UID[4]
+                 , OtaGetUidSeed(), OtaCrcInitializer
+#elif defined(RADIO_SX128X)
                  , OtaGetUidSeed(), OtaCrcInitializer, ModParams->radio_type
 #elif defined(RADIO_LR1121)
                  , ModParams->radio_type, (uint8_t)UID[5], (uint8_t)UID[4]
@@ -405,7 +413,7 @@ static void ICACHE_RAM_ATTR HandleFHSS()
 #if defined(RADIO_SX127X)
     // SX127x radio has to reset receive mode after hopping
     uint8_t modresultTLM = OtaNonce % ExpressLRS_currTlmDenom;
-    if (modresultTLM != 0 || ExpressLRS_currTlmDenom == 1) // if we are about to send a tlm response don't bother going back to rx
+    if (radioChip == RADIO_CHIP_SX127X && (modresultTLM != 0 || ExpressLRS_currTlmDenom == 1)) // if we are about to send a tlm response don't bother going back to rx
     {
         Radio.RXnb();
     }
@@ -1174,6 +1182,7 @@ bool ICACHE_RAM_ATTR ProcessRFPacket(SX12xxDriverCommon::rx_status const status)
     if (Radio.FrequencyErrorAvailable())
     {
     #if defined(RADIO_SX127X)
+        // On a multi-radio build with an SX1280 fitted, SetPPMoffsetReg() does nothing
         int32_t tempFreqCorrection = HandleFreqCorr(Radio.GetFrequencyErrorbool(Radio.GetProcessingPacketRadio()), Radio.GetProcessingPacketRadio());
         // Teamp900 also needs to adjust its demood PPM
         Radio.SetPPMoffsetReg(tempFreqCorrection, Radio.GetProcessingPacketRadio());
@@ -1767,7 +1776,7 @@ static void updateBindingMode(unsigned long now)
 
 #if defined(RADIO_LR1121) || defined(RADIO_LR2021)
     // Change frequency domains every 500ms.  This will allow single LR1121 receivers to receive bind packets from SX12XX Tx modules.
-    else if (InBindingMode && (now - BindingRateChangeMs) > BindingRateChangeCyclePeriodMs)
+    else if (InBindingMode && radioIsLR() && (now - BindingRateChangeMs) > BindingRateChangeCyclePeriodMs)
     {
         BindingRateChangeMs = now;
         if (ExpressLRS_currAirRate_Modparams->enum_rate == RATE_DUALBAND_BINDING)
@@ -2042,6 +2051,11 @@ void setup()
         #else
         BackpackOrLogStrm = new NullStream();
         #endif
+
+#if defined(RADIO_MULTI)
+        // the driver, rate tables and FHSS domains all follow the chip the layout is for
+        setRadioChip(MultiRadioDriver::ChipFromLayout());
+#endif
 
         // Init EEPROM and load config, checking powerup count
         setupConfigAndPocCheck();

@@ -41,7 +41,31 @@ const HARDWARE_SCHEMA = [
 
     {
         title: 'Radio Chip Pins & Options', rows: [
-            /* FEATURE: NOT HAS_SX127X */
+            /* FEATURE: MULTI_RADIO */
+            {
+                id: 'radio_chip',
+                label: 'Radio chip',
+                type: 'select',
+                options: [
+                    {value: -1, label: 'From the pins'},
+                    {value: 0, label: 'SX127x (900 MHz)'},
+                    {value: 1, label: 'SX1280 (2.4 GHz)'},
+                    /* FEATURE: HAS_LR1121 */
+                    {value: 2, label: 'LR1121'},
+                    /* /FEATURE: HAS_LR1121 */
+                    /* FEATURE: HAS_LR2021 */
+                    {value: 3, label: 'LR2021'},
+                    /* /FEATURE: HAS_LR2021 */
+                ],
+                /* FEATURE: NOT HAS_DUAL_BAND */
+                desc: 'The radio chip fitted. From the pins means SX127x if a DIO0 pin is set, else SX1280'
+                /* /FEATURE: NOT HAS_DUAL_BAND */
+                /* FEATURE: HAS_DUAL_BAND */
+                desc: 'The radio chip fitted. From the pins means SX127x if a DIO0 pin is set, else whichever LR chip answers, else SX1280'
+                /* /FEATURE: HAS_DUAL_BAND */
+            },
+            /* /FEATURE: MULTI_RADIO */
+            /* FEATURE: NOT SX127X_ONLY */
             {
                 id: 'radio_busy',
                 label: 'BUSY pin',
@@ -49,7 +73,7 @@ const HARDWARE_SCHEMA = [
                 icon: 'input',
                 desc: 'GPIO Input connected to transceiver busy pin'
             },
-            /* /FEATURE: NOT HAS_SX127X */
+            /* /FEATURE: NOT SX127X_ONLY */
             /* FEATURE: HAS_SX127X */
             {
                 id: 'radio_dio0',
@@ -59,7 +83,7 @@ const HARDWARE_SCHEMA = [
                 desc: 'Interrupt pin from transceiver'
             },
             /* /FEATURE: HAS_SX127X */
-            /* FEATURE: NOT HAS_SX127X */
+            /* FEATURE: NOT SX127X_ONLY */
             {
                 id: 'radio_dio1',
                 label: 'DIO1 pin',
@@ -67,7 +91,7 @@ const HARDWARE_SCHEMA = [
                 icon: 'input',
                 desc: 'Interrupt pin from transceiver'
             },
-            /* /FEATURE: NOT HAS_SX127X */
+            /* /FEATURE: NOT SX127X_ONLY */
             {
                 id: 'radio_miso',
                 label: 'MISO pin',
@@ -104,7 +128,7 @@ const HARDWARE_SCHEMA = [
                 desc: 'Clock pin connected to (possibly) multiple transceiver'
             },
             /* FEATURE: NOT IS_8285 */
-            /* FEATURE: NOT HAS_SX127X */
+            /* FEATURE: NOT SX127X_ONLY */
             {
                 id: 'radio_busy_2',
                 label: 'BUSY_2 pin',
@@ -112,7 +136,7 @@ const HARDWARE_SCHEMA = [
                 icon: 'input',
                 desc: 'Busy pin for second transceiver'
             },
-            /* /FEATURE: NOT HAS_SX127X */
+            /* /FEATURE: NOT SX127X_ONLY */
             /* FEATURE: HAS_SX127X */
             {
                 id: 'radio_dio0_2',
@@ -122,7 +146,7 @@ const HARDWARE_SCHEMA = [
                 desc: 'Interrupt pin for second transceiver'
             },
             /* /FEATURE: HAS_SX127X */
-            /* FEATURE: NOT HAS_SX127X */
+            /* FEATURE: NOT SX127X_ONLY */
             {
                 id: 'radio_dio1_2',
                 label: 'DIO1_2 pin',
@@ -130,7 +154,7 @@ const HARDWARE_SCHEMA = [
                 icon: 'input',
                 desc: 'Interrupt pin for second transceiver'
             },
-            /* /FEATURE: NOT HAS_SX127X */
+            /* /FEATURE: NOT SX127X_ONLY */
             {
                 id: 'radio_nss_2',
                 label: 'NSS_2 pin',
@@ -146,7 +170,7 @@ const HARDWARE_SCHEMA = [
                 desc: 'Reset pin connected to second transceiver'
             },
             /* /FEATURE: NOT IS_8285 */
-            /* FEATURE: NOT HAS_SX127X */
+            /* FEATURE: NOT SX127X_ONLY */
             {
                 id: 'radio_dcdc',
                 label: 'DCDC enabled',
@@ -154,8 +178,8 @@ const HARDWARE_SCHEMA = [
                 icon: null,
                 desc: 'Use the SX1280 DC-DC converter rather than LDO voltage regulator (15uH inductor must be present)'
             },
-            /* /FEATURE: NOT HAS_SX127X */
-            /* FEATURE: NOT HAS_SX128X */
+            /* /FEATURE: NOT SX127X_ONLY */
+            /* FEATURE: NOT SX128X_ONLY */
             {
                 id: 'radio_rfo_hf',
                 label: 'RFO_HF enabled',
@@ -163,7 +187,7 @@ const HARDWARE_SCHEMA = [
                 icon: null,
                 desc: 'SX127x PA to use, either the RFO_HF or PA_BOOST (depends on circuit design)'
             },
-            /* /FEATURE: NOT HAS_SX128X */
+            /* /FEATURE: NOT SX128X_ONLY */
             /* FEATURE: HAS_LR1121 */
             {
                 id: 'radio_rfsw_ctrl',
@@ -194,7 +218,7 @@ const HARDWARE_SCHEMA = [
                 desc: 'How long (in 30.52us steps) for the TCXO to stabilize'
             },
             /* /FEATURE: HAS_LR1121 */
-            /* FEATURE: HAS_LR2021 */
+            /* FEATURE: LR2021_ONLY */
             {
                 id: 'radio_rfsw_ctrl',
                 label: 'LR2021 RF Switch Controls',
@@ -223,7 +247,7 @@ const HARDWARE_SCHEMA = [
                 icon: null,
                 desc: 'How long (in ticks) for the TCXO to stabilize'
             },
-            /* /FEATURE: HAS_LR2021 */
+            /* /FEATURE: LR2021_ONLY */
         ]
     },
 

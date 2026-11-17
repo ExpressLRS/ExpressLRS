@@ -95,7 +95,9 @@ export class App extends LitElement {
                             <!-- /FEATURE:NOT IS_TX -->
                             <li><a id="menu-cw" href="#cw"><span class="mui--align-middle icon--symbols icon--symbols--wave"></span>Continuous Wave</a></li>
                             <!-- FEATURE:HAS_LR1121 -->
+                            <!-- FEATURE:MULTI_RADIO -->${elrsState.settings?.['radio-type'] === 'LR1121' ? html`<!-- /FEATURE:MULTI_RADIO -->
                             <li><a id="menu-lr1121" href="#lr1121"><span class="mui--align-middle icon--symbols icon--symbols--lr1121"></span>LR1121 Firmware</a></li>
+                            <!-- FEATURE:MULTI_RADIO -->` : ''}<!-- /FEATURE:MULTI_RADIO -->
                             <!-- /FEATURE:HAS_LR1121 -->
                         </ul>
                     </li>

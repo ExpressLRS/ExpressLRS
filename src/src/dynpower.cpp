@@ -5,6 +5,7 @@
 #include "POWERMGNT.h"
 #include "config.h"
 #include "logging.h"
+#include "options.h"
 
 #if defined(TARGET_TX)
 #include <handset.h>
@@ -145,10 +146,11 @@ void DynamicPower_Update(uint32_t now)
   // Quick boost up of power when detected any emergency LQ drops.
   // It should be useful for bando or sudden lost of LoS cases.
   uint32_t lq_current = linkStats.uplink_Link_quality;
-#if defined(Regulatory_Domain_EU_CE_2400)
+#if HAS_LBT
   // Scale up receiver LQ for packets not sent because the channel was not clear
   // the calculation could exceed 100% during a rate change or initial connect when the LQs are not synced
-  lq_current = std::min(lq_current * 100 / std::max((uint32_t)LBTSuccessCalc.getLQ(), (uint32_t)1U), (uint32_t)100U);
+  if (firmwareOptions.lbt)
+    lq_current = std::min(lq_current * 100 / std::max((uint32_t)LBTSuccessCalc.getLQ(), (uint32_t)1U), (uint32_t)100U);
 #endif
   uint32_t lq_avg = dynpower_mavg_lq;
   int32_t lq_diff = lq_avg - lq_current;

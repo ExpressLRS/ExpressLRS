@@ -100,6 +100,8 @@ def patch_unified(args, options):
 
     if args.domain is not None:
         json_flags['domain'] = domain_number(args.domain)
+    if args.lbt:
+        json_flags['lbt'] = True
 
     json_flags['flash-discriminator'] = randint(1,2**32-1)
 
@@ -215,7 +217,7 @@ def main():
     parser.add_argument("--force", action='store_true', default=False, help="Force upload even if target does not match")
     parser.add_argument("--confirm", action='store_true', default=False, help="Confirm upload if a mismatched target was previously uploaded")
     parser.add_argument("--tx", action='store_true', default=False, help="Flash a TX module, RX if not specified")
-    parser.add_argument("--lbt", action='store_true', default=False, help="Use LBT firmware, default is FCC (only for 2.4GHz firmware)")
+    parser.add_argument("--lbt", action='store_true', default=False, help="EU CE 2.4GHz: listen before talk and the CE power limits, default is FCC (set in the firmware's options, kept across updates)")
     parser.add_argument('--rx-as-tx', type=TXType, choices=list(TXType), required=False, default=None, help="Flash an RX module with TX firmware, either internal (full-duplex) or external (half-duplex)")
     # Deprecated options, left for backward compatibility
     parser.add_argument('--uart-inverted', action=deprecate_action, nargs=0, help='Deprecated')
@@ -242,7 +244,10 @@ def main():
                     print("ESP8285 only supports full-duplex internal RX as TX.")
                     exit(1)
             firmware_dir = '' if args.fdir is None else args.fdir + '/'
-            srcdir = firmware_dir + ('LBT/' if args.lbt else 'FCC/') + file
+            # one firmware for both now; older releases kept LBT builds apart
+            srcdir = firmware_dir + 'LBT/' + file
+            if not args.lbt or not os.path.exists(srcdir):
+                srcdir = firmware_dir + 'FCC/' + file
             dst = 'firmware.bin'
             shutil.copy2(srcdir + '/firmware.bin', ".")
             if os.path.exists(srcdir + '/bootloader.bin'): shutil.copy2(srcdir + '/bootloader.bin', ".")

@@ -30,12 +30,14 @@ class RxOptionsPanel extends LitElement {
                     persist across reboots, but <b>will be reset</b> when the firmware is reflashed.</p>
                 <form id='upload_options' method='POST' action="/options">
                     <!-- FEATURE:HAS_SUBGHZ -->
+                    <!-- FEATURE:MULTI_RADIO -->${elrsState.settings.has_low_band ? html`<!-- /FEATURE:MULTI_RADIO -->
                     <div class="mui-select">
                         <select id="domain" @change="${(e) => this.domain = parseInt(e.target.value)}">
                             ${_renderOptions(['AU915','FCC915','EU868','IN866','AU433','EU433','US433','US433-Wide','TH920'], this.domain)}
                         </select>
                         <label for="domain">Regulatory domain</label>
                     </div>
+                    <!-- FEATURE:MULTI_RADIO -->` : ''}<!-- /FEATURE:MULTI_RADIO -->
                     <!-- /FEATURE:HAS_SUBGHZ -->
                     <h2>Lock on first connection</h2>
                     RF Mode Locking - Default mode is for the RX to cycle through the available RF modes with 5s pauses

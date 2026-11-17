@@ -1,9 +1,11 @@
-#if defined(Regulatory_Domain_EU_CE_2400)
+#include "LBT.h"
+#if HAS_LBT
 #include "common.h"
 #include "logging.h"
 #include "LBT.h"
 #include "POWERMGNT.h"
 #include "config.h"
+#include "options.h"
 
 LQCALC<100> LBTSuccessCalc;
 static uint32_t rxStartTime;
@@ -18,39 +20,45 @@ static uint32_t validRSSIdelayUs = 0;
 static uint32_t SpreadingFactorToRSSIvalidDelayUs(uint8_t SF, uint8_t radio_type)
 {
 #if defined(RADIO_SX128X)
-  // The necessary wait time from RX start to valid instant RSSI reading
-  // changes with the spreading factor setting.
-  // The worst case necessary wait time is TX->RX switch time + Lora symbol time
-  // This assumes the radio switches from either TX, RX or FS (Freq Synth mode)
-  // TX to RX switch time is 60us for sx1280
-  // Lora symbol time for the relevant spreading factors is:
-  // SF5: 39.4us
-  // SF6: 78.8us
-  // SF7: 157.6us
-  // SF8: 315.2us
-  // However, by measuring when the RSSI reading is stable and valid, it was found that
-  // actual necessary wait times are:
-  // SF5 ~100us (60us + SF5 symbol time)
-  // SF6 ~141us (60us + SF6 symbol time)
-  // SF7 ~218us (60us + SF7 symbol time)
-  // SF8 ~376us (60us + SF8 symbol time) Empirical testing shows 480us to be the sweet-spot
-
-  if (radio_type == RadioBandMod::Combined::LORA_2G4)
+  if (radioChip == RADIO_CHIP_SX128X)
   {
-    switch((SX1280_RadioLoRaSpreadingFactors_t)SF)
+    // The necessary wait time from RX start to valid instant RSSI reading
+    // changes with the spreading factor setting.
+    // The worst case necessary wait time is TX->RX switch time + Lora symbol time
+    // This assumes the radio switches from either TX, RX or FS (Freq Synth mode)
+    // TX to RX switch time is 60us for sx1280
+    // Lora symbol time for the relevant spreading factors is:
+    // SF5: 39.4us
+    // SF6: 78.8us
+    // SF7: 157.6us
+    // SF8: 315.2us
+    // However, by measuring when the RSSI reading is stable and valid, it was found that
+    // actual necessary wait times are:
+    // SF5 ~100us (60us + SF5 symbol time)
+    // SF6 ~141us (60us + SF6 symbol time)
+    // SF7 ~218us (60us + SF7 symbol time)
+    // SF8 ~376us (60us + SF8 symbol time) Empirical testing shows 480us to be the sweet-spot
+
+    if (radio_type == RadioBandMod::Combined::LORA_2G4)
     {
-      case SX1280_LORA_SF5: return 100;
-      case SX1280_LORA_SF6: return 141;
-      case SX1280_LORA_SF7: return 218;
-      case SX1280_LORA_SF8: return 480;
-      default: return 480;
+      switch((SX1280_RadioLoRaSpreadingFactors_t)SF)
+      {
+        case SX1280_LORA_SF5: return 100;
+        case SX1280_LORA_SF6: return 141;
+        case SX1280_LORA_SF7: return 218;
+        case SX1280_LORA_SF8: return 480;
+        default: return 480;
+      }
+    }
+    if (radio_type == RadioBandMod::Combined::FLRC_2G4)
+    {
+      return 60 + 20; // switching time (60us) + 20us settling time (seems fine when testing)
     }
   }
-  if (radio_type == RadioBandMod::Combined::FLRC_2G4)
+#endif
+#if defined(RADIO_LR1121)
+  if (radioChip == RADIO_CHIP_LR1121)
   {
-    return 60 + 20; // switching time (60us) + 20us settling time (seems fine when testing)
-  }
-#elif defined(RADIO_LR1121)
     if (radio_type == RadioBandMod::Combined::LORA_2G4 || radio_type == RadioBandMod::Combined::LORA_DUAL)
     {
         switch((lr11xx_radio_lora_sf_t)SF)
@@ -66,7 +74,11 @@ static uint32_t SpreadingFactorToRSSIvalidDelayUs(uint8_t SF, uint8_t radio_type
     {
         return 40; // 40us settling time; documentation says Twait for 467 kHz bandwidth is 30.68us
     }
-#elif defined(RADIO_LR2021) // PKTEST
+  }
+#endif
+#if defined(RADIO_LR2021) // PKTEST
+  if (radioChip == RADIO_CHIP_LR2021)
+  {
     if (radio_type == RadioBandMod::Combined::LORA_2G4 || radio_type == RadioBandMod::Combined::LORA_DUAL)
     {
         switch((lr20xx_radio_lora_sf_t)SF)
@@ -82,15 +94,20 @@ static uint32_t SpreadingFactorToRSSIvalidDelayUs(uint8_t SF, uint8_t radio_type
     {
         return 40; // 40us settling time; documentation says Twait for 467 kHz bandwidth is 30.68us
     }
+  }
 #endif
   return 0;
 }
 
 void LbtEnableIfRequired()
 {
-    LbtIsEnabled = config.GetPower() > PWR_10mW;
+    LbtIsEnabled = firmwareOptions.lbt && config.GetPower() > PWR_10mW;
 #if defined(RADIO_LR1121) || defined(RADIO_LR2021)
     LbtIsEnabled &= (RadioBandMod::isB2G4(ExpressLRS_currAirRate_Modparams->radio_type) || RadioBandMod::isBDUAL(ExpressLRS_currAirRate_Modparams->radio_type));
+#endif
+#if defined(RADIO_MULTI)
+    // LBT is for 2.4 GHz only, a CE build with an SX127x fitted is a sub-GHz receiver
+    LbtIsEnabled &= radioChip != RADIO_CHIP_SX127X;
 #endif
     validRSSIdelayUs = SpreadingFactorToRSSIvalidDelayUs(ExpressLRS_currAirRate_Modparams->sf, ExpressLRS_currAirRate_Modparams->radio_type);
 }
@@ -103,7 +120,8 @@ static int8_t ICACHE_RAM_ATTR PowerEnumToLBTLimit(PowerLevels_e txPower, RadioBa
   // different RF frontends.
   // TODO: Maybe individual adjustment offset for differences in
   // rssi reading between bandwidth setting is also necessary when other BW than 0.8MHz are used.
-#if defined(RADIO_SX128X)
+// The LR branch covers the SX1280's rates too, with the same limits
+#if defined(RADIO_SX128X) && !defined(RADIO_LR1121) && !defined(RADIO_LR2021)
   if (radio_type == RadioBandMod::Combined::LORA_2G4)
   {
     switch(txPower)

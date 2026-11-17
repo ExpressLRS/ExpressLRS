@@ -51,14 +51,10 @@
 
 extern char backpackVersion[];
 
-#if defined(Regulatory_Domain_EU_CE_2400)
+char strPowerLevels[] = "10;25;50;100;250;500;1000;2000;MatchTX ";
 #if defined(RADIO_LR1121) || defined(RADIO_LR2021)
-char strPowerLevels[] = "10/10;25/25;25/50;25/100;25/250;25/500;25/1000;25/2000;MatchTX ";
-#else
-char strPowerLevels[] = "10;25;50;100;250;500;1000;2000;MatchTX ";
-#endif
-#else
-char strPowerLevels[] = "10;25;50;100;250;500;1000;2000;MatchTX ";
+// LBT: sub-GHz is limited to 25 mW, so show both bands' power
+static char strPowerLevelsCE[] = "10/10;25/25;25/50;25/100;25/250;25/500;25/1000;25/2000;MatchTX ";
 #endif
 static char pwrFolderDynamicName[] = "TX Power (25/1000mW AUX12)"; // sized for the longest name
 static char vtxFolderDynamicName[] = "VTX Admin (OFF:C:1 Aux11 )";
@@ -133,7 +129,7 @@ static selectionParameter luaFanThreshold = {
     STR_EMPTYSPACE // units embedded so it won't display "NevermW"
 };
 
-#if defined(Regulatory_Domain_EU_CE_2400)
+#if defined(RADIO_SX128X) || defined(RADIO_LR1121) || defined(RADIO_LR2021)
 static stringParameter luaCELimit = {
 #if defined(RADIO_LR1121) || defined(RADIO_LR2021)
     {"25/100mW 868M/2G4 CE LIMIT", CRSF_INFO},
@@ -882,7 +878,12 @@ void TXModuleEndpoint::registerParameters()
 
     // POWER folder
     registerParameter(&luaPowerFolder);
-    filterOptions(&luaPower, POWERMGNT::getMinPower(), POWERMGNT::getMaxPower(), strPowerLevels);
+    char *powerLevels = strPowerLevels;
+#if defined(RADIO_LR1121) || defined(RADIO_LR2021)
+    if (firmwareOptions.lbt)
+        powerLevels = strPowerLevelsCE;
+#endif
+    filterOptions(&luaPower, POWERMGNT::getMinPower(), POWERMGNT::getMaxPower(), powerLevels);
     registerParameter(&luaPower, [this](propertiesCommon *item, uint8_t arg) {
       SetPowerMax(constrain(arg + POWERMGNT::getMinPower(), POWERMGNT::getMinPower(), POWERMGNT::getMaxPower()));
     }, luaPowerFolder.common.id);
@@ -895,8 +896,8 @@ void TXModuleEndpoint::registerParameters()
       config.SetPowerFanThreshold(arg);
     }, luaPowerFolder.common.id);
   }
-#if defined(Regulatory_Domain_EU_CE_2400)
-  if (HAS_RADIO) {
+#if defined(RADIO_SX128X) || defined(RADIO_LR1121) || defined(RADIO_LR2021)
+  if (HAS_RADIO && firmwareOptions.lbt) {
     registerParameter(&luaCELimit, NULL, luaPowerFolder.common.id);
   }
 #endif

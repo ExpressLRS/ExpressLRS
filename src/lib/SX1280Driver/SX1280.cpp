@@ -5,10 +5,11 @@
 #include "RFAMP_hal.h"
 #include <math.h>
 
-SX1280Hal hal;
+// static: a multi-radio build links both SX12xx drivers, each with its own hal
+static SX1280Hal hal;
 SX1280Driver *SX1280Driver::instance = NULL;
 
-RFAMP_hal RFAMP;
+static RFAMP_hal RFAMP;
 
 //DEBUG_SX1280_OTA_TIMING
 
