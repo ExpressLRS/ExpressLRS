@@ -10,6 +10,9 @@
 #include "msp.h"
 #include "msptypes.h"
 #include "config.h"
+#if defined(PLATFORM_ESP32)
+#include "SDSession.h"
+#endif
 
 #if defined(PLATFORM_ESP32)
 RTC_DATA_ATTR int rtcModelId = 0;
@@ -48,6 +51,14 @@ void TXModuleEndpoint::handleMessage(const crsf_header_t *message)
     {
         return;
     }
+
+#if defined(PLATFORM_ESP32)
+    if (packetType == CRSF_FRAMETYPE_SD_SESSION)
+    {
+        SDSession::handleCrsf(extMessage);
+        return;
+    }
+#endif
 
     // Enter Binding Mode
     if (packetType == CRSF_FRAMETYPE_COMMAND

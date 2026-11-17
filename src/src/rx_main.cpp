@@ -37,6 +37,7 @@
 #include "devServoOutput.h"
 #include "devWIFI.h"
 #include "RXEndpoint.h"
+#include "RxUpdateReceiver.h"
 #include "RXOTAConnector.h"
 #include "rx-serial/devSerialIO.h"
 
@@ -1251,6 +1252,14 @@ void DataUlReceiveComplete()
             setWifiUpdateMode();
         });
         break;
+#if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
+    case MSP_ELRS_ENTER_RX_UPDATE: // 0x12
+        // same as wifi: let the ACK go out first
+        deferExecutionMillis(500, []() {
+            RxUpdateReceiver::enter();
+        });
+        break;
+#endif
     case MSP_ELRS_MAVLINK_TLM: // 0xFD
         // raw mavlink data
         if (config.GetSerialProtocol() == PROTOCOL_MAVLINK)
@@ -1717,6 +1726,10 @@ static void EnterBindingMode()
 
     DBGLN("Entered binding mode at freq = %d", Radio.currFreq);
     devicesTriggerEvent(EVENT_ENTER_BIND_MODE);
+#if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
+    // a TX's Bind Receiver can also find us, update us and bind us
+    RxUpdateReceiver::bindListen(true);
+#endif
 }
 
 static void ExitBindingMode()
@@ -1748,6 +1761,9 @@ static void ExitBindingMode()
     // Do this last as LostConnection() will wait for a tock that never comes
     // if we're in binding mode
     InBindingMode = false;
+#if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
+    RxUpdateReceiver::bindListen(false);
+#endif
     DBGLN("Exiting binding mode");
     devicesTriggerEvent(EVENT_EXIT_BIND_MODE);
 }
@@ -2089,6 +2105,12 @@ void setup()
 
     devicesStart();
 
+#if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
+    // a TX may be waiting to update us, with no way to reach us over the link
+    if (connectionState == disconnected)
+        RxUpdateReceiver::bootListen();
+#endif
+
     // setup() eats up some of this time, which can cause the first mode connection to fail.
     // Resetting the time here give the first mode a better chance of connection.
     RFmodeLastCycled = millis();
@@ -2116,6 +2138,15 @@ void loop()
 
     CheckConfigChangePending();
     executeDeferredFunction(micros());
+
+#if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
+    RxUpdateReceiver::listenLoop(now);
+    if (connectionState == rxUpdate)
+    {
+        RxUpdateReceiver::loop(now);
+        return;
+    }
+#endif
 
     if (connectionState > MODE_STATES)
     {

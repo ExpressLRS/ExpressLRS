@@ -77,6 +77,7 @@ typedef enum : uint8_t
 
     CRSF_FRAMETYPE_COMMAND = 0x32,
     CRSF_FRAMETYPE_HANDSET = 0x3A,
+    CRSF_FRAMETYPE_SD_SESSION = 0x3E, // handset SD card access for the module, provisional id
 
     // KISS frames
     CRSF_FRAMETYPE_KISS_REQ  = 0x78,

@@ -9,13 +9,14 @@
 #include "HardwareSerial.h"
 #endif
 #include "CRSFConnector.h"
+#include "SDBulkLink.h"
 #include "common.h"
 
 #ifdef PLATFORM_ESP32
 #include "driver/uart.h"
 #endif
 
-class CRSFHandset final : public Handset, public CRSFConnector
+class CRSFHandset final : public Handset, public CRSFConnector, public SDBulkTransport
 {
 
 public:
@@ -38,6 +39,10 @@ public:
 
     uint8_t GetMaxPacketBytes() const override { return maxPacketBytes; }
     int getMinPacketInterval() const override;
+
+    // SD bulk session: raw access to the port while connectionState == sdBulk
+    void bulkSend(const uint8_t *data, size_t len) override;
+    int bulkRead(uint8_t *data, size_t len) override;
 
 private:
     uint8_t inBuffer[CRSF_MAX_PACKET_LEN] = {};
@@ -77,6 +82,10 @@ private:
     bool UARTwdt();
     uint32_t autobaud();
     void flush_port_input();
+    bool outputIdle() const;
+#if defined(PLATFORM_ESP32)
+    void restoreAfterBulk();
+#endif
 };
 
 #endif
