@@ -70,7 +70,7 @@ int32_t BMP280::getTemperature()
     var1 = ((var1 * var1 * (int64_t)m_calib.dig_P3) >> 8) + ((var1 * (int64_t)m_calib.dig_P2) << 12);
     var1 = (((((int64_t)1) << 47) + var1)) * ((int64_t)m_calib.dig_P1) >> 33;
     if (var1 == 0)
-        return BaroBase::PRESSURE_INVALID;
+        return BaroBase::TEMPERATURE_INVALID;
 
     p = 1048576 - adc_P;
     p = (((p << 31) - var2) * 3125) / var1;
