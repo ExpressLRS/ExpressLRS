@@ -181,8 +181,8 @@ void POWERMGNT::setPower(PowerLevels_e Power)
     CurrentPower = Power;
 
     // When using SubHGz with CE, limit to a max of 25mW.
-    #if defined(Regulatory_Domain_EU_CE_2400) && (defined(RADIO_LR1121) || defined(RADIO_LR2021))
-    if (Power > PWR_25mW && radioIsLR() && isUsingPrimaryFreqBand())
+    #if defined(RADIO_LR1121) || defined(RADIO_LR2021)
+    if (firmwareOptions.lbt && Power > PWR_25mW && radioIsLR() && isUsingPrimaryFreqBand())
     {
         Power = (MinPower > PWR_25mW) ? getMinPower() : PWR_25mW;
     }

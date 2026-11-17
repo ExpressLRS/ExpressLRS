@@ -629,8 +629,8 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
     }
   }
 
-#if defined(Regulatory_Domain_EU_CE_2400)
-  transmittingRadio = LbtChannelIsClear(transmittingRadio);   // weed out the radio(s) if channel in use
+#if HAS_LBT
+  transmittingRadio = LbtChannelIsClear(transmittingRadio);   // weed out the radio(s) if channel in use (LBT on)
 
   if (transmittingRadio == SX12XX_Radio_NONE)
   {
@@ -693,9 +693,9 @@ void ICACHE_RAM_ATTR timerCallback()
   if (TelemetryRcvPhase == ttrpPreReceiveGap)
   {
     TelemetryRcvPhase = ttrpExpectingTelem;
-#if defined(Regulatory_Domain_EU_CE_2400)
-    // Use downlink LQ for LBT success ratio instead for EU/CE reg domain
-    linkStats.downlink_Link_quality = LBTSuccessCalc.getLQ();
+#if HAS_LBT
+    // With LBT on (EU CE), downlink LQ shows the LBT success ratio instead
+    linkStats.downlink_Link_quality = firmwareOptions.lbt ? LBTSuccessCalc.getLQ() : LqTQly.getLQ();
 #else
     linkStats.downlink_Link_quality = LqTQly.getLQ();
 #endif

@@ -49,14 +49,10 @@ const fhss_config_t domains[] = {
 };
 
 #if (defined(RADIO_LR1121) || defined(RADIO_LR2021)) && !defined(RADIO_MULTI)
+// the same channels either way: firmwareOptions.lbt picks which one names them
 const fhss_config_t domainsDualBand[] = {
-    {
-    #if defined(Regulatory_Domain_EU_CE_2400)
-        "CE_LBT",
-    #else
-        "ISM2G4",
-    #endif
-    FREQ_HZ_TO_REG_VAL(2400400000), FREQ_HZ_TO_REG_VAL(2479400000), 80, 2440000000}
+    {"ISM2G4", FREQ_HZ_TO_REG_VAL(2400400000), FREQ_HZ_TO_REG_VAL(2479400000), 80, 2440000000},
+    {"CE_LBT", FREQ_HZ_TO_REG_VAL(2400400000), FREQ_HZ_TO_REG_VAL(2479400000), 80, 2440000000},
 };
 #endif
 
@@ -73,14 +69,10 @@ const fhss_config_t domainsDualBand[] = {
 #define DOMAINS_2G4 domains
 #endif
 
+// the same channels either way: firmwareOptions.lbt picks which one names them
 const fhss_config_t DOMAINS_2G4[] = {
-    {
-    #if defined(Regulatory_Domain_EU_CE_2400)
-        "CE_LBT",
-    #elif defined(Regulatory_Domain_ISM_2400)
-        "ISM2G4",
-    #endif
-    FREQ_HZ_TO_REG_VAL(2400400000), FREQ_HZ_TO_REG_VAL(2479400000), 80, 2440000000}
+    {"ISM2G4", FREQ_HZ_TO_REG_VAL(2400400000), FREQ_HZ_TO_REG_VAL(2479400000), 80, 2440000000},
+    {"CE_LBT", FREQ_HZ_TO_REG_VAL(2400400000), FREQ_HZ_TO_REG_VAL(2479400000), 80, 2440000000},
 };
 #endif
 
@@ -93,13 +85,8 @@ static const fhss_config_t domainsHz[] = {
 };
 
 static const fhss_config_t domainsDualBand[] = {
-    {
-    #if defined(Regulatory_Domain_EU_CE_2400)
-        "CE_LBT",
-    #else
-        "ISM2G4",
-    #endif
-    FREQ_HZ_TO_REG_VAL(2400400000), FREQ_HZ_TO_REG_VAL(2479400000), 80, 2440000000}
+    {"ISM2G4", FREQ_HZ_TO_REG_VAL(2400400000), FREQ_HZ_TO_REG_VAL(2479400000), 80, 2440000000},
+    {"CE_LBT", FREQ_HZ_TO_REG_VAL(2400400000), FREQ_HZ_TO_REG_VAL(2479400000), 80, 2440000000},
 };
 
 // 8 extra bits of spread precision on the SX12xx register units; none on Hz, which would overflow
@@ -157,12 +144,14 @@ void FHSSrandomiseFHSSsequence(const uint32_t seed)
     }
     else
     {
-        FHSSconfig = radioChip == RADIO_CHIP_SX127X ? &domains[firmwareOptions.domain] : &domains2G4[0];
+        FHSSconfig = radioChip == RADIO_CHIP_SX127X ? &domains[firmwareOptions.domain] : &domains2G4[firmwareOptions.lbt ? 1 : 0];
         freqSpreadShift = 8;
     }
 #elif defined(RADIO_MULTI)
     // the 2.4 GHz band has one domain, which the sub-GHz domain option doesn't select
-    FHSSconfig = radioChip == RADIO_CHIP_SX127X ? &domains[firmwareOptions.domain] : &domains2G4[0];
+    FHSSconfig = radioChip == RADIO_CHIP_SX127X ? &domains[firmwareOptions.domain] : &domains2G4[firmwareOptions.lbt ? 1 : 0];
+#elif defined(RADIO_SX128X)
+    FHSSconfig = &domains[firmwareOptions.lbt ? 1 : 0];
 #else
     FHSSconfig = &domains[firmwareOptions.domain];
 #endif
@@ -180,7 +169,7 @@ void FHSSrandomiseFHSSsequence(const uint32_t seed)
     if (radioIsLR())
 #endif
     {
-        FHSSconfigDualBand = &domainsDualBand[0];
+        FHSSconfigDualBand = &domainsDualBand[firmwareOptions.lbt ? 1 : 0];
         sync_channel_DualBand = FHSSconfigDualBand->freq_count / 2;
         freq_spread_DualBand = (FHSSconfigDualBand->freq_stop - FHSSconfigDualBand->freq_start) * FREQ_SPREAD_SCALE / (FHSSconfigDualBand->freq_count - 1);
 

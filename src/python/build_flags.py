@@ -177,6 +177,10 @@ if '-DRADIO_SX127X=1' in build_flags or '-DRADIO_LR1121=1' in build_flags or '-D
 else:
     json_flags['domain'] = 0
 
+# EU CE 2.4 GHz (LBT) is a trailer option now, so the same firmware serves both
+if fnmatch.filter(build_flags, '*-DRegulatory_Domain_EU_CE_2400'):
+    json_flags['lbt'] = True
+
 # Remove ISM_2400 domain flag if not unit test, it is defined per target config
 if fnmatch.filter(build_flags, '*Regulatory_Domain_ISM_2400*') and \
         target_name != "NATIVE":

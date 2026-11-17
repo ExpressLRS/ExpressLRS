@@ -1,9 +1,11 @@
-#if defined(Regulatory_Domain_EU_CE_2400)
+#include "LBT.h"
+#if HAS_LBT
 #include "common.h"
 #include "logging.h"
 #include "LBT.h"
 #include "POWERMGNT.h"
 #include "config.h"
+#include "options.h"
 
 LQCALC<100> LBTSuccessCalc;
 static uint32_t rxStartTime;
@@ -99,7 +101,7 @@ static uint32_t SpreadingFactorToRSSIvalidDelayUs(uint8_t SF, uint8_t radio_type
 
 void LbtEnableIfRequired()
 {
-    LbtIsEnabled = config.GetPower() > PWR_10mW;
+    LbtIsEnabled = firmwareOptions.lbt && config.GetPower() > PWR_10mW;
 #if defined(RADIO_LR1121) || defined(RADIO_LR2021)
     LbtIsEnabled &= (RadioBandMod::isB2G4(ExpressLRS_currAirRate_Modparams->radio_type) || RadioBandMod::isBDUAL(ExpressLRS_currAirRate_Modparams->radio_type));
 #endif

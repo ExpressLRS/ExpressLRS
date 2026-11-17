@@ -18,10 +18,20 @@ enum BuzzerMode {
     buzzerTune
 };
 
+// A build with Regulatory_Domain_EU_CE_2400 defaults to LBT; any other to whatever its
+// trailer says
+#if defined(Regulatory_Domain_EU_CE_2400)
+#define LBT_BUILD_DEFAULT true
+#else
+#define LBT_BUILD_DEFAULT false
+#endif
+
 typedef struct _options {
     uint8_t     _magic_[8];     // this is the magic constant so the configurator can find this options block
     uint16_t    _version_;      // the version of this structure
     uint8_t     domain;         // depends on radio chip
+    bool        lbt;            // EU CE 2.4 GHz: listen before talk, power limits. Set at flash time
+                                // in the trailer only (see options.cpp), so it stays with the device
     uint8_t     hasUID;
     uint8_t     uid[6];         // MY_UID derived from MY_BINDING_PHRASE
     uint32_t    flash_discriminator;    // Discriminator value used to determine if the device has been reflashed and therefore
