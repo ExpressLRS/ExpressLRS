@@ -83,7 +83,9 @@ private:
     uint32_t autobaud();
     void flush_port_input();
     bool outputIdle() const;
+#if defined(PLATFORM_ESP32)
     void restoreAfterBulk();
+#endif
 };
 
 #endif

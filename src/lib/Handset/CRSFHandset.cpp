@@ -426,6 +426,8 @@ int CRSFHandset::bulkRead(uint8_t *data, size_t len)
     return Port.read(data, std::min((size_t)avail, len));
 }
 
+#if defined(PLATFORM_ESP32)
+// SD bulk sessions are ESP32 only (SDSession.h)
 void CRSFHandset::restoreAfterBulk()
 {
     // Come back as if the handset had just been plugged in: the first good frame
@@ -448,6 +450,7 @@ void CRSFHandset::restoreAfterBulk()
     SDSession::portRestored();
     DBGLN("SD bulk done, back to CRSF");
 }
+#endif
 
 void CRSFHandset::duplex_set_RX() const
 {
