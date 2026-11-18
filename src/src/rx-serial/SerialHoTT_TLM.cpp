@@ -368,7 +368,7 @@ void SerialHoTT_TLM::sendCRSFrpm(uint32_t now, HoTTDevices device)
             crsfRpm.p.rpm2 = htobe24((esc.becTemp + (esc.capacitorTemp << 8)));        // turbine: fuel in ml
             crsfRpm.p.rpm3 = htobe24(esc.becCurrent);                                  // turbine: fuel flow in ml/min
  
-            payloadSize += SIZE_8BIT + SIZE_24BIT * 2;
+            payloadSize += SIZE_24BIT * 2;
         }
     }
 
@@ -421,7 +421,7 @@ void SerialHoTT_TLM::sendCRSFtemp(uint32_t now, HoTTDevices device)
             crsfTemp.p.temperature[5] = htobe16((esc.throttle) * HOTT_TEMP_SCALE);                          // turbine: throttle %
             crsfTemp.p.temperature[6] = htobe16(((int8_t)esc.turbineNumber) * HOTT_TEMP_SCALE);             // turbine: status
 
-            payloadSize += SIZE_8BIT + SIZE_16BIT * 2;
+            payloadSize += SIZE_16BIT * 2;
         } 
     }
 
