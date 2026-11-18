@@ -229,7 +229,8 @@ enum eSerialProtocol : uint8_t
     PROTOCOL_MAVLINK,
     PROTOCOL_MSP_DISPLAYPORT,
     PROTOCOL_GPS,
-    PROTOCOL_SCORPION_TLM
+    PROTOCOL_SCORPION_TLM,
+    PROTOCOL_SRXL2
 };
 
 #if defined(PLATFORM_ESP32)
@@ -248,7 +249,8 @@ enum eSerial1Protocol : uint8_t
     PROTOCOL_SERIAL1_SMARTAUDIO,
     PROTOCOL_SERIAL1_MSP_DISPLAYPORT,
     PROTOCOL_SERIAL1_GPS,
-    PROTOCOL_SERIAL1_SCORPION_TLM
+    PROTOCOL_SERIAL1_SCORPION_TLM,
+    PROTOCOL_SERIAL1_SRXL2
 };
 #endif
 
@@ -332,6 +334,7 @@ inline void setConnectionState(connectionState_e newState) {
 #endif
 
 extern bool crsfBatterySensorDetected;
+extern bool srxl2BatterySensorDetected;
 extern bool crsfBaroSensorDetected;
 
 void ChannelDataReset();
