@@ -83,7 +83,10 @@ void SX1280Hal::init()
     SPIEx.setDataMode(SPI_MODE0);
     SPIEx.setFrequency(17500000);
 #endif
+}
 
+void SX1280Hal::enableInterrupts(void)
+{
     //attachInterrupt(digitalPinToInterrupt(GPIO_PIN_BUSY), this->busyISR, CHANGE); //not used atm
     attachInterrupt(digitalPinToInterrupt(GPIO_PIN_DIO1), this->dioISR_1, RISING);
     if (GPIO_PIN_DIO1_2 != UNDEF_PIN)

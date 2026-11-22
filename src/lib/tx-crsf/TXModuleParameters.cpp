@@ -60,9 +60,9 @@ char strPowerLevels[] = "10;25;50;100;250;500;1000;2000;MatchTX ";
 #else
 char strPowerLevels[] = "10;25;50;100;250;500;1000;2000;MatchTX ";
 #endif
-static char pwrFolderDynamicName[] = "TX Power (1000 Dynamic)";
+static char pwrFolderDynamicName[] = "TX Power (25/1000mW AUX12)"; // sized for the longest name
 static char vtxFolderDynamicName[] = "VTX Admin (OFF:C:1 Aux11 )";
-static char modelMatchUnit[] = " (ID: 00)";
+static char modelMatchUnit[] = " (ID: 255)"; // sized for the largest model ID
 static char tlmBandwidth[] = " (xxxxxbps)";
 static constexpr char folderNameSeparator[2] = {' ',':'};
 static constexpr char tlmRatios[] = "Std;Off;1:128;1:64;1:32;1:16;1:8;1:4;1:2;Race";
