@@ -1300,9 +1300,12 @@ RxConfig::SetDefaults(bool commit)
             }
 #endif
         }
-        const uint16_t failsafe = ch == 2 ? US_CHANNEL_VALUE_EXT_MIN - US_CHANNEL_VALUE_MIN :
-                                            US_CHANNEL_VALUE_CENTER - US_CHANNEL_VALUE_MIN; // ch2 is throttle, failsafe it to 880
-        SetPwmChannel(ch, failsafe, ch, false, mode, false);
+        uint16_t failsafeUs = ch == 2 ? US_CHANNEL_VALUE_EXT_MIN : US_CHANNEL_VALUE_CENTER; // ch2 is throttle, failsafe it to 880
+        if (ch < PWM_FAILSAFE_DEFAULTS_COUNT)
+        {
+            failsafeUs = constrain(PWM_FAILSAFE_DEFAULTS[ch], US_CHANNEL_VALUE_MIN, US_CHANNEL_VALUE_MAX);
+        }
+        SetPwmChannel(ch, failsafeUs - US_CHANNEL_VALUE_MIN, ch, false, mode, false);
     }
 
     m_config.teamraceChannel = AUX7; // CH11
