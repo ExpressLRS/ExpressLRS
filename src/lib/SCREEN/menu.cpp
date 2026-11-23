@@ -10,6 +10,7 @@
 #include "handset.h"
 #include "OTA.h"
 #include "deferred.h"
+#include "FHSS.h"
 
 #include "thermal.h"
 #define UPDATE_TEMP_TIMEOUT 5000
@@ -191,6 +192,12 @@ static void setupValueIndex(bool init)
         values_index = config.GetVtxPitmode();
         break;
     }
+}
+
+static void setupValueBounds(bool init)
+{
+    setupValueIndex(init);
+    display->setValueBounds(values_min, values_max, values_index);
 }
 
 static void displayValueIndex(bool init)
@@ -417,7 +424,63 @@ static void executeBind(bool init)
 // Linkstats
 static void displayLinkstats(bool init)
 {
-    display->displayLinkstats();
+    display->displayLinkstatsPage(state_machine.getCurrentState() - STATE_LINKSTATS);
+}
+
+// ---- UI model glue (see uimodel.h) ----
+
+void uiPullReal(ui_model_t &m)
+{
+    // Always: things the demo generator does not fake
+    m.dual = isDualRadio();
+    m.hop_channels = FHSSgetChannelCount();
+    m.power_min = MinPower;
+    m.power_max = POWERMGNT::getMaxPower();
+    if (m.demo)
+        return;
+
+    if (connectionState == radioFailed)
+        m.link = UI_RADIOFAIL;
+    else if (connectionState == noCrossfire)
+        m.link = UI_NOHANDSET;
+    else if (isArmed)
+        m.link = UI_ARMED;
+    else if (connectionState == connected)
+        m.link = connectionHasModelMatch ? UI_LINKED : UI_MISMATCH;
+    else
+        m.link = UI_SEARCHING;
+
+    m.lq_up = linkStats.uplink_Link_quality;
+    m.lq_dn = linkStats.downlink_Link_quality;
+    m.rssi_up1 = linkStats.uplink_RSSI_1;
+    m.rssi_up2 = linkStats.uplink_RSSI_2;
+    m.rssi_dn1 = linkStats.downlink_RSSI_1;
+    m.rssi_dn2 = m.dual ? linkStats.downlink_RSSI_2 : 0;
+    m.snr_up = linkStats.uplink_SNR;
+    m.snr_dn = linkStats.downlink_SNR;
+    m.ant = linkStats.active_antenna;
+}
+
+int uiMenuSiblings(int *items, int max, int *pos)
+{
+    const fsm_state_entry_t *f = state_machine.getCurrentFsm();
+    const fsm_state_t cur = state_machine.getCurrentState();
+    int n = 0;
+    *pos = 0;
+    for (int i = 0; i < 32 && f[i].state != STATE_LAST && n < max; i++)
+    {
+        if (f[i].available && !f[i].available())
+            continue;
+        if (f[i].state == cur)
+            *pos = n;
+        items[n++] = f[i].state;
+    }
+    return n;
+}
+
+const char *uiVersion()
+{
+    return version;
 }
 
 //-------------------------------------------------------------------
@@ -445,7 +508,7 @@ fsm_state_event_t const value_decrement_events[] = {{EVENT_IMMEDIATE, GOTO(STATE
 fsm_state_event_t const value_save_events[] = {{EVENT_IMMEDIATE, ACTION_POP}};
 
 fsm_state_entry_t const value_select_fsm[] = {
-    {STATE_VALUE_INIT, nullptr, setupValueIndex, 0, value_init_events, ARRAY_SIZE(value_init_events)},
+    {STATE_VALUE_INIT, nullptr, setupValueBounds, 0, value_init_events, ARRAY_SIZE(value_init_events)},
     {STATE_VALUE_SELECT, nullptr, displayValueIndex, 20000, value_select_events, ARRAY_SIZE(value_select_events)},
     {STATE_VALUE_INC, nullptr, incrementValueIndex, 0, value_increment_events, ARRAY_SIZE(value_increment_events)},
     {STATE_VALUE_DEC, nullptr, decrementValueIndex, 0, value_decrement_events, ARRAY_SIZE(value_decrement_events)},
@@ -480,7 +543,7 @@ fsm_state_event_t const vtxvalue_select_events[] = {
     {EVENT_DOWN, GOTO(STATE_VALUE_INC)}
 };
 fsm_state_entry_t const vtx_select_fsm[] = {
-    {STATE_VALUE_INIT, nullptr, setupValueIndex, 0, value_init_events, ARRAY_SIZE(value_init_events)},
+    {STATE_VALUE_INIT, nullptr, setupValueBounds, 0, value_init_events, ARRAY_SIZE(value_init_events)},
     {STATE_VALUE_SELECT, nullptr, displayValueIndex, 20000, vtxvalue_select_events, ARRAY_SIZE(vtxvalue_select_events)},
     {STATE_VALUE_INC, nullptr, incrementValueIndex, 0, value_increment_events, ARRAY_SIZE(value_increment_events)},
     {STATE_VALUE_DEC, nullptr, decrementValueIndex, 0, value_decrement_events, ARRAY_SIZE(value_decrement_events)},
@@ -584,16 +647,17 @@ fsm_state_entry_t const main_menu_fsm[] = {
     {STATE_LAST}
 };
 
-// Linkstats FSM
-fsm_state_event_t const linkstats_confirm_events[] = {
-    {EVENT_TIMEOUT, GOTO(STATE_LINKSTATS)},
-    {EVENT_LONG_ENTER, PUSH(main_menu_fsm)},
-    {EVENT_LONG_RIGHT, PUSH(main_menu_fsm)},
-    {EVENT_UP, ACTION_POPALL},
-    {EVENT_DOWN, ACTION_POPALL}
-};
+// Linkstats FSM: UP/DOWN page through the views, LEFT goes back to the idle screen
+#define LINKSTATS_EVENTS(page)     {EVENT_TIMEOUT, GOTO(page)},     {EVENT_LONG_ENTER, PUSH(main_menu_fsm)},     {EVENT_LONG_RIGHT, PUSH(main_menu_fsm)},     {EVENT_LEFT, ACTION_POPALL},     {EVENT_ENTER, ACTION_POPALL},     {EVENT_UP, ACTION_PREVIOUS},     {EVENT_DOWN, ACTION_NEXT}
+fsm_state_event_t const linkstats_events[] = {LINKSTATS_EVENTS(STATE_LINKSTATS)};
+fsm_state_event_t const linkstats_scope_events[] = {LINKSTATS_EVENTS(STATE_LINKSTATS_SCOPE)};
+fsm_state_event_t const linkstats_hops_events[] = {LINKSTATS_EVENTS(STATE_LINKSTATS_HOPS)};
+fsm_state_event_t const linkstats_wf_events[] = {LINKSTATS_EVENTS(STATE_LINKSTATS_WATERFALL)};
 fsm_state_entry_t const linkstats_menu_fsm[] = {
-    {STATE_LINKSTATS, nullptr, displayLinkstats, 1000, linkstats_confirm_events, ARRAY_SIZE(linkstats_confirm_events)},
+    {STATE_LINKSTATS, nullptr, displayLinkstats, 1000, linkstats_events, ARRAY_SIZE(linkstats_events)},
+    {STATE_LINKSTATS_SCOPE, nullptr, displayLinkstats, 1000, linkstats_scope_events, ARRAY_SIZE(linkstats_scope_events)},
+    {STATE_LINKSTATS_HOPS, nullptr, displayLinkstats, 1000, linkstats_hops_events, ARRAY_SIZE(linkstats_hops_events)},
+    {STATE_LINKSTATS_WATERFALL, nullptr, displayLinkstats, 1000, linkstats_wf_events, ARRAY_SIZE(linkstats_wf_events)},
     {STATE_LAST}
 };
 

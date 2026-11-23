@@ -20,6 +20,7 @@
 #include "devBackpack.h"
 #if !defined(PLATFORM_ESP32_C3)
 #include "devScreen.h"
+#include "hopstats.h"
 #include "devGsensor.h"
 #include "devThermal.h"
 #include "devPDET.h"
@@ -257,6 +258,7 @@ static bool ICACHE_RAM_ATTR ProcessDownlinkPacket(SX12xxDriverCommon::rx_status 
   linkStats.downlink_SNR = SNR_DESCALE(Radio.LastPacketSNRRaw);
   linkStats.downlink_RSSI_1 = Radio.LastPacketRSSI;
   linkStats.downlink_RSSI_2 = Radio.LastPacketRSSI2;
+  hopStatsHit(FHSSsequence[FHSSptr], Radio.LastPacketRSSI);
 
   // Full res mode
   if (OtaIsFullRes)
@@ -704,6 +706,7 @@ void ICACHE_RAM_ATTR timerCallback()
   }
   else if (TelemetryRcvPhase == ttrpExpectingTelem && !LqTQly.currentIsSet())
   {
+    hopStatsMiss(FHSSsequence[FHSSptr]);
     // Indicate no telemetry packet received to the DP system
     DynamicPower_TelemetryUpdate(DYNPOWER_UPDATE_MISSED);
   }
@@ -1084,6 +1087,9 @@ static void HandleUARTout()
 
 static void HandleUARTin()
 {
+#if defined(DEBUG_SCREEN_REMOTE)
+  return; // the screen remote control owns the USB serial port
+#endif
   if (firmwareOptions.is_airport)
   {
     auto size = std::min(apInputBuffer.free(), (uint16_t)TxUSB->available());

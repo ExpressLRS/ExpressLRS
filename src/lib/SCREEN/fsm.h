@@ -52,6 +52,7 @@ public:
     fsm_state_t getCurrentState();
     fsm_state_t getParentState();
     void popState() { force_pop = true; }
+    const fsm_state_entry_t *getCurrentFsm() const { return current_fsm; }
 
     void jumpTo(fsm_state_entry_t const *fsm, fsm_state_t state);
 
