@@ -1271,10 +1271,10 @@ static void setupSerial()
 #endif
 
 // Setup TxUSB
-#if defined(PLATFORM_ESP32_S3) || defined(PLATFORM_ESP32_C3)
+#if defined(PLATFORM_ESP32_S3)
   USBSerial.begin(firmwareOptions.uart_baud);
   TxUSB = &USBSerial;
-#elif defined(PLATFORM_ESP32)
+#elif defined(PLATFORM_ESP32) && !defined(PLATFORM_ESP32_C3)
   if (GPIO_PIN_DEBUG_RX == U0RXD_GPIO_NUM && GPIO_PIN_DEBUG_TX == U0TXD_GPIO_NUM)
   {
     // The backpack or Airpoirt is already assigned on UART0 (pins 3, 1)
