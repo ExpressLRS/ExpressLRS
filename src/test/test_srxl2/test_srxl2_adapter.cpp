@@ -1044,6 +1044,30 @@ void test_secondary_preserves_neutral_and_all_inhibition_paths()
     }
 }
 
+void test_srxl2_input_passes_only_bytes_returned_by_the_stream()
+{
+    class ShortReadStream : public StringStream
+    {
+    public:
+        using StringStream::StringStream;
+        int available() override { return 4; }
+    };
+    class Receiver : public SerialSRXL2
+    {
+    public:
+        using SerialSRXL2::SerialSRXL2;
+        uint16_t received = 0;
+        void processBytes(uint8_t *, uint16_t size) override { received = size; }
+    };
+    std::string bytes = "A";
+    ShortReadStream stream(bytes);
+    Receiver receiver(&stream, &stream, 1);
+    receiver.processSerialInput();
+    TEST_ASSERT_EQUAL(1, receiver.received);
+    receiver.processSerialInput();
+    TEST_ASSERT_EQUAL(0, receiver.received);
+}
+
 void test_rejected_owner_leaves_uart_irq_input_and_telemetry_with_first_owner()
 {
     std::string in, out;
@@ -1706,6 +1730,7 @@ void run_adapter_tests()
     RUN_TEST(test_secondary_startup_fifo_prefix_and_handoff_match_port_and_pin);
     RUN_TEST(test_secondary_startup_rejects_a_corrupt_fifo_prefix);
     RUN_TEST(test_airport_masks_only_the_primary_control_permission);
+    RUN_TEST(test_srxl2_input_passes_only_bytes_returned_by_the_stream);
     RUN_TEST(test_rejected_owner_leaves_uart_irq_input_and_telemetry_with_first_owner);
     RUN_TEST(test_failed_irq_allocation_is_inert_and_releases_its_receive_uart);
     RUN_TEST(test_failed_receive_startup_is_inert_and_preserves_handoff_for_replacement);

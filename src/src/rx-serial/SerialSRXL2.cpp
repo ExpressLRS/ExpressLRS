@@ -326,7 +326,16 @@ SerialSRXL2::~SerialSRXL2()
 
 void SerialSRXL2::processSerialInput()
 {
-    if (srxl2Owner == this && txReady) SerialIO::processSerialInput();
+    if (srxl2Owner != this || !txReady) return;
+    const int count = min(inputPort->available(), getMaxSerialReadSize());
+    if (count <= 0)
+    {
+        processBytes(nullptr, 0); // Keep TX completion and link timers running on empty polls.
+        return;
+    }
+    uint8_t bytes[count];
+    const size_t bytesRead = inputPort->readBytes(bytes, count);
+    processBytes(bytes, bytesRead);
 }
 
 bool SerialSRXL2::controlAllowed() const
