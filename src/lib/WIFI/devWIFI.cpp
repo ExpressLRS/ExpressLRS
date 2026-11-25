@@ -763,7 +763,7 @@ static void WebUpdateSetHome(AsyncWebServerRequest *request)
   if (request->hasArg("save")) {
     strlcpy(firmwareOptions.home_wifi_ssid, ssid.c_str(), sizeof(firmwareOptions.home_wifi_ssid));
     strlcpy(firmwareOptions.home_wifi_password, password.c_str(), sizeof(firmwareOptions.home_wifi_password));
-    firmwareOptions.wifi_auto_on_interval = (onInterval.isEmpty() ? -1 : onInterval.toInt()) * 1000;
+    firmwareOptions.wifi_auto_on_interval = (onInterval.isEmpty() || onInterval.toInt() < 0) ? -1 : onInterval.toInt() * 1000;
     saveOptions();
   }
   WebUpdateConnect(request);
@@ -775,7 +775,7 @@ static void WebUpdateForget(AsyncWebServerRequest *request)
   String onInterval = request->arg("wifi-on-interval");
   firmwareOptions.home_wifi_ssid[0] = 0;
   firmwareOptions.home_wifi_password[0] = 0;
-  firmwareOptions.wifi_auto_on_interval = (onInterval.isEmpty() ? -1 : onInterval.toInt()) * 1000;
+  firmwareOptions.wifi_auto_on_interval = (onInterval.isEmpty() || onInterval.toInt() < 0) ? -1 : onInterval.toInt() * 1000;
   saveOptions();
   station_ssid[0] = 0;
   station_password[0] = 0;
