@@ -123,6 +123,28 @@ constexpr uint16_t elrs_banner_bgColor[] = {
 static Arduino_DataBus *bus;
 static Arduino_GFX *gfx;
 
+// Panel maker's frame rate, power, VCOM and gamma values for the 0.96" BOE ST7735S glass (JK096-16080-C08)
+static const uint8_t st7735s_init_operations[] = {
+    BEGIN_WRITE,
+    WRITE_C8_BYTES, 0xB1, 3, 0x05, 0x3C, 0x3C,
+    WRITE_C8_BYTES, 0xB2, 3, 0x05, 0x3C, 0x3C,
+    WRITE_C8_BYTES, 0xB3, 6, 0x05, 0x3C, 0x3C, 0x05, 0x3C, 0x3C,
+    WRITE_C8_D8, 0xB4, 0x03,
+    WRITE_C8_BYTES, 0xC0, 3, 0x0E, 0x0E, 0x04,
+    WRITE_C8_D8, 0xC1, 0xC0,
+    WRITE_C8_D16, 0xC2, 0x0D, 0x00,
+    WRITE_C8_D16, 0xC3, 0x8D, 0x2A,
+    WRITE_C8_D16, 0xC4, 0x8D, 0xEE,
+    WRITE_C8_D8, 0xC5, 0x04,
+    WRITE_C8_BYTES, 0xE0, 16,
+    0x05, 0x1A, 0x0B, 0x15, 0x3D, 0x38, 0x2E, 0x30,
+    0x2D, 0x28, 0x30, 0x3B, 0x00, 0x01, 0x02, 0x10,
+    WRITE_C8_BYTES, 0xE1, 16,
+    0x05, 0x1A, 0x0B, 0x15, 0x36, 0x2E, 0x28, 0x2B,
+    0x2B, 0x28, 0x30, 0x3B, 0x00, 0x01, 0x02, 0x10,
+    END_WRITE,
+};
+
 void TFTDisplay::init()
 {
     if (GPIO_PIN_SCREEN_BL != UNDEF_PIN)
@@ -130,9 +152,22 @@ void TFTDisplay::init()
         pinMode(GPIO_PIN_SCREEN_BL, OUTPUT);
     }
     bus = new Arduino_ESP32SPI(GPIO_PIN_SCREEN_DC, GPIO_PIN_SCREEN_CS, GPIO_PIN_SCREEN_SCK, GPIO_PIN_SCREEN_MOSI, GFX_NOT_DEFINED, HSPI);
-    gfx = new Arduino_ST7735(bus, GPIO_PIN_SCREEN_RST, OPT_SCREEN_REVERSED ? 3 : 1 /* rotation */, true , 80, 160, 26, 1, 26, 1);
+    const uint8_t rotation = OPT_SCREEN_REVERSED ? 3 : 1;
+    if (OPT_HAS_TFT_ST7735S)
+    {
+        // Controller is strapped for 128x160 RAM, so the glass sits at 24/0 in every rotation; it is not inverted
+        gfx = new Arduino_ST7735(bus, GPIO_PIN_SCREEN_RST, rotation, false, 80, 160, 24, 0, 24, 0);
+    }
+    else
+    {
+        gfx = new Arduino_ST7735(bus, GPIO_PIN_SCREEN_RST, rotation, true, 80, 160, 26, 1, 26, 1);
+    }
 
     gfx->begin();
+    if (OPT_HAS_TFT_ST7735S)
+    {
+        bus->batchOperation(st7735s_init_operations, sizeof(st7735s_init_operations));
+    }
     doScreenBackLight(SCREEN_BACKLIGHT_ON);
 }
 

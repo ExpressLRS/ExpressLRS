@@ -583,7 +583,8 @@ const HARDWARE_SCHEMA = [
                     {value: 0, label: 'None'},
                     {value: 1, label: 'I2C OLED (SSD1306 128x64)'},
                     {value: 2, label: 'SPI OLED (SSD1306 128x64)'},
-                    {value: 4, label: 'SPI TFT (ST7735 160x80)'}
+                    {value: 4, label: 'SPI TFT (ST7735 160x80)'},
+                    {value: 5, label: 'SPI TFT (ST7735S 160x80)'}
                 ], desc: 'Type of display connected'
             },
             {
