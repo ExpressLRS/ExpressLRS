@@ -128,6 +128,9 @@ uint32_t serialBaud;
 #endif
 
 SerialIO *serialIO = nullptr;
+// serialIO when it is a SerialMavlink, else nullptr. The TX can switch the protocol to MAVLink on a
+// receiver with no serial port (serialIO is then a SerialNOOP), so casting serialIO is not safe
+static SerialMavlink *serialMavlink = nullptr;
 
 #define SERIAL_PROTOCOL_RX Serial
 #define SERIAL1_PROTOCOL_RX Serial1
@@ -1253,9 +1256,9 @@ void DataUlReceiveComplete()
         break;
     case MSP_ELRS_MAVLINK_TLM: // 0xFD
         // raw mavlink data
-        if (config.GetSerialProtocol() == PROTOCOL_MAVLINK)
+        if (serialMavlink != nullptr)
         {
-            ((SerialMavlink *)serialIO)->forwardMessage(DataUlBuffer);
+            serialMavlink->forwardMessage(DataUlBuffer);
         }
         break;
     default:
@@ -1383,7 +1386,8 @@ static void setupSerial()
     }
     else if (mavlinkSerialOutput)
     {
-        serialIO = new SerialMavlink(SERIAL_PROTOCOL_TX, SERIAL_PROTOCOL_RX);
+        serialMavlink = new SerialMavlink(SERIAL_PROTOCOL_TX, SERIAL_PROTOCOL_RX);
+        serialIO = serialMavlink;
     }
     else if (config.GetSerialProtocol() == PROTOCOL_MSP_DISPLAYPORT)
     {
@@ -1533,6 +1537,7 @@ static void serialShutdown()
         Serial.end();
         delete serialIO;
         serialIO = nullptr;
+        serialMavlink = nullptr;
     }
 }
 
@@ -2165,7 +2170,7 @@ void loop()
         DataDlSender.SetDataToTransmit(DataDlBuffer, nextPlayloadSize);
     }
 
-    if (config.GetSerialProtocol() == PROTOCOL_MAVLINK && !DataDlSender.IsActive() && ((SerialMavlink *)serialIO)->GetNextPayload(&nextPlayloadSize, DataDlBuffer))
+    if (serialMavlink != nullptr && !DataDlSender.IsActive() && serialMavlink->GetNextPayload(&nextPlayloadSize, DataDlBuffer))
     {
         DataDlSender.SetDataToTransmit(DataDlBuffer, nextPlayloadSize);
     }
