@@ -1560,7 +1560,19 @@ static void setupConfigAndPocCheck()
         if (connectionState != connected && config.GetPowerOnCounter() != 0)
         {
             config.SetPowerOnCounter(0);
+            // Stop the radio for the commit, as CheckConfigChangePending() does. On ESP8266 the flash erase
+            // disables the cache, and a packet arriving during it crashes the DIO ISR on flash-resident code
+            const bool radioActive = connectionState < MODE_STATES;
+            if (radioActive)
+            {
+                LostConnection(false);
+                Radio.SetTxIdleMode(); // LostConnection() leaves the radio receiving in binding mode
+            }
             config.Commit();
+            if (radioActive)
+            {
+                Radio.RXnb();
+            }
         }
     });
 }
