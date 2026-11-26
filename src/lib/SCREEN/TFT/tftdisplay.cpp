@@ -155,8 +155,8 @@ void TFTDisplay::init()
     const uint8_t rotation = OPT_SCREEN_REVERSED ? 3 : 1;
     if (OPT_HAS_TFT_ST7735S)
     {
-        // Glass is bonded off-centre in the 132x162 RAM (24/0 one side, 28/2 the other) and is not inverted
-        gfx = new Arduino_ST7735(bus, GPIO_PIN_SCREEN_RST, rotation, false, 80, 160, 28, 2, 24, 0);
+        // Controller is strapped for 128x160 RAM, so the glass sits at 24/0 in every rotation; it is not inverted
+        gfx = new Arduino_ST7735(bus, GPIO_PIN_SCREEN_RST, rotation, false, 80, 160, 24, 0, 24, 0);
     }
     else
     {
