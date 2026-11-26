@@ -319,3 +319,63 @@ const char *Display::getValue(menu_item_t menu, uint8_t value_index)
         return nullptr;
     }
 }
+
+void Display::storeIdle(uint8_t rate_index, uint8_t power_index, uint8_t ratio_index, bool dynamic, uint8_t running_power_index, uint8_t temperature)
+{
+    ui.rate = rate_index;
+    ui.power = power_index;
+    ui.tlm = ratio_index;
+    ui.dynamic = dynamic;
+    ui.run_power = running_power_index;
+    ui.temperature = temperature;
+}
+
+// Write all of buf, retrying short writes (USB CDC returns short when its ring is full)
+void Display::writeAll(Print &out, const char *buf, size_t len)
+{
+    uint32_t start = millis();
+    while (len && millis() - start < 500)
+    {
+        // HWCDC can report a full write yet drop it when its ring is full, so wait for room first
+        const int room = out.availableForWrite();
+        if (room < (int)(len < 64 ? len : 64))
+        {
+            delay(1);
+            continue;
+        }
+        const size_t n = out.write((const uint8_t *)buf, (size_t)room < len ? (size_t)room : len);
+        buf += n;
+        len -= n;
+        if (!n)
+            delay(1);
+    }
+}
+
+// Hex dump of a framebuffer, one "NNN:<hex>" line per row so the host can
+// spot a damaged row and ask for it again ('@NNN').
+void Display::dumpRows(Print &out, const char *header, const uint8_t *buf, int rowBytes, int rows, int first, int count)
+{
+    static const char hex[] = "0123456789abcdef";
+    char line[4 + 2 * 128 + 1];
+    if (count < 0)
+        count = rows;
+    out.print("\n");
+    out.print(header);
+    out.print("\n");
+    for (int r = first; r < first + count && r < rows; r++)
+    {
+        const uint8_t *p = buf + r * rowBytes;
+        line[0] = '0' + r / 100;
+        line[1] = '0' + (r / 10) % 10;
+        line[2] = '0' + r % 10;
+        line[3] = ':';
+        for (int j = 0; j < rowBytes; j++)
+        {
+            line[4 + j * 2] = hex[p[j] >> 4];
+            line[5 + j * 2] = hex[p[j] & 15];
+        }
+        line[4 + rowBytes * 2] = '\n';
+        writeAll(out, line, 5 + rowBytes * 2);
+    }
+    out.print("END\n");
+}

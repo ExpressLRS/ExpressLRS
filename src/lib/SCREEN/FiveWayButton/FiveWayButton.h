@@ -32,6 +32,9 @@ public:
     FiveWayButton();
     void init();
     void update(int *keyValue, bool *keyLongPressed);
+    // Calibrated joystick thresholds (mV on ESP32) and their tolerance, for diagnostics
+    uint16_t joyValue(unsigned i) const { return joyAdcValues[i]; }
+    uint16_t fuzz(unsigned i) const { return fuzzValues[i]; }
 
     static constexpr uint32_t KEY_DEBOUNCE_MS = 25;
     static constexpr uint32_t KEY_LONG_PRESS_MS = 1000;

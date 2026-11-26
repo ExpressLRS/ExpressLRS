@@ -1,0 +1,8 @@
+obj/
+out/
+out_tft/
+dev/
+*.exe
+*.scr
+*.png
+__pycache__/

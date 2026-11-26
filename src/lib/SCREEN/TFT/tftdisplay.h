@@ -20,4 +20,10 @@ public:
     void displayRunning();
     void displaySending();
     void displayLinkstats();
+
+    void tick(uint32_t now) override;
+    void displayLinkstatsPage(uint8_t page) override;
+    void setValueBounds(int min, int max, int saved) override;
+    bool horizontalValuePicker() override { return true; }
+    void dumpFrame(Print &out, int first = 0, int count = -1) override;
 };
