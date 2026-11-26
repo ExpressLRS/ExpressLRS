@@ -276,14 +276,37 @@ bool ICACHE_RAM_ATTR SX1280Hal::WaitOnBusy(SX12XX_Radio_Number_t radioNumber)
     return true;
 }
 
+/***
+ * Without a BUSY pin there is no way to tell that the radio is still processing a command when DIO1 rises,
+ * e.g. a SetRfFrequency from the hop that arrived while it was receiving a packet. An SPI access a few us
+ * after that packet's RX_DONE can hang the SX1280 until it is reset, so hold off the first access after DIO1,
+ * keeping any longer delay that is already pending. See #3835.
+ ***/
+void ICACHE_RAM_ATTR SX1280Hal::DioHoldoff()
+{
+    if (GPIO_PIN_BUSY != UNDEF_PIN)
+        return;
+
+    uint32_t const now = micros();
+    uint32_t const elapsed = now - BusyDelayStart;
+    uint32_t const remaining = elapsed < BusyDelayDuration ? BusyDelayDuration - elapsed : 0;
+    if (remaining < DIO_HOLDOFF_US)
+    {
+        BusyDelayStart = now;
+        BusyDelayDuration = DIO_HOLDOFF_US;
+    }
+}
+
 void ICACHE_RAM_ATTR SX1280Hal::dioISR_1()
 {
+    instance->DioHoldoff();
     if (instance->IsrCallback_1)
         instance->IsrCallback_1();
 }
 
 void ICACHE_RAM_ATTR SX1280Hal::dioISR_2()
 {
+    instance->DioHoldoff();
     if (instance->IsrCallback_2)
         instance->IsrCallback_2();
 }
