@@ -1054,9 +1054,9 @@ void ProcessMSPPacket(uint32_t now, mspPacket_t *packet)
 #endif
 }
 
-void ParseMSPData(uint8_t *buf, uint8_t size)
+static void ParseMSPData(const uint8_t *buf, uint16_t size)
 {
-  for (uint8_t i = 0; i < size; ++i)
+  for (uint16_t i = 0; i < size; ++i)
   {
     if (msp.processReceivedByte(buf[i]))
     {
@@ -1128,6 +1128,13 @@ static void HandleUARTin()
     else
     {
       crsfParser.processBytes(&usbConnector, buf, size);
+    }
+
+    // Modules with the backpack on UART0 share it with USB, so the backpack's replies
+    // (version, head tracking, VTX config) arrive here and never reach the read below
+    if (TxUSB == BackpackOrLogStrm)
+    {
+      ParseMSPData(buf, size);
     }
   }
 
