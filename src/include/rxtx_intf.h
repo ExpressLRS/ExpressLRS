@@ -17,6 +17,8 @@ void scheduleRebootTime(unsigned long inMs);
  ***/
 #if defined(TARGET_TX)
 void SetSyncSpam();
+// LoRa or ESP-NOW bind still going
+bool BindInProgress();
 #endif
 
 /***

@@ -293,3 +293,23 @@ jobs:
           else
             echo "::notice title=Artifactory Skip::Artifact already exists and this is not a tag push. Skipping overwrite."
           fi
+
+      - name: Publish receiver SD-card images to ExpressLRS artifactory
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_ENDPOINT_URL: ${{ secrets.AWS_ENDPOINT_URL }}
+          AWS_REGION: "auto"
+        run: |
+          if [[ -z $AWS_ACCESS_KEY_ID || -z $AWS_SECRET_ACCESS_KEY || -z $AWS_ENDPOINT_URL ]]; then
+            echo "::warning title=Artifactory Skip::Credentials not defined. Skipping RX SD image upload (expected for PRs from forks)."
+            exit 0
+          fi
+
+          # Card-ready RX images + manifest, read by the TX at
+          # http://artifactory.expresslrs.org/ExpressLRS-rx-sd/<sha6>/manifest.json
+          # (<sha6> = first 6 hex chars of the commit, same as the firmware's GIT_SHA)
+          python src/python/rx_sd_release.py dist/firmware rx-sd-out
+          SHA6=$(python -c "import json;print(json.load(open('rx-sd-out/manifest.json'))['commit'])")
+          aws s3 cp --recursive --endpoint-url $AWS_ENDPOINT_URL rx-sd-out s3://expresslrs/ExpressLRS-rx-sd/$SHA6/
+          echo "::notice title=Artifactory Upload Success::RX SD images for $SHA6 have been uploaded."

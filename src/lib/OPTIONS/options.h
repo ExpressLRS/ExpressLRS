@@ -51,6 +51,11 @@ constexpr size_t ELRSOPTS_PRODUCTNAME_SIZE = 128;
 constexpr size_t ELRSOPTS_DEVICENAME_SIZE = 16;
 constexpr size_t ELRSOPTS_OPTIONS_SIZE = 512;
 constexpr size_t ELRSOPTS_HARDWARE_SIZE = 2048;
+constexpr size_t ELRSOPTS_TRAILER_SIZE = ELRSOPTS_PRODUCTNAME_SIZE + ELRSOPTS_DEVICENAME_SIZE + ELRSOPTS_OPTIONS_SIZE + ELRSOPTS_HARDWARE_SIZE;
+
+// An ESP8285 RX updated over the air (RxUpdateReceiver8266) leaves its old trailer
+// here; the new firmware writes it back after itself on first boot
+#define ELRSOPTS_TRAILER_STASH "/trailer.bin"
 
 extern char device_name[];
 extern firmware_options_t firmwareOptions;

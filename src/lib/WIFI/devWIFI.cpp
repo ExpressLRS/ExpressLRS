@@ -38,6 +38,7 @@
 #if defined(TARGET_RX)
 #include "devAnalogVbat.h"
 #include "VbatCalibration.h"
+#include "RxUpdateReceiver.h"
 #endif
 #if defined(TARGET_RX) && defined(PLATFORM_ESP32)
 #include "devVTXSPI.h"
@@ -1122,6 +1123,11 @@ static void startWiFi(unsigned long now)
   if (wifiStarted) {
     return;
   }
+
+#if defined(TARGET_RX)
+  // a receiver in bind mode may be listening for a TX over ESP-NOW: the web UI wins
+  RxUpdateReceiver::stopListening();
+#endif
 
   if (connectionState < FAILURE_STATES) {
     hwTimer::stop();

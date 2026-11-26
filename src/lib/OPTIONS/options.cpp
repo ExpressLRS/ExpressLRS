@@ -254,6 +254,63 @@ static bool options_LoadProductAndDeviceName(EspFlashStream &strmFlash)
     }
 }
 
+#if defined(TARGET_RX) && defined(PLATFORM_ESP8266)
+/**
+ * @brief:  After an over-the-air update the image ends in an erased trailer, and the
+ *          old one waits in LittleFS: write it back after the sketch, then drop the copy.
+ *          Writing over erased flash needs no erase, so the end of the image (which
+ *          shares the sector) is never touched. A torn write is finished on the next boot.
+ */
+static void options_RestoreTrailer(uint32_t trailerAddr)
+{
+    File file = LittleFS.open(ELRSOPTS_TRAILER_STASH, "r");
+    if (!file || file.isDirectory())
+    {
+        return;
+    }
+    if (file.size() != ELRSOPTS_TRAILER_SIZE)
+    {
+        file.close();
+        LittleFS.remove(ELRSOPTS_TRAILER_STASH);
+        return;
+    }
+
+    uint32_t want[64];
+    uint32_t have[64];
+    // pass 0: can it be written without an erase (only 1 -> 0 bits)? 1: write it, 2: verify
+    for (int pass = 0; pass < 3; pass++)
+    {
+        file.seek(0);
+        for (size_t off = 0; off < ELRSOPTS_TRAILER_SIZE; off += sizeof(want))
+        {
+            const size_t n = std::min(sizeof(want), ELRSOPTS_TRAILER_SIZE - off);
+            file.read((uint8_t *)want, n);
+            if (pass == 1)
+            {
+                ESP.flashWrite(trailerAddr + off, want, n);
+                continue;
+            }
+            ESP.flashRead(trailerAddr + off, have, n);
+            for (size_t i = 0; i < n / 4; i++)
+            {
+                if ((pass == 0 && (have[i] & want[i]) != want[i]) || (pass == 2 && have[i] != want[i]))
+                {
+                    // Not an erased trailer, or the write didn't take: leave the flash
+                    // alone, the RX runs on whatever it has (as before this update)
+                    ERRLN("trailer restore failed (pass %d)", pass);
+                    file.close();
+                    LittleFS.remove(ELRSOPTS_TRAILER_STASH);
+                    return;
+                }
+            }
+        }
+    }
+    file.close();
+    LittleFS.remove(ELRSOPTS_TRAILER_STASH);
+    DBGLN("trailer restored");
+}
+#endif
+
 bool options_init()
 {
     debugCreateInitLogger();
@@ -269,6 +326,9 @@ bool options_init()
 #else
     LittleFS.begin();
     // ESP8266 sketch baseAddr is always 0
+#if defined(TARGET_RX)
+    options_RestoreTrailer(ESP.getSketchSize());
+#endif
 #endif
 
     EspFlashStream strmFlash;

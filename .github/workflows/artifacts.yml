@@ -33,3 +33,15 @@ jobs:
           for i in `grep -v -f /tmp/hashes /tmp/artifacts`; do
             aws s3 rm --recursive --endpoint-url $AWS_ENDPOINT_URL s3://expresslrs/ExpressLRS/$i
           done
+
+          # Receiver SD-card images live in ExpressLRS-rx-sd/<sha6>/. Keep one only
+          # while a full-sha firmware bundle starting with that sha6 survives above.
+          aws s3 ls --endpoint-url $AWS_ENDPOINT_URL s3://expresslrs/ExpressLRS/ | grep PRE | awk '{print $2}' | sed 's/\///' > /tmp/remaining || true
+          aws s3 ls --endpoint-url $AWS_ENDPOINT_URL s3://expresslrs/ExpressLRS-rx-sd/ | grep PRE | awk '{print $2}' | sed 's/\///' > /tmp/rx-sd || true
+          if [ -s /tmp/remaining ]; then
+            for i in `grep -E '^[0-9a-f]{6}$' /tmp/rx-sd || true`; do
+              if ! grep -q "^$i" /tmp/remaining; then
+                aws s3 rm --recursive --endpoint-url $AWS_ENDPOINT_URL s3://expresslrs/ExpressLRS-rx-sd/$i/
+              fi
+            done
+          fi

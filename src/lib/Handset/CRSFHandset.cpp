@@ -4,6 +4,7 @@
 #include "CRSFEndpoint.h"
 #include "CRSFRouter.h"
 #include "FIFO.h"
+#include "SDSession.h"
 #include "helpers.h"
 #include "logging.h"
 
@@ -25,6 +26,8 @@ static constexpr int HANDSET_TELEMETRY_FIFO_SIZE = 128; // this is the smallest 
 /// Out FIFO to buffer messages///
 static constexpr auto CRSF_SERIAL_OUT_FIFO_SIZE = 256U;
 static FIFO<CRSF_SERIAL_OUT_FIFO_SIZE> SerialOutFIFO;
+// bytes of the current outgoing frame still to be written (large frames are split across periods)
+static uint8_t packageLengthRemaining = 0;
 
 Stream *CRSFHandset::PortSecondary;
 
@@ -59,6 +62,8 @@ void CRSFHandset::Begin()
     halfDuplex = (GPIO_PIN_RCSIGNAL_TX == GPIO_PIN_RCSIGNAL_RX);
 
 #if defined(PLATFORM_ESP32)
+    // an SD bulk answer is up to 519 B; the default 256 B ring would overflow between polls
+    Port.setRxBufferSize(1024);
     portDISABLE_INTERRUPTS();
     UARTinverted = halfDuplex; // on a full UART we will start uninverted checking first
     Port.begin(UARTrequestedBaud, SERIAL_8N1,
@@ -71,7 +76,11 @@ void CRSFHandset::Begin()
         duplex_set_RX();
     }
     portENABLE_INTERRUPTS();
+    // Arduino's default interrupts at 120 of the 128 FIFO bytes, ~21us of slack at
+    // 3.75 Mbaud: with WiFi busy that drops bytes from long (SD bulk) frames
+    Port.setRxFIFOFull(32);
     flush_port_input();
+    SDSession::setTransport(this);
 #elif defined(PLATFORM_ESP8266)
     // Uses default UART pins
     Port.begin(UARTrequestedBaud);
@@ -233,6 +242,23 @@ void CRSFHandset::alignBufferToSync(uint8_t startIdx)
 
 void CRSFHandset::handleInput()
 {
+#if defined(PLATFORM_ESP32)
+    // An SD bulk session owns the port; the job task drives it through bulkSend/bulkRead
+    if (connectionState == sdBulk)
+    {
+        if (SDSession::portReleased())
+        {
+            restoreAfterBulk();
+        }
+        return;
+    }
+    if (SDSession::wantsPort() && outputIdle())
+    {
+        SDSession::portAcquired();
+        return;
+    }
+#endif
+
     if (UARTwdt())
     {
         return;
@@ -302,7 +328,6 @@ void CRSFHandset::handleOutput(const uint32_t receivedBytes)
 {
     static uint8_t CRSFoutBuffer[CRSF_MAX_PACKET_LEN] = {0};
     // both static to split up larger packages
-    static uint8_t packageLengthRemaining = 0;
     static uint8_t sendingOffset = 0;
 
     if (!controllerConnected)
@@ -360,6 +385,72 @@ void CRSFHandset::handleOutput(const uint32_t receivedBytes)
         } while(periodBytesRemaining != 0 && SerialOutFIFO.size() != 0);
     }
 }
+
+bool CRSFHandset::outputIdle() const
+{
+#if defined(PLATFORM_ESP32)
+    if (transmitting && !uart_ll_is_tx_idle(UART_LL_GET_HW(0)))
+    {
+        return false;
+    }
+#endif
+    return packageLengthRemaining == 0 && SerialOutFIFO.size() == 0;
+}
+
+void CRSFHandset::bulkSend(const uint8_t *data, size_t len)
+{
+    if (halfDuplex)
+    {
+        duplex_set_TX();
+    }
+    Port.write(data, len);
+    if (halfDuplex)
+    {
+        Port.flush();
+#if defined(PLATFORM_ESP32)
+        while (!uart_ll_is_tx_idle(UART_LL_GET_HW(0)))
+        {
+        }
+#endif
+        duplex_set_RX();
+    }
+}
+
+int CRSFHandset::bulkRead(uint8_t *data, size_t len)
+{
+    const int avail = Port.available();
+    if (avail <= 0)
+    {
+        return 0;
+    }
+    return Port.read(data, std::min((size_t)avail, len));
+}
+
+#if defined(PLATFORM_ESP32)
+// SD bulk sessions are ESP32 only (SDSession.h)
+void CRSFHandset::restoreAfterBulk()
+{
+    // Come back as if the handset had just been plugged in: the first good frame
+    // calls connected() -> awaitingModelId and restarts the RF timer
+    transmitting = false;
+    if (halfDuplex)
+    {
+        duplex_set_RX();
+    }
+    flush_port_input();
+    SerialInPacketPtr = 0;
+    SerialOutFIFO.lock();
+    SerialOutFIFO.flush();
+    SerialOutFIFO.unlock();
+    packageLengthRemaining = 0;
+    controllerConnected = false;
+    GoodPktsCount = BadPktsCount = 0;
+    UARTwdtLastChecked = millis() + UARTwdtInterval;
+    setConnectionState(noCrossfire);
+    SDSession::portRestored();
+    DBGLN("SD bulk done, back to CRSF");
+}
+#endif
 
 void CRSFHandset::duplex_set_RX() const
 {
