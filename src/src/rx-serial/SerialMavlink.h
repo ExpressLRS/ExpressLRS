@@ -14,7 +14,7 @@ extern FIFO<MAV_OUTPUT_BUF_LEN> mavlinkOutputBuffer;
 class SerialMavlink final : public SerialIO {
 public:
     explicit SerialMavlink(Stream &out, Stream &in);
-    ~SerialMavlink() override = default;
+    ~SerialMavlink() override;
 
     uint32_t sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t *channelData) override;
 
@@ -28,6 +28,9 @@ public:
 
 private:
     void processBytes(uint8_t *bytes, u_int16_t size) override;
+    void handleWifi();
+    void stopWifi() __attribute__((noinline));
+    void sendToGcs(const uint8_t *data, uint16_t len);
 
     uint8_t this_system_id;
     const uint8_t this_component_id;
@@ -40,4 +43,8 @@ private:
     // Variables / constants for Mavlink //
     FIFO<MAV_INPUT_BUF_LEN> mavlinkInputBuffer;
     FIFO<MAV_OUTPUT_BUF_LEN> mavlinkOutputBuffer;
+
+    // UDP link to a GCS, only allocated when the RX is in WiFi mode
+    struct WifiLink;
+    WifiLink *wifi = nullptr;
 };
