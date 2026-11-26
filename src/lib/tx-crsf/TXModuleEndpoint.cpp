@@ -29,7 +29,7 @@ void TXModuleEndpoint::begin()
     registerParameters();
 }
 
-bool TXModuleEndpoint::handleRaw(const crsf_header_t *message)
+bool TXModuleEndpoint::handleRaw(const CRSFConnector *connector, const crsf_header_t *message)
 {
     if (message->type == CRSF_FRAMETYPE_RC_CHANNELS_PACKED)
     {

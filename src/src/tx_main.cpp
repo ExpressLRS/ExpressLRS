@@ -802,6 +802,19 @@ static void ConfigChangeCommit()
   devicesTriggerEvent(changes);
 }
 
+/***
+ * @brief Wait for the packet in flight to finish. When LBT blocks a packet, its TXdone is
+ * deferred to the main loop, which is the caller, so deferred functions must run while waiting
+ * or busyTransmitting never clears
+ */
+static void WaitForTransmitComplete()
+{
+  while (busyTransmitting)
+  {
+    executeDeferredFunction(micros());
+  }
+}
+
 static void CheckConfigChangePending()
 {
   if (config.IsModified() || ModelUpdatePending)
@@ -811,7 +824,7 @@ static void CheckConfigChangePending()
       return;
 
     // wait until no longer transmitting
-    while (busyTransmitting);
+    WaitForTransmitComplete();
     // Set the commitInProgress flag to prevent any other RF SPI traffic during the commit from RX or scheduled TX
     commitInProgress = true;
     // If telemetry expected in the next interval, the radio was in RX mode
@@ -981,7 +994,7 @@ static void EnterBindingMode()
 
   // Disable the TX timer and wait for any TX to complete
   hwTimer::stop();
-  while (busyTransmitting);
+  WaitForTransmitComplete();
 
   // Queue up sending the Master UID as MSP packets
   SendUIDOverMSP();

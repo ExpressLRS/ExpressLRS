@@ -128,6 +128,9 @@ uint32_t serialBaud;
 #endif
 
 SerialIO *serialIO = nullptr;
+// Only set when serialIO really is a SerialMavlink, the configured protocol can change
+// (from a sync packet) before serialIO is recreated, or may never get one at all
+SerialMavlink *serialMavlink = nullptr;
 
 #define SERIAL_PROTOCOL_RX Serial
 #define SERIAL1_PROTOCOL_RX Serial1
@@ -167,6 +170,8 @@ bool doStartTimer = false;
 ///////////////////////////////////////////////
 
 static bool alreadyTLMresp = false;
+// The serial protocol in use before the TX switched us to MAVLink, restored when it switches back
+static eSerialProtocol protocolBeforeMavlink = PROTOCOL_CRSF;
 
 //////////////////////////////////////////////////////////////
 
@@ -1048,11 +1053,15 @@ static bool ICACHE_RAM_ATTR ProcessRfPacket_SYNC(uint32_t const now, OTA_Sync_s 
 
     if (otaSync->otaProtocol == TX_MAVLINK_MODE)
     {
+        if (config.GetSerialProtocol() != PROTOCOL_MAVLINK)
+        {
+            protocolBeforeMavlink = config.GetSerialProtocol();
+        }
         config.SetSerialProtocol(PROTOCOL_MAVLINK);
     }
     else if (config.GetSerialProtocol() == PROTOCOL_MAVLINK)
     {
-        config.SetSerialProtocol(PROTOCOL_CRSF);
+        config.SetSerialProtocol(protocolBeforeMavlink);
     }
 
     // Check if otaProtocol has been updated.
@@ -1253,9 +1262,9 @@ void DataUlReceiveComplete()
         break;
     case MSP_ELRS_MAVLINK_TLM: // 0xFD
         // raw mavlink data
-        if (config.GetSerialProtocol() == PROTOCOL_MAVLINK)
+        if (serialMavlink != nullptr)
         {
-            ((SerialMavlink *)serialIO)->forwardMessage(DataUlBuffer);
+            serialMavlink->forwardMessage(DataUlBuffer);
         }
         break;
     default:
@@ -1383,7 +1392,8 @@ static void setupSerial()
     }
     else if (mavlinkSerialOutput)
     {
-        serialIO = new SerialMavlink(SERIAL_PROTOCOL_TX, SERIAL_PROTOCOL_RX);
+        serialMavlink = new SerialMavlink(SERIAL_PROTOCOL_TX, SERIAL_PROTOCOL_RX);
+        serialIO = serialMavlink;
     }
     else if (config.GetSerialProtocol() == PROTOCOL_MSP_DISPLAYPORT)
     {
@@ -1531,6 +1541,7 @@ static void serialShutdown()
     if(serialIO != nullptr)
     {
         Serial.end();
+        serialMavlink = nullptr;
         delete serialIO;
         serialIO = nullptr;
     }
@@ -2165,7 +2176,7 @@ void loop()
         DataDlSender.SetDataToTransmit(DataDlBuffer, nextPlayloadSize);
     }
 
-    if (config.GetSerialProtocol() == PROTOCOL_MAVLINK && !DataDlSender.IsActive() && ((SerialMavlink *)serialIO)->GetNextPayload(&nextPlayloadSize, DataDlBuffer))
+    if (serialMavlink != nullptr && !DataDlSender.IsActive() && serialMavlink->GetNextPayload(&nextPlayloadSize, DataDlBuffer))
     {
         DataDlSender.SetDataToTransmit(DataDlBuffer, nextPlayloadSize);
     }

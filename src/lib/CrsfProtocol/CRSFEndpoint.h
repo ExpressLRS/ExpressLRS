@@ -3,6 +3,8 @@
 
 #include "CRSFParameters.h"
 
+class CRSFConnector;
+
 #define MAX_CRSF_PARAMETERS 64
 
 class CRSFEndpoint {
@@ -26,10 +28,11 @@ public:
      *
      * All messages, regardless of routing information, are passed to this function.
      *
+     * @param connector The connector the message was received from, nullptr if generated locally.
      * @param message Pointer to the CRSF message header structure containing the message data.
      * @return A boolean value indicating whether the message should be ignored and not processed further.
      */
-    virtual bool handleRaw(const crsf_header_t * message) { return false; }
+    virtual bool handleRaw(const CRSFConnector *connector, const crsf_header_t * message) { return false; }
 
     /**
      * Handles a CRSF message and determines if it should be processed further or ignored.
