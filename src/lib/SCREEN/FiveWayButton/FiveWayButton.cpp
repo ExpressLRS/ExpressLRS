@@ -1,5 +1,8 @@
 #include "FiveWayButton.h"
 #include "devADC.h"
+#if defined(PLATFORM_ESP32)
+#include <esp_adc_cal.h>
+#endif
 
 #if defined(PLATFORM_ESP32)
 uint16_t FiveWayButton::joyAdcValues[] = {0};
@@ -30,12 +33,20 @@ void FiveWayButton::calcFuzzValues()
     memcpy(FiveWayButton::joyAdcValues, JOY_ADC_VALUES, sizeof(FiveWayButton::joyAdcValues));
 
 #if defined(PLATFORM_ESP32)
-    // Convert JOY_ADC_VALUES from raw counts to millivolt values to match
-    // the calibrated mV readings from analogReadMilliVolts() used in devADC.
-    // This corrects for chip-to-chip reference voltage variation.
-    for (unsigned int i = 0; i < N_JOY_ADC_VALUES; i++)
+    // Convert JOY_ADC_VALUES from raw counts to millivolts through the same
+    // eFuse calibration that analogReadMilliVolts() (used in devADC) applies
+    // to live readings. A plain raw * 3300 / 4096 scale ignores the ADC's
+    // offset: on the classic ESP32 at 11 dB a raw 0 reads ~140 mV, which
+    // shifts every threshold and pushes UP/DOWN/RIGHT out of their windows.
     {
-        joyAdcValues[i] = (uint32_t)joyAdcValues[i] * 3300 / 4096;
+        const int8_t channel = digitalPinToAnalogChannel(GPIO_PIN_JOYSTICK);
+        const adc_unit_t unit = (channel > SOC_ADC_MAX_CHANNEL_NUM - 1) ? ADC_UNIT_2 : ADC_UNIT_1;
+        esp_adc_cal_characteristics_t chars = {};
+        esp_adc_cal_characterize(unit, ADC_ATTEN_DB_11, ADC_WIDTH_BIT_12, 1100, &chars);
+        for (unsigned int i = 0; i < N_JOY_ADC_VALUES; i++)
+        {
+            joyAdcValues[i] = esp_adc_cal_raw_to_voltage(joyAdcValues[i], &chars);
+        }
     }
 #endif
 
