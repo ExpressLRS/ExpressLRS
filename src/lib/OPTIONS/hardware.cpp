@@ -119,6 +119,8 @@ typedef enum {
     X(HARDWARE_thermal_lm75a, "thermal_lm75a", BOOL) \
     X(HARDWARE_pwm_outputs, "pwm_outputs", ARRAY) \
     X(HARDWARE_pwm_outputs_count, "pwm_outputs", COUNT) \
+    X(HARDWARE_pwm_outputs_inverted, "pwm_outputs_inverted", ARRAY) \
+    X(HARDWARE_pwm_outputs_inverted_count, "pwm_outputs_inverted", COUNT) \
     X(HARDWARE_pwm_out_only, "pwm_out_only", BOOL) \
     X(HARDWARE_vbat, "vbat", INT) \
     X(HARDWARE_vbat_offset, "vbat_offset", INT) \

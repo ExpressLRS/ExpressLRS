@@ -9,14 +9,16 @@
 
 static uint16_t refreshInterval[MAX_PWM_CHANNELS] = {0};
 static int8_t pwm_gpio[MAX_PWM_CHANNELS] = {-1};
+static bool pwm_inverted[MAX_PWM_CHANNELS] = {false};
 
-pwm_channel_t PWMController::allocate(uint8_t pin, uint32_t frequency)
+pwm_channel_t PWMController::allocate(uint8_t pin, uint32_t frequency, bool inverted)
 {
     for(int channel=0 ; channel<MAX_PWM_CHANNELS ; channel++)
     {
         if (refreshInterval[channel] == 0)
         {
             pwm_gpio[channel] = pin;
+            pwm_inverted[channel] = inverted;
             refreshInterval[channel] = 1000000U / frequency;
             pinMode(pin, OUTPUT);
             return channel;
@@ -43,13 +45,15 @@ void PWMController::setDuty(pwm_channel_t channel, uint16_t duty)
 void PWMController::setMicroseconds(pwm_channel_t channel, uint16_t microseconds)
 {
     int8_t pin = pwm_gpio[channel];
+    const bool inverted = pwm_inverted[channel];
     if (microseconds == 0 || microseconds==refreshInterval[channel])
     {
         stopWaveform8266(pin);
-        digitalWrite(pin, microseconds == 0 ? LOW : HIGH);
+        digitalWrite(pin, (microseconds == 0 || inverted) ? LOW : HIGH);
         return;
     }
-    startWaveform8266(pin, microseconds, refreshInterval[channel] - microseconds);
+    const uint16_t rest = refreshInterval[channel] - microseconds;
+    startWaveform8266(pin, inverted ? rest : microseconds, inverted ? microseconds : rest);
 }
 
 void PWMController::feedWatchdog()

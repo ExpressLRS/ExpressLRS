@@ -10,9 +10,12 @@ public:
      *
      * @param pin the GPIO pin to output the PWM signal on
      * @param frequency the output frequency of the PWM signal
+     * @param inverted output the signal electrically inverted, for a pin that drives its
+     *                 output through a low-side N-channel MOSFET. The pin still idles low when
+     *                 there is no pulse to output, which leaves the driver switched off.
      * @return the allocated PWM channel or -1 if a channel cannot be assigned
      */
-    pwm_channel_t allocate(uint8_t pin, uint32_t frequency);
+    pwm_channel_t allocate(uint8_t pin, uint32_t frequency, bool inverted = false);
 
     /**
      * @brief release a channel back to the allocator

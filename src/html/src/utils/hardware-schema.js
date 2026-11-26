@@ -782,6 +782,14 @@ const HARDWARE_SCHEMA = [
                 desc: 'Comma-separated list of pins used for PWM (and other I/O features)'
             },
             {
+                id: 'pwm_outputs_inverted',
+                label: 'Inverted PWM pins',
+                type: 'array',
+                size: 40,
+                icon: 'pwm',
+                desc: 'Comma-separated list of the PWM pins that drive their output through a low-side N-channel MOSFET. Servo and DShot signals are inverted on these pins so they arrive the right way up; 10kHz duty and On/Off outputs are not.'
+            },
+            {
                 id: 'pwm_out_only',
                 label: 'PWM pins are output-only',
                 type: 'checkbox',

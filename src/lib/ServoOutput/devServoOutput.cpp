@@ -31,6 +31,18 @@ static constexpr uint32_t DISCONNECTED_UPDATE_MS = 10;
 
 typedef void (*servoWrite_fn)(uint8_t ch, uint16_t us);
 
+static bool isInvertedOutput(int8_t pin)
+{
+    for (int i = 0; i < GPIO_PIN_PWM_OUTPUTS_INVERTED_COUNT; ++i)
+    {
+        if (GPIO_PIN_PWM_OUTPUTS_INVERTED[i] == pin)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
 void ICACHE_RAM_ATTR servoNewChannelsAvailable()
 {
     newChannelsAvailable = true;
@@ -274,7 +286,7 @@ static bool initialize()
                 DBGLN("Initializing DShot: gpio: %u, ch: %d, rmtChannel: %u", gpio, ch, rmtChannel);
                 pinMode(pin, OUTPUT);
                 digitalWrite(pin, LOW);
-                dshotInstances[ch] = new DShotRMT(gpio, rmtChannel); // Initialize the DShotRMT instance
+                dshotInstances[ch] = new DShotRMT(gpio, rmtChannel, isInvertedOutput(pin)); // Initialize the DShotRMT instance
                 rmtCH++;
             }
             pin = UNDEF_PIN;
@@ -338,7 +350,9 @@ static int event()
             const auto frequency = servoOutputModeToFrequency((eServoOutputMode)chConfig->val.mode);
             if (frequency && servoPins[ch] != UNDEF_PIN)
             {
-                pwmChannels[ch] = PWM.allocate(servoPins[ch], frequency);
+                // A low-side N-channel MOSFET flips a servo signal, but it switches a 10kHz duty load the right way round
+                const bool inverted = chConfig->val.mode != som10KHzDuty && isInvertedOutput(servoPins[ch]);
+                pwmChannels[ch] = PWM.allocate(servoPins[ch], frequency, inverted);
             }
 #if defined(PLATFORM_ESP32)
             else if ((eServoOutputMode)chConfig->val.mode == somDShot || (eServoOutputMode)chConfig->val.mode == somDShot3D)

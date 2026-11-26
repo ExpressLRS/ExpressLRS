@@ -129,6 +129,8 @@ typedef enum {
     // PWM
     HARDWARE_pwm_outputs,
     HARDWARE_pwm_outputs_count,
+    HARDWARE_pwm_outputs_inverted,
+    HARDWARE_pwm_outputs_inverted_count,
     HARDWARE_pwm_out_only,
 
     // VBAT

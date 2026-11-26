@@ -7,7 +7,7 @@
 
 #include "DShotRMT.h"
 
-DShotRMT::DShotRMT(gpio_num_t gpio, rmt_channel_t rmtChannel) : gpio_num(gpio), rmt_channel(rmtChannel) {
+DShotRMT::DShotRMT(gpio_num_t gpio, rmt_channel_t rmtChannel, bool inverted) : gpio_num(gpio), rmt_channel(rmtChannel), inverted(inverted) {
 	// ...create clean packet
 	encode_dshot_to_rmt(DSHOT_NULL_PACKET);
 }
@@ -66,6 +66,7 @@ bool DShotRMT::begin(dshot_mode_t dshot_mode, bool is_bidirectional) {
 		.gpio_num = gpio_num,
 		.clk_div = DSHOT_CLK_DIVIDER,
 		.mem_block_num = uint8_t(RMT_CHANNEL_MAX - uint8_t(rmt_channel)),
+		.flags = inverted ? RMT_CHANNEL_FLAGS_INVERT_SIG : 0U,
 		.tx_config = {
         	.idle_level = bidirectional ? RMT_IDLE_LEVEL_HIGH : RMT_IDLE_LEVEL_LOW,
 			.carrier_en = false,
