@@ -70,7 +70,7 @@ int32_t BMP280::getTemperature()
     var1 = ((var1 * var1 * (int64_t)m_calib.dig_P3) >> 8) + ((var1 * (int64_t)m_calib.dig_P2) << 12);
     var1 = (((((int64_t)1) << 47) + var1)) * ((int64_t)m_calib.dig_P1) >> 33;
     if (var1 == 0)
-        return BaroBase::PRESSURE_INVALID;
+        return BaroBase::TEMPERATURE_INVALID;
 
     p = 1048576 - adc_P;
     p = (((p << 31) - var2) * 3125) / var1;
@@ -79,7 +79,8 @@ int32_t BMP280::getTemperature()
     p = ((p + var1 + var2) >> 8) + (((int64_t)m_calib.dig_P7) << 4);
     // p is pressure in Pa as unsigned 32 bit integer in Q24.8 format (24 integer bits and 8 fractional bits).
     // Output value of "24674867" represents 24674867/256 = 96386.2 Pa = 963.862 hPa
-    m_pressureLast = ((uint32_t)p) >> 8;
+    // Convert to deci-Pascals, keeping one digit of the fraction
+    m_pressureLast = (uint32_t)((p * 10) >> 8);
 
     int32_t temperature = (t_fine * 5 + 128) >> 8;
     //DBGLN("%u t=%d p=%u", millis(), temperature, m_pressureLast);
