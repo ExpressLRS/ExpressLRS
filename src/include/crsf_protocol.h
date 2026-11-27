@@ -505,6 +505,16 @@ static inline uint8_t ICACHE_RAM_ATTR CalcCRCMsp(uint8_t *data, int length)
     return crc;
 }
 
+/**
+ * @brief Check that the length byte of a frame received into a buffer (e.g. over the air)
+ *        keeps the frame inside that buffer: [sync/addr][len][len bytes]
+ */
+static inline bool crsfFrameFitsBuffer(const uint8_t *frame, const size_t bufLen)
+{
+    return bufLen >= CRSF_FRAME_NOT_COUNTED_BYTES
+        && frame[CRSF_TELEMETRY_LENGTH_INDEX] <= bufLen - CRSF_FRAME_NOT_COUNTED_BYTES;
+}
+
 #if !defined(__linux__)
 static inline uint16_t htobe16(uint16_t val)
 {
