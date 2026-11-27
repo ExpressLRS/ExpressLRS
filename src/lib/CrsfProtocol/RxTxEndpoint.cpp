@@ -55,9 +55,20 @@ void RxTxEndpoint::handleMspGetRxTxConfig(crsf_ext_header_t *extMessage)
  */
 void RxTxEndpoint::handleMspSetRxTxConfig(crsf_ext_header_t *extMessage)
 {
-    // Encapsulated MSP header is (0x30, mspPayloadSize, command)
+    // Encapsulated MSP header is (0x30, mspPayloadSize, command, subcommand)
+    // frame_size counts type, dest and orig (3 bytes), the payload and the crc (1 byte)
+    constexpr uint8_t frameOverhead = 3 + 4 + 1; // ext header + MSP header + crc
+    if (extMessage->frame_size < frameOverhead || extMessage->payload[1] < 1)
+    {
+        return;
+    }
     // Subtract one from mspPayloadSize for the subcommand in payload[3]
-    auto payloadLen = extMessage->payload[1] - 1;
+    const uint8_t payloadLen = extMessage->payload[1] - 1;
+    // mspPayloadSize comes off the wire, the data must be inside the received frame
+    if (payloadLen > extMessage->frame_size - frameOverhead)
+    {
+        return;
+    }
     auto mspPayload = &extMessage->payload[4];
 
     switch ((MSP_ELRS_RXTX_CONFIG_SUBCMD)extMessage->payload[3])
