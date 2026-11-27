@@ -89,6 +89,7 @@ static uint8_t BindingSendCount;
 bool RxWiFiReadyToSend = false;
 
 static TxTlmRcvPhase_e TelemetryRcvPhase = ttrpTransmitting;
+static volatile bool tlmIdleSet = false; // radio already moved from RX to FS after telemetry
 StubbornReceiver DataDlReceiver;
 StubbornSender DataUlSender;
 uint8_t CRSFinBuffer[CRSF_MAX_PACKET_LEN+1];
@@ -708,6 +709,12 @@ void ICACHE_RAM_ATTR timerCallback()
     DynamicPower_TelemetryUpdate(DYNPOWER_UPDATE_MISSED);
   }
 
+  if (TelemetryRcvPhase == ttrpExpectingTelem && !tlmIdleSet && !LbtIsEnabled)
+  {
+    Radio.SetTxIdleMode(); // no telemetry arrived: radio is still in RX
+  }
+  tlmIdleSet = false;
+
   TelemetryRcvPhase = ttrpTransmitting;
 
   SendRCdataToRF();
@@ -837,6 +844,13 @@ bool ICACHE_RAM_ATTR RXdoneISR(SX12xxDriverCommon::rx_status const status)
 
   LbtCcaTimerStart();
   const bool packetSuccessful = ProcessDownlinkPacket(status);
+  // Telemetry received: leave continuous RX now. An uplink TX started straight from RX
+  // occasionally ends after ~300 us with nothing sent (seen on LR1121).
+  if (packetSuccessful && !LbtIsEnabled)
+  {
+    Radio.SetTxIdleMode();
+    tlmIdleSet = true;
+  }
   return packetSuccessful;
 }
 
