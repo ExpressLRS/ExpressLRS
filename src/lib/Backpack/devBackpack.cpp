@@ -319,6 +319,12 @@ static void BackpackPollAuxStates()
             case HT_ON:
                 enable = true; break;
             default:
+                // the setting can be set to any value via WiFi import, treat values beyond HT_AUX8_DN as off
+                if (config.GetPTREnableChannel() > HT_AUX8_DN)
+                {
+                    enable = false;
+                    break;
+                }
                 enable = CRSF_to_BIT(ChannelData[config.GetPTREnableChannel() / 2 + 3]);
                 if (config.GetPTREnableChannel() % 2)
                     enable = !enable;
@@ -337,7 +343,8 @@ static void BackpackPollAuxStates()
     }
 
     // DVR recording enable
-    if (config.GetDvrAux() != 0)
+    // aux numbers past CRSF_NUM_CHANNELS can only come from an invalid setting (e.g. WiFi import)
+    if (config.GetDvrAux() != 0 && (config.GetDvrAux() - 1) / 2 + AUX1 <= CRSF_NUM_CHANNELS)
     {
         // DVR AUX control is on
         const uint8_t auxNumber = (config.GetDvrAux() - 1) / 2 + AUX1;
