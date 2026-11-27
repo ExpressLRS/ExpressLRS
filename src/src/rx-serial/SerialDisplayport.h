@@ -21,6 +21,18 @@ CONSEQUENTIAL DAMAGES, FOR ANY REASON WHATSOEVER.
 #define MSP_STATUS          101
 #define MSP_STATUS_EX       150
 #define MSP_MSG_PERIOD_MS   100
+#define MSP_BATTERY_STATE   130
+#define MSP_DISPLAYPORT     182
+#define MSP_OSD_MAX_COLUMN  53
+
+
+// DisplayPort Sub-commands
+#define MSP_DP_HEARTBEAT       0
+#define MSP_DP_RELEASE         1
+#define MSP_DP_CLEAR           2
+#define MSP_DP_WRITE_STRING    3
+#define MSP_DP_DRAW_SCREEN     4
+#define MSP_DP_OPTIONS         5
 
 struct msp_status_t
 {
@@ -52,6 +64,12 @@ private:
     void processBytes(uint8_t *bytes, uint16_t size) override;
     void send(uint8_t messageID, void * payload, uint8_t size, Stream * _stream);
     bool getArmedState();
+    void sendDisplayPortHeartbeat();
+    void sendDisplayPortDrawScreen();
+    void sendDisplayPortClear();
+    void sendDisplayPortReleaseScreen();
+    void sendDisplayPortString(uint8_t row, uint8_t col, char* str);
+    void sendMspDisplayPort(uint32_t *channelData);
 
     uint8_t m_receivedBytes;
     uint32_t m_receivedTimestamp;

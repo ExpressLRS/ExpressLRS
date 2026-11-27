@@ -36,6 +36,99 @@ void SerialDisplayport::send(uint8_t messageID, void * payload, uint8_t size, St
     _stream->write(checksum);
 }
 
+
+// send displayport heartbeat
+void SerialDisplayport::sendDisplayPortHeartbeat()
+{
+  uint8_t payload[1] = {MSP_DP_HEARTBEAT};
+  send(MSP_DISPLAYPORT, payload, 1, _outputPort);
+}
+
+// send displayport draw screen
+void SerialDisplayport::sendDisplayPortDrawScreen()
+{
+  uint8_t payload[1] = {MSP_DP_DRAW_SCREEN};
+  send(MSP_DISPLAYPORT, payload, 1, _outputPort);
+}
+
+// send displayport clear screen
+void SerialDisplayport::sendDisplayPortClear()
+{
+  uint8_t payload[1] = {MSP_DP_CLEAR};
+  send(MSP_DISPLAYPORT, payload, 1, _outputPort);
+}
+
+// send displayport release screen
+void SerialDisplayport::sendDisplayPortReleaseScreen()
+{
+  uint8_t payload[1] = {MSP_DP_RELEASE};
+  send(MSP_DISPLAYPORT, payload, 1, _outputPort);
+}
+
+// send displayport string 
+void SerialDisplayport::sendDisplayPortString(uint8_t row, uint8_t col, char* str)
+{
+  uint8_t len = strlen(str);
+  if (len > MSP_OSD_MAX_COLUMN) len = MSP_OSD_MAX_COLUMN; 
+
+  uint8_t payload[32];
+  payload[0] = MSP_DP_WRITE_STRING;
+  payload[1] = row;
+  payload[2] = col;
+  payload[3] = 0; 
+  
+  for (uint8_t i = 0; i < len; i++) 
+  {
+    payload[4 + i] = str[i];
+  }
+  send(MSP_DISPLAYPORT, payload, 4 + len, _outputPort);
+}
+
+void SerialDisplayport::sendMspDisplayPort(uint32_t *channelData)
+{
+    char buf[MSP_OSD_MAX_COLUMN];
+    // Send heartbeat
+    sendDisplayPortHeartbeat();
+    // Clear the canvas
+    sendDisplayPortClear();
+
+    // Draw OSD ELRS RSSI dbM
+    if(firmwareOptions.enable_osd_rssi)
+    {
+        int32_t rssiDBM = linkStats.active_antenna == 0 ? -linkStats.uplink_RSSI_1 : -linkStats.uplink_RSSI_2;
+        snprintf(buf, sizeof(buf), "\x01 %d", rssiDBM);
+        sendDisplayPortString(firmwareOptions.osd_rssi_row, firmwareOptions.osd_rssi_col, buf);
+    }
+
+    // Draw OSD ELRS Link Quality
+    if(firmwareOptions.enable_osd_lq)
+    {
+        uint8_t rfMode = linkStats.rf_Mode;
+        uint8_t linkQuality = linkStats.uplink_Link_quality;
+        snprintf(buf, sizeof(buf), "\x7B %d:%d", rfMode, linkQuality);
+        sendDisplayPortString(firmwareOptions.osd_lq_row, firmwareOptions.osd_lq_col, buf);
+    }
+
+    // Channel Monitor
+    if(firmwareOptions.osd_channel_monitor > 0)
+    {
+        for (uint8_t i = 0;i<firmwareOptions.osd_channel_monitor;i++)
+        {
+            int32_t ch = CRSF_to_US(channelData[i]);
+            if (firmwareOptions.osd_channel_use_percent)
+            {
+                ch = map(channelData[i], CRSF_CHANNEL_VALUE_STD_MIN, CRSF_CHANNEL_VALUE_STD_MAX, -100, 100);
+            }
+            
+            snprintf(buf, sizeof(buf), "CH%d:%d", i+1, ch);
+            sendDisplayPortString(firmwareOptions.osd_channel_row+i, firmwareOptions.osd_channel_col, buf);
+        }
+    }
+    
+    // Draw the screen 
+    sendDisplayPortDrawScreen();
+}
+
 uint32_t SerialDisplayport::sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t *channelData)
 {
     bool armed = getArmedState();
@@ -58,6 +151,11 @@ uint32_t SerialDisplayport::sendRCFrame(bool frameAvailable, bool frameMissed, u
 
     // Send extended status MSP
     send(MSP_STATUS_EX, &status, sizeof(status), _outputPort);
+
+    if(firmwareOptions.enable_msp_osd)
+    {
+        sendMspDisplayPort(channelData);
+    }
 
     return MSP_MSG_PERIOD_MS;   // Send MSP msgs to DJI at 10Hz
 }
