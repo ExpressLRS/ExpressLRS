@@ -616,7 +616,8 @@ static void UpdateConfiguration(AsyncWebServerRequest *request, JsonVariant &jso
 {
   if (json["button-actions"].is<JsonVariant>()) {
     const JsonArray &array = json["button-actions"].as<JsonArray>();
-    for (size_t button=0 ; button<array.size() ; button++)
+    // only two buttons are stored in the config
+    for (size_t button=0 ; button<array.size() && button<2 ; button++)
     {
       tx_button_color_t action;
       for (int pos=0 ; pos<button_GetActionCnt() ; pos++)
@@ -831,8 +832,8 @@ static void WebUpdateSetHome(AsyncWebServerRequest *request)
   String onInterval = request->arg("wifi-on-interval");
 
   DBGLN("Setting network %s", ssid.c_str());
-  strcpy(station_ssid, ssid.c_str());
-  strcpy(station_password, password.c_str());
+  strlcpy(station_ssid, ssid.c_str(), sizeof(station_ssid));
+  strlcpy(station_password, password.c_str(), sizeof(station_password));
   if (request->hasArg("save")) {
     strlcpy(firmwareOptions.home_wifi_ssid, ssid.c_str(), sizeof(firmwareOptions.home_wifi_ssid));
     strlcpy(firmwareOptions.home_wifi_password, password.c_str(), sizeof(firmwareOptions.home_wifi_password));

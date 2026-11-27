@@ -48,7 +48,9 @@ static void handlePress(uint8_t button, bool longPress, uint8_t count)
 #endif
     for (unsigned i=0 ; i<button_GetActionCnt() ; i++)
     {
-        if (button_actions[i].action != ACTION_NONE && button_actions[i].pressType == longPress && button_actions[i].count == count-1)
+        // the action is 4 bits in the config (settable via WiFi import), but only ACTION_LAST functions exist
+        if (button_actions[i].action != ACTION_NONE && button_actions[i].action < ACTION_LAST
+            && button_actions[i].pressType == longPress && button_actions[i].count == count-1)
         {
             if (actions[button_actions[i].action])
             {
