@@ -1253,7 +1253,7 @@ void DataUlReceiveComplete()
         break;
     case MSP_ELRS_MAVLINK_TLM: // 0xFD
         // raw mavlink data
-        if (config.GetSerialProtocol() == PROTOCOL_MAVLINK)
+        if (!firmwareOptions.is_airport && config.GetSerialProtocol() == PROTOCOL_MAVLINK)
         {
             ((SerialMavlink *)serialIO)->forwardMessage(DataUlBuffer);
         }
@@ -2165,7 +2165,8 @@ void loop()
         DataDlSender.SetDataToTransmit(DataDlBuffer, nextPlayloadSize);
     }
 
-    if (config.GetSerialProtocol() == PROTOCOL_MAVLINK && !DataDlSender.IsActive() && ((SerialMavlink *)serialIO)->GetNextPayload(&nextPlayloadSize, DataDlBuffer))
+    // AirPort owns serialIO even when saved or OTA serial protocol is MAVLink.
+    if (!firmwareOptions.is_airport && config.GetSerialProtocol() == PROTOCOL_MAVLINK && !DataDlSender.IsActive() && ((SerialMavlink *)serialIO)->GetNextPayload(&nextPlayloadSize, DataDlBuffer))
     {
         DataDlSender.SetDataToTransmit(DataDlBuffer, nextPlayloadSize);
     }
