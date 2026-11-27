@@ -806,6 +806,11 @@ TxConfig::SetDefaults(bool commit)
 bool
 TxConfig::SetModelId(uint8_t modelId)
 {
+    // The model ID comes from the handset (CRSF model select) or a WiFi import, keep the current model if it is invalid
+    if (modelId >= CONFIG_TX_MODEL_CNT)
+    {
+        return false;
+    }
     model_config_t *newModel = &m_config.model_config[modelId];
     if (newModel != m_model)
     {
