@@ -112,13 +112,36 @@ MSPframeType_e MSP2CROSSFIRE::getVersion(const uint8_t *data)
 
 void MSP2CROSSFIRE::parse(CRSFConnector *connector, const uint8_t *data, uint32_t frameLen, const crsf_addr_e src, const crsf_addr_e dest)
 {
+    // getVersion() reads data[1] and data[3]
+    if (frameLen < 4)
+    {
+        return;
+    }
     const MSPframeType_e mspVersion = getVersion(data);
+    // Minimum length to read the payload length from the header: $M<[len] / $M<[0xff][cmd][len lo][len hi] / $X<[flags][func lo][func hi][len lo][len hi]
+    uint32_t minHeaderLen;
+    switch (mspVersion)
+    {
+    case MSP_FRAME_V1: minHeaderLen = 4; break;
+    case MSP_FRAME_V1_JUMBO: minHeaderLen = 7; break;
+    case MSP_FRAME_V2: minHeaderLen = 8; break;
+    default: return;
+    }
+    if (frameLen < minHeaderLen)
+    {
+        return;
+    }
     const uint32_t mspPayloadLen = getPayloadLen(data, mspVersion);
     const uint32_t MSPframeLen = getFrameLen(mspPayloadLen, mspVersion);
-    const uint8_t numChunks = (MSPframeLen / CRSF_MSP_MAX_BYTES_PER_CHUNK) + 1; // count the first chunk!
+    // The whole frame must be present: 3 header bytes + MSPframeLen + 1 checksum byte
+    if (frameLen < MSPframeLen + 4)
+    {
+        return;
+    }
+    const uint32_t numChunks = (MSPframeLen / CRSF_MSP_MAX_BYTES_PER_CHUNK) + 1; // count the first chunk!
     const uint8_t chunkRemainder = MSPframeLen % CRSF_MSP_MAX_BYTES_PER_CHUNK;
 
-    for (uint8_t i = 0; i < numChunks; i++)
+    for (uint32_t i = 0; i < numChunks; i++)
     {
         uint8_t packet[CRSF_MAX_PACKET_LEN] {};
         packet[5] = getVersionBits(mspVersion) | getSeqNumberBits(seqNum++) | getNewFrameBits(i == 0);
