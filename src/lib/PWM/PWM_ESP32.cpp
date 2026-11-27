@@ -50,7 +50,7 @@ static uint32_t mcpwm_frequencies[MCPWM_CHANNELS] = {0};
 static struct
 {
     uint8_t pin;
-    bool inverted;
+    pwm_polarity_t polarity;
 } mcpwm_outputs[MCPWM_CHANNELS];
 #endif
 
@@ -104,8 +104,38 @@ static void ledcAttachPinEx(uint8_t pin, uint8_t chan, ledc_timer_t timer, bool 
     }
 }
 
-pwm_channel_t PWMController::allocate(uint8_t pin, uint32_t frequency, bool inverted)
+#if SOC_MCPWM_SUPPORTED
+static void setMcpwmPolarity(int ch, bool active)
 {
+    const auto polarity = mcpwm_outputs[ch].polarity;
+    if (polarity == PWM_POLARITY_NORMAL)
+    {
+        return;
+    }
+    if (active)
+    {
+        mcpwm_set_duty_type(mcpwm_config[ch].unit, mcpwm_config[ch].timer, mcpwm_config[ch].generator, MCPWM_DUTY_MODE_1);
+    }
+    else if (polarity == PWM_POLARITY_INVERTED)
+    {
+        mcpwm_set_signal_high(mcpwm_config[ch].unit, mcpwm_config[ch].timer, mcpwm_config[ch].generator);
+    }
+    else
+    {
+        // MCPWM_DUTY_MODE_1 holds the pin high at zero duty
+        mcpwm_set_signal_low(mcpwm_config[ch].unit, mcpwm_config[ch].timer, mcpwm_config[ch].generator);
+    }
+}
+#endif
+
+pwm_channel_t PWMController::allocate(uint8_t pin, uint32_t frequency, pwm_polarity_t polarity)
+{
+    const bool inverted = polarity != PWM_POLARITY_NORMAL;
+    if (inverted)
+    {
+        // The level the pin falls back to whenever it is not routed to a PWM peripheral
+        digitalWrite(pin, polarity == PWM_POLARITY_INVERTED ? HIGH : LOW);
+    }
     // 1. see if we can allocate a MCPWM channel at this frequency
 #if SOC_MCPWM_SUPPORTED
     // 1a. see if theres a MCPWM already using this frequency we can piggy-back on
@@ -156,7 +186,15 @@ pwm_channel_t PWMController::allocate(uint8_t pin, uint32_t frequency, bool inve
         mcpwm_init(mcpwm_config[channel].unit, mcpwm_config[channel].timer, &pwm_config);
         mcpwm_frequencies[channel] = frequency;
         mcpwm_outputs[channel].pin = pin;
-        mcpwm_outputs[channel].inverted = inverted;
+        mcpwm_outputs[channel].polarity = polarity;
+        // mcpwm_init resets both generators of the timer, so put both back at their idle level
+        for (int i = channel & ~1; i <= (channel | 1); i++)
+        {
+            if (mcpwm_frequencies[i] != 0)
+            {
+                setMcpwmPolarity(i, false);
+            }
+        }
         return channel | MCPWM_CHANNEL_FLAG;
     }
 #endif
@@ -184,7 +222,7 @@ pwm_channel_t PWMController::allocate(uint8_t pin, uint32_t frequency, bool inve
                 }
                 if (ledcTimerConfigs[timer_idx] == frequency)
                 {
-                    // An inverted channel holds its pin high at zero duty, so it is only attached once it has a pulse to output
+                    // An inverted channel is only attached once it has a pulse to output, until then the pin stays a plain GPIO
                     if (!inverted)
                     {
                         ledcAttachPinEx(pin, ch, (ledc_timer_t)timer_idx, false);
@@ -224,11 +262,11 @@ void PWMController::release(pwm_channel_t channel)
     {
         auto ch = MCPWM_CHANNEL(channel);
         mcpwm_stop(mcpwm_config[ch].unit, mcpwm_config[ch].timer);
-        if (mcpwm_outputs[ch].inverted)
+        if (mcpwm_outputs[ch].polarity != PWM_POLARITY_NORMAL)
         {
-            // A stopped timer most likely leaves an inverted output high, hand the pin back to the GPIO driver which holds it low
+            // Hand the pin back to the GPIO driver, which holds it at the idle level
             pinMatrixOutDetach(mcpwm_outputs[ch].pin, false, false);
-            mcpwm_outputs[ch].inverted = false;
+            mcpwm_outputs[ch].polarity = PWM_POLARITY_NORMAL;
         }
         mcpwm_frequencies[ch] = 0;
     }
@@ -238,25 +276,6 @@ void PWMController::release(pwm_channel_t channel)
         ERRLN("Invalid PWM channel %x", channel);
     }
 }
-
-#if SOC_MCPWM_SUPPORTED
-static void setMcpwmPolarity(int ch, bool active)
-{
-    if (!mcpwm_outputs[ch].inverted)
-    {
-        return;
-    }
-    // MCPWM_DUTY_MODE_1 holds the pin high at zero duty, so the output is forced low while there is no pulse
-    if (active)
-    {
-        mcpwm_set_duty_type(mcpwm_config[ch].unit, mcpwm_config[ch].timer, mcpwm_config[ch].generator, MCPWM_DUTY_MODE_1);
-    }
-    else
-    {
-        mcpwm_set_signal_low(mcpwm_config[ch].unit, mcpwm_config[ch].timer, mcpwm_config[ch].generator);
-    }
-}
-#endif
 
 static void setLedcMapped(pwm_channel_t channel, bool active, uint32_t raw)
 {
