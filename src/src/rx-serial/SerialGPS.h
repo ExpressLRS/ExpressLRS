@@ -134,7 +134,7 @@ private:
     // NMEA 0183 has a maximum 82 byte sentence including the \r\n, UBX-NAV-PVT is 92 bytes.
     // Only one message is ever in flight so both protocols share the buffer.
     uint8_t buffer[92] = {};
-    uint8_t bufferIndex = 0;
+    uint16_t bufferIndex = 0;  // UBX payloads can be longer than 255 bytes (only the first sizeof(buffer) are stored)
 
     gpsRx_e rxState = grIdle;
     uint8_t ubxClass = 0;
