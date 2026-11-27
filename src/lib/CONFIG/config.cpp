@@ -220,6 +220,12 @@ void TxConfig::Load()
     if (nvs_get_u32(handle, "motion", &value) == ESP_OK)
         m_config.motionMode = value;
 
+    // dynamic power floor
+    if (nvs_get_u8(handle, "txdynmin", &value8) == ESP_OK)
+        m_config.minPower = value8;
+    else
+        m_config.minPower = POWERMGNT::getMinPower();
+
     if (version >= 6)
     {
         // dvr (v6)
@@ -276,8 +282,9 @@ void TxConfig::Load()
                 nvs_set_u32(handle, model, Model_to_U32(newModel));
             }
 
-            if (version == TX_CONFIG_VERSION)
+            if (version >= 8)
             {
+                // v8 and v9 model format are identical (minPower is in m_config, not per-model)
                 U32_to_Model(value, &m_config.model_config[i]);
             }
 
@@ -288,6 +295,31 @@ void TxConfig::Load()
             }
         }
     } // for each model
+
+    // Sanitize stale or out-of-range minPower (e.g. a test build wrote an
+    // invalid value, or hardware limits changed between flashes). Persist the
+    // sanitized value so the Lua selector never displays an impossible index.
+    // NOTE: minPower is GLOBAL while GetPower() is per-model. At Load time
+    // the handset has not yet selected the active model, so GetPower() reads
+    // model 0. Clamping against model 0 only would wrongly lower the floor
+    // for a user whose active model has a higher max, or miss the case where
+    // the active model later has a lower max (handled in SetModelId). To
+    // avoid persisting a model-0-biased clamp, only a hardware-level clamp
+    // [MinPower, MaxPower] is persisted here; per-model clamping happens in
+    // SetModelId and at runtime in DynamicPower_GetMinFloor / SetPower.
+    {
+        uint8_t clamped = constrain(m_config.minPower, POWERMGNT::getMinPower(),
+                                    POWERMGNT::getMaxPower());
+        if (clamped != m_config.minPower)
+        {
+            m_config.minPower = clamped;
+            m_modified |= EVENT_CONFIG_MAIN_CHANGED;
+        }
+        // Interim builds (v8 + txdynmin in NVS) may have stored a floor above
+        // the current model's max; that is intentionally left alone here and
+        // handled per-model by SetModelId / dynpower. See UpgradeEepromV8ToV9
+        // comment for the EEPROM-side note.
+    }
 
     if (version != TX_CONFIG_VERSION)
     {
@@ -306,9 +338,23 @@ void TxConfig::Load()
         version = m_config.version & ~CONFIG_MAGIC_MASK;
     DBGLN("Config version %u", version);
 
-    // If version is current, all done
+    // If version is current, sanitize minPower (may be stale/garbage if a test
+    // build or a hardware change invalidated it) and return.
+    // NOTE: hardware-level clamp only. Per-model overflow (a later-active model
+    // with GetPower() < minPower) is handled in SetModelId; clamping here
+    // against model 0 would be biased and is avoided on purpose.
     if (version == TX_CONFIG_VERSION)
+    {
+        uint8_t clamped = constrain(m_config.minPower, POWERMGNT::getMinPower(),
+                                    POWERMGNT::getMaxPower());
+        if (clamped != m_config.minPower)
+        {
+            m_config.minPower = clamped;
+            m_modified |= EVENT_CONFIG_MAIN_CHANGED;
+            Commit();
+        }
         return;
+    }
 
     // Can't upgrade from version <5, or when flashing a previous version, just use defaults.
     if (version < 5 || version > TX_CONFIG_VERSION)
@@ -335,6 +381,12 @@ void TxConfig::Load()
     if (version == 7)
     {
         UpgradeEepromV7ToV8();
+        version = 8;
+    }
+
+    if (version == 8)
+    {
+        UpgradeEepromV8ToV9();
     }
 }
 
@@ -420,6 +472,74 @@ void TxConfig::UpgradeEepromV7ToV8()
     m_config.version = 8U | TX_CONFIG_MAGIC;
     Commit();
 }
+
+void TxConfig::UpgradeEepromV8ToV9()
+{
+    // V9 only adds minPower, which reuses one byte of V8 struct padding
+    // (offset 9: padding in V8 -> minPower in V9). All other fields are at the
+    // same byte offsets, so the EEPROM image is byte-compatible apart from that
+    // single byte. Byte 9 is never read as a saved floor (see NOTE below —
+    // genuine-v8 garbage and interim-build floors are indistinguishable).
+    //
+    // Precondition: m_config already holds defaults (from SetDefaults(false) in
+    // Load), but the per-field copies below overwrite with the actual V8 data.
+    v8_tx_config_t v8Config;
+    m_eeprom.Get(0, v8Config);
+
+    // v8 model_config entries are already in the current (V8) format, so they
+    // can be copied verbatim (v8_tx_config_t models are the same bit layout as
+    // model_config_t in tx_config_t).
+    static_assert(sizeof(v8Config.model_config) == sizeof(m_config.model_config),
+                  "v8/v9 model_config array sizes must match");
+    static_assert(sizeof(v8Config) == sizeof(m_config),
+                  "v8 and v9 tx_config sizes must match (minPower reuses padding)");
+    // offsetof checks for the v9 (current) side — the v8 side is asserted in
+    // config_legacy.h. Together they prove byte-identical layout apart from
+    // byte 9. Both headers must be visible here: config.h defines tx_config_t,
+    // config_legacy.h defines v8_tx_config_t.
+    static_assert(offsetof(tx_config_t, minPower) == 9, "v9 minPower reuses v8 padding byte 9");
+    static_assert(offsetof(tx_config_t, model_config) ==
+                  offsetof(v8_tx_config_t, model_config), "v8/v9 model_config offsets must match");
+    static_assert(offsetof(tx_config_t, fanMode) ==
+                  offsetof(v8_tx_config_t, fanMode), "v8/v9 fanMode offsets must match");
+    static_assert(offsetof(tx_config_t, buttonColors) ==
+                  offsetof(v8_tx_config_t, buttonColors), "v8/v9 buttonColors offsets must match");
+    // Field copies (same members exist in both)
+    m_config.vtxBand = v8Config.vtxBand;
+    m_config.vtxChannel = v8Config.vtxChannel;
+    m_config.vtxPower = v8Config.vtxPower;
+    m_config.vtxPitmode = v8Config.vtxPitmode;
+    m_config.powerFanThreshold = v8Config.powerFanThreshold;
+    m_config.fanMode = v8Config.fanMode;
+    m_config.motionMode = v8Config.motionMode;
+    m_config.dvrStopDelay = v8Config.dvrStopDelay;
+    m_config.backpackDisable = v8Config.backpackDisable;
+    m_config.backpackTlmMode = v8Config.backpackTlmMode;
+    m_config.dvrStartDelay = v8Config.dvrStartDelay;
+    m_config.dvrAux = v8Config.dvrAux;
+    memcpy(m_config.buttonColors, v8Config.buttonColors, sizeof(m_config.buttonColors));
+    // model_config structs have identical bit layouts; copy byte-for-byte
+    memcpy(m_config.model_config, v8Config.model_config, sizeof(m_config.model_config));
+
+    // New in V9: reset to the hardware floor. Genuine v8 EEPROM images hold
+    // undefined padding garbage at byte 9, so it is never read as minPower.
+    //
+    // NOTE: interim pre-release builds on this branch stored a real floor in
+    // that padding byte while labelling the image TX_CONFIG_VERSION 8. Any
+    // such floor is intentionally lost on upgrade. Distinguishing an interim
+    // byte from garbage is impossible (a garbage value in [MinPower,
+    // MaxPower] is indistinguishable from a deliberately saved floor), and
+    // resurrecting garbage could leave Dynamic Power transmitting at an
+    // unintended high minimum until the user notices. Resetting is safe: the
+    // user simply re-sets the floor once, and the per-model clamps in
+    // SetModelId / SetPower / DynamicPower_GetMinFloor are unaffected.
+    m_config.minPower = POWERMGNT::getMinPower();
+
+    m_modified = ALL_CHANGED;
+
+    m_config.version = 9U | TX_CONFIG_MAGIC;
+    Commit();
+}
 #endif
 
 uint32_t
@@ -467,6 +587,7 @@ TxConfig::Commit()
         nvs_set_u8(handle, "dvraux", m_config.dvrAux);
         nvs_set_u8(handle, "dvrstartdelay", m_config.dvrStartDelay);
         nvs_set_u8(handle, "dvrstopdelay", m_config.dvrStopDelay);
+        nvs_set_u8(handle, "txdynmin", m_config.minPower);
     }
     if (m_modified & EVENT_CONFIG_BUTTON_CHANGED)
     {
@@ -512,10 +633,34 @@ TxConfig::SetTlm(uint8_t tlm)
 void
 TxConfig::SetPower(uint8_t power)
 {
+    power = constrain(power, POWERMGNT::getMinPower(), POWERMGNT::getMaxPower());
     if (GetPower() != power)
     {
         m_model->power = power;
         m_modified |= EVENT_CONFIG_MODEL_CHANGED;
+        // Keep the invariant minPower <= power. If max is lowered below the
+        // saved floor, drop the floor to the new max so it persists.
+        if (GetMinPower() > power)
+        {
+            m_config.minPower = power;
+            m_modified |= EVENT_CONFIG_MAIN_CHANGED;
+        }
+    }
+}
+
+void
+TxConfig::SetMinPower(uint8_t minPower)
+{
+    // Clamp to [MinPower, min(GetMaxPower, GetPower)] so minPower never exceeds
+    // the configured maximum for the currently selected model.
+    uint8_t hi = std::min((uint8_t)POWERMGNT::getMaxPower(), GetPower());
+    if (hi < (uint8_t)POWERMGNT::getMinPower())
+        hi = (uint8_t)POWERMGNT::getMinPower();
+    uint8_t clamped = constrain(minPower, POWERMGNT::getMinPower(), hi);
+    if (GetMinPower() != clamped)
+    {
+        m_config.minPower = clamped;
+        m_modified |= EVENT_CONFIG_MAIN_CHANGED;
     }
 }
 
@@ -740,6 +885,7 @@ TxConfig::SetDefaults(bool commit)
 
     m_config.version = TX_CONFIG_VERSION | TX_CONFIG_MAGIC;
     m_config.powerFanThreshold = PWR_250mW;
+    m_config.minPower = POWERMGNT::getMinPower();
     m_modified = ALL_CHANGED;
 
     // Set defaults for button 1
@@ -802,15 +948,35 @@ TxConfig::SetDefaults(bool commit)
 /**
  * Sets ModelId used for subsequent per-model config gets
  * Returns: true if the model has changed
- **/
+ */
 bool
 TxConfig::SetModelId(uint8_t modelId)
 {
+    // NOTE: modelId is assumed < CONFIG_TX_MODEL_CNT by all current callers
+    // (handset sends 0..63; devWIFI's SetModelId(255) is under TARGET_RX,
+    // which has a separate SetModelId). No bounds check is added here to keep
+    // this function's contract identical to before; callers that pass 255 do
+    // so only on the RX side.
     model_config_t *newModel = &m_config.model_config[modelId];
     if (newModel != m_model)
     {
         m_model = newModel;
         m_modelId = modelId;
+
+        // minPower is GLOBAL but GetPower() is per-model. Switching to a
+        // model with a lower max than the saved floor would leave minPower >
+        // GetPower(), which the Lua selector would display as an impossible
+        // index and which Load-time sanitization (done pre-selection against
+        // model 0) cannot catch. Re-clamp the floor against the newly active
+        // model and mark it changed so it persists. This also re-clamps on
+        // every SetDefaults loop iteration (SetModelId(i) in a loop) — harmless
+        // there since minPower == getMinPower() and model power is clamped.
+        if (GetMinPower() > GetPower())
+        {
+            m_config.minPower = GetPower();
+            m_modified |= EVENT_CONFIG_MAIN_CHANGED;
+        }
+
         return true;
     }
 
@@ -828,7 +994,7 @@ void TxConfig::SetUID(uint8_t uid[UID_LEN])
 
 #endif
 
-/////////////////////////////////////////////////////
+////////////////////////////////////////////////////
 
 #if defined(TARGET_RX)
 
@@ -1470,3 +1636,4 @@ void RxConfig::ReturnLoan()
 }
 
 #endif
+

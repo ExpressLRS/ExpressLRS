@@ -15,11 +15,11 @@
 #define STR_LUA_ALLAUX         "AUX1;AUX2;AUX3;AUX4;AUX5;AUX6;AUX7;AUX8;AUX9;AUX10;AUX11;AUX12"
 
 #define STR_LUA_ALLAUX_UPDOWN  "AUX1" LUASYM_ARROW_UP ";AUX1" LUASYM_ARROW_DN ";AUX2" LUASYM_ARROW_UP ";AUX2" LUASYM_ARROW_DN \
-                               ";AUX3" LUASYM_ARROW_UP ";AUX3" LUASYM_ARROW_DN ";AUX4" LUASYM_ARROW_UP ";AUX4" LUASYM_ARROW_DN \
-                               ";AUX5" LUASYM_ARROW_UP ";AUX5" LUASYM_ARROW_DN ";AUX6" LUASYM_ARROW_UP ";AUX6" LUASYM_ARROW_DN \
-                               ";AUX7" LUASYM_ARROW_UP ";AUX7" LUASYM_ARROW_DN ";AUX8" LUASYM_ARROW_UP ";AUX8" LUASYM_ARROW_DN \
-                               ";AUX9" LUASYM_ARROW_UP ";AUX9" LUASYM_ARROW_DN ";AUX10" LUASYM_ARROW_UP ";AUX10" LUASYM_ARROW_DN \
-                               ";AUX11" LUASYM_ARROW_UP ";AUX11" LUASYM_ARROW_DN ";AUX12" LUASYM_ARROW_UP ";AUX12" LUASYM_ARROW_DN
+                                ";AUX3" LUASYM_ARROW_UP ";AUX3" LUASYM_ARROW_DN ";AUX4" LUASYM_ARROW_UP ";AUX4" LUASYM_ARROW_DN \
+                                ";AUX5" LUASYM_ARROW_UP ";AUX5" LUASYM_ARROW_DN ";AUX6" LUASYM_ARROW_UP ";AUX6" LUASYM_ARROW_DN \
+                                ";AUX7" LUASYM_ARROW_UP ";AUX7" LUASYM_ARROW_DN ";AUX8" LUASYM_ARROW_UP ";AUX8" LUASYM_ARROW_DN \
+                                ";AUX9" LUASYM_ARROW_UP ";AUX9" LUASYM_ARROW_DN ";AUX10" LUASYM_ARROW_UP ";AUX10" LUASYM_ARROW_DN \
+                                ";AUX11" LUASYM_ARROW_UP ";AUX11" LUASYM_ARROW_DN ";AUX12" LUASYM_ARROW_UP ";AUX12" LUASYM_ARROW_DN
 
 #if defined(RADIO_SX127X)
 #define STR_LUA_PACKETRATES \
@@ -115,6 +115,13 @@ static folderParameter luaPowerFolder = {
 static selectionParameter luaPower = {
     {"Max Power", CRSF_TEXT_SELECTION},
     0, // value
+    strPowerLevels,
+    "mW"
+};
+
+static selectionParameter luaMinPower = {
+    {"Min Power", CRSF_TEXT_SELECTION},
+    0,
     strPowerLevels,
     "mW"
 };
@@ -345,392 +352,392 @@ void TXModuleEndpoint::devicePingCalled()
 
 void TXModuleEndpoint::setWarningFlag(const warningFlags flag, const bool value)
 {
-  if (value)
-  {
-    luaWarningFlags |= 1 << (uint8_t)flag;
-  }
-  else
-  {
-    luaWarningFlags &= ~(1 << (uint8_t)flag);
-  }
+    if (value)
+    {
+        luaWarningFlags |= 1 << (uint8_t)flag;
+    }
+    else
+    {
+        luaWarningFlags &= ~(1 << (uint8_t)flag);
+    }
 }
 
 void TXModuleEndpoint::sendELRSstatus(const crsf_addr_e origin)
 {
-  constexpr const char *messages[] = { //higher order = higher priority
-    "",                   //status2 = connected status
-    "",                   //status1, reserved for future use
-    "Model Mismatch",     //warning3, model mismatch
-    "[ ! Armed ! ]",      //warning2, AUX1 high / armed
-    "",           //warning1, reserved for future use
-    "Not while connected",  //critical warning3, trying to change a protected value while connected
-    "Baud rate too low",  //critical warning2, changing packet rate and baud rate too low
-    ""   //critical warning1, reserved for future use
-  };
+    constexpr const char *messages[] = { //higher order = higher priority
+      "",                   //status2 = connected status
+      "",                   //status1, reserved for future use
+      "Model Mismatch",     //warning3, model mismatch
+      "[ ! Armed ! ]",      //warning2, AUX1 high / armed
+      "",           //warning1, reserved for future use
+      "Not while connected",  //critical warning3, trying to change a protected value while connected
+      "Baud rate too low",  //critical warning2, changing packet rate and baud rate too low
+      ""   //critical warning1, reserved for future use
+    };
 
-  setWarningFlag(LUA_FLAG_MODEL_MATCH, connectionState == connected && connectionHasModelMatch == false);
-  setWarningFlag(LUA_FLAG_CONNECTED, connectionState == connected);
-  setWarningFlag(LUA_FLAG_ISARMED, isArmed);
+    setWarningFlag(LUA_FLAG_MODEL_MATCH, connectionState == connected && connectionHasModelMatch == false);
+    setWarningFlag(LUA_FLAG_CONNECTED, connectionState == connected);
+    setWarningFlag(LUA_FLAG_ISARMED, isArmed);
 
-  auto warningInfo = "";
+    auto warningInfo = "";
 
-  for (int i = 7; i >= 0; i--)
-  {
-      if (luaWarningFlags & (1 << i))
-      {
-          warningInfo = messages[i];
-          break;
-      }
-  }
-  const uint8_t payloadSize = sizeof(elrsStatusParameter) + strlen(warningInfo) + 1;
-  uint8_t buffer[sizeof(crsf_ext_header_t) + payloadSize + 1];
-  const auto params = (elrsStatusParameter *)&buffer[sizeof(crsf_ext_header_t)];
+    for (int i = 7; i >= 0; i--)
+    {
+        if (luaWarningFlags & (1 << i))
+        {
+            warningInfo = messages[i];
+            break;
+        }
+    }
+    const uint8_t payloadSize = sizeof(elrsStatusParameter) + strlen(warningInfo) + 1;
+    uint8_t buffer[sizeof(crsf_ext_header_t) + payloadSize + 1];
+    const auto params = (elrsStatusParameter *)&buffer[sizeof(crsf_ext_header_t)];
 
-  params->pktsBad = CRSFHandset::BadPktsCountResult;
-  params->pktsGood = htobe16(CRSFHandset::GoodPktsCountResult);
-  params->flags = luaWarningFlags;
-  // to support sending a params.msg, buffer should be extended by the strlen of the message
-  // and copied into params->msg (with trailing null)
-  strcpy(params->msg, warningInfo);
-  crsfRouter.SetExtendedHeaderAndCrc((crsf_ext_header_t *)buffer, CRSF_FRAMETYPE_ELRS_STATUS, CRSF_EXT_FRAME_SIZE(payloadSize), origin, CRSF_ADDRESS_CRSF_TRANSMITTER);
-  crsfRouter.processMessage(nullptr, (crsf_header_t *)buffer);
+    params->pktsBad = CRSFHandset::BadPktsCountResult;
+    params->pktsGood = htobe16(CRSFHandset::GoodPktsCountResult);
+    params->flags = luaWarningFlags;
+    // to support sending a params.msg, buffer should be extended by the strlen of the message
+    // and copied into params->msg (with trailing null)
+    strcpy(params->msg, warningInfo);
+    crsfRouter.SetExtendedHeaderAndCrc((crsf_ext_header_t *)buffer, CRSF_FRAMETYPE_ELRS_STATUS, CRSF_EXT_FRAME_SIZE(payloadSize), origin, CRSF_ADDRESS_CRSF_TRANSMITTER);
+    crsfRouter.processMessage(nullptr, (crsf_header_t *)buffer);
 }
 
 void TXModuleEndpoint::updateModelID() {
-  itoa(modelId, modelMatchUnit+6, 10);
-  strcat(modelMatchUnit, ")");
+    itoa(modelId, modelMatchUnit+6, 10);
+    strcat(modelMatchUnit, ")");
 }
 
 void TXModuleEndpoint::updateTlmBandwidth()
 {
-  const auto eRatio = (expresslrs_tlm_ratio_e)config.GetTlm();
-  // TLM_RATIO_STD / TLM_RATIO_DISARMED
-  if (eRatio == TLM_RATIO_STD || eRatio == TLM_RATIO_DISARMED)
-  {
-    // For Standard ratio, display the ratio instead of bps
-    strcpy(tlmBandwidth, " (1:");
-    const uint8_t ratioDiv = TLMratioEnumToValue(ExpressLRS_currAirRate_Modparams->TLMinterval);
-    itoa(ratioDiv, &tlmBandwidth[4], 10);
-    strcat(tlmBandwidth, ")");
-  }
-
-  // TLM_RATIO_NO_TLM
-  else if (eRatio == TLM_RATIO_NO_TLM)
-  {
-    tlmBandwidth[0] = '\0';
-  }
-
-  // All normal ratios
-  else
-  {
-    tlmBandwidth[0] = ' ';
-
-    const uint16_t hz = 1000000 / ExpressLRS_currAirRate_Modparams->interval;
-    const uint8_t ratiodiv = TLMratioEnumToValue(eRatio);
-    const uint8_t burst = TLMBurstMaxForRateRatio(hz, ratiodiv);
-    const uint8_t bytesPerCall = OtaIsFullRes ? ELRS8_DATA_DL_BYTES_PER_CALL : ELRS4_DATA_DL_BYTES_PER_CALL;
-    uint32_t bandwidthValue = bytesPerCall * 8U * burst * hz / ratiodiv / (burst + 1);
-    if (OtaIsFullRes)
+    const auto eRatio = (expresslrs_tlm_ratio_e)config.GetTlm();
+    // TLM_RATIO_STD / TLM_RATIO_DISARMED
+    if (eRatio == TLM_RATIO_STD || eRatio == TLM_RATIO_DISARMED)
     {
-      // Due to fullres also packing telemetry into the LinkStats packet, there is at least
-      // N bytes more data for every rate except 100Hz 1:128, and 2*N bytes more for many
-      // rates. The calculation is a more complex though, so just approximate some of the
-      // extra bandwidth
-      bandwidthValue += 8U * (ELRS8_DATA_DL_BYTES_PER_CALL - sizeof(OTA_LinkStats_s));
+        // For Standard ratio, display the ratio instead of bps
+        strcpy(tlmBandwidth, " (1:");
+        const uint8_t ratioDiv = TLMratioEnumToValue(ExpressLRS_currAirRate_Modparams->TLMinterval);
+        itoa(ratioDiv, &tlmBandwidth[4], 10);
+        strcat(tlmBandwidth, ")");
     }
 
-    utoa(bandwidthValue, &tlmBandwidth[2], 10);
-    strcat(tlmBandwidth, "bps)");
-  }
+    // TLM_RATIO_NO_TLM
+    else if (eRatio == TLM_RATIO_NO_TLM)
+    {
+        tlmBandwidth[0] = '\0';
+    }
+
+    // All normal ratios
+    else
+    {
+        tlmBandwidth[0] = ' ';
+
+        const uint16_t hz = 1000000 / ExpressLRS_currAirRate_Modparams->interval;
+        const uint8_t ratiodiv = TLMratioEnumToValue(eRatio);
+        const uint8_t burst = TLMBurstMaxForRateRatio(hz, ratiodiv);
+        const uint8_t bytesPerCall = OtaIsFullRes ? ELRS8_DATA_DL_BYTES_PER_CALL : ELRS4_DATA_DL_BYTES_PER_CALL;
+        uint32_t bandwidthValue = bytesPerCall * 8U * burst * hz / ratiodiv / (burst + 1);
+        if (OtaIsFullRes)
+        {
+            // Due to fullres also packing telemetry into the LinkStats packet, there is at least
+            // N bytes more data for every rate except 100Hz 1:128, and 2*N bytes more for many
+            // rates. The calculation is a more complex though, so just approximate some of the
+            // extra bandwidth
+            bandwidthValue += 8U * (ELRS8_DATA_DL_BYTES_PER_CALL - sizeof(OTA_LinkStats_s));
+        }
+
+        utoa(bandwidthValue, &tlmBandwidth[2], 10);
+        strcat(tlmBandwidth, "bps)");
+    }
 }
 
 void TXModuleEndpoint::updateBackpackOpts()
 {
-  const bool isBackpackEnabled = config.GetBackpackDisable() == false;
+    const bool isBackpackEnabled = config.GetBackpackDisable() == false;
 
-  LUA_FIELD_VISIBLE(luaDvrAux, isBackpackEnabled);
-  LUA_FIELD_VISIBLE(luaDvrStartDelay, isBackpackEnabled);
-  LUA_FIELD_VISIBLE(luaDvrStopDelay, isBackpackEnabled);
-  LUA_FIELD_VISIBLE(luaHeadTrackingEnableChannel, isBackpackEnabled);
-  LUA_FIELD_VISIBLE(luaHeadTrackingStartChannel, isBackpackEnabled);
-  LUA_FIELD_VISIBLE(luaBackpackTelemetry, isBackpackEnabled);
-  LUA_FIELD_VISIBLE(luaBackpackVersion, isBackpackEnabled);
+    LUA_FIELD_VISIBLE(luaDvrAux, isBackpackEnabled);
+    LUA_FIELD_VISIBLE(luaDvrStartDelay, isBackpackEnabled);
+    LUA_FIELD_VISIBLE(luaDvrStopDelay, isBackpackEnabled);
+    LUA_FIELD_VISIBLE(luaHeadTrackingEnableChannel, isBackpackEnabled);
+    LUA_FIELD_VISIBLE(luaHeadTrackingStartChannel, isBackpackEnabled);
+    LUA_FIELD_VISIBLE(luaBackpackTelemetry, isBackpackEnabled);
+    LUA_FIELD_VISIBLE(luaBackpackVersion, isBackpackEnabled);
 }
 
 void TXModuleEndpoint::updateVtxAdminOpts()
 {
-  const bool isVtxAdminEnabled = config.GetVtxBand() != 0;
+    const bool isVtxAdminEnabled = config.GetVtxBand() != 0;
 
-  LUA_FIELD_VISIBLE(luaVtxChannel, isVtxAdminEnabled);
-  LUA_FIELD_VISIBLE(luaVtxPwr, isVtxAdminEnabled);
-  LUA_FIELD_VISIBLE(luaVtxPit, isVtxAdminEnabled);
-  // Pit mode can only be sent as part of the power byte
-  LUA_FIELD_VISIBLE(luaVtxPit, isVtxAdminEnabled && config.GetVtxPower() != 0);
-  // Can't toggle a COMMAND type, the lua will not refresh commands
-  //LUA_FIELD_VISIBLE(luaVtxSend, isVtxAdminEnabled);
+    LUA_FIELD_VISIBLE(luaVtxChannel, isVtxAdminEnabled);
+    LUA_FIELD_VISIBLE(luaVtxPwr, isVtxAdminEnabled);
+    LUA_FIELD_VISIBLE(luaVtxPit, isVtxAdminEnabled);
+    // Pit mode can only be sent as part of the power byte
+    LUA_FIELD_VISIBLE(luaVtxPit, isVtxAdminEnabled && config.GetVtxPower() != 0);
+    // Can't toggle a COMMAND type, the lua will not refresh commands
+    //LUA_FIELD_VISIBLE(luaVtxSend, isVtxAdminEnabled);
 }
 
 static void setBleJoystickMode()
 {
-  setConnectionState(bleJoystick);
+    setConnectionState(bleJoystick);
 }
 
 void TXModuleEndpoint::handleWifiBle(propertiesCommon *item, uint8_t arg)
 {
-  commandParameter *cmd = (commandParameter *)item;
-  void (*setTargetState)();
-  connectionState_e targetState;
-  const char *textConfirm;
-  const char *textRunning;
-  if ((void *)item == (void *)&luaWebUpdate)
-  {
-    setTargetState = &setWifiUpdateMode;
-    textConfirm = "Enter WiFi Update?";
-    textRunning = "WiFi Running...";
-    targetState = wifiUpdate;
-  }
-  else
-  {
-    setTargetState = &setBleJoystickMode;
-    textConfirm = "Start BLE Joystick?";
-    textRunning = "Joystick Running...";
-    targetState = bleJoystick;
-  }
+    commandParameter *cmd = (commandParameter *)item;
+    void (*setTargetState)();
+    connectionState_e targetState;
+    const char *textConfirm;
+    const char *textRunning;
+    if ((void *)item == (void *)&luaWebUpdate)
+    {
+        setTargetState = &setWifiUpdateMode;
+        textConfirm = "Enter WiFi Update?";
+        textRunning = "WiFi Running...";
+        targetState = wifiUpdate;
+    }
+    else
+    {
+        setTargetState = &setBleJoystickMode;
+        textConfirm = "Start BLE Joystick?";
+        textRunning = "Joystick Running...";
+        targetState = bleJoystick;
+    }
 
-  switch ((commandStep_e)arg)
-  {
-    case lcsClick:
-      if (connectionState == connected)
-      {
-        sendCommandResponse(cmd, lcsAskConfirm, textConfirm);
-        return;
-      }
-      // fallthrough (clicking while not connected goes right to exectute)
+    switch ((commandStep_e)arg)
+    {
+        case lcsClick:
+            if (connectionState == connected)
+            {
+                sendCommandResponse(cmd, lcsAskConfirm, textConfirm);
+                return;
+            }
+            // fallthrough (clicking while not connected goes right to exectute)
 
-    case lcsConfirmed:
-      sendCommandResponse(cmd, lcsExecuting, textRunning);
-      setTargetState();
-      break;
+        case lcsConfirmed:
+            sendCommandResponse(cmd, lcsExecuting, textRunning);
+            setTargetState();
+            break;
 
-    case lcsCancel:
-      sendCommandResponse(cmd, lcsIdle, STR_EMPTYSPACE);
-      if (connectionState == targetState)
-      {
-        scheduleRebootTime(400);
-      }
-      break;
+        case lcsCancel:
+            sendCommandResponse(cmd, lcsIdle, STR_EMPTYSPACE);
+            if (connectionState == targetState)
+            {
+                scheduleRebootTime(400);
+            }
+            break;
 
-    default: // LUACMDSTEP_NONE on load, LUACMDSTEP_EXECUTING (our lua) or LUACMDSTEP_QUERY (Crossfire Config)
-      sendCommandResponse(cmd, cmd->step, cmd->info);
-      break;
-  }
+        default: // LUACMDSTEP_NONE on load, LUACMDSTEP_EXECUTING (our lua) or LUACMDSTEP_QUERY (Crossfire Config)
+            sendCommandResponse(cmd, cmd->step, cmd->info);
+            break;
+    }
 }
 
 void TXModuleEndpoint::handleSimpleSendCmd(propertiesCommon *item, uint8_t arg)
 {
-  const char *msg = "Sending...";
-  static uint32_t lastLcsPoll;
-  if (arg < lcsCancel)
-  {
-    lastLcsPoll = millis();
-    if ((void *)item == (void *)&luaBind)
+    const char *msg = "Sending...";
+    static uint32_t lastLcsPoll;
+    if (arg < lcsCancel)
     {
-      msg = "Binding...";
-      EnterBindingModeSafely();
-    }
-    else if ((void *)item == (void *)&luaVtxSend)
+        lastLcsPoll = millis();
+        if ((void *)item == (void *)&luaBind)
+        {
+            msg = "Binding...";
+            EnterBindingModeSafely();
+        }
+        else if ((void *)item == (void *)&luaVtxSend)
+        {
+            // If VtxAdmin enabled then send, otherwise show brief "Not enabled" message
+            if (config.GetVtxBand() != 0)
+                VtxTriggerSend();
+            else
+                msg = "Not enabled";
+        }
+        else if ((void *)item == (void *)&luaRxWebUpdate)
+        {
+            RxWiFiReadyToSend = true;
+        }
+        else if ((void *)item == (void *)&luaTxBackpackUpdate && OPT_USE_TX_BACKPACK)
+        {
+            TxBackpackWiFiReadyToSend = true;
+        }
+        else if ((void *)item == (void *)&luaVRxBackpackUpdate && OPT_USE_TX_BACKPACK)
+        {
+            VRxBackpackWiFiReadyToSend = true;
+        }
+        sendCommandResponse((commandParameter *)item, lcsExecuting, msg);
+    } /* if doExecute */
+    else if(arg == lcsCancel || ((millis() - lastLcsPoll)> 2000))
     {
-      // If VtxAdmin enabled then send, otherwise show brief "Not enabled" message
-      if (config.GetVtxBand() != 0)
-        VtxTriggerSend();
-      else
-        msg = "Not enabled";
+        sendCommandResponse((commandParameter *)item, lcsIdle, STR_EMPTYSPACE);
     }
-    else if ((void *)item == (void *)&luaRxWebUpdate)
-    {
-      RxWiFiReadyToSend = true;
-    }
-    else if ((void *)item == (void *)&luaTxBackpackUpdate && OPT_USE_TX_BACKPACK)
-    {
-      TxBackpackWiFiReadyToSend = true;
-    }
-    else if ((void *)item == (void *)&luaVRxBackpackUpdate && OPT_USE_TX_BACKPACK)
-    {
-      VRxBackpackWiFiReadyToSend = true;
-    }
-    sendCommandResponse((commandParameter *)item, lcsExecuting, msg);
-  } /* if doExecute */
-  else if(arg == lcsCancel || ((millis() - lastLcsPoll)> 2000))
-  {
-    sendCommandResponse((commandParameter *)item, lcsIdle, STR_EMPTYSPACE);
-  }
 }
 
 static void updateFolderName_TxPower()
 {
-  const uint8_t txPwrDyn = config.GetDynamicPower() ? config.GetBoostChannel() + 1 : 0;
-  uint8_t pwrFolderLabelOffset = 10; // start writing after "TX Power ("
+    const uint8_t txPwrDyn = config.GetDynamicPower() ? config.GetBoostChannel() + 1 : 0;
+    uint8_t pwrFolderLabelOffset = 10; // start writing after "TX Power ("
 
-  // Power Level
-  pwrFolderLabelOffset += findSelectionLabel(&luaPower, &pwrFolderDynamicName[pwrFolderLabelOffset], config.GetPower() - MinPower);
+    // Power Level
+    pwrFolderLabelOffset += findSelectionLabel(&luaPower, &pwrFolderDynamicName[pwrFolderLabelOffset], config.GetPower() - MinPower);
 
-  // Dynamic Power
-  if (txPwrDyn)
-  {
-    pwrFolderDynamicName[pwrFolderLabelOffset++] = folderNameSeparator[0];
-    pwrFolderLabelOffset += findSelectionLabel(&luaDynamicPower, &pwrFolderDynamicName[pwrFolderLabelOffset], txPwrDyn);
-  }
+    // Dynamic Power
+    if (txPwrDyn)
+    {
+        pwrFolderDynamicName[pwrFolderLabelOffset++] = folderNameSeparator[0];
+        pwrFolderLabelOffset += findSelectionLabel(&luaDynamicPower, &pwrFolderDynamicName[pwrFolderLabelOffset], txPwrDyn);
+    }
 
-  pwrFolderDynamicName[pwrFolderLabelOffset++] = ')';
-  pwrFolderDynamicName[pwrFolderLabelOffset] = '\0';
+    pwrFolderDynamicName[pwrFolderLabelOffset++] = ')';
+    pwrFolderDynamicName[pwrFolderLabelOffset] = '\0';
 }
 
 static void updateFolderName_VtxAdmin()
 {
-  const uint8_t vtxBand = config.GetVtxBand();
-  if (vtxBand)
-  {
-    luaVtxFolder.dyn_name = vtxFolderDynamicName;
-    uint8_t vtxFolderLabelOffset = 11; // start writing after "VTX Admin ("
-
-    // Band
-    vtxFolderLabelOffset += findSelectionLabel(&luaVtxBand, &vtxFolderDynamicName[vtxFolderLabelOffset], vtxBand);
-    vtxFolderDynamicName[vtxFolderLabelOffset++] = folderNameSeparator[1];
-
-    // Channel
-    vtxFolderDynamicName[vtxFolderLabelOffset++] = '1' + config.GetVtxChannel();
-
-    // VTX Power
-    const uint8_t vtxPwr = config.GetVtxPower();
-    //if power is no-change (-), don't show, also hide pitmode
-    if (vtxPwr)
+    const uint8_t vtxBand = config.GetVtxBand();
+    if (vtxBand)
     {
-      vtxFolderDynamicName[vtxFolderLabelOffset++] = folderNameSeparator[1];
-      vtxFolderLabelOffset += findSelectionLabel(&luaVtxPwr, &vtxFolderDynamicName[vtxFolderLabelOffset], vtxPwr);
+        luaVtxFolder.dyn_name = vtxFolderDynamicName;
+        uint8_t vtxFolderLabelOffset = 11; // start writing after "VTX Admin ("
 
-      // Pit Mode
-      const uint8_t vtxPit = config.GetVtxPitmode();
-      //if pitmode is off, don't show
-      //show pitmode AuxSwitch or show P if not OFF
-      if (vtxPit != 0)
-      {
-        if (vtxPit != 1)
+        // Band
+        vtxFolderLabelOffset += findSelectionLabel(&luaVtxBand, &vtxFolderDynamicName[vtxFolderLabelOffset], vtxBand);
+        vtxFolderDynamicName[vtxFolderLabelOffset++] = folderNameSeparator[1];
+
+        // Channel
+        vtxFolderDynamicName[vtxFolderLabelOffset++] = '1' + config.GetVtxChannel();
+
+        // VTX Power
+        const uint8_t vtxPwr = config.GetVtxPower();
+        //if power is no-change (-), don't show, also hide pitmode
+        if (vtxPwr)
         {
-          vtxFolderDynamicName[vtxFolderLabelOffset++] = folderNameSeparator[1];
-          vtxFolderLabelOffset += findSelectionLabel(&luaVtxPit, &vtxFolderDynamicName[vtxFolderLabelOffset], vtxPit);
+            vtxFolderDynamicName[vtxFolderLabelOffset++] = folderNameSeparator[1];
+            vtxFolderLabelOffset += findSelectionLabel(&luaVtxPwr, &vtxFolderDynamicName[vtxFolderLabelOffset], vtxPwr);
+
+            // Pit Mode
+            const uint8_t vtxPit = config.GetVtxPitmode();
+            //if pitmode is off, don't show
+            //show pitmode AuxSwitch or show P if not OFF
+            if (vtxPit != 0)
+            {
+                if (vtxPit != 1)
+                {
+                    vtxFolderDynamicName[vtxFolderLabelOffset++] = folderNameSeparator[1];
+                    vtxFolderLabelOffset += findSelectionLabel(&luaVtxPit, &vtxFolderDynamicName[vtxFolderLabelOffset], vtxPit);
+                }
+                else
+                {
+                    vtxFolderDynamicName[vtxFolderLabelOffset++] = folderNameSeparator[1];
+                    vtxFolderDynamicName[vtxFolderLabelOffset++] = 'P';
+                }
+            }
         }
-        else
-        {
-          vtxFolderDynamicName[vtxFolderLabelOffset++] = folderNameSeparator[1];
-          vtxFolderDynamicName[vtxFolderLabelOffset++] = 'P';
-        }
-      }
+        vtxFolderDynamicName[vtxFolderLabelOffset++] = ')';
+        vtxFolderDynamicName[vtxFolderLabelOffset] = '\0';
     }
-    vtxFolderDynamicName[vtxFolderLabelOffset++] = ')';
-    vtxFolderDynamicName[vtxFolderLabelOffset] = '\0';
-  }
-  else
-  {
-    //don't show vtx settings if band is OFF
-    luaVtxFolder.dyn_name = NULL;
-  }
+    else
+    {
+        //don't show vtx settings if band is OFF
+        luaVtxFolder.dyn_name = NULL;
+    }
 }
 
 void TXModuleEndpoint::SetPacketRateIdx(uint8_t idx, bool forceChange)
 {
-  if (idx >= RATE_MAX)
-    return;
+    if (idx >= RATE_MAX)
+        return;
 
-  uint8_t actualRate = adjustPacketRateForBaud(idx);
-  // No change, don't do anything
-  if (actualRate == ExpressLRS_currAirRate_Modparams->index)
-    return;
+    uint8_t actualRate = adjustPacketRateForBaud(idx);
+    // No change, don't do anything
+    if (actualRate == ExpressLRS_currAirRate_Modparams->index)
+        return;
 
-  const auto newModParams = get_elrs_airRateConfig(actualRate);
-  uint8_t newSwitchMode = adjustSwitchModeForAirRate((OtaSwitchMode_e)config.GetSwitchMode(), newModParams->PayloadLength);
-  // Force Gemini when using dual band modes.
-  uint8_t newAntennaMode = RadioBandMod::isBDUAL(newModParams->radio_type) ? TX_RADIO_MODE_GEMINI : config.GetAntennaMode();
-  // If the switch mode is going to change, block the change while connected
-  bool isDisconnected = connectionState == disconnected;
-  // Don't allow the switch mode to change if the TX is in mavlink mode
-  // Wide switch mode is not compatible with mavlink, and the switch mode is
-  // autoconfigured when entering mavlink mode
-  bool isMavlinkMode = config.GetLinkMode() == TX_MAVLINK_MODE;
-  if (forceChange || (newSwitchMode == OtaSwitchModeCurrent) || (isDisconnected && !isMavlinkMode))
-  {
-    // This must be deferred because this can be called from any thread.
-    // Deferring it forces it to run in the main loop, which otherwise
-    // would cause a race condition with the syncspam needing to get out
-    // before the rate change
-    deferExecutionMillis(10, [actualRate, newSwitchMode, newAntennaMode]() {
-      config.SetRate(actualRate);
-      config.SetSwitchMode(newSwitchMode);
-      config.SetAntennaMode(newAntennaMode);
-      SetSyncSpam();
-    });
-    setWarningFlag(LUA_FLAG_ERROR_BAUDRATE, actualRate != idx);
-    // No need to set OtaSerializers, the rate is changing so all of that will be reconfigured
-  } else {
-    setWarningFlag(LUA_FLAG_ERROR_CONNECTED, true);
-  }
+    const auto newModParams = get_elrs_airRateConfig(actualRate);
+    uint8_t newSwitchMode = adjustSwitchModeForAirRate((OtaSwitchMode_e)config.GetSwitchMode(), newModParams->PayloadLength);
+    // Force Gemini when using dual band modes.
+    uint8_t newAntennaMode = RadioBandMod::isBDUAL(newModParams->radio_type) ? TX_RADIO_MODE_GEMINI : config.GetAntennaMode();
+    // If the switch mode is going to change, block the change while connected
+    bool isDisconnected = connectionState == disconnected;
+    // Don't allow the switch mode to change if the TX is in mavlink mode
+    // Wide switch mode is not compatible with mavlink, and the switch mode is
+    // autoconfigured when entering mavlink mode
+    bool isMavlinkMode = config.GetLinkMode() == TX_MAVLINK_MODE;
+    if (forceChange || (newSwitchMode == OtaSwitchModeCurrent) || (isDisconnected && !isMavlinkMode))
+    {
+        // This must be deferred because this can be called from any thread.
+        // Deferring it forces it to run in the main loop, which otherwise
+        // would cause a race condition with the syncspam needing to get out
+        // before the rate change
+        deferExecutionMillis(10, [actualRate, newSwitchMode, newAntennaMode]() {
+            config.SetRate(actualRate);
+            config.SetSwitchMode(newSwitchMode);
+            config.SetAntennaMode(newAntennaMode);
+            SetSyncSpam();
+        });
+        setWarningFlag(LUA_FLAG_ERROR_BAUDRATE, actualRate != idx);
+        // No need to set OtaSerializers, the rate is changing so all of that will be reconfigured
+    } else {
+        setWarningFlag(LUA_FLAG_ERROR_CONNECTED, true);
+    }
 }
 
 void TXModuleEndpoint::SetSwitchMode(uint8_t idx)
 {
-  // Only allow changing switch mode when disconnected since we need to guarantee
-  // the pack and unpack functions are matched
-  bool isDisconnected = connectionState == disconnected;
-  // Don't allow the switch mode to change if the TX is in mavlink mode
-  // Wide switchmode is not compatible with mavlink, and the switchmode is
-  // auto-configured when entering mavlink mode
-  bool isMavlinkMode = config.GetLinkMode() == TX_MAVLINK_MODE;
-  if (isDisconnected && !isMavlinkMode)
-  {
-    config.SetSwitchMode(idx);
-    OtaUpdateSerializers((OtaSwitchMode_e)idx, ExpressLRS_currAirRate_Modparams->PayloadLength);
-  }
-  else if (!isMavlinkMode) // No need to display warning as no switch change can be made while in Mavlink mode.
-  {
-    setWarningFlag(LUA_FLAG_ERROR_CONNECTED, true);
-  }
+    // Only allow changing switch mode when disconnected since we need to guarantee
+    // the pack and unpack functions are matched
+    bool isDisconnected = connectionState == disconnected;
+    // Don't allow the switch mode to change if the TX is in mavlink mode
+    // Wide switchmode is not compatible with mavlink, and the switchmode is
+    // auto-configured when entering mavlink mode
+    bool isMavlinkMode = config.GetLinkMode() == TX_MAVLINK_MODE;
+    if (isDisconnected && !isMavlinkMode)
+    {
+        config.SetSwitchMode(idx);
+        OtaUpdateSerializers((OtaSwitchMode_e)idx, ExpressLRS_currAirRate_Modparams->PayloadLength);
+    }
+    else if (!isMavlinkMode) // No need to display warning as no switch change can be made while in Mavlink mode.
+    {
+        setWarningFlag(LUA_FLAG_ERROR_CONNECTED, true);
+    }
 }
 
 void TXModuleEndpoint::SetAntennaMode(uint8_t idx)
 {
-  // Force Gemini when using dual band modes.
-  uint8_t newAntennaMode = RadioBandMod::isBDUAL(get_elrs_airRateConfig(config.GetRate())->radio_type) ? TX_RADIO_MODE_GEMINI : idx;
-  config.SetAntennaMode(newAntennaMode);
+    // Force Gemini when using dual band modes.
+    uint8_t newAntennaMode = RadioBandMod::isBDUAL(get_elrs_airRateConfig(config.GetRate())->radio_type) ? TX_RADIO_MODE_GEMINI : idx;
+    config.SetAntennaMode(newAntennaMode);
 }
 
 void TXModuleEndpoint::SetTlmRatio(uint8_t idx)
 {
-  const auto eRatio = (expresslrs_tlm_ratio_e)idx;
-  if (eRatio <= TLM_RATIO_DISARMED)
-  {
-    const bool isMavlinkMode = config.GetLinkMode() == TX_MAVLINK_MODE;
-    // Don't allow TLM ratio changes if using AIRPORT or Mavlink
-    if (!firmwareOptions.is_airport && !isMavlinkMode)
+    const auto eRatio = (expresslrs_tlm_ratio_e)idx;
+    if (eRatio <= TLM_RATIO_DISARMED)
     {
-      config.SetTlm(eRatio);
-      // Update the telemetry ratio immediately, rather than wait the agonizing 5 seconds for the next sync
-      SetSyncSpam();
+        const bool isMavlinkMode = config.GetLinkMode() == TX_MAVLINK_MODE;
+        // Don't allow TLM ratio changes if using AIRPORT or Mavlink
+        if (!firmwareOptions.is_airport && !isMavlinkMode)
+        {
+            config.SetTlm(eRatio);
+            // Update the telemetry ratio immediately, rather than wait the agonizing 5 seconds for the next sync
+            SetSyncSpam();
+        }
     }
-  }
 }
 
 void TXModuleEndpoint::SetPowerMax(uint8_t idx)
 {
-  config.SetPower(idx);
-  if (!config.IsModified())
-  {
-      ResetPower();
-  }
+    config.SetPower(idx);
+    if (!config.IsModified())
+    {
+        ResetPower();
+    }
 }
 
 void TXModuleEndpoint::SetDynamicPower(uint8_t idx)
 {
-  config.SetDynamicPower(idx > 0);
-  config.SetBoostChannel((idx - 1) > 0 ? idx - 1 : 0);
+    config.SetDynamicPower(idx > 0);
+    config.SetBoostChannel((idx - 1) > 0 ? idx - 1 : 0);
 }
 
 /***
@@ -738,12 +745,13 @@ void TXModuleEndpoint::SetDynamicPower(uint8_t idx)
  ***/
 void TXModuleEndpoint::updateFolderNamesAndVisibility()
 {
-  updateFolderName_TxPower();
-  updateFolderName_VtxAdmin();
+    updateFolderName_TxPower();
+    updateFolderName_VtxAdmin();
 
-  updateTlmBandwidth();
-  updateBackpackOpts();
-  updateVtxAdminOpts();
+    updateTlmBandwidth();
+    updateBackpackOpts();
+    updateVtxAdminOpts();
+    LUA_FIELD_VISIBLE(luaMinPower, config.GetDynamicPower());
 }
 
 static void recalculatePacketRateOptions(int minInterval)
@@ -811,6 +819,7 @@ void TXModuleEndpoint::registerParameters()
         strlcat(luastrRFBands, ";X-Band", sizeof(luastrRFBands));
       }
 
+      // Only double LR1121 supports Dual Band modes
       registerParameter(&luaRFBand, [this](propertiesCommon *item, uint8_t arg) {
         if (arg != currentRfBand)
         {
@@ -885,6 +894,15 @@ void TXModuleEndpoint::registerParameters()
     filterOptions(&luaPower, POWERMGNT::getMinPower(), POWERMGNT::getMaxPower(), strPowerLevels);
     registerParameter(&luaPower, [this](propertiesCommon *item, uint8_t arg) {
       SetPowerMax(constrain(arg + POWERMGNT::getMinPower(), POWERMGNT::getMinPower(), POWERMGNT::getMaxPower()));
+    }, luaPowerFolder.common.id);
+    filterOptions(&luaMinPower, POWERMGNT::getMinPower(), POWERMGNT::getMaxPower(), strPowerLevels);
+    registerParameter(&luaMinPower, [this](propertiesCommon *item, uint8_t arg) {
+      uint8_t selected = constrain(arg + POWERMGNT::getMinPower(), POWERMGNT::getMinPower(), POWERMGNT::getMaxPower());
+      if (selected > config.GetPower())
+      {
+        selected = config.GetPower();
+      }
+      config.SetMinPower(selected);
     }, luaPowerFolder.common.id);
     registerParameter(&luaDynamicPower, [this](propertiesCommon *item, uint8_t arg) {
       SetDynamicPower(arg);
@@ -1021,6 +1039,7 @@ void TXModuleEndpoint::updateParameters()
   updateModelID();
   setTextSelectionValue(&luaModelMatch, (uint8_t)config.GetModelMatch());
   setTextSelectionValue(&luaPower, config.GetPower() - MinPower);
+  setTextSelectionValue(&luaMinPower, config.GetMinPower() - MinPower);
   if (GPIO_PIN_FAN_EN != UNDEF_PIN || GPIO_PIN_FAN_PWM != UNDEF_PIN)
   {
     setTextSelectionValue(&luaFanThreshold, config.GetPowerFanThreshold());
@@ -1046,3 +1065,4 @@ void TXModuleEndpoint::updateParameters()
   }
   updateFolderNamesAndVisibility();
 }
+

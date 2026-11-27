@@ -17,6 +17,7 @@
  ***/
 
 #include <inttypes.h>
+#include <stddef.h>
 
 /***
  * TX config
@@ -96,6 +97,72 @@ typedef struct {
     uint8_t         dvrStartDelay:3;
     uint8_t         dvrStopDelay:3;
 } v7_tx_config_t;
+
+// V8 = V7 upgradable to tx_config_t (current) - tx_config_t without minPower,
+// but with same layout for all fields except byte at offset 9 (padding -> minPower).
+// model_config_t here is the current TX model struct (post V7->V8 conversion).
+// Used only for the V8 -> V9 EEPROM upgrade path on ESP8266.
+//
+// NOTE: interim pre-release builds on this branch (d13aafbe and
+// descendants) stored a real minPower floor in this very padding byte
+// while still labelling the image TX_CONFIG_VERSION 8. On upgrade,
+// UpgradeEepromV8ToV9 does NOT preserve it: genuine-v8 garbage and an
+// interim floor are indistinguishable, and resurrecting garbage could
+// leave Dynamic Power at an unintended high minimum. The floor is reset
+// to getMinPower(); interim users simply re-set it once. See the comment
+// in UpgradeEepromV8ToV9.
+typedef struct {
+    uint32_t        version;
+    uint8_t         vtxBand;
+    uint8_t         vtxChannel;
+    uint8_t         vtxPower;
+    uint8_t         vtxPitmode;
+    uint8_t         powerFanThreshold:4;
+    // offset 9 in V8 is 3 bytes of struct padding (byte 9, 10, 11) before model_config at offset 12.
+    // In V9 byte 9 becomes minPower; bytes 10-11 remain padding. Byte 9 is
+    // never read as a saved floor during upgrade (undefined padding garbage
+    // in genuine v8; interim-build floors intentionally discarded — see
+    // NOTE above and UpgradeEepromV8ToV9).
+    uint8_t         _pad9_11[3];
+    struct {
+        uint32_t    rate:5, tlm:4, power:3, switchMode:2, boostChannel:3,
+                    dynamicPower:1, modelMatch:1, txAntenna:2,
+                    ptrStartChannel:4, ptrEnableChannel:5, linkMode:2;
+    } model_config[64];
+    uint8_t         fanMode;
+    uint8_t         motionMode:2, dvrStopDelay:3, backpackDisable:1, backpackTlmMode:2;
+    uint8_t         dvrStartDelay:3, dvrAux:5;
+    // Explicit padding to match the 4-byte alignment of tx_button_color_t
+    // (union containing uint32 raw) in tx_config_t: buttonColors must start at
+    // offset 272, not 271. Without this, field offsets would be wrong.
+    uint8_t         _pad271;
+    union {
+        struct {
+            uint8_t     color;
+            struct { uint8_t pressType:1, count:3, action:4; } actions[2];
+            uint8_t     unused;
+        } val;
+        uint32_t raw;
+    } buttonColors[2];
+} v8_tx_config_t;
+
+// Layout assertions: v8 and v9 must be byte-identical apart from byte 9 (see
+// comment in UpgradeEepromV8ToV9 and the note on v8_tx_config_t). These
+// offsetof checks run at compile time on the build host compiler; they
+// verify the intentional layout assumption that the migration depends on.
+// If a future field edit moves offsets, these will fail loudly instead of
+// silently corrupting the EEPROM image on upgrade.
+//
+// model_config_t itself is defined in config.h, not here, so offsetof on
+// tx_config_t's model_config is checked where both types are visible
+// (config.cpp, in UpgradeEepromV8ToV9). Here we assert the legacy-struct
+// internal offsets only.
+static_assert(offsetof(v8_tx_config_t, version) == 0, "v8 version offset");
+static_assert(offsetof(v8_tx_config_t, _pad9_11) == 9, "v8 pad offset (minPower reuse point)");
+static_assert(offsetof(v8_tx_config_t, model_config) == 12, "v8 model_config offset");
+static_assert(offsetof(v8_tx_config_t, fanMode) == 268, "v8 fanMode offset");
+static_assert(offsetof(v8_tx_config_t, _pad271) == 271, "v8 pad271 offset");
+static_assert(offsetof(v8_tx_config_t, buttonColors) == 272, "v8 buttonColors offset");
 
 /***
  * RX config
