@@ -625,12 +625,14 @@ void OtaUnpackAirportData(OTA_Packet_s const * const otaPktPtr, FIFO<AP_MAX_BUF_
 {
     if (OtaIsFullRes)
     {
-        uint8_t count = otaPktPtr->full.airport.count;
+        // count comes off the air and its 5 bits can exceed the payload size
+        const uint8_t count = std::min((uint8_t)otaPktPtr->full.airport.count, (uint8_t)sizeof(otaPktPtr->full.airport.payload));
         outputBuffer->atomicPushBytes(otaPktPtr->full.airport.payload, count);
     }
     else
     {
-        uint8_t count = otaPktPtr->std.airport.count;
+        // count comes off the air and its 6 bits can exceed the payload size
+        const uint8_t count = std::min((uint8_t)otaPktPtr->std.airport.count, (uint8_t)sizeof(otaPktPtr->std.airport.payload));
         outputBuffer->atomicPushBytes(otaPktPtr->std.airport.payload, count);
     }
 }
