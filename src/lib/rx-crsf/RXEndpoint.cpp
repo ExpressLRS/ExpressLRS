@@ -66,7 +66,12 @@ void RXEndpoint::handleMessage(const crsf_header_t *message)
     }
     else if (OPT_HAS_VTX_SPI && message->type == CRSF_FRAMETYPE_MSP_WRITE && extMessage->payload[2] == MSP_SET_VTX_CONFIG)
     {
-        vtxSPIFrequency = getFreqByIdx(extMessage->payload[3]);
+        const uint16_t freq = getFreqByIdx(extMessage->payload[3]);
+        if (freq == 0)
+        {
+            return; // invalid band/channel index
+        }
+        vtxSPIFrequency = freq;
         if (extMessage->payload[1] >= 4) // If packet has 4 bytes it also contains power idx and pitmode.
         {
             vtxSPIPowerIdx = extMessage->payload[5];
