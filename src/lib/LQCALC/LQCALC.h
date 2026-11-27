@@ -2,6 +2,17 @@
 
 #include <stdint.h>
 
+// These accessors are called from IRAM interrupt handlers. ICACHE_RAM_ATTR alone is not
+// enough: GCC silently drops the section attribute for COMDAT template members, so the
+// out-of-line copies link into IROM, and an ISR that calls one during a flash erase (when
+// the flash window is unmapped) faults with Exception(0). Forcing them inline means the
+// IRAM caller contains the code and never reaches into flash.
+#if defined(__GNUC__)
+  #define LQCALC_ALWAYS_INLINE __attribute__((always_inline)) inline
+#else
+  #define LQCALC_ALWAYS_INLINE inline
+#endif
+
 template <uint8_t N>
 class LQCALC
 {
@@ -12,7 +23,7 @@ public:
     }
 
     /* Set the bit for the current period to true and update the running LQ */
-    void ICACHE_RAM_ATTR add()
+    void ICACHE_RAM_ATTR LQCALC_ALWAYS_INLINE add()
     {
         if (currentIsSet())
             return;
@@ -21,7 +32,7 @@ public:
     }
 
     /* Start a new period */
-    void ICACHE_RAM_ATTR inc()
+    void ICACHE_RAM_ATTR LQCALC_ALWAYS_INLINE inc()
     {
         // Increment the counter by shifting one bit higher
         // If we've shifted out all the bits, move to next idx
@@ -50,7 +61,7 @@ public:
     }
 
     /* Return the current running total of bits set, in percent */
-    uint8_t ICACHE_RAM_ATTR getLQ() const
+    uint8_t ICACHE_RAM_ATTR LQCALC_ALWAYS_INLINE getLQ() const
     {
         return (uint32_t)LQ * 100U / count;
     }
@@ -93,7 +104,7 @@ public:
     }
 
     /*  Return true if the current period was add()ed */
-    bool ICACHE_RAM_ATTR currentIsSet() const
+    bool ICACHE_RAM_ATTR LQCALC_ALWAYS_INLINE currentIsSet() const
     {
         return LQArray[index] & LQmask;
     }
