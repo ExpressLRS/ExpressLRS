@@ -82,6 +82,21 @@ public:
     virtual void JustSentRFpacket() {}
 
     /**
+     * Queue raw downlink telemetry bytes for the handset; base no-op (only MAVLink forwards FC telemetry).
+     */
+    virtual void queueTelemetry(const uint8_t *data, uint8_t len) {}
+
+    /**
+     * @return Whether this handset speaks MAVLink.
+     */
+    virtual bool isMavlinkHandset() const { return false; }
+
+    /**
+     * Mark that AutoDetect spawned this handset, so it joins protocol rotation on a connect timeout.
+     */
+    void markAutoDetected() { viaAutoDetect = true; }
+
+    /**
      * @brief Run any RcChannelsOverride callback
      *        Should be called by incoming ChannelData generators before RCDataReceived()
      */
@@ -124,6 +139,25 @@ protected:
     void (*disconnected)() = nullptr;    // called when RC packet stream is lost
     void (*connected)() = nullptr;       // called when RC packet stream is regained
 
+    // Protocol autodetect
+    static constexpr uint32_t DETECT_TIMEOUT_MS = 5000;
+    bool viaAutoDetect = false;      // spawned by AutoDetect -> eligible to rotate to the other protocol
+    bool hadConnected = false;       // has reached a connection at least once this instance
+    uint32_t detectStartMs = 0;      // millis() when this handset instance first ran (lazy-init in detectionTimedOut)
+    uint32_t lastOkMs = 0;           // millis() of the last moment controllerConnected was true
+
+    bool detectionTimedOut()
+    {
+        const uint32_t now = millis();
+        if (detectStartMs == 0) detectStartMs = now;
+        if (controllerConnected) { hadConnected = true; lastOkMs = now; return false; }
+        const uint32_t since = hadConnected ? (now - lastOkMs) : (now - detectStartMs);
+        return since > DETECT_TIMEOUT_MS;
+    }
+#if defined(PLATFORM_ESP32)
+    void restartDetection();
+#endif
+
     int32_t RequestedRCpacketInterval = 5000; // default to 200hz as per 'normal'
 
 private:
@@ -132,4 +166,6 @@ private:
 
 #ifdef TARGET_TX
 extern Handset *handset;
+// True when the TX link is carrying MAVLink
+bool mavlinkTunnelActive();
 #endif

@@ -25,6 +25,8 @@ public:
     static uint32_t GoodPktsCountResult; // need to latch the results
     static uint32_t BadPktsCountResult;  // need to latch the results
 
+    ~CRSFHandset();                      // deregister from crsfRouter
+
     void Begin() override;
     void End() override;
 
