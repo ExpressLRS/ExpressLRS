@@ -1017,30 +1017,21 @@ static void WebUdpControl(AsyncWebServerRequest *request)
 static size_t firmwareOffset = 0;
 static size_t getFirmwareChunk(uint8_t *data, size_t len, size_t pos)
 {
-  uint8_t *dst;
-  uint8_t alignedBuffer[7];
-  if ((uintptr_t)data % 4 != 0)
+  // flashRead needs a 4 byte aligned flash address, destination and length
+  const size_t addr = firmwareOffset + pos;
+  if ((uintptr_t)data % 4 == 0 && addr % 4 == 0 && len >= 4)
   {
-    // If data is not aligned, read aligned byes using the local buffer and hope the next call will be aligned
-    dst = (uint8_t *)((uint32_t)alignedBuffer / 4 * 4);
-    len = 4;
-  }
-  else
-  {
-    // Otherwise just make sure len is a multiple of 4 and smaller than a sector
-    dst = data;
-    len = constrain((len / 4) * 4, 4, SPI_FLASH_SEC_SIZE);
+    len = std::min((len / 4) * 4, (size_t)SPI_FLASH_SEC_SIZE);
+    ESP.flashRead(addr, (uint32_t *)data, len);
+    return len;
   }
 
-  ESP.flashRead(firmwareOffset + pos, (uint32_t *)dst, len);
-
-  // If using local stack buffer, move the 4 bytes into the passed buffer
-  // data is known to not be aligned so it is moved byte-by-byte instead of as uint32_t*
-  if ((void *)dst != (void *)data)
-  {
-    for (unsigned b=len; b>0; --b)
-      *data++ = *dst++;
-  }
+  // Otherwise read the aligned word containing addr and copy as many of its bytes as fit into data
+  uint32_t word;
+  ESP.flashRead(addr & ~(size_t)3, &word, sizeof(word));
+  const size_t offset = addr % 4;
+  len = std::min(len, sizeof(word) - offset);
+  memcpy(data, (uint8_t *)&word + offset, len);
   return len;
 }
 
