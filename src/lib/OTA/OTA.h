@@ -34,7 +34,7 @@ typedef struct {
             newTlmRatio:3,
             geminiMode:1,
             otaProtocol:2,
-            free:1;
+            switchEncMode12:1;
     uint8_t UID4;
     uint8_t UID5;
 } PACKED OTA_Sync_s;
@@ -171,6 +171,7 @@ extern uint8_t UID[UID_LEN];
 extern elrsLinkStatistics_t linkStats;
 extern bool isArmed;
 extern bool OtaIsFullRes;
+extern uint8_t OtaNumChannels;
 extern volatile uint8_t OtaNonce;
 extern uint16_t OtaCrcInitializer;
 extern OtaSwitchMode_e OtaSwitchModeCurrent;

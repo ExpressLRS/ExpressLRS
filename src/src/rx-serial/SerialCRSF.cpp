@@ -49,7 +49,7 @@ uint32_t SerialCRSF::sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t
     PackedRCdataOut.ch13 = channelData[13];
 
     // In 16ch mode, do not output RSSI/LQ on channels
-    if (OtaIsFullRes && OtaSwitchModeCurrent == smHybridOr16ch)
+    if (OtaNumChannels > 12)
     {
         PackedRCdataOut.ch14 = channelData[14];
         PackedRCdataOut.ch15 = channelData[15];
