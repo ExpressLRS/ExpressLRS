@@ -247,7 +247,8 @@ void processPanTiltRollPacket(const uint32_t now, const mspPacket_t *packet)
     for (unsigned ch=0; ch<CRSF_NUM_CHANNELS; ++ch)
     {
         uint16_t chVal;
-        if (ch >= chStart && payloadPos < (packet->payloadSize - 1))
+        // two bytes per channel; payloadSize - 1 would wrap for an empty payload and use stale buffer contents
+        if (ch >= chStart && payloadPos + 1 < packet->payloadSize)
         {
             chVal = packet->payload[payloadPos] | (packet->payload[payloadPos+1] << 8);
             payloadPos += 2;
