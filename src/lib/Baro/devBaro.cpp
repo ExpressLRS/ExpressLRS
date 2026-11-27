@@ -5,6 +5,7 @@
 
 #include "CRSFRouter.h"
 #include "baro_bmp280.h"
+#include "baro_spa06.h"
 #include "baro_spl06.h"
 #include "logging.h"
 //#include "baro_bmp085.h"
@@ -26,6 +27,12 @@ static bool Baro_Detect()
         {
             DBGLN("Detected baro: SPL06");
             baro = new SPL06();
+            return true;
+        }
+        if (SPA06::detect())
+        {
+            DBGLN("Detected baro: SPA06");
+            baro = new SPA06();
             return true;
         }
         if (BMP280::detect())
