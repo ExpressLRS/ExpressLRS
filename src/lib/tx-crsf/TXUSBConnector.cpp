@@ -11,6 +11,10 @@ void TXUSBConnector::forwardMessage(const crsf_header_t *message)
     if (TxUSB != BackpackOrLogStrm && config.GetLinkMode() != TX_MAVLINK_MODE)
     {
         const size_t length = message->frame_size + CRSF_FRAME_NOT_COUNTED_BYTES;
+        if (length > CRSF_MAX_PACKET_LEN)
+        {
+            return;
+        }
         TxUSB->write((uint8_t *)message, length);
     }
 }

@@ -1517,7 +1517,9 @@ void loop()
     checkSendLinkStatsToHandset(now);
     if (DataDlReceiver.HasFinishedData())
     {
-      if (CRSFinBuffer[0] == CRSF_ADDRESS_USB)
+      // the length byte comes off the air, drop data that would not be inside CRSFinBuffer
+      const bool validLength = crsfFrameFitsBuffer(CRSFinBuffer, sizeof(CRSFinBuffer));
+      if (validLength && CRSFinBuffer[0] == CRSF_ADDRESS_USB)
       {
         if (config.GetLinkMode() == TX_MAVLINK_MODE)
         {
@@ -1533,7 +1535,10 @@ void loop()
           }
         }
       }
-      else
+      // a CRSF frame has at least a type and crc. RC channels only come from the handset, TXModuleEndpoint would
+      // take channels received from the RX (or anything sending on the downlink) as stick input
+      else if (validLength && CRSFinBuffer[CRSF_TELEMETRY_LENGTH_INDEX] >= 2
+               && ((crsf_header_t *)CRSFinBuffer)->type != CRSF_FRAMETYPE_RC_CHANNELS_PACKED)
       {
         // Send all other tlm to CRSF router
         crsfRouter.processMessage(&otaConnector, (crsf_header_t *)CRSFinBuffer);

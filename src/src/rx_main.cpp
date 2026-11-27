@@ -1252,8 +1252,8 @@ void DataUlReceiveComplete()
         });
         break;
     case MSP_ELRS_MAVLINK_TLM: // 0xFD
-        // raw mavlink data
-        if (config.GetSerialProtocol() == PROTOCOL_MAVLINK)
+        // raw mavlink data, [1] is the byte count
+        if (config.GetSerialProtocol() == PROTOCOL_MAVLINK && crsfFrameFitsBuffer(DataUlBuffer, sizeof(DataUlBuffer)))
         {
             ((SerialMavlink *)serialIO)->forwardMessage(DataUlBuffer);
         }
@@ -1261,7 +1261,11 @@ void DataUlReceiveComplete()
     default:
         //handle received CRSF package
         const auto receivedHeader = (crsf_header_t *) DataUlBuffer;
-        crsfRouter.processMessage(&otaConnector, receivedHeader);
+        // the frame size comes off the air, the frame must at least have a type and crc and fit the buffer
+        if (receivedHeader->frame_size >= 2 && crsfFrameFitsBuffer(DataUlBuffer, sizeof(DataUlBuffer)))
+        {
+            crsfRouter.processMessage(&otaConnector, receivedHeader);
+        }
 
     }
 
