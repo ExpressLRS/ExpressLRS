@@ -11,7 +11,7 @@
 #define MAVLINK_COMM_NUM_BUFFERS 1
 #include "common/mavlink.h"
 
-#define MAV_FTP_OPCODE_OPENFILERO 4
+extern void reset_into_bootloader();
 
 SerialMavlink::SerialMavlink(Stream &out, Stream &in):
     SerialIO(&out, &in),
@@ -74,6 +74,29 @@ void SerialMavlink::processBytes(uint8_t *bytes, u_int16_t size)
     if (connectionState == connected)
     {
         mavlinkInputBuffer.atomicPushBytes(bytes, size);
+    }
+    else
+    {
+        // process bytes to see if we have a reset to bootloader command
+        for (uint16_t i = 0; i < size; ++i)
+        {
+            static constexpr uint8_t command[] {0xEC, 0x04, 0x32, 'b', 'l', 0x0A};
+            static uint8_t matched = 0;
+
+            if (bytes[i] == command[matched])
+            {
+                ++matched;
+                if (matched == sizeof(command))
+                {
+                    matched = 0;
+                    reset_into_bootloader();
+                }
+            }
+            else
+            {
+                matched = bytes[i] == command[0] ? 1 : 0;
+            }
+        }
     }
 }
 
