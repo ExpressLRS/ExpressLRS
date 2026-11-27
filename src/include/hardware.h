@@ -1,3 +1,4 @@
+#include <stddef.h>
 #include <stdint.h>
 
 typedef enum {
@@ -184,3 +185,8 @@ int hardware_int(nameType name);
 float hardware_float(nameType name);
 const int16_t* hardware_i16_array(nameType name);
 const uint16_t* hardware_u16_array(nameType name);
+// Number of entries in an ARRAY field (0 if it is not defined)
+size_t hardware_array_count(nameType name);
+
+// Fixed size arrays (e.g. the servo output state) hold this many PWM outputs, more are ignored
+constexpr int HARDWARE_MAX_PWM_OUTPUTS = 16;

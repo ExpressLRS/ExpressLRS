@@ -352,6 +352,16 @@ static bool initialize()
 
     if (OPT_HAS_VTX_SPI)
     {
+        // the set point arrays from hardware.json are indexed by VpdFreqArray
+        for (const nameType arr : {HARDWARE_vtx_amp_vpd_25mW, HARDWARE_vtx_amp_vpd_100mW, HARDWARE_vtx_amp_pwm_25mW, HARDWARE_vtx_amp_pwm_100mW})
+        {
+            if (hardware_array_count(arr) < VpdSetPointCount)
+            {
+                ERRLN("VTX SPI disabled, hardware vtx_amp arrays need %u values", VpdSetPointCount);
+                return false;
+            }
+        }
+
         if (GPIO_PIN_SPI_VTX_SCK != UNDEF_PIN && GPIO_PIN_SPI_VTX_SCK != GPIO_PIN_SCK)
         {
             vtxSPI = new SPIClass(HSPI);

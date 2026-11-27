@@ -90,7 +90,10 @@ static void setFanSpeed()
         255  // 2000mW
     };
 
-    uint32_t speed = GPIO_PIN_FAN_SPEEDS == nullptr ? defaultFanSpeeds[POWERMGNT::currPower()] : GPIO_PIN_FAN_SPEEDS[POWERMGNT::currPower()-POWERMGNT::getMinPower()];
+    // misc_fan_speeds comes from hardware.json and may have fewer entries than there are power levels
+    const unsigned fanIdx = POWERMGNT::currPower() - POWERMGNT::getMinPower();
+    uint32_t speed = (GPIO_PIN_FAN_SPEEDS == nullptr || fanIdx >= (unsigned)GPIO_PIN_FAN_SPEEDS_COUNT)
+        ? defaultFanSpeeds[POWERMGNT::currPower()] : GPIO_PIN_FAN_SPEEDS[fanIdx];
     ledcWrite(fanChannel, speed);
     DBGLN("Fan speed: %d (power) -> %u (pwm)", POWERMGNT::currPower(), speed);
 }

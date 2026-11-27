@@ -12,6 +12,8 @@
 #include <driver/periph_ctrl.h>
 #endif
 
+// GPIO_PIN_PWM_OUTPUTS_COUNT is limited to HARDWARE_MAX_PWM_OUTPUTS when hardware.json is loaded
+static_assert(PWM_MAX_CHANNELS == HARDWARE_MAX_PWM_OUTPUTS, "PWM output arrays and the hardware limit must match");
 static int8_t servoPins[PWM_MAX_CHANNELS];
 static pwm_channel_t pwmChannels[PWM_MAX_CHANNELS];
 static uint16_t pwmChannelValues[PWM_MAX_CHANNELS];

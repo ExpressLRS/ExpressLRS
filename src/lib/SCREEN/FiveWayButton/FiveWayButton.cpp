@@ -27,7 +27,12 @@ uint16_t FiveWayButton::joyAdcValues[] = {0};
  */
 void FiveWayButton::calcFuzzValues()
 {
-    memcpy(FiveWayButton::joyAdcValues, JOY_ADC_VALUES, sizeof(FiveWayButton::joyAdcValues));
+    // joystick_values comes from hardware.json and may have fewer entries
+    const size_t joyAdcCount = std::min(hardware_array_count(HARDWARE_joystick_values), N_JOY_ADC_VALUES);
+    if (joyAdcCount != 0)
+    {
+        memcpy(FiveWayButton::joyAdcValues, JOY_ADC_VALUES, joyAdcCount * sizeof(FiveWayButton::joyAdcValues[0]));
+    }
 
 #if defined(PLATFORM_ESP32)
     // Convert JOY_ADC_VALUES from raw counts to millivolt values to match
