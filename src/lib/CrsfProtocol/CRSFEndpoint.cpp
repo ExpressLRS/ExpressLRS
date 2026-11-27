@@ -304,6 +304,39 @@ void CRSFEndpoint::registerParameter(void *definition, const parameterHandlerCal
     paramCallbacks[lastParameter] = callback;
 }
 
+/**
+ * Checks a value received in a PARAMETER_WRITE against the parameter's limits, so the
+ * parameter callbacks only ever see values the parameter can represent
+ */
+static bool isParameterValueValid(const propertiesCommon *parameter, const int32_t value)
+{
+    switch (parameter->type & CRSF_FIELD_TYPE_MASK)
+    {
+    case CRSF_UINT8: {
+        const auto p = (const int8Parameter *)parameter;
+        return value >= p->properties.u.min && value <= p->properties.u.max;
+    }
+    case CRSF_INT8: {
+        const auto p = (const int8Parameter *)parameter;
+        return value >= p->properties.s.min && value <= p->properties.s.max;
+    }
+    // int16 limits are stored big-endian, as sent on the wire
+    case CRSF_UINT16: {
+        const auto p = (const int16Parameter *)parameter;
+        return value >= be16toh(p->properties.u.min) && value <= be16toh(p->properties.u.max);
+    }
+    case CRSF_INT16: {
+        const auto p = (const int16Parameter *)parameter;
+        return value >= (int16_t)be16toh(p->properties.u.min) && value <= (int16_t)be16toh(p->properties.u.max);
+    }
+    case CRSF_TEXT_SELECTION:
+        return value >= 0 && value <= selectionOptionMax(((const selectionParameter *)parameter)->options);
+    default:
+        // commands, strings, folders: the callbacks interpret the value themselves
+        return true;
+    }
+}
+
 void CRSFEndpoint::parameterUpdateReq(const crsf_addr_e origin, const uint8_t parameterType, const uint8_t parameterIndex, void *payload)
 {
     propertiesCommon *parameter = parameterIndex < MAX_CRSF_PARAMETERS ? paramDefinitions[parameterIndex] : nullptr;
@@ -317,24 +350,30 @@ void CRSFEndpoint::parameterUpdateReq(const crsf_addr_e origin, const uint8_t pa
         {
             uint8_t *argBytes = (uint8_t*)payload;
             int32_t arg = 0;
-            switch (parameter->type)
+            const uint8_t dataType = parameter->type & CRSF_FIELD_TYPE_MASK;
+            switch (dataType)
             {
                 case CRSF_UINT32:
                 case CRSF_INT32:
                     arg = (argBytes[0] << 24) | (argBytes[1] << 16) | (argBytes[2] << 8) | argBytes[3];
-                    if (parameter->type == CRSF_INT32) arg = (int32_t)arg;
+                    if (dataType == CRSF_INT32) arg = (int32_t)arg;
                     break;
                 case CRSF_UINT16:
                 case CRSF_INT16:
                     arg = (argBytes[0] << 8) | argBytes[1];
-                    if (parameter->type == CRSF_INT16) arg = (int16_t)arg;
+                    if (dataType == CRSF_INT16) arg = (int16_t)arg;
                     break;
                 case CRSF_UINT8:
                 case CRSF_INT8:
                 default:
                     arg = argBytes[0];
-                    if (parameter->type == CRSF_INT8) arg = (int8_t)arg;
+                    if (dataType == CRSF_INT8) arg = (int8_t)arg;
                     break;
+            }
+            if (!isParameterValueValid(parameter, arg))
+            {
+                DBGLN("Parameter [%s] value %d out of range", parameter->name, arg);
+                break;
             }
             DBGLN("Set parameter [%s]=%u", parameter->name, arg);
 
