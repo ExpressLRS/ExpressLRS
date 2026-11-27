@@ -39,7 +39,7 @@ class InfoPanel extends LitElement {
                                 html`<tr><td><b>Airport Mode</b></td><td>Enabled</td></tr>`
                                 : ''}
                         ${elrsState.options['wifi-on-interval'] !== 60 ?
-                                html`<tr><td><b>Wifi Auto-on Interval</b></td><td>${elrsState.options['wifi-on-interval']}</td></tr>`
+                                html`<tr><td><b>Wifi Auto-on Interval</b></td><td>${elrsState.options['wifi-on-interval'] === undefined || elrsState.options['wifi-on-interval'] < 0 ? 'Disabled' : elrsState.options['wifi-on-interval']}</td></tr>`
                                 : ''}
                         <!-- FEATURE: NOT IS_TX -->
                         ${elrsState.options['lock-on-first-connection'] !== true ?
