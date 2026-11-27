@@ -47,6 +47,11 @@ static const struct
 };
 
 static uint32_t mcpwm_frequencies[MCPWM_CHANNELS] = {0};
+static struct
+{
+    uint8_t pin;
+    pwm_polarity_t polarity;
+} mcpwm_outputs[MCPWM_CHANNELS];
 #endif
 
 static struct
@@ -55,6 +60,7 @@ static struct
     uint8_t resolution_bits;
     uint32_t interval;
     bool attached;
+    bool inverted;
     uint8_t tmr_idx;
 } ledc_config[LEDC_CHANNELS];
 static uint32_t ledcTimerConfigs[LEDC_TIMER_MAX] = {0};
@@ -80,7 +86,7 @@ static void ledcSetupEx(uint8_t chan, ledc_timer_t timer, uint32_t freq, uint8_t
     }
 }
 
-static void ledcAttachPinEx(uint8_t pin, uint8_t chan, ledc_timer_t timer)
+static void ledcAttachPinEx(uint8_t pin, uint8_t chan, ledc_timer_t timer, bool inverted)
 {
     ledc_channel_config_t ledc_channel = {
         .gpio_num = pin,
@@ -89,7 +95,8 @@ static void ledcAttachPinEx(uint8_t pin, uint8_t chan, ledc_timer_t timer)
         .intr_type = LEDC_INTR_DISABLE,
         .timer_sel = (ledc_timer_t)timer,
         .duty = 0,
-        .hpoint = 0};
+        .hpoint = 0,
+        .flags = {.output_invert = inverted}};
     auto err = ledc_channel_config(&ledc_channel);
     if (err != OK)
     {
@@ -97,8 +104,38 @@ static void ledcAttachPinEx(uint8_t pin, uint8_t chan, ledc_timer_t timer)
     }
 }
 
-pwm_channel_t PWMController::allocate(uint8_t pin, uint32_t frequency)
+#if SOC_MCPWM_SUPPORTED
+static void setMcpwmPolarity(int ch, bool active)
 {
+    const auto polarity = mcpwm_outputs[ch].polarity;
+    if (polarity == PWM_POLARITY_NORMAL)
+    {
+        return;
+    }
+    if (active)
+    {
+        mcpwm_set_duty_type(mcpwm_config[ch].unit, mcpwm_config[ch].timer, mcpwm_config[ch].generator, MCPWM_DUTY_MODE_1);
+    }
+    else if (polarity == PWM_POLARITY_INVERTED)
+    {
+        mcpwm_set_signal_high(mcpwm_config[ch].unit, mcpwm_config[ch].timer, mcpwm_config[ch].generator);
+    }
+    else
+    {
+        // MCPWM_DUTY_MODE_1 holds the pin high at zero duty
+        mcpwm_set_signal_low(mcpwm_config[ch].unit, mcpwm_config[ch].timer, mcpwm_config[ch].generator);
+    }
+}
+#endif
+
+pwm_channel_t PWMController::allocate(uint8_t pin, uint32_t frequency, pwm_polarity_t polarity)
+{
+    const bool inverted = polarity != PWM_POLARITY_NORMAL;
+    if (inverted)
+    {
+        // The level the pin falls back to whenever it is not routed to a PWM peripheral
+        digitalWrite(pin, polarity == PWM_POLARITY_INVERTED ? HIGH : LOW);
+    }
     // 1. see if we can allocate a MCPWM channel at this frequency
 #if SOC_MCPWM_SUPPORTED
     // 1a. see if theres a MCPWM already using this frequency we can piggy-back on
@@ -148,6 +185,16 @@ pwm_channel_t PWMController::allocate(uint8_t pin, uint32_t frequency)
         }
         mcpwm_init(mcpwm_config[channel].unit, mcpwm_config[channel].timer, &pwm_config);
         mcpwm_frequencies[channel] = frequency;
+        mcpwm_outputs[channel].pin = pin;
+        mcpwm_outputs[channel].polarity = polarity;
+        // mcpwm_init resets both generators of the timer, so put both back at their idle level
+        for (int i = channel & ~1; i <= (channel | 1); i++)
+        {
+            if (mcpwm_frequencies[i] != 0)
+            {
+                setMcpwmPolarity(i, false);
+            }
+        }
         return channel | MCPWM_CHANNEL_FLAG;
     }
 #endif
@@ -175,11 +222,16 @@ pwm_channel_t PWMController::allocate(uint8_t pin, uint32_t frequency)
                 }
                 if (ledcTimerConfigs[timer_idx] == frequency)
                 {
-                    ledcAttachPinEx(pin, ch, (ledc_timer_t)timer_idx);
+                    // An inverted channel is only attached once it has a pulse to output, until then the pin stays a plain GPIO
+                    if (!inverted)
+                    {
+                        ledcAttachPinEx(pin, ch, (ledc_timer_t)timer_idx, false);
+                    }
                     ledc_config[ch].pin = pin;
                     ledc_config[ch].resolution_bits = bits;
                     ledc_config[ch].interval = 1000000U / frequency;
-                    ledc_config[ch].attached = true;
+                    ledc_config[ch].attached = !inverted;
+                    ledc_config[ch].inverted = inverted;
                     ledc_config[ch].tmr_idx = timer_idx;
                     DBGLN("allocate ledc_ch %d on pin %d using ledc_tim: %d, bits: %d", ch, pin, timer_idx, bits);
                     return ch | LEDC_CHANNEL_FLAG;
@@ -210,6 +262,12 @@ void PWMController::release(pwm_channel_t channel)
     {
         auto ch = MCPWM_CHANNEL(channel);
         mcpwm_stop(mcpwm_config[ch].unit, mcpwm_config[ch].timer);
+        if (mcpwm_outputs[ch].polarity != PWM_POLARITY_NORMAL)
+        {
+            // Hand the pin back to the GPIO driver, which holds it at the idle level
+            pinMatrixOutDetach(mcpwm_outputs[ch].pin, false, false);
+            mcpwm_outputs[ch].polarity = PWM_POLARITY_NORMAL;
+        }
         mcpwm_frequencies[ch] = 0;
     }
 #endif
@@ -227,7 +285,7 @@ static void setLedcMapped(pwm_channel_t channel, bool active, uint32_t raw)
     {
         if (!ledc_config[ch].attached)
         {
-            ledcAttachPinEx(ledc_config[ch].pin, ch, (ledc_timer_t)(ledc_config[ch].tmr_idx));
+            ledcAttachPinEx(ledc_config[ch].pin, ch, (ledc_timer_t)(ledc_config[ch].tmr_idx), ledc_config[ch].inverted);
             ledc_config[ch].attached = true;
         }
 
@@ -258,6 +316,7 @@ void PWMController::setDuty(pwm_channel_t channel, uint16_t duty)
     {
         auto ch = MCPWM_CHANNEL(channel);
         mcpwm_set_duty(mcpwm_config[ch].unit, mcpwm_config[ch].timer, mcpwm_config[ch].generator, duty / 10.0f);
+        setMcpwmPolarity(ch, duty > 0);
     }
 #endif
 }
@@ -277,6 +336,7 @@ void PWMController::setMicroseconds(pwm_channel_t channel, uint16_t microseconds
     {
         auto ch = MCPWM_CHANNEL(channel);
         mcpwm_set_duty_in_us(mcpwm_config[ch].unit, mcpwm_config[ch].timer, mcpwm_config[ch].generator, microseconds);
+        setMcpwmPolarity(ch, microseconds > 0);
     }
 #endif
 }

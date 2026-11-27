@@ -90,7 +90,7 @@ typedef struct dshot_config_s {
 
 class DShotRMT {
 public:
-	DShotRMT(gpio_num_t gpio, rmt_channel_t rmtChannel);
+	DShotRMT(gpio_num_t gpio, rmt_channel_t rmtChannel, bool inverted = false);
 	~DShotRMT();
 
 	// ...safety first ...no parameters, no DShot
@@ -101,6 +101,7 @@ public:
 private:
 	gpio_num_t gpio_num;
 	rmt_channel_t rmt_channel;
+	bool inverted;
 	rmt_item32_t dshot_tx_rmt_item[DSHOT_PACKET_LENGTH + 1];
 
 	dshot_mode_t mode = DSHOT_OFF;

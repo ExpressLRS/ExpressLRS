@@ -31,6 +31,27 @@ static constexpr uint32_t DISCONNECTED_UPDATE_MS = 10;
 
 typedef void (*servoWrite_fn)(uint8_t ch, uint16_t us);
 
+// Values of the pwm_output_drive hardware option, one per PWM output
+enum eOutputDrive : uint8_t
+{
+    odDirect = 0,
+    odLowSide = 1,  // low-side N-channel MOSFET: flips a signal, but switches a load the right way round
+    odInverted = 2, // inverted in every mode, the pin is high while the output is off
+};
+
+static eOutputDrive outputDrive(uint8_t ch)
+{
+    if (ch < PWM_OUTPUT_DRIVE_COUNT)
+    {
+        const auto drive = PWM_OUTPUT_DRIVE[ch];
+        if (drive == odLowSide || drive == odInverted)
+        {
+            return (eOutputDrive)drive;
+        }
+    }
+    return odDirect;
+}
+
 void ICACHE_RAM_ATTR servoNewChannelsAvailable()
 {
     newChannelsAvailable = true;
@@ -115,7 +136,7 @@ static void servoWrite(uint8_t ch, uint16_t us)
         pwmChannelValues[ch] = us;
         if (chMode == somOnOff)
         {
-            digitalWrite(servoPins[ch], us > 1500);
+            digitalWrite(servoPins[ch], (us > 1500) != (outputDrive(ch) == odInverted));
         }
         else if (chMode == som10KHzDuty)
         {
@@ -273,15 +294,15 @@ static bool initialize()
                 auto rmtChannel = (rmt_channel_t)rmtCH;
                 DBGLN("Initializing DShot: gpio: %u, ch: %d, rmtChannel: %u", gpio, ch, rmtChannel);
                 pinMode(pin, OUTPUT);
-                digitalWrite(pin, LOW);
-                dshotInstances[ch] = new DShotRMT(gpio, rmtChannel); // Initialize the DShotRMT instance
+                digitalWrite(pin, outputDrive(ch) == odInverted ? HIGH : LOW);
+                dshotInstances[ch] = new DShotRMT(gpio, rmtChannel, outputDrive(ch) != odDirect); // Initialize the DShotRMT instance
                 rmtCH++;
             }
             pin = UNDEF_PIN;
         }
 #endif
         servoPins[ch] = pin;
-        // Initialize all servos to low ASAP
+        // Initialize all servos to off ASAP
         if (pin != UNDEF_PIN)
         {
             if (mode == somOnOff)
@@ -294,7 +315,7 @@ static bool initialize()
             }
 
             pinMode(pin, OUTPUT);
-            digitalWrite(pin, LOW);
+            digitalWrite(pin, outputDrive(ch) == odInverted ? HIGH : LOW);
         }
     }
     return true;
@@ -338,7 +359,16 @@ static int event()
             const auto frequency = servoOutputModeToFrequency((eServoOutputMode)chConfig->val.mode);
             if (frequency && servoPins[ch] != UNDEF_PIN)
             {
-                pwmChannels[ch] = PWM.allocate(servoPins[ch], frequency);
+                auto polarity = PWM_POLARITY_NORMAL;
+                if (outputDrive(ch) == odInverted)
+                {
+                    polarity = PWM_POLARITY_INVERTED;
+                }
+                else if (outputDrive(ch) == odLowSide && chConfig->val.mode != som10KHzDuty)
+                {
+                    polarity = PWM_POLARITY_INVERTED_IDLE_LOW;
+                }
+                pwmChannels[ch] = PWM.allocate(servoPins[ch], frequency, polarity);
             }
 #if defined(PLATFORM_ESP32)
             else if ((eServoOutputMode)chConfig->val.mode == somDShot || (eServoOutputMode)chConfig->val.mode == somDShot3D)

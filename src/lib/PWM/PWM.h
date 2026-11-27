@@ -2,6 +2,13 @@
 
 typedef int pwm_channel_t;
 
+typedef enum : uint8_t
+{
+    PWM_POLARITY_NORMAL,
+    PWM_POLARITY_INVERTED,          // pin is high while there is no pulse to output
+    PWM_POLARITY_INVERTED_IDLE_LOW, // pin is low while there is no pulse to output
+} pwm_polarity_t;
+
 class PWMController
 {
 public:
@@ -10,9 +17,11 @@ public:
      *
      * @param pin the GPIO pin to output the PWM signal on
      * @param frequency the output frequency of the PWM signal
+     * @param polarity output the signal as is or electrically inverted, and for an inverted
+     *                 signal the level the pin holds while there is no pulse to output
      * @return the allocated PWM channel or -1 if a channel cannot be assigned
      */
-    pwm_channel_t allocate(uint8_t pin, uint32_t frequency);
+    pwm_channel_t allocate(uint8_t pin, uint32_t frequency, pwm_polarity_t polarity = PWM_POLARITY_NORMAL);
 
     /**
      * @brief release a channel back to the allocator
