@@ -782,6 +782,14 @@ const HARDWARE_SCHEMA = [
                 desc: 'Comma-separated list of pins used for PWM (and other I/O features)'
             },
             {
+                id: 'pwm_failsafe',
+                label: 'PWM failsafe defaults',
+                type: 'array',
+                size: 80,
+                icon: null,
+                desc: 'Comma-separated list of default failsafe positions in microseconds (476-2523), one per PWM pin. Outputs without an entry default to 1500, or 880 for output 3'
+            },
+            {
                 id: 'pwm_out_only',
                 label: 'PWM pins are output-only',
                 type: 'checkbox',

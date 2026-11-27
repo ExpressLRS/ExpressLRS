@@ -76,6 +76,8 @@
 // PWM
 #define GPIO_PIN_PWM_OUTPUTS hardware_i16_array(HARDWARE_pwm_outputs)
 #define GPIO_PIN_PWM_OUTPUTS_COUNT hardware_int(HARDWARE_pwm_outputs_count)
+#define PWM_FAILSAFE_DEFAULTS hardware_i16_array(HARDWARE_pwm_failsafe)
+#define PWM_FAILSAFE_DEFAULTS_COUNT hardware_int(HARDWARE_pwm_failsafe_count)
 #define OPT_HAS_SERVO_OUTPUT (GPIO_PIN_PWM_OUTPUTS_COUNT > 0)
 #define OPT_PWM_OUT_ONLY hardware_flag(HARDWARE_pwm_out_only)
 
