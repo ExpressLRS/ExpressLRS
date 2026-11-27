@@ -121,6 +121,8 @@ void setUp()
 
 void tearDown()
 {
+    delete router;
+    router = nullptr;
     delete testEndpoint;
     delete connector1;
     delete connector2;

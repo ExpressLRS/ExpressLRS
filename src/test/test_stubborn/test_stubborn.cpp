@@ -141,10 +141,13 @@ void test_stubborn_link_receives_data_with_multiple_bytes(void)
     receiver.ResetState();
     receiver.SetDataToReceive(data, sizeof(data));
 
-    for(int i = 0; i < sizeof(batterySequence) / 3; i++)
+    // 15 bytes sent as 3 packages of 5 bytes, the last package has index 0
+    constexpr int bytesPerPackage = 5;
+    constexpr int packageCnt = sizeof(batterySequence) / bytesPerPackage;
+    for(int i = 0; i < packageCnt; i++)
     {
-        uint8_t idx = (i >= sizeof(batterySequence)-6) ? 0 : i + 1;
-        receiver.ReceiveData(idx, &batterySequence[i * 5], 5);
+        uint8_t idx = (i == packageCnt - 1) ? 0 : i + 1;
+        receiver.ReceiveData(idx, &batterySequence[i * bytesPerPackage], bytesPerPackage);
     }
 
     TEST_ASSERT_EQUAL_UINT8_ARRAY(batterySequence, data, sizeof(batterySequence));

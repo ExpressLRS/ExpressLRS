@@ -82,6 +82,11 @@ jobs:
         platformio pkg update
         PLATFORMIO_BUILD_FLAGS="-DRegulatory_Domain_ISM_2400" pio test -e native
 
+    - name: Run PlatformIO Tests with AddressSanitizer/UBSan
+      run: |
+        cd src
+        PLATFORMIO_BUILD_FLAGS="-DRegulatory_Domain_ISM_2400" pio test -e native-asan
+
   targets:
     needs:
       - build-and-validate-artifacts
