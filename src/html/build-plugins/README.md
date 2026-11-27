@@ -14,6 +14,15 @@ in [`../dev-plugins`](../dev-plugins/README.md).
 
 ## Plugins
 
+### `normalize-eol-plugin.js`
+
+Purpose:
+- converts CRLF/CR to LF in all text inputs so builds are byte-identical on
+  Windows (autocrlf checkouts) and Linux
+
+Use when:
+- always; it must stay first in the plugin list
+
 ### `feature-blocks-plugin.js`
 
 Purpose:

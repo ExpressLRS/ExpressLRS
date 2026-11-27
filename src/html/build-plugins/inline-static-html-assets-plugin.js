@@ -13,6 +13,8 @@ function inlineForHtml(code, tagName) {
 }
 
 function toDataUrl(contentType, data) {
+  // SVG is text: make the base64 payload independent of the checkout's EOLs.
+  if (contentType === 'image/svg+xml') data = Buffer.from(data.toString('utf8').replace(/\r\n?/g, '\n'), 'utf8')
   return `data:${contentType};base64,${data.toString('base64')}`
 }
 
